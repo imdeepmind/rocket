@@ -5,7 +5,8 @@ import swaggerUI from '@fastify/swagger-ui';
 
 import { AppConfig, Mode } from './types';
 import dbPlugin from './plugin/database';
-import { createTables } from './database/creator';
+import { createTables } from './database/table-creator';
+import { createIndexes } from './database/index-creator';
 
 async function registerSwagger(swaggerConfig: AppConfig['swagger'], app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -78,9 +79,10 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
     connection: config.database.connection,
   });
 
-  // Auto-generate tables if models are provided
+  // Auto-generate tables and indexes if models are provided
   if (config.models && config.models.length > 0) {
     await createTables(app.db, config.models, config.database.engine, app.log);
+    await createIndexes(app.db, config.models, config.database.engine, app.log);
   }
 
   // register swagger
