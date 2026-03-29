@@ -31,18 +31,21 @@
                 {
                     "name": "id",
                     "type": "integer",
-                    "primaryKey": true
+                    "primaryKey": true,
+                    "supportedOperation": ["editable", "deletable"]
                 },
                 {
                     "name": "email",
                     "type": "string",
                     "unique": true,
-                    "nullable": false
+                    "nullable": false,
+                    "supportedOperation": ["searchable"]
                 },
                 {
                     "name": "name",
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "supportedOperation": ["searchable"]
                 },
                 {
                     "name": "is_active",

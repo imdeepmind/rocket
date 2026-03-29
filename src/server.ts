@@ -3,13 +3,14 @@ import Fastify, { FastifyInstance, FastifyRequest, FastifyReply, FastifyError } 
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 
-import { AppConfig, Mode } from './types';
+import { Mode } from './types';
+import { AppConfig, SwaggerConfig } from './schema/config';
 import dbPlugin from './plugin/database';
 import { createTables } from './database/table-creator';
 import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
 
-async function registerSwagger(swaggerConfig: AppConfig['swagger'], app: FastifyInstance) {
+async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
   if (swaggerConfig.enabled) {
     // Swagger (OpenAPI spec)
     await app.register(swagger, {
