@@ -10,11 +10,7 @@ async function registerSwagger(swaggerConfig: AppConfig['swagger'], app: Fastify
     // Swagger (OpenAPI spec)
     await app.register(swagger, {
       openapi: {
-        info: {
-          title: swaggerConfig.info.title,
-          description: swaggerConfig.info.description,
-          version: swaggerConfig.info.version,
-        },
+        info: swaggerConfig.info,
       },
     });
 
