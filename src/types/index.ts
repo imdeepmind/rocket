@@ -2,6 +2,7 @@ export type Mode = 'dev' | 'prod';
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export type DBEngine = 'sqlite' | 'pg';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
+export type ForeignKeyAction = 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
 
 export interface CLIOptions {
   config: string;
@@ -62,10 +63,20 @@ export interface ModelIndex {
   unique?: boolean;
 }
 
+export interface ModelForeignKey {
+  name: string;
+  columns: string[];
+  referenceTable: string;
+  referenceColumns: string[];
+  onDelete?: ForeignKeyAction;
+  onUpdate?: ForeignKeyAction;
+}
+
 export interface ModelConfig {
   name: string;
   fields: ModelField[];
   indexes?: ModelIndex[];
+  foreignKeys?: ModelForeignKey[];
 }
 
 export interface AppConfig {
