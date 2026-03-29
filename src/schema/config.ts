@@ -1,6 +1,18 @@
 export type DBEngine = 'sqlite' | 'pg';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
 export type ForeignKeyAction = 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
+export type SupportedOperations =
+  | 'searchable'
+  | 'sortable'
+  | 'editable'
+  | 'deletable'
+  | 'lessThan'
+  | 'lessThanEqual'
+  | 'greaterThan'
+  | 'greaterThanEqual'
+  | 'equal'
+  | 'oneOf';
+export type SupportedAggregationOperation = 'mean' | 'max' | 'min' | 'count' | 'sum' | 'frequency';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -36,6 +48,8 @@ export interface ModelFieldConfig {
   nullable?: boolean;
   unique?: boolean;
   default?: unknown;
+  supportedOperations?: SupportedOperations[];
+  supportedAggregation?: SupportedAggregationOperation[];
 }
 
 export interface ModelIndexConfig {
