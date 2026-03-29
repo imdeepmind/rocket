@@ -88,8 +88,8 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   });
 
   try {
-    await app.listen({ port });
-    console.log(chalk.blue(`Server running at http://localhost:${port}`));
+    await app.listen({ port, host: '0.0.0.0' });
+    console.log(chalk.blue(`Server running at http://0.0.0.0:${port}`));
   } catch (err) {
     app.log.error(err);
     process.exit(1);
