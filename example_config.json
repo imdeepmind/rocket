@@ -32,25 +32,26 @@
                     "name": "id",
                     "type": "integer",
                     "primaryKey": true,
-                    "supportedOperation": ["editable", "deletable"]
+                    "supportedOperations": ["editable", "deletable"]
                 },
                 {
                     "name": "email",
                     "type": "string",
                     "unique": true,
                     "nullable": false,
-                    "supportedOperation": ["searchable"]
+                    "supportedOperations": ["searchable", "equal"]
                 },
                 {
                     "name": "name",
                     "type": "string",
                     "nullable": true,
-                    "supportedOperation": ["searchable"]
+                    "supportedOperations": ["searchable", "sortable"]
                 },
                 {
                     "name": "is_active",
                     "type": "boolean",
-                    "default": true
+                    "default": true,
+                    "supportedOperations": ["equal"]
                 }
             ],
             "indexes": [
@@ -72,12 +73,14 @@
                 {
                     "name": "id",
                     "type": "integer",
-                    "primaryKey": true
+                    "primaryKey": true,
+                    "supportedOperations": ["editable", "deletable"]
                 },
                 {
                     "name": "title",
                     "type": "string",
-                    "nullable": false
+                    "nullable": false,
+                    "supportedOperations": ["searchable", "sortable"]
                 },
                 {
                     "name": "body",
@@ -87,11 +90,14 @@
                 {
                     "name": "user_id",
                     "type": "integer",
-                    "nullable": false
+                    "nullable": false,
+                    "supportedOperations": ["equal", "oneOf"],
+                    "supportedAggregation": ["count", "frequency"]
                 },
                 {
                     "name": "created_at",
-                    "type": "datetime"
+                    "type": "datetime",
+                    "supportedOperations": ["lessThan", "greaterThan", "sortable"]
                 }
             ],
             "indexes": [

@@ -25,7 +25,7 @@ export async function createTables(
     let tableExists = false;
     if (engine === 'pg') {
       const res = await db.query<string, { exists: boolean }>(
-        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
         [model.name]
       );
       tableExists = res[0].exists;
