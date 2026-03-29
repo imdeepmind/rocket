@@ -21,7 +21,7 @@
     "database": {
         "engine": "sqlite",
         "connection": {
-            "path": "./database.db"
+            "urlOrPath": "./database.db"
         }
     }
 }

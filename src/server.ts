@@ -4,6 +4,7 @@ import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 
 import { AppConfig, Mode } from './types';
+import dbPlugin from './plugin/database';
 
 async function registerSwagger(swaggerConfig: AppConfig['swagger'], app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -63,6 +64,12 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
             },
           }
         : true,
+  });
+
+  // config-driven DB
+  await app.register(dbPlugin, {
+    engine: config.database.engine,
+    connection: config.database.connection,
   });
 
   // register swagger

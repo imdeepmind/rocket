@@ -37,16 +37,22 @@ export interface SwaggerConfig {
 export interface DatabaseConfig {
   engine: DBEngine;
   connection: {
-    host?: string;
-    port?: number;
-    user?: string;
-    password?: string;
-    database?: string;
-    path?: string;
+    urlOrPath: string;
   };
 }
 
 export interface AppConfig {
   swagger: SwaggerConfig;
   database: DatabaseConfig;
+}
+
+export interface DatabaseQuery {
+  query: (sql: string, params?: unknown[]) => Promise<unknown[]>;
+  close: () => Promise<void>;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: DatabaseQuery;
+  }
 }
