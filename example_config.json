@@ -23,5 +23,33 @@
         "connection": {
             "urlOrPath": "postgres://devuser:devpassword@db:5432/rocketdb"
         }
-    }
+    },
+    "models": [
+        {
+            "name": "users",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true
+                },
+                {
+                    "name": "email",
+                    "type": "string",
+                    "unique": true,
+                    "nullable": false
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "nullable": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true
+                }
+            ]
+        }
+    ]
 }

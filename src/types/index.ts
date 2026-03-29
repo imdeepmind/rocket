@@ -1,6 +1,7 @@
 export type Mode = 'dev' | 'prod';
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export type DBEngine = 'sqlite' | 'pg';
+export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
 
 export interface CLIOptions {
   config: string;
@@ -41,14 +42,29 @@ export interface DatabaseConfig {
   };
 }
 
-export interface AppConfig {
-  swagger: SwaggerConfig;
-  database: DatabaseConfig;
-}
-
 export interface DatabaseQuery {
   query<T, Q>(sql: string, params?: T[]): Promise<Q[]>;
   close: () => Promise<void>;
+}
+
+export interface ModelField {
+  name: string;
+  type: DataType;
+  primaryKey?: boolean;
+  nullable?: boolean;
+  unique?: boolean;
+  default?: unknown;
+}
+
+export interface ModelConfig {
+  name: string;
+  fields: ModelField[];
+}
+
+export interface AppConfig {
+  swagger: SwaggerConfig;
+  database: DatabaseConfig;
+  models: ModelConfig[];
 }
 
 declare module 'fastify' {

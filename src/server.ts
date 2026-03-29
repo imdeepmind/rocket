@@ -5,6 +5,7 @@ import swaggerUI from '@fastify/swagger-ui';
 
 import { AppConfig, Mode } from './types';
 import dbPlugin from './plugin/database';
+import { createTables } from './database/creator';
 
 async function registerSwagger(swaggerConfig: AppConfig['swagger'], app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -45,10 +46,12 @@ async function registerRoutes(app: FastifyInstance) {
       },
     },
     async () => {
-      const result = await app.db.query<{ answer: number }, { answer: number }>(
-        'SELECT 1+1 as answer;'
-      );
-      return { message: `1+1=${result[0].answer}` };
+      try {
+        const users = await app.db.query('SELECT * FROM "users";');
+        return { message: `Found ${users.length} users in the dynamic table.` };
+      } catch (e: unknown) {
+        return { message: `Error querying users: ${(e as Error).message}` };
+      }
     }
   );
 }
@@ -74,6 +77,11 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
     engine: config.database.engine,
     connection: config.database.connection,
   });
+
+  // Auto-generate tables if models are provided
+  if (config.models && config.models.length > 0) {
+    await createTables(app.db, config.models, config.database.engine, app.log);
+  }
 
   // register swagger
   await registerSwagger(config.swagger, app);
