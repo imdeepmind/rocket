@@ -1,0 +1,21 @@
+{
+    "swagger": {
+        "enabled": true,
+        "basePath": "/api/docs",
+        "info": {
+            "title": "Rocket OSS",
+            "description": "THis is the sample description",
+            "version": "v1.5.0",
+            "termsOfService": "https://example.com/terms",
+            "contact": {
+                "name": "John Doe",
+                "url": "https://example.com",
+                "email": "[EMAIL_ADDRESS]"
+            },
+            "license": {
+                "name": "MIT",
+                "url": "https://opensource.org/licenses/MIT"
+            }
+        }
+    }
+}
