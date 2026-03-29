@@ -62,6 +62,52 @@
                     "unique": false
                 }
             ]
+        },
+        {
+            "name": "posts",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true
+                },
+                {
+                    "name": "title",
+                    "type": "string",
+                    "nullable": false
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "nullable": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "integer",
+                    "nullable": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "datetime"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "posts_user_id_idx",
+                    "columns": ["user_id"],
+                    "unique": false
+                }
+            ],
+            "foreignKeys": [
+                {
+                    "name": "fk_posts_user_id",
+                    "columns": ["user_id"],
+                    "referenceTable": "users",
+                    "referenceColumns": ["id"],
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE"
+                }
+            ]
         }
     ]
 }
