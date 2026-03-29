@@ -9,6 +9,7 @@ import dbPlugin from './plugin/database';
 import { createTables } from './database/table-creator';
 import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
+import { registerModelRoutes } from './routes';
 
 async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -28,35 +29,6 @@ async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstanc
       },
     });
   }
-}
-
-async function registerRoutes(app: FastifyInstance) {
-  // Example route with schema
-  app.get(
-    '/hello',
-    {
-      schema: {
-        description: 'Hello route',
-        tags: ['Default'],
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              message: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
-    async () => {
-      try {
-        const users = await app.db.query('SELECT * FROM "users";');
-        return { message: `Found ${users.length} users in the dynamic table.` };
-      } catch (e: unknown) {
-        return { message: `Error querying users: ${(e as Error).message}` };
-      }
-    }
-  );
 }
 
 export async function startServer(config: AppConfig, port: number, mode: Mode) {
@@ -91,8 +63,10 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   // register swagger
   await registerSwagger(config.swagger, app);
 
-  // register routes
-  await registerRoutes(app);
+  // register config-driven model routes
+  if (config.models && config.models.length > 0) {
+    registerModelRoutes(app, config.models);
+  }
 
   // Global error handler
   app.setErrorHandler((err: FastifyError, req: FastifyRequest, reply: FastifyReply) => {

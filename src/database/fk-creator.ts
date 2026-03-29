@@ -33,8 +33,9 @@ export async function createForeignKeys(
 
       let fkExists = false;
       if (engine === 'pg') {
-        const query = SQL`SELECT EXISTS (SELECT FROM information_schema.table_constraints WHERE constraint_name = ${fk.name} AND constraint_type = 'FOREIGN KEY')`;
-        const res = await db.query<string, { exists: boolean }>(query.sql, query.values);
+        const query =
+          "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = $1 AND constraint_type = 'FOREIGN KEY')";
+        const res = await db.query<string, { exists: boolean }>(query, [fk.name]);
         fkExists = res[0].exists;
       } else {
         // SQLite doesn't support ALTER TABLE ADD CONSTRAINT for FKs.
