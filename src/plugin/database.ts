@@ -13,9 +13,9 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     });
 
     db = {
-      query: async (sql: string, params?: unknown[]) => {
+      query: async <T, Q>(sql: string, params?: T[]) => {
         const res = await pool.query(sql, params);
-        return res.rows;
+        return res.rows as Q[];
       },
       close: async () => pool.end(),
     };
@@ -23,15 +23,15 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     const sqlite = new Database(opts.connection.urlOrPath || './database.db');
 
     db = {
-      query: async (sql: string, params?: unknown[]) => {
+      query: async <T, Q>(sql: string, params?: T[]) => {
         const stmt = sqlite.prepare(sql);
 
         if (sql.trim().toLowerCase().startsWith('select')) {
-          return stmt.all(params);
+          return stmt.all(params || []) as Q[];
         }
 
-        const res = stmt.run(params);
-        return [res as unknown] as unknown[];
+        const res = stmt.run(params || []);
+        return [res as unknown] as Q[];
       },
       close: async () => {
         sqlite.close();
