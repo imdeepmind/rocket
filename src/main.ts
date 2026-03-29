@@ -5,6 +5,7 @@ import { Command } from 'commander';
 
 import { CLIOptions } from './types';
 import { validateConfigPath, validateMode, validatePort } from './validators';
+import { startServer } from './server';
 
 /**
  * CLI Definition
@@ -18,13 +19,15 @@ program
   .requiredOption('-c, --config <path>', 'Path to config file', validateConfigPath)
   .option('-p, --port <number>', 'Port to run server on (default: 3000)', validatePort, 3000)
   .option('-m, --mode <mode>', 'Mode: dev or prod (default: dev)', validateMode, 'dev')
-  .action((options: CLIOptions) => {
+  .action(async (options: CLIOptions) => {
     const { config, port, mode } = options;
 
     console.log(chalk.blue('Starting server with:'));
     console.log(chalk.blue(`Config: ${config}`));
     console.log(chalk.blue(`Port: ${port}`));
     console.log(chalk.blue(`Mode: ${mode}`));
+
+    await startServer({ config, port, mode });
   });
 
 program.parse();
