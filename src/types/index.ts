@@ -66,9 +66,3 @@ export interface AppConfig {
   database: DatabaseConfig;
   models: ModelConfig[];
 }
-
-declare module 'fastify' {
-  interface FastifyInstance {
-    db: DatabaseQuery;
-  }
-}
