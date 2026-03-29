@@ -2,10 +2,19 @@
 
 import chalk from 'chalk';
 import { Command } from 'commander';
+import * as fs from 'fs';
 
-import { CLIOptions } from './types';
+import { CLIOptions, AppConfig } from './types';
 import { validateConfigPath, validateMode, validatePort } from './validators';
 import { startServer } from './server';
+
+/**
+ * Load Config
+ */
+function loadConfig(configPath: string): AppConfig {
+  const raw = fs.readFileSync(configPath, 'utf-8');
+  return JSON.parse(raw);
+}
 
 /**
  * CLI Definition
@@ -27,7 +36,9 @@ program
     console.log(chalk.blue(`Port: ${port}`));
     console.log(chalk.blue(`Mode: ${mode}`));
 
-    await startServer({ config, port, mode });
+    const loadedConfig = loadConfig(config);
+
+    await startServer(loadedConfig, port, mode);
   });
 
 program.parse();

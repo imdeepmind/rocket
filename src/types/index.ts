@@ -12,3 +12,15 @@ export interface CLIOptions {
   port: number;
   mode: Mode;
 }
+
+export interface AppConfig {
+  swagger: {
+    enabled: boolean;
+    basePath: string;
+    info: {
+      title: string;
+      description: string;
+      version: string;
+    };
+  };
+}
