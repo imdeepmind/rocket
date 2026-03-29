@@ -17,5 +17,11 @@
                 "url": "https://opensource.org/licenses/MIT"
             }
         }
+    },
+    "database": {
+        "engine": "sqlite",
+        "connection": {
+            "urlOrPath": "./database.db"
+        }
     }
 }

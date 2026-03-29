@@ -33,7 +33,9 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.7.5",
+    "@types/pg": "^8.20.0",
     "gts": "^7.0.0",
     "husky": "^9.1.7",
     "pino-pretty": "^10.0.0",
@@ -42,8 +44,11 @@
   "dependencies": {
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
+    "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "commander": "^14.0.3",
-    "fastify": "^5.8.4"
+    "fastify": "^5.8.4",
+    "pg": "^8.20.0",
+    "sql-template-strings": "^2.2.2"
   }
 }
