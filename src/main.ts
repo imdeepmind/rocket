@@ -4,7 +4,8 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import * as fs from 'fs';
 
-import { CLIOptions, AppConfig } from './types';
+import { CLIOptions } from './types';
+import { AppConfig } from './schema/config';
 import { validateConfigPath, validateMode, validatePort } from './validators';
 import { startServer } from './server';
 

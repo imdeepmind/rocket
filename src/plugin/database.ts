@@ -2,7 +2,9 @@ import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { Pool } from 'pg';
 import Database from 'better-sqlite3';
-import { DatabaseConfig, DatabaseQuery } from '../types';
+
+import { DatabaseQuery } from '../types';
+import { DatabaseConfig } from '../schema/config';
 
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
   let db: DatabaseQuery;

@@ -1,4 +1,5 @@
-import { DatabaseQuery, ModelConfig, DBEngine } from '../types';
+import { DatabaseQuery } from '../types';
+import { ModelConfig, DBEngine } from '../schema/config';
 
 export async function createIndexes(
   db: DatabaseQuery,
