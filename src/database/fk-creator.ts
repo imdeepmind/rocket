@@ -1,3 +1,5 @@
+import SQL from 'sql-template-strings';
+
 import { DatabaseQuery } from '../types';
 import { ModelConfig, DBEngine } from '../schema/config';
 
@@ -29,13 +31,10 @@ export async function createForeignKeys(
         validateIdentifier(col, `reference column name in FK "${fk.name}"`);
       }
 
-      // Check if constraint already exists
       let fkExists = false;
       if (engine === 'pg') {
-        const res = await db.query<string, { exists: boolean }>(
-          "SELECT EXISTS (SELECT FROM information_schema.table_constraints WHERE constraint_name = $1 AND constraint_type = 'FOREIGN KEY')",
-          [fk.name]
-        );
+        const query = SQL`SELECT EXISTS (SELECT FROM information_schema.table_constraints WHERE constraint_name = ${fk.name} AND constraint_type = 'FOREIGN KEY')`;
+        const res = await db.query<string, { exists: boolean }>(query.sql, query.values);
         fkExists = res[0].exists;
       } else {
         // SQLite doesn't support ALTER TABLE ADD CONSTRAINT for FKs.
@@ -54,21 +53,25 @@ export async function createForeignKeys(
       const columnList = fk.columns.map((c) => `"${c}"`).join(', ');
       const refColumnList = fk.referenceColumns.map((c) => `"${c}"`).join(', ');
 
-      let sql = `ALTER TABLE "${model.name}" ADD CONSTRAINT "${fk.name}" FOREIGN KEY (${columnList}) REFERENCES "${fk.referenceTable}" (${refColumnList})`;
+      const statement = SQL`ALTER TABLE `
+        .append(`"${model.name}"`)
+        .append(` ADD CONSTRAINT "${fk.name}" FOREIGN KEY (${columnList}) REFERENCES `)
+        .append(`"${fk.referenceTable}"`)
+        .append(` (${refColumnList})`);
 
       if (fk.onDelete) {
-        sql += ` ON DELETE ${fk.onDelete}`;
+        statement.append(` ON DELETE ${fk.onDelete}`);
       }
       if (fk.onUpdate) {
-        sql += ` ON UPDATE ${fk.onUpdate}`;
+        statement.append(` ON UPDATE ${fk.onUpdate}`);
       }
 
-      sql += ';';
+      statement.append(';');
 
       logger.info(
         `Creating foreign key "${fk.name}" on "${model.name}" referencing "${fk.referenceTable}" (${fk.referenceColumns.join(', ')})...`
       );
-      await db.query(sql);
+      await db.query(statement.sql, statement.values);
       logger.info(`Foreign key "${fk.name}" created successfully.`);
     }
   }
