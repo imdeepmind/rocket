@@ -45,7 +45,10 @@ async function registerRoutes(app: FastifyInstance) {
       },
     },
     async () => {
-      return { message: 'Hello World' };
+      const result = await app.db.query<{ answer: number }, { answer: number }>(
+        'SELECT 1+1 as answer;'
+      );
+      return { message: `1+1=${result[0].answer}` };
     }
   );
 }

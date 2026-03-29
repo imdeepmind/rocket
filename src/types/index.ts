@@ -47,7 +47,7 @@ export interface AppConfig {
 }
 
 export interface DatabaseQuery {
-  query: (sql: string, params?: unknown[]) => Promise<unknown[]>;
+  query<T, Q>(sql: string, params?: T[]): Promise<Q[]>;
   close: () => Promise<void>;
 }
 
