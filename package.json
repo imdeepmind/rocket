@@ -1,0 +1,41 @@
+{
+  "name": "rocket",
+  "version": "1.0.0",
+  "description": "Some API related experiment",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:check": "gts lint",
+    "lint:write": "gts fix",
+    "clean": "gts clean",
+    "compile": "tsc",
+    "dev": "tsc && node ./build/src/main.js",
+    "prepare": "husky",
+    "pretest": "npm run compile",
+    "posttest": "npm run lint:check",
+    "commitlint": "commitlint --edit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imdeepmind/rocket.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/imdeepmind/rocket/issues"
+  },
+  "homepage": "https://github.com/imdeepmind/rocket#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
+    "@types/node": "^22.7.5",
+    "gts": "^7.0.0",
+    "husky": "^9.1.7",
+    "typescript": "^5.6.3"
+  }
+}
