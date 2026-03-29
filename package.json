@@ -13,9 +13,10 @@
     "clean": "gts clean",
     "compile": "tsc",
     "dev": "tsc && node ./build/src/main.js",
-    "prepare": "npm run compile",
+    "prepare": "husky",
     "pretest": "npm run compile",
-    "posttest": "npm run lint:check"
+    "posttest": "npm run lint:check",
+    "commitlint": "commitlint --edit"
   },
   "repository": {
     "type": "git",
@@ -30,8 +31,11 @@
   },
   "homepage": "https://github.com/imdeepmind/rocket#readme",
   "devDependencies": {
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
+    "@types/node": "^22.7.5",
     "gts": "^7.0.0",
-    "typescript": "^5.6.3",
-    "@types/node": "^22.7.5"
+    "husky": "^9.1.7",
+    "typescript": "^5.6.3"
   }
 }
