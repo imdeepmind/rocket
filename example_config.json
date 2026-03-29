@@ -49,6 +49,18 @@
                     "type": "boolean",
                     "default": true
                 }
+            ],
+            "indexes": [
+                {
+                    "name": "users_email_idx",
+                    "columns": ["email"],
+                    "unique": true
+                },
+                {
+                    "name": "users_name_is_active_idx",
+                    "columns": ["name", "is_active"],
+                    "unique": false
+                }
             ]
         }
     ]

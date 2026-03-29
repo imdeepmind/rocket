@@ -56,9 +56,16 @@ export interface ModelField {
   default?: unknown;
 }
 
+export interface ModelIndex {
+  name: string;
+  columns: string[];
+  unique?: boolean;
+}
+
 export interface ModelConfig {
   name: string;
   fields: ModelField[];
+  indexes?: ModelIndex[];
 }
 
 export interface AppConfig {
