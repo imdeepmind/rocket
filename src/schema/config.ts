@@ -13,6 +13,7 @@ export type SupportedOperations =
   | 'equal'
   | 'oneOf';
 export type SupportedAggregationOperation = 'mean' | 'max' | 'min' | 'count' | 'sum' | 'frequency';
+export type ModelBody = Record<string, string | number | boolean | null | undefined>;
 
 export interface SwaggerConfig {
   enabled: boolean;

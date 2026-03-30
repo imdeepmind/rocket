@@ -15,8 +15,23 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     });
 
     db = {
-      query: async <T, Q>(sql: string, params?: T[]) => {
-        const res = await pool.query(sql, params);
+      query: async <T, Q>(
+        sql: string | { sql: string; text: string; values: T[] },
+        params?: T[]
+      ) => {
+        let sqlStr: string;
+        let p: T[] | undefined;
+
+        if (typeof sql === 'object') {
+          sqlStr = sql.text; // PG uses .text which has $1, $2 symbols
+          p = sql.values;
+        } else {
+          sqlStr = sql;
+          p = params;
+        }
+
+        const res = await pool.query(sqlStr, p);
+        console.log({ res });
         return res.rows as Q[];
       },
       close: async () => pool.end(),
@@ -25,14 +40,28 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     const sqlite = new Database(opts.connection.urlOrPath || './database.db');
 
     db = {
-      query: async <T, Q>(sql: string, params?: T[]) => {
-        const stmt = sqlite.prepare(sql);
+      query: async <T, Q>(
+        sql: string | { sql: string; text: string; values: T[] },
+        params?: T[]
+      ) => {
+        let sqlStr: string;
+        let p: T[] | undefined;
 
-        if (sql.trim().toLowerCase().startsWith('select')) {
-          return stmt.all(params || []) as Q[];
+        if (typeof sql === 'object') {
+          sqlStr = sql.sql; // SQLite uses .sql which has ? symbols
+          p = sql.values;
+        } else {
+          sqlStr = sql;
+          p = params;
         }
 
-        const res = stmt.run(params || []);
+        const stmt = sqlite.prepare(sqlStr);
+
+        if (sqlStr.trim().toLowerCase().startsWith('select')) {
+          return stmt.all(p || []) as Q[];
+        }
+
+        const res = stmt.run(p || []);
         return [res as unknown] as Q[];
       },
       close: async () => {
