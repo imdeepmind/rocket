@@ -2,7 +2,6 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { ModelBody, ModelConfig } from '../schema/config';
 import { mapDataTypeToJsonSchema, helloWorldResponseSchema } from './schema-helpers';
-import SQL from 'sql-template-strings';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -50,20 +49,9 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
 
         // Identifiers (table/column names) cannot be parameterized.
         const columns = keys.map((key) => `"${key}"`).join(', ');
-        const query = SQL`INSERT INTO `.append(`"${tableName}"`).append(` (${columns}) VALUES (`);
-
-        // Values are appended as parameters
-        values.forEach((value, index) => {
-          query.append(SQL`${value}`);
-          if (index < values.length - 1) {
-            query.append(', ');
-          }
-        });
-
-        query.append(');');
-
-        console.log(query.sql, query.values);
-        const res = await app.db.query(query);
+        const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+        const query = `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders});`;
+        const res = await app.db.query(query, values);
 
         console.log({ res });
         return { message: 'hello world' };

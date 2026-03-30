@@ -1,5 +1,3 @@
-import SQL from 'sql-template-strings';
-
 import { DatabaseQuery } from '../types';
 import { ModelConfig, DBEngine } from '../schema/config';
 
@@ -24,13 +22,13 @@ export async function createTables(
     // Check if table exists
     let tableExists = false;
     if (engine === 'pg') {
-      const res = await db.query<string, { exists: boolean }>(
+      const res = await db.query<{ exists: boolean }>(
         "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
         [model.name]
       );
       tableExists = res[0].exists;
     } else {
-      const res = await db.query<string, { count: number }>(
+      const res = await db.query<{ count: number }>(
         "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=$1",
         [model.name]
       );
@@ -44,7 +42,6 @@ export async function createTables(
 
     logger.info(`Creating table "${model.name}"...`);
 
-    const statement = SQL`CREATE TABLE `.append(`"${model.name}"`).append(' (\n  ');
     const columnDefs: string[] = [];
 
     for (const field of model.fields) {
@@ -98,11 +95,8 @@ export async function createTables(
       columnDefs.push(def);
     }
 
-    statement.append(columnDefs.join(',\n  '));
-    statement.append('\n);');
-
-    // Using sql-template-strings output
-    await db.query(statement.sql, statement.values);
+    const statement = `CREATE TABLE "${model.name}" (\n  ${columnDefs.join(',\n  ')}\n);`;
+    await db.query(statement);
     logger.info(`Table "${model.name}" created successfully.`);
   }
 }

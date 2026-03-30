@@ -14,9 +14,6 @@ export interface CLIOptions {
 }
 
 export interface DatabaseQuery {
-  query<T, Q>(
-    sql: string | { sql: string; text: string; values: unknown[] },
-    params?: T[]
-  ): Promise<Q[]>;
+  query<Q>(sql: string, params?: unknown[]): Promise<Q[]>;
   close: () => Promise<void>;
 }

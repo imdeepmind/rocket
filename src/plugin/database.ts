@@ -6,6 +6,10 @@ import Database from 'better-sqlite3';
 import { DatabaseQuery } from '../types';
 import { DatabaseConfig } from '../schema/config';
 
+function normalizeSqliteParams(sql: string): string {
+  return sql.replace(/\$(\d+)/g, '?');
+}
+
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
   let db: DatabaseQuery;
 
@@ -15,22 +19,8 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     });
 
     db = {
-      query: async <T, Q>(
-        sql: string | { sql: string; text: string; values: T[] },
-        params?: T[]
-      ) => {
-        let sqlStr: string;
-        let p: T[] | undefined;
-
-        if (typeof sql === 'object') {
-          sqlStr = sql.text; // PG uses .text which has $1, $2 symbols
-          p = sql.values;
-        } else {
-          sqlStr = sql;
-          p = params;
-        }
-
-        const res = await pool.query(sqlStr, p);
+      query: async <Q>(sql: string, params?: unknown[]) => {
+        const res = await pool.query(sql, params);
         console.log({ res });
         return res.rows as Q[];
       },
@@ -40,28 +30,16 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     const sqlite = new Database(opts.connection.urlOrPath || './database.db');
 
     db = {
-      query: async <T, Q>(
-        sql: string | { sql: string; text: string; values: T[] },
-        params?: T[]
-      ) => {
-        let sqlStr: string;
-        let p: T[] | undefined;
+      query: async <Q>(sql: string, params?: unknown[]) => {
+        const normalizedSql = normalizeSqliteParams(sql);
+        const stmt = sqlite.prepare(normalizedSql);
+        const queryParams = params ?? [];
 
-        if (typeof sql === 'object') {
-          sqlStr = sql.sql; // SQLite uses .sql which has ? symbols
-          p = sql.values;
-        } else {
-          sqlStr = sql;
-          p = params;
+        if (normalizedSql.trim().toLowerCase().startsWith('select')) {
+          return stmt.all(queryParams) as Q[];
         }
 
-        const stmt = sqlite.prepare(sqlStr);
-
-        if (sqlStr.trim().toLowerCase().startsWith('select')) {
-          return stmt.all(p || []) as Q[];
-        }
-
-        const res = stmt.run(p || []);
+        const res = stmt.run(queryParams);
         return [res as unknown] as Q[];
       },
       close: async () => {
