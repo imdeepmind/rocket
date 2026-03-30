@@ -71,7 +71,12 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   // Global error handler
   app.setErrorHandler((err: FastifyError, req: FastifyRequest, reply: FastifyReply) => {
     req.log.error(err);
-    reply.status(500).send({ error: err.message });
+    const statusCode = err.statusCode || 500;
+    reply.status(statusCode).send({
+      error: err.name,
+      message: err.message,
+      ...(err.validation ? { validation: err.validation } : {}),
+    });
   });
 
   try {
