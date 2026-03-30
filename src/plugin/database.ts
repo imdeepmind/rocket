@@ -10,6 +10,24 @@ function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');
 }
 
+function normalizeSqliteValue(value: unknown): unknown {
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+  if (value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return value;
+}
+
+function isSelectQuery(sql: string): boolean {
+  const lowered = sql.trim().toLowerCase();
+  return lowered.startsWith('select') || lowered.startsWith('with');
+}
+
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
   let db: DatabaseQuery;
 
@@ -20,9 +38,22 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {
-        const res = await pool.query(sql, params);
-        console.log({ res });
-        return res.rows as Q[];
+        const queryParams = params ?? [];
+        const select = isSelectQuery(sql);
+
+        if (select) {
+          const res = await pool.query(sql, queryParams);
+          return {
+            changes: 0,
+            rows: res.rows as Q[],
+          };
+        }
+
+        const res = await pool.query(sql, queryParams);
+        return {
+          changes: res.rowCount ?? 0,
+          rows: [] as Q[],
+        };
       },
       close: async () => pool.end(),
     };
@@ -33,14 +64,20 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       query: async <Q>(sql: string, params?: unknown[]) => {
         const normalizedSql = normalizeSqliteParams(sql);
         const stmt = sqlite.prepare(normalizedSql);
-        const queryParams = params ?? [];
+        const queryParams = (params ?? []).map(normalizeSqliteValue);
 
-        if (normalizedSql.trim().toLowerCase().startsWith('select')) {
-          return stmt.all(queryParams) as Q[];
+        if (isSelectQuery(normalizedSql)) {
+          return {
+            changes: 0,
+            rows: stmt.all(queryParams) as Q[],
+          };
         }
 
         const res = stmt.run(queryParams);
-        return [res as unknown] as Q[];
+        return {
+          changes: res.changes ?? 0,
+          rows: [] as Q[],
+        };
       },
       close: async () => {
         sqlite.close();

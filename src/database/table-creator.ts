@@ -26,13 +26,13 @@ export async function createTables(
         "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
         [model.name]
       );
-      tableExists = res[0].exists;
+      tableExists = res.rows[0].exists;
     } else {
       const res = await db.query<{ count: number }>(
         "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=$1",
         [model.name]
       );
-      tableExists = res[0].count > 0;
+      tableExists = res.rows[0].count > 0;
     }
 
     if (tableExists) {

@@ -51,9 +51,11 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
         const columns = keys.map((key) => `"${key}"`).join(', ');
         const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
         const query = `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders});`;
-        const res = await app.db.query(query, values);
 
-        console.log({ res });
+        const res = await app.db.query(query, values);
+        const res2 = await app.db.query('SELECT * FROM "users";');
+
+        console.log({ res, res2 });
         return { message: 'hello world' };
       }
     );

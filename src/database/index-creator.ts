@@ -29,11 +29,11 @@ export async function createIndexes(
         const query =
           "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = $1)";
         const res = await db.query<{ exists: boolean }>(query, [index.name]);
-        indexExists = res[0].exists;
+        indexExists = res.rows[0].exists;
       } else {
         const query = "SELECT count(*) as count FROM sqlite_master WHERE type='index' AND name=$1";
         const res = await db.query<{ count: number }>(query, [index.name]);
-        indexExists = res[0].count > 0;
+        indexExists = res.rows[0].count > 0;
       }
 
       if (indexExists) {
