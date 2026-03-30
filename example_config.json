@@ -69,6 +69,15 @@
         },
         {
             "name": "posts",
+            "validation": {
+                "type": "object",
+                "required": ["title", "user_id"],
+                "properties": {
+                    "title": { "type": "string", "minLength": 5 },
+                    "body": { "type": "string" },
+                    "user_id": { "type": "integer", "minimum": 1 }
+                }
+            },
             "fields": [
                 {
                     "name": "id",

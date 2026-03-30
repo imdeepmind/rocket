@@ -72,6 +72,7 @@ export interface ModelConfig {
   fields: ModelFieldConfig[];
   indexes?: ModelIndexConfig[];
   foreignKeys?: ModelForeignKeyConfig[];
+  validation?: Record<string, unknown>;
 }
 
 export interface AppConfig {

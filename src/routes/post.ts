@@ -29,7 +29,7 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
         schema: {
           description: `Create a new ${model.name} record`,
           tags: [model.name],
-          body: {
+          body: model.validation || {
             type: 'object',
             properties: bodyProperties,
           },
