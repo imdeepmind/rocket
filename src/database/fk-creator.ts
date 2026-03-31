@@ -1,5 +1,3 @@
-import SQL from 'sql-template-strings';
-
 import { DatabaseQuery } from '../types';
 import { ModelConfig, DBEngine } from '../schema/config';
 
@@ -35,8 +33,8 @@ export async function createForeignKeys(
       if (engine === 'pg') {
         const query =
           "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = $1 AND constraint_type = 'FOREIGN KEY')";
-        const res = await db.query<string, { exists: boolean }>(query, [fk.name]);
-        fkExists = res[0].exists;
+        const res = await db.query<{ exists: boolean }>(query, [fk.name]);
+        fkExists = res.rows[0].exists;
       } else {
         // SQLite doesn't support ALTER TABLE ADD CONSTRAINT for FKs.
         // FKs must be defined at table creation time in SQLite.
@@ -54,25 +52,14 @@ export async function createForeignKeys(
       const columnList = fk.columns.map((c) => `"${c}"`).join(', ');
       const refColumnList = fk.referenceColumns.map((c) => `"${c}"`).join(', ');
 
-      const statement = SQL`ALTER TABLE `
-        .append(`"${model.name}"`)
-        .append(` ADD CONSTRAINT "${fk.name}" FOREIGN KEY (${columnList}) REFERENCES `)
-        .append(`"${fk.referenceTable}"`)
-        .append(` (${refColumnList})`);
-
-      if (fk.onDelete) {
-        statement.append(` ON DELETE ${fk.onDelete}`);
-      }
-      if (fk.onUpdate) {
-        statement.append(` ON UPDATE ${fk.onUpdate}`);
-      }
-
-      statement.append(';');
+      const onDeleteClause = fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '';
+      const onUpdateClause = fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '';
+      const statement = `ALTER TABLE "${model.name}" ADD CONSTRAINT "${fk.name}" FOREIGN KEY (${columnList}) REFERENCES "${fk.referenceTable}" (${refColumnList})${onDeleteClause}${onUpdateClause};`;
 
       logger.info(
         `Creating foreign key "${fk.name}" on "${model.name}" referencing "${fk.referenceTable}" (${fk.referenceColumns.join(', ')})...`
       );
-      await db.query(statement.sql, statement.values);
+      await db.query(statement);
       logger.info(`Foreign key "${fk.name}" created successfully.`);
     }
   }

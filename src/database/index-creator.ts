@@ -1,5 +1,3 @@
-import SQL from 'sql-template-strings';
-
 import { DatabaseQuery } from '../types';
 import { ModelConfig, DBEngine } from '../schema/config';
 
@@ -23,28 +21,19 @@ export async function createIndexes(
       }
 
       const columnList = index.columns.map((c) => `"${c}"`).join(', ');
-      const statement = SQL`CREATE `;
-      if (index.unique) {
-        statement.append('UNIQUE ');
-      }
-      statement
-        .append('INDEX IF NOT EXISTS ')
-        .append(`"${index.name}"`)
-        .append(' ON ')
-        .append(`"${model.name}"`)
-        .append(` (${columnList});`);
+      const statement = `CREATE ${index.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS "${index.name}" ON "${model.name}" (${columnList});`;
 
       // Check if index already exists
       let indexExists = false;
       if (engine === 'pg') {
         const query =
           "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = $1)";
-        const res = await db.query<string, { exists: boolean }>(query, [index.name]);
-        indexExists = res[0].exists;
+        const res = await db.query<{ exists: boolean }>(query, [index.name]);
+        indexExists = res.rows[0].exists;
       } else {
         const query = "SELECT count(*) as count FROM sqlite_master WHERE type='index' AND name=$1";
-        const res = await db.query<string, { count: number }>(query, [index.name]);
-        indexExists = res[0].count > 0;
+        const res = await db.query<{ count: number }>(query, [index.name]);
+        indexExists = res.rows[0].count > 0;
       }
 
       if (indexExists) {
@@ -55,7 +44,7 @@ export async function createIndexes(
       logger.info(
         `Creating ${index.unique ? 'unique ' : ''}index "${index.name}" on table "${model.name}" (${index.columns.join(', ')})...`
       );
-      await db.query(statement.sql, statement.values);
+      await db.query(statement);
       logger.info(`Index "${index.name}" created successfully.`);
     }
   }

@@ -14,6 +14,13 @@ export interface CLIOptions {
 }
 
 export interface DatabaseQuery {
-  query<T, Q>(sql: string, params?: T[]): Promise<Q[]>;
+  query<Q>(sql: string, params?: unknown[]): Promise<{ changes: number; rows: Q[] }>;
   close: () => Promise<void>;
+}
+
+export interface StructuredResponse<T = unknown, R = unknown> {
+  code: number;
+  message: string;
+  data: T;
+  raw_data?: R;
 }

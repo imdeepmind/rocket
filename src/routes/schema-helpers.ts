@@ -1,4 +1,4 @@
-import { DataType, ModelFieldConfig } from '../schema/config';
+import { DataType, ModelFieldConfig, ModelBody, ModelConfig } from '../schema/config';
 
 /**
  * Map config DataType to JSON Schema type definition for Swagger.
@@ -123,4 +123,87 @@ export const helloWorldResponseSchema = {
       message: { type: 'string' },
     },
   },
+};
+
+/**
+ * Build (or reuse) the JSON schema for a POST body based on the model.
+ *
+ * Rules for generated schema:
+ * - Every field is included in `properties`.
+ * - `required` includes fields that are NOT marked `nullable` and have NO `default`.
+ * - If `model.validation` is provided, it is used verbatim.
+ */
+export function buildPostBodyValidationSchema(model: ModelConfig): Record<string, unknown> {
+  if (model.validation) return model.validation;
+
+  const bodyProperties: Record<string, object> = {};
+  for (const field of model.fields) {
+    bodyProperties[field.name] = {
+      ...mapDataTypeToJsonSchema(field.type),
+      description: `Value for ${field.name}`,
+    };
+  }
+
+  const required = model.fields
+    .filter((field) => field.nullable !== true && field.default === undefined)
+    .map((field) => field.name);
+
+  return {
+    type: 'object',
+    properties: bodyProperties,
+    ...(required.length > 0 ? { required } : {}),
+  };
+}
+
+/**
+ * Strip any fields from the request body that are not present in the model.
+ */
+export function stripAdditionalPostFields(model: ModelConfig, body: ModelBody): ModelBody {
+  const allowed = new Set(model.fields.map((field) => field.name));
+  const filtered: ModelBody = {};
+
+  for (const [key, value] of Object.entries(body)) {
+    if (allowed.has(key)) {
+      filtered[key] = value;
+    }
+  }
+
+  return filtered;
+}
+
+export const getResponseStructureSchema = (
+  codes: number[],
+  dataSchema: Record<string, unknown>,
+  rowSchema?: Record<string, unknown>
+): Record<number, object> => {
+  const respSchema: Record<number, object> = {};
+
+  for (const code of codes) {
+    switch (code) {
+      case 201:
+        respSchema[code] = {
+          type: 'object',
+          properties: {
+            code: { type: 'integer' },
+            message: { type: 'string' },
+            data: dataSchema,
+            raw_data: {
+              type: 'object',
+              properties: {
+                changes: { type: 'integer' },
+                rows: {
+                  type: 'array',
+                  items: rowSchema || { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        };
+        break;
+      default:
+        break;
+    }
+  }
+
+  return respSchema;
 };
