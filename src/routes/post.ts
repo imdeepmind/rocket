@@ -1,7 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { ModelBody, ModelConfig } from '../schema/config';
-import { mapDataTypeToJsonSchema, getResponseStructureSchema } from './schema-helpers';
+import {
+  buildPostBodyValidationSchema,
+  stripAdditionalPostFields,
+  getResponseStructureSchema,
+} from './schema-helpers';
 import { capitalizeFirstLetter } from '../utils/string';
 
 /**
@@ -14,20 +18,7 @@ import { capitalizeFirstLetter } from '../utils/string';
  */
 export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]): void {
   for (const model of models) {
-    if (model.fields.length === 0) continue;
-
-    const bodyProperties: Record<string, object> = {};
-    for (const field of model.fields) {
-      bodyProperties[field.name] = {
-        ...mapDataTypeToJsonSchema(field.type),
-        description: `Value for ${field.name}`,
-      };
-    }
-
-    const bodySchema = model.validation || {
-      type: 'object',
-      properties: bodyProperties,
-    };
+    const bodySchema = buildPostBodyValidationSchema(model);
 
     app.post(
       `/${model.name}/`,
@@ -42,8 +33,8 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
       },
       async (request: FastifyRequest<{ Body: ModelBody }>, reply: FastifyReply) => {
         const tableName = request.url.split('/')[1];
-        const body = request.body;
-
+        const incomingBody = request.body;
+        const body = stripAdditionalPostFields(model, incomingBody);
         const keys = Object.keys(body);
         const values = Object.values(body);
 
