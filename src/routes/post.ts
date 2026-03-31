@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { ModelBody, ModelConfig } from '../schema/config';
-import { mapDataTypeToJsonSchema, helloWorldResponseSchema } from './schema-helpers';
+import { mapDataTypeToJsonSchema, getResponseStructureSchema } from './schema-helpers';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -23,17 +23,19 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
       };
     }
 
+    const bodySchema = model.validation || {
+      type: 'object',
+      properties: bodyProperties,
+    };
+
     app.post(
       `/${model.name}/`,
       {
         schema: {
           description: `Create a new ${model.name} record`,
           tags: [model.name],
-          body: model.validation || {
-            type: 'object',
-            properties: bodyProperties,
-          },
-          response: helloWorldResponseSchema,
+          body: bodySchema,
+          response: getResponseStructureSchema([201], bodySchema),
         },
       },
       async (request: FastifyRequest<{ Body: ModelBody }>, reply: FastifyReply) => {
@@ -44,7 +46,7 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
         const values = Object.values(body);
 
         if (keys.length === 0) {
-          return reply.status(400).send({ error: 'Body cannot be empty' });
+          return reply.status(400).send(app.buildResponse(400, 'Body cannot be empty', body, null));
         }
 
         // Identifiers (table/column names) cannot be parameterized.
@@ -53,10 +55,19 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
         const query = `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders});`;
 
         const res = await app.db.query(query, values);
-        const res2 = await app.db.query('SELECT * FROM "users";');
 
-        console.log({ res, res2 });
-        return { message: 'hello world' };
+        console.log({ body, res });
+
+        return reply
+          .status(201)
+          .send(
+            app.buildResponse(
+              201,
+              `Successfully added the new entry to the ${tableName} table`,
+              body,
+              res
+            )
+          );
       }
     );
   }

@@ -124,3 +124,40 @@ export const helloWorldResponseSchema = {
     },
   },
 };
+
+export const getResponseStructureSchema = (
+  codes: number[],
+  dataSchema: Record<string, unknown>,
+  rowSchema?: Record<string, unknown>
+): Record<number, object> => {
+  const respSchema: Record<number, object> = {};
+
+  for (const code of codes) {
+    switch (code) {
+      case 201:
+        respSchema[code] = {
+          type: 'object',
+          properties: {
+            code: { type: 'integer' },
+            message: { type: 'string' },
+            data: dataSchema,
+            raw_data: {
+              type: 'object',
+              properties: {
+                changes: { type: 'integer' },
+                rows: {
+                  type: 'array',
+                  items: rowSchema || { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        };
+        break;
+      default:
+        break;
+    }
+  }
+
+  return respSchema;
+};

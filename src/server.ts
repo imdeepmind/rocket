@@ -6,6 +6,7 @@ import swaggerUI from '@fastify/swagger-ui';
 import { Mode } from './types';
 import { AppConfig, SwaggerConfig } from './schema/config';
 import dbPlugin from './plugin/database';
+import responsePlugin from './plugin/response';
 import { createTables } from './database/table-creator';
 import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
@@ -52,6 +53,7 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
     engine: config.database.engine,
     connection: config.database.connection,
   });
+  await app.register(responsePlugin);
 
   // Auto-generate tables, indexes, and foreign keys if models are provided
   if (config.models && config.models.length > 0) {

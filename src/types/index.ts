@@ -17,3 +17,10 @@ export interface DatabaseQuery {
   query<Q>(sql: string, params?: unknown[]): Promise<{ changes: number; rows: Q[] }>;
   close: () => Promise<void>;
 }
+
+export interface StructuredResponse<T = unknown, R = unknown> {
+  code: number;
+  message: string;
+  data: T;
+  raw_data?: R;
+}
