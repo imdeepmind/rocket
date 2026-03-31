@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { ModelBody, ModelConfig } from '../schema/config';
 import { mapDataTypeToJsonSchema, getResponseStructureSchema } from './schema-helpers';
+import { capitalizeFirstLetter } from '../utils/string';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -32,8 +33,9 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
       `/${model.name}/`,
       {
         schema: {
-          description: `Create a new ${model.name} record`,
-          tags: [model.name],
+          summary: `Create a new ${capitalizeFirstLetter(model.name)} record`,
+          description: `Create a new ${capitalizeFirstLetter(model.name)} record in the database`,
+          tags: [capitalizeFirstLetter(model.name), 'Insert'],
           body: bodySchema,
           response: getResponseStructureSchema([201], bodySchema),
         },
