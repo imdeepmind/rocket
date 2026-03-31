@@ -45,18 +45,11 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
         const keys = Object.keys(body);
         const values = Object.values(body);
 
-        if (keys.length === 0) {
-          return reply.status(400).send(app.buildResponse(400, 'Body cannot be empty', body, null));
-        }
-
-        // Identifiers (table/column names) cannot be parameterized.
         const columns = keys.map((key) => `"${key}"`).join(', ');
         const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
         const query = `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders});`;
 
         const res = await app.db.query(query, values);
-
-        console.log({ body, res });
 
         return reply
           .status(201)
