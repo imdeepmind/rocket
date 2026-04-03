@@ -1,6 +1,11 @@
 import chalk from 'chalk';
 import { AppConfig } from '../schema/config';
 
+export interface RouteInfo {
+  method: string;
+  url: string;
+}
+
 const ROCKET_ASCII = `
                                                                      
                                                                      
@@ -9,9 +14,9 @@ const ROCKET_ASCII = `
                                            ;rLQQQQQQQQQQQQLCLQQQc    
                                         fJQQQQQQQQJuTi      UQQQn    
                                      TCQQQQQQQn:           .QQQQf    
-                                  ,YQQQQQQY;               ;QQQQ,    
-                                ICQQQQQz;                  rQQQX     
-                              iCQQQQLT                    ,LQQQf     
+                                   ,YQQQQQQY;               ;QQQQ,    
+                                 ICQQQQQz;                  rQQQX     
+                               iCQQQQLT                    ,LQQQf     
                             .CQQQQQi                      rQQQC      
                            fQQQQL!    ,YQQQQQQCl         iQQQQ!      
                 ixYQQQQQQQQQQQQn     fQQQQQQQQQQz        UQQQz       
@@ -42,17 +47,17 @@ const ROCKET_ASCII = `
                                                    
 `;
 
-export function showWelcomeScreen(config: AppConfig, port: number) {
+export function showWelcomeScreen(config: AppConfig, port: number, routes: RouteInfo[]) {
   // Clear console for a fresh look
   process.stdout.write('\x1Bc');
 
-  // Colorize the rocket
+  // Colorize the rocket (using some gradients or alternating colors based on characters)
   const coloredRocket = ROCKET_ASCII.split('\n')
     .map((line) => {
       return line
-        .replace(/[#*]/g, (m) => chalk.yellow(m))
-        .replace(/[-=:+]/g, (m) => chalk.red(m))
-        .replace(/[.]/g, (m) => chalk.gray(m));
+        .replace(/[QLUCJFTYXIF]+/g, (m) => chalk.blueBright(m))
+        .replace(/[nzvxticulr]+/g, (m) => chalk.cyan(m))
+        .replace(/[;:,!]+/g, (m) => chalk.gray(m));
     })
     .join('\n');
 
@@ -76,6 +81,35 @@ export function showWelcomeScreen(config: AppConfig, port: number) {
   );
   console.log('  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length));
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
+
+  // Log models detail
+  console.log('\n  ' + chalk.cyan('Models:'));
+  config.models.forEach((model) => {
+    console.log(
+      '  ' +
+        chalk.white('• ') +
+        chalk.yellow(model.name.padEnd(15)) +
+        chalk.gray(` (${model.fields.length} fields)`)
+    );
+  });
+
+  // Log all routes
+  console.log('\n  ' + chalk.cyan('Routes:'));
+  const sortedRoutes = [...routes].sort((a, b) => a.url.localeCompare(b.url));
+  sortedRoutes.forEach((route) => {
+    const methodColor =
+      {
+        GET: chalk.green,
+        POST: chalk.yellow,
+        PUT: chalk.blue,
+        PATCH: chalk.blue,
+        DELETE: chalk.red,
+      }[route.method] || chalk.white;
+
+    console.log('  ' + methodColor(route.method.padEnd(7)) + chalk.white(` ${route.url}`));
+  });
+
+  console.log('\n  ' + chalk.gray('─────────────────────────────────────────'));
   console.log('  ' + chalk.dim('Press Ctrl+C to stop the server'));
   console.log('\n');
 }

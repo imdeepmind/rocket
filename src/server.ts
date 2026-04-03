@@ -10,7 +10,7 @@ import { createTables } from './database/table-creator';
 import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
 import { registerModelRoutes } from './routes';
-import { showWelcomeScreen } from './utils/welcome';
+import { showWelcomeScreen, RouteInfo } from './utils/welcome';
 
 async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -33,6 +33,8 @@ async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstanc
 }
 
 export async function startServer(config: AppConfig, port: number, mode: Mode) {
+  const routes: RouteInfo[] = [];
+
   const app: FastifyInstance = Fastify({
     logger:
       mode === 'dev'
@@ -46,6 +48,16 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
             },
           }
         : true,
+  });
+
+  // Track each registered route
+  app.addHook('onRoute', (routeOptions) => {
+    routes.push({
+      method: Array.isArray(routeOptions.method)
+        ? routeOptions.method.join('/')
+        : routeOptions.method,
+      url: routeOptions.url,
+    });
   });
 
   // config-driven DB
@@ -107,8 +119,8 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   );
 
   try {
+    showWelcomeScreen(config, port, routes);
     await app.listen({ port, host: '0.0.0.0' });
-    showWelcomeScreen(config, port);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
