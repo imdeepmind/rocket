@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply, FastifyError } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
@@ -11,6 +10,7 @@ import { createTables } from './database/table-creator';
 import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
 import { registerModelRoutes } from './routes';
+import { showWelcomeScreen } from './utils/welcome';
 
 async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -108,7 +108,7 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
 
   try {
     await app.listen({ port, host: '0.0.0.0' });
-    console.log(chalk.blue(`Server running at http://0.0.0.0:${port}`));
+    showWelcomeScreen(config, port);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
