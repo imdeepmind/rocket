@@ -200,6 +200,12 @@ export const getResponseStructureSchema = (
           },
         };
         break;
+      case 204:
+        respSchema[code] = {
+          type: 'null',
+          description: 'Successfully deleted the entry',
+        };
+        break;
       default:
         break;
     }
