@@ -67,13 +67,53 @@ const swaggerSchema = {
   },
 };
 
+const databaseSchema = {
+  type: 'object',
+  oneOf: [
+    {
+      properties: {
+        engine: { type: 'string', const: 'sqlite' },
+        connection: {
+          type: 'object',
+          properties: {
+            urlOrPath: {
+              type: 'string',
+              pattern: '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
+            },
+          },
+          required: ['urlOrPath'],
+          additionalProperties: false,
+        },
+      },
+      required: ['engine', 'connection'],
+      additionalProperties: false,
+    },
+    {
+      properties: {
+        engine: { type: 'string', const: 'pg' },
+        connection: {
+          type: 'object',
+          properties: {
+            urlOrPath: { type: 'string', pattern: '^postgres(ql)?:\\/\\/' },
+          },
+          required: ['urlOrPath'],
+          additionalProperties: false,
+        },
+      },
+      required: ['engine', 'connection'],
+      additionalProperties: false,
+    },
+  ],
+};
+
 const schema = {
   type: 'object',
-  required: ['swagger'],
+  required: ['swagger', 'database'],
   additionalProperties: false,
 
   properties: {
     swagger: swaggerSchema,
+    database: databaseSchema,
   },
 };
 

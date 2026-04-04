@@ -35,7 +35,7 @@ async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstanc
 
 export async function startServer(config: AppConfig, port: number, mode: Mode) {
   // validate the schema
-  validateConfig(config);
+  config = validateConfig(config);
 
   const routes: RouteInfo[] = [];
 
