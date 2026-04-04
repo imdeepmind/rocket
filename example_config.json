@@ -39,13 +39,13 @@
                     "type": "string",
                     "unique": true,
                     "nullable": false,
-                    "supportedOperations": ["searchable", "equal", "sortable"]
+                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"]
                 },
                 {
                     "name": "name",
                     "type": "string",
                     "nullable": true,
-                    "supportedOperations": ["searchable", "sortable"]
+                    "supportedOperations": ["searchable", "sortable", "indexable"]
                 },
                 {
                     "name": "is_active",
