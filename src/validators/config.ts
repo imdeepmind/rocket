@@ -124,9 +124,35 @@ const fieldSchema = {
   },
 };
 
+const indexSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['name', 'columns'],
+  properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+    },
+    columns: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'string',
+        pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      },
+      uniqueItems: true,
+    },
+    unique: {
+      type: 'boolean',
+      default: false,
+    },
+  },
+};
+
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields'],
+  required: ['name', 'fields', 'indexes'],
   additionalProperties: false,
   properties: {
     name: {
@@ -138,6 +164,11 @@ const modelSchema = {
       type: 'array',
       minItems: 1,
       items: fieldSchema,
+    },
+    indexes: {
+      type: 'array',
+      items: indexSchema,
+      default: [],
     },
   },
 };
@@ -232,6 +263,39 @@ function validateFieldConstraints(config: AppConfig): string[] {
   return errors;
 }
 
+function validateIndexes(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  config.models.forEach((model, mi) => {
+    const path = `/models/${mi}`;
+
+    if (!model.indexes) return;
+
+    const indexNames = new Set<string>();
+    const fieldNames = new Set(model.fields.map((f) => f.name));
+
+    model.indexes.forEach((index, ii) => {
+      const indexPath = `${path}/indexes/${ii}`;
+
+      // 1. unique index name
+      if (indexNames.has(index.name)) {
+        errors.push(`${indexPath}: duplicate index name "${index.name}"`);
+      } else {
+        indexNames.add(index.name);
+      }
+
+      // 2. columns must exist
+      index.columns.forEach((col) => {
+        if (!fieldNames.has(col)) {
+          errors.push(`${indexPath}/columns: column "${col}" does not exist in fields`);
+        }
+      });
+    });
+  });
+
+  return errors;
+}
+
 const validateSchema = ajv.compile(schema);
 
 export function validateConfig(input: AppConfig) {
@@ -241,9 +305,9 @@ export function validateConfig(input: AppConfig) {
     ? []
     : (validateSchema.errors?.map((e) => `${e.instancePath} ${e.message}`) ?? []);
 
-  // Only run field constraint checks if AJV structural validation passed,
-  // otherwise the fields may not be fully formed yet.
-  const constraintErrors = valid ? validateFieldConstraints(input as AppConfig) : [];
+  const constraintErrors = valid
+    ? [...validateFieldConstraints(input as AppConfig), ...validateIndexes(input as AppConfig)]
+    : [];
 
   const allErrors = [...ajvErrors, ...constraintErrors];
 
