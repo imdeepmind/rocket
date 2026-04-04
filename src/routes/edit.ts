@@ -6,6 +6,7 @@ import {
   buildFilterQueryProperties,
   getResponseStructureSchema,
   stripAdditionalPostFields,
+  buildPostBodyValidationSchema,
 } from './schema-helpers';
 import { capitalizeFirstLetter } from '../utils/string';
 
@@ -69,10 +70,11 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
             properties: bodyProperties,
             required: method === 'PUT' ? allBodyFieldNames : [],
           },
-          response: getResponseStructureSchema([200], {
-            type: 'object',
-            additionalProperties: true,
-          }),
+          response: getResponseStructureSchema(
+            [200],
+            buildPostBodyValidationSchema(model),
+            buildPostBodyValidationSchema(model)
+          ),
         };
 
         if (Object.keys(queryProperties).length > 0) {

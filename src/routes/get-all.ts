@@ -6,6 +6,7 @@ import {
   buildSortQueryProperties,
   paginationQueryProperties,
   getResponseStructureSchema,
+  buildPostBodyValidationSchema,
 } from './schema-helpers';
 import { capitalizeFirstLetter } from '../utils/string';
 
@@ -49,22 +50,26 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
             type: 'object',
             properties: queryProperties,
           },
-          response: getResponseStructureSchema([200], {
-            type: 'object',
-            properties: {
-              data: {
-                type: 'array',
-                items: { type: 'object', additionalProperties: true },
-              },
-              pagination: {
-                type: 'object',
-                properties: {
-                  page: { type: 'integer' },
-                  limit: { type: 'integer' },
+          response: getResponseStructureSchema(
+            [200],
+            {
+              type: 'object',
+              properties: {
+                data: {
+                  type: 'array',
+                  items: buildPostBodyValidationSchema(model),
+                },
+                pagination: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer' },
+                    limit: { type: 'integer' },
+                  },
                 },
               },
             },
-          }),
+            buildPostBodyValidationSchema(model)
+          ),
         },
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
