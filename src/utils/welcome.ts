@@ -47,11 +47,44 @@ const ROCKET_ASCII = `
                                                    
 `;
 
+function getMethodColor(method: string) {
+  const colors: Record<string, chalk.Chalk> = {
+    GET: chalk.green,
+    POST: chalk.yellow,
+    PUT: chalk.blue,
+    PATCH: chalk.blueBright,
+    DELETE: chalk.red,
+    HEAD: chalk.magenta,
+    OPTIONS: chalk.cyan,
+  };
+
+  // Handle multi-methods like GET/HEAD
+  if (method.includes('/')) {
+    return method
+      .split('/')
+      .map((m) => {
+        const color = colors[m.toUpperCase()] || chalk.white;
+        return color(m);
+      })
+      .join(chalk.gray('/'));
+  }
+
+  return (colors[method.toUpperCase()] || chalk.white)(method);
+}
+
+const MODEL_COLORS = [
+  chalk.yellow,
+  chalk.magenta,
+  chalk.cyan,
+  chalk.blueBright,
+  chalk.greenBright,
+  chalk.redBright,
+];
+
 export function showWelcomeScreen(config: AppConfig, port: number, routes: RouteInfo[]) {
-  // Clear console for a fresh look
+  // Clear console
   process.stdout.write('\x1Bc');
 
-  // Colorize the rocket (using some gradients or alternating colors based on characters)
   const coloredRocket = ROCKET_ASCII.split('\n')
     .map((line) => {
       return line
@@ -82,31 +115,38 @@ export function showWelcomeScreen(config: AppConfig, port: number, routes: Route
   console.log('  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length));
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
 
-  // Log models detail
+  // Log models
   console.log('\n  ' + chalk.cyan('Models:'));
-  config.models.forEach((model) => {
+  config.models.forEach((model, index) => {
+    const color = MODEL_COLORS[index % MODEL_COLORS.length];
     console.log(
       '  ' +
         chalk.white('• ') +
-        chalk.yellow(model.name.padEnd(15)) +
+        color(model.name.padEnd(15)) +
         chalk.gray(` (${model.fields.length} fields)`)
     );
   });
 
-  // Log all routes
+  // Log routes
   console.log('\n  ' + chalk.cyan('Routes:'));
-  const sortedRoutes = [...routes].sort((a, b) => a.url.localeCompare(b.url));
-  sortedRoutes.forEach((route) => {
-    const methodColor =
-      {
-        GET: chalk.green,
-        POST: chalk.yellow,
-        PUT: chalk.blue,
-        PATCH: chalk.blue,
-        DELETE: chalk.red,
-      }[route.method] || chalk.white;
+  // Filter routes
+  const filteredRoutes = routes.filter((route) => {
+    const isHead = route.method.toUpperCase().split('/').includes('HEAD');
+    const isStatic = route.url.includes('/static');
+    return !isHead && !isStatic;
+  });
 
-    console.log('  ' + methodColor(route.method.padEnd(7)) + chalk.white(` ${route.url}`));
+  const sortedRoutes = [...filteredRoutes].sort((a, b) => a.url.localeCompare(b.url));
+
+  // Determine max method length for padding (ignoring color codes)
+  const maxMethodLength = Math.max(...filteredRoutes.map((r) => r.method.length), 7);
+
+  sortedRoutes.forEach((route) => {
+    const coloredMethod = getMethodColor(route.method);
+    // Calculate padding manually to account for colors in getMethodColor result
+    const padding = ' '.repeat(Math.max(0, maxMethodLength - route.method.length));
+
+    console.log('  ' + coloredMethod + padding + chalk.white(`  ${route.url}`));
   });
 
   console.log('\n  ' + chalk.gray('─────────────────────────────────────────'));

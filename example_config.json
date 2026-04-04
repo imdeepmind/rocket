@@ -19,9 +19,9 @@
         }
     },
     "database": {
-        "engine": "pg",
+        "engine": "sqlite",
         "connection": {
-            "urlOrPath": "postgres://devuser:devpassword@db:5432/rocketdb"
+            "urlOrPath": "./database.db"
         }
     },
     "models": [
