@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { AppConfig } from '../schema/config';
+import { AppConfig, JsonSchemaObject, JsonSchemaProperty } from '../schema/config';
 
 const ajv = new Ajv({
   allErrors: true,
@@ -213,6 +213,10 @@ const modelSchema = {
       items: foreignKeySchema,
       default: [],
     },
+    validation: {
+      type: 'object',
+      nullable: true,
+    },
   },
 };
 
@@ -399,6 +403,90 @@ function validateForeignKeys(config: AppConfig): string[] {
   return errors;
 }
 
+function mapModelTypeToJsonSchema(type: string): string {
+  switch (type) {
+    case 'integer':
+      return 'integer';
+    case 'string':
+    case 'text':
+      return 'string';
+    case 'boolean':
+      return 'boolean';
+    case 'datetime':
+      return 'string';
+    default:
+      return 'string';
+  }
+}
+
+export function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
+  const errors: string[] = [];
+
+  config.models.forEach((model, mi) => {
+    const validation = (model as { validation?: unknown }).validation;
+    if (!validation) return;
+
+    const path = `/models/${mi}/validation`;
+
+    // must be object
+    if (typeof validation !== 'object' || validation === null || Array.isArray(validation)) {
+      errors.push(`${path}: must be an object`);
+      return;
+    }
+
+    const schema = validation as JsonSchemaObject;
+
+    // validate JSON schema
+    const isValidSchema = ajv.validateSchema(schema);
+    if (!isValidSchema) {
+      const schemaErrors = ajv.errors?.map((e) => `${path}: ${e.instancePath} ${e.message}`) ?? [];
+      errors.push(...schemaErrors);
+    }
+
+    const fieldMap = new Map(model.fields.map((f) => [f.name, f.type]));
+
+    // properties validation
+    if (schema.properties && typeof schema.properties === 'object') {
+      Object.entries(schema.properties).forEach(([key, value]) => {
+        const propPath = `${path}/properties/${key}`;
+
+        if (!fieldMap.has(key)) {
+          errors.push(`${propPath}: field does not exist in model`);
+          return;
+        }
+
+        const modelType = fieldMap.get(key)!;
+        const expectedType = mapModelTypeToJsonSchema(modelType);
+
+        let schemaType: string | undefined;
+
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+          const v = value as JsonSchemaProperty;
+          schemaType = v.type;
+        }
+
+        if (schemaType && schemaType !== expectedType) {
+          errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+        }
+      });
+    }
+
+    // required validation
+    if (schema.required !== undefined) {
+      if (!Array.isArray(schema.required)) {
+        errors.push(`${path}/required: must be an array`);
+      } else {
+        schema.required.forEach((field, idx) => {
+          if (!fieldMap.has(field)) {
+            errors.push(`${path}/required/${idx}: field "${field}" does not exist in model`);
+          }
+        });
+      }
+    }
+  });
+
+  return errors;
+}
 const validateSchema = ajv.compile(schema);
 
 export function validateConfig(input: AppConfig) {
@@ -413,6 +501,7 @@ export function validateConfig(input: AppConfig) {
         ...validateFieldConstraints(input as AppConfig),
         ...validateIndexes(input as AppConfig),
         ...validateForeignKeys(input as AppConfig),
+        ...validateModelValidation(input as AppConfig, ajv),
       ]
     : [];
 
