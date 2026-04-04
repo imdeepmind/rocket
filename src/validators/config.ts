@@ -150,9 +150,47 @@ const indexSchema = {
   },
 };
 
+const foreignKeySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['name', 'columns', 'referenceTable', 'referenceColumns'],
+  properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+    },
+    columns: {
+      type: 'array',
+      minItems: 1,
+      items: { type: 'string' },
+      uniqueItems: true,
+    },
+    referenceTable: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+    },
+    referenceColumns: {
+      type: 'array',
+      minItems: 1,
+      items: { type: 'string' },
+      uniqueItems: true,
+    },
+    onDelete: {
+      type: 'string',
+      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+    },
+    onUpdate: {
+      type: 'string',
+      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+    },
+  },
+};
+
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields', 'indexes'],
+  required: ['name', 'fields', 'indexes', 'foreignKeys'],
   additionalProperties: false,
   properties: {
     name: {
@@ -168,6 +206,11 @@ const modelSchema = {
     indexes: {
       type: 'array',
       items: indexSchema,
+      default: [],
+    },
+    foreignKeys: {
+      type: 'array',
+      items: foreignKeySchema,
       default: [],
     },
   },
@@ -296,6 +339,66 @@ function validateIndexes(config: AppConfig): string[] {
   return errors;
 }
 
+function validateForeignKeys(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  // Map of all models for quick lookup
+  const modelMap = new Map<string, (typeof config.models)[0]>();
+  config.models.forEach((m) => modelMap.set(m.name, m));
+
+  config.models.forEach((model, mi) => {
+    const path = `/models/${mi}`;
+
+    if (!model.foreignKeys) return;
+
+    const fieldNames = new Set(model.fields.map((f) => f.name));
+    const fkNames = new Set<string>();
+
+    model.foreignKeys.forEach((fk, fi) => {
+      const fkPath = `${path}/foreignKeys/${fi}`;
+
+      // 1. unique FK name inside model
+      if (fkNames.has(fk.name)) {
+        errors.push(`${fkPath}: duplicate foreign key name "${fk.name}"`);
+      } else {
+        fkNames.add(fk.name);
+      }
+
+      // 2. local columns must exist
+      fk.columns.forEach((col) => {
+        if (!fieldNames.has(col)) {
+          errors.push(`${fkPath}/columns: column "${col}" does not exist in model "${model.name}"`);
+        }
+      });
+
+      // 3. reference table must exist
+      const refModel = modelMap.get(fk.referenceTable);
+      if (!refModel) {
+        errors.push(`${fkPath}: referenceTable "${fk.referenceTable}" does not exist`);
+        return;
+      }
+
+      const refFieldNames = new Set(refModel.fields.map((f) => f.name));
+
+      // 4. reference columns must exist
+      fk.referenceColumns.forEach((col) => {
+        if (!refFieldNames.has(col)) {
+          errors.push(
+            `${fkPath}/referenceColumns: column "${col}" does not exist in table "${fk.referenceTable}"`
+          );
+        }
+      });
+
+      // 5. column length match (VERY important)
+      if (fk.columns.length !== fk.referenceColumns.length) {
+        errors.push(`${fkPath}: columns and referenceColumns must have same length`);
+      }
+    });
+  });
+
+  return errors;
+}
+
 const validateSchema = ajv.compile(schema);
 
 export function validateConfig(input: AppConfig) {
@@ -306,7 +409,11 @@ export function validateConfig(input: AppConfig) {
     : (validateSchema.errors?.map((e) => `${e.instancePath} ${e.message}`) ?? []);
 
   const constraintErrors = valid
-    ? [...validateFieldConstraints(input as AppConfig), ...validateIndexes(input as AppConfig)]
+    ? [
+        ...validateFieldConstraints(input as AppConfig),
+        ...validateIndexes(input as AppConfig),
+        ...validateForeignKeys(input as AppConfig),
+      ]
     : [];
 
   const allErrors = [...ajvErrors, ...constraintErrors];
