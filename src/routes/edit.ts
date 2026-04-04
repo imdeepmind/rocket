@@ -51,6 +51,22 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
       }
 
       const buildRouteSchema = (method: 'PATCH' | 'PUT') => {
+        let finalBodySchema: Record<string, unknown>;
+
+        if (model.validation) {
+          finalBodySchema = { ...model.validation };
+          if (method === 'PATCH') {
+            // For PATCH, remove 'required' so partial updates are valid
+            delete finalBodySchema.required;
+          }
+        } else {
+          finalBodySchema = {
+            type: 'object',
+            properties: bodyProperties,
+            required: method === 'PUT' ? allBodyFieldNames : [],
+          };
+        }
+
         const schema: Record<string, unknown> = {
           summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
           description: `${method} update on records from the database by ${field.name}`,
@@ -65,11 +81,7 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
             },
             required: [field.name],
           },
-          body: {
-            type: 'object',
-            properties: bodyProperties,
-            required: method === 'PUT' ? allBodyFieldNames : [],
-          },
+          body: finalBodySchema,
           response: getResponseStructureSchema(
             [200],
             buildPostBodyValidationSchema(model),
