@@ -7,6 +7,7 @@ import {
   buildSortQueryProperties,
   paginationQueryProperties,
   getResponseStructureSchema,
+  buildPostBodyValidationSchema,
 } from './schema-helpers';
 import { capitalizeFirstLetter } from '../utils/string';
 
@@ -50,8 +51,8 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
 
       const responseSchemaProperties: Record<string, object> = {
         data: isUnique
-          ? { type: 'object', additionalProperties: true, nullable: true }
-          : { type: 'array', items: { type: 'object', additionalProperties: true } },
+          ? { ...buildPostBodyValidationSchema(model), nullable: true }
+          : { type: 'array', items: buildPostBodyValidationSchema(model) },
       };
 
       if (!isUnique) {
@@ -78,10 +79,14 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
           },
           required: [field.name],
         },
-        response: getResponseStructureSchema([200], {
-          type: 'object',
-          properties: responseSchemaProperties,
-        }),
+        response: getResponseStructureSchema(
+          [200],
+          {
+            type: 'object',
+            properties: responseSchemaProperties,
+          },
+          buildPostBodyValidationSchema(model)
+        ),
       };
 
       if (Object.keys(queryProperties).length > 0) {

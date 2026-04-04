@@ -28,7 +28,7 @@ export function registerPostRoutes(app: FastifyInstance, models: ModelConfig[]):
           description: `Create a new ${capitalizeFirstLetter(model.name)} record in the database`,
           tags: [capitalizeFirstLetter(model.name), 'Insert'],
           body: bodySchema,
-          response: getResponseStructureSchema([201], bodySchema),
+          response: getResponseStructureSchema([201], bodySchema, bodySchema),
         },
       },
       async (request: FastifyRequest<{ Body: ModelBody }>, reply: FastifyReply) => {
