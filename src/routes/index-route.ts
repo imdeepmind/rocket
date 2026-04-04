@@ -23,8 +23,7 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
   for (const model of models) {
     // Determine which fields need an index route
     const indexFields = model.fields.filter((f) => {
-      const isIndexed = model.indexes?.some((idx) => idx.columns.includes(f.name));
-      return f.primaryKey || f.unique || isIndexed;
+      return f.primaryKey || f.unique || f.supportedOperations?.includes('indexable');
     });
 
     for (const field of indexFields) {

@@ -11,7 +11,8 @@ export type SupportedOperations =
   | 'greaterThan'
   | 'greaterThanEqual'
   | 'equal'
-  | 'oneOf';
+  | 'oneOf'
+  | 'indexable';
 export type SupportedAggregationOperation = 'mean' | 'max' | 'min' | 'count' | 'sum' | 'frequency';
 export type ModelBody = Record<string, string | number | boolean | null | undefined>;
 
