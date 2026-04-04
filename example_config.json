@@ -10,7 +10,7 @@
             "contact": {
                 "name": "John Doe",
                 "url": "https://example.com",
-                "email": "[EMAIL_ADDRESS]"
+                "email": "email@email.com"
             },
             "license": {
                 "name": "MIT",

@@ -11,6 +11,7 @@ import { createIndexes } from './database/index-creator';
 import { createForeignKeys } from './database/fk-creator';
 import { registerModelRoutes } from './routes';
 import { showWelcomeScreen, RouteInfo } from './utils/welcome';
+import { validateConfig } from './validators/config';
 
 async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
   if (swaggerConfig.enabled) {
@@ -33,6 +34,9 @@ async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstanc
 }
 
 export async function startServer(config: AppConfig, port: number, mode: Mode) {
+  // validate the schema
+  validateConfig(config);
+
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
