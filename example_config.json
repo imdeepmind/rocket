@@ -39,7 +39,8 @@
                     "type": "string",
                     "unique": true,
                     "nullable": false,
-                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"]
+                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
+                    "supportedAggregation": ["count", "frequency"]
                 },
                 {
                     "name": "name",
