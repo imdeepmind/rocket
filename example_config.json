@@ -4,13 +4,13 @@
         "basePath": "/api/docs",
         "info": {
             "title": "Rocket OSS",
-            "description": "THis is the sample description",
+            "description": "This is the sample description",
             "version": "v1.5.0",
             "termsOfService": "https://example.com/terms",
             "contact": {
                 "name": "John Doe",
                 "url": "https://example.com",
-                "email": "[EMAIL_ADDRESS]"
+                "email": "email@email.com"
             },
             "license": {
                 "name": "MIT",
@@ -32,6 +32,8 @@
                     "name": "id",
                     "type": "integer",
                     "primaryKey": true,
+                    "unique": true,
+                    "nullable": false,
                     "supportedOperations": ["editable", "deletable", "greaterThanEqual"]
                 },
                 {
@@ -40,7 +42,7 @@
                     "unique": true,
                     "nullable": false,
                     "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
-                    "supportedAggregation": ["count", "frequency"]
+                    "supportedAggregation": ["count"]
                 },
                 {
                     "name": "name",
@@ -84,6 +86,8 @@
                     "name": "id",
                     "type": "integer",
                     "primaryKey": true,
+                    "unique": true,
+                    "nullable": false,
                     "supportedOperations": ["editable", "deletable"]
                 },
                 {
@@ -102,7 +106,7 @@
                     "type": "integer",
                     "nullable": false,
                     "supportedOperations": ["equal", "oneOf"],
-                    "supportedAggregation": ["count", "frequency"]
+                    "supportedAggregation": ["count"]
                 },
                 {
                     "name": "created_at",

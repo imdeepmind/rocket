@@ -15,6 +15,16 @@ export type SupportedOperations =
   | 'indexable';
 export type SupportedAggregationOperation = 'mean' | 'max' | 'min' | 'count' | 'sum' | 'frequency';
 export type ModelBody = Record<string, string | number | boolean | null | undefined>;
+export type JsonSchemaProperty = {
+  type?: string;
+  [key: string]: unknown;
+};
+
+export type JsonSchemaObject = {
+  properties?: Record<string, JsonSchemaProperty> | null;
+  required?: string[];
+  [key: string]: unknown;
+};
 
 export interface SwaggerConfig {
   enabled: boolean;
