@@ -19,57 +19,43 @@ const swaggerSchema = {
 
   properties: {
     enabled: { type: 'boolean' },
-
     basePath: {
       type: 'string',
       pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
-      // ensures:
-      // starts with /
-      // no spaces
-      // valid URL path segments
     },
-
     info: {
       type: 'object',
-      required: ['title'], // ONLY required field
+      required: ['title'],
       additionalProperties: false,
-
       properties: {
-        title: { type: 'string', minLength: 1 },
-
-        description: { type: 'string' },
+        title: { type: 'string', minLength: 5 },
+        description: { type: 'string', minLength: 25 },
         version: { type: 'string' },
-
         termsOfService: {
           type: 'string',
           format: 'uri',
         },
-
         contact: {
           type: 'object',
           additionalProperties: false,
           properties: {
             name: { type: 'string' },
-
             url: {
               type: 'string',
               format: 'uri',
             },
-
             email: {
               type: 'string',
               format: 'email',
             },
           },
         },
-
         license: {
           type: 'object',
           required: ['name'],
           additionalProperties: false,
           properties: {
             name: { type: 'string' },
-
             url: {
               type: 'string',
               format: 'uri',

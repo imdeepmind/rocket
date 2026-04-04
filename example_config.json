@@ -4,7 +4,7 @@
         "basePath": "/api/docs",
         "info": {
             "title": "Rocket OSS",
-            "description": "THis is the sample description",
+            "description": "This is the sample description",
             "version": "v1.5.0",
             "termsOfService": "https://example.com/terms",
             "contact": {
