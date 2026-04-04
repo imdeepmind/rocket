@@ -180,6 +180,7 @@ export const getResponseStructureSchema = (
 
   for (const code of codes) {
     switch (code) {
+      case 200:
       case 201:
         respSchema[code] = {
           type: 'object',

@@ -32,14 +32,14 @@
                     "name": "id",
                     "type": "integer",
                     "primaryKey": true,
-                    "supportedOperations": ["editable", "deletable"]
+                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"]
                 },
                 {
                     "name": "email",
                     "type": "string",
                     "unique": true,
                     "nullable": false,
-                    "supportedOperations": ["searchable", "equal"]
+                    "supportedOperations": ["searchable", "equal", "sortable"]
                 },
                 {
                     "name": "name",
