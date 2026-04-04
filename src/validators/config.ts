@@ -186,10 +186,10 @@ const ALLOWED_OPERATIONS: Record<string, string[]> = {
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   integer: ['mean', 'max', 'min', 'count', 'sum'],
-  string: ['count', 'frequency'],
+  string: ['count'],
   boolean: ['count', 'frequency'],
   text: [],
-  datetime: ['mean', 'max', 'min', 'count', 'frequency'],
+  datetime: ['mean', 'max', 'min', 'count'],
 };
 
 function validateFieldConstraints(config: AppConfig): string[] {

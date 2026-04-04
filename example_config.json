@@ -42,7 +42,7 @@
                     "unique": true,
                     "nullable": false,
                     "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
-                    "supportedAggregation": ["count", "frequency"]
+                    "supportedAggregation": ["count"]
                 },
                 {
                     "name": "name",
