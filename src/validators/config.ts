@@ -35,7 +35,7 @@ const swaggerSchema = {
           type: 'object',
           additionalProperties: false,
           properties: {
-            name: { type: 'string' },
+            name: { type: 'string', minLength: 5 },
             url: { type: 'string', format: 'uri' },
             email: { type: 'string', format: 'email' },
           },
@@ -45,7 +45,7 @@ const swaggerSchema = {
           required: ['name'],
           additionalProperties: false,
           properties: {
-            name: { type: 'string' },
+            name: { type: 'string', minLength: 1 },
             url: { type: 'string', format: 'uri' },
           },
         },
@@ -419,7 +419,7 @@ function mapModelTypeToJsonSchema(type: string): string {
   }
 }
 
-export function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
+function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
   const errors: string[] = [];
 
   config.models.forEach((model, mi) => {
