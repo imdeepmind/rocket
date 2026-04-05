@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
     "lint:check": "gts lint",
     "lint:write": "gts fix",
     "clean": "gts clean",
@@ -25,7 +26,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/imdeepmind/rocket/issues"
   },
@@ -36,11 +37,13 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.7.5",
     "@types/pg": "^8.20.0",
+    "@vitest/coverage-v8": "^4.1.2",
     "gts": "^7.0.0",
     "husky": "^9.1.7",
     "pino-pretty": "^10.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "@fastify/swagger": "^9.7.0",

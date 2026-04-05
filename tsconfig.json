@@ -3,11 +3,13 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "build",
-    "esModuleInterop": true
-
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*.ts",
-    "test/**/*.ts"
+    "tests/**/*.ts"
   ]
 }
