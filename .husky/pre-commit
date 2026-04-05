@@ -1,2 +1,3 @@
 npm run lint:check
 npm run compile
+npm run coverage
