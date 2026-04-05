@@ -142,7 +142,7 @@ describe('validateInvalidSwaggerConfig', () => {
       },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrowError(expected);
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
   });
 });
 
@@ -227,6 +227,76 @@ describe('validateValidSwaggerConfig', () => {
       ...validBaseConfig,
       swagger: {
         ...validBaseConfig.swagger,
+        ...patch,
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateInvalidDatabaseConfig', () => {
+  it.each([
+    {
+      name: 'engine as invalid',
+      patch: { engine: 'wrong', connection: { urlOrPath: './database.db' } },
+      expected: '/database/engine must be equal to constant',
+    },
+    {
+      name: 'engine as undefined',
+      patch: { engine: undefined, connection: { urlOrPath: './database.db' } },
+      expected: "/database must have required property 'engine'",
+    },
+    {
+      name: 'connection.urlOrPath as empty string',
+      patch: { engine: 'pg', connection: { urlOrPath: '' } },
+      expected: '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+    },
+    {
+      name: 'connection.urlOrPath wrong pg connection string',
+      patch: { engine: 'pg', connection: { urlOrPath: './database.db' } },
+      expected: '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+    },
+    {
+      name: 'connection.urlOrPath wrong sqlite connection string',
+      patch: {
+        engine: 'sqlite',
+        connection: { urlOrPath: '.postgres://devuser:devpassword@db:5432/rocketdb' },
+      },
+      expected:
+        '/database/connection/urlOrPath must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+    },
+  ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
+    const config = {
+      ...validBaseConfig,
+      database: {
+        ...validBaseConfig.database,
+        ...patch,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
+  });
+});
+
+describe('validateValidDatabaseConfig', () => {
+  it.each([
+    {
+      name: 'engine as pg',
+      patch: {
+        engine: 'pg',
+        connection: { urlOrPath: 'postgres://devuser:devpassword@db:5432/rocketdb' },
+      },
+    },
+    {
+      name: 'engine as sqlite',
+      patch: { engine: 'sqlite', connection: { urlOrPath: './database.db' } },
+    },
+  ])('Scenario: $name -> should return', ({ patch }) => {
+    const config = {
+      ...validBaseConfig,
+      database: {
+        ...validBaseConfig.database,
         ...patch,
       },
     };
