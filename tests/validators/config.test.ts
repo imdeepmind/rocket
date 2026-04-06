@@ -133,7 +133,7 @@ describe('validateInvalidSwaggerConfig', () => {
       },
       expected: '/swagger/info/license/url must match format "uri"',
     },
-  ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
     const config = {
       ...validBaseConfig,
       swagger: {
@@ -266,7 +266,7 @@ describe('validateInvalidDatabaseConfig', () => {
       expected:
         '/database/connection/urlOrPath must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
-  ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
     const config = {
       ...validBaseConfig,
       database: {
@@ -399,7 +399,453 @@ describe('validateInvalidModelConfig', () => {
       },
       expected: '/models/0/fields/0: primaryKey field must have nullable=false',
     },
-  ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
+    {
+      name: 'field.supportedOperations is not array',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: 'invalid' }],
+      },
+      expected: '/models/0/fields/0/supportedOperations must be array',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: ['invalid'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "invalid" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=integer',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'integer', supportedOperations: ['searchable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "integer"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: ['lessThan'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: ['lessThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: ['greaterThan'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedOperations: ['greaterThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['searchable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['sortable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['editable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['deletable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['lessThan'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['lessThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['greaterThan'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['greaterThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['oneOf'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedOperations: ['indexable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['searchable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['sortable'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['editable'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['deletable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['lessThan'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['lessThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['greaterThan'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['greaterThanEqual'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['equal'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "equal" is not allowed for type "text"',
+    },
+
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['oneOf'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['indexable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['searchable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['editable'] }],
+      },
+      expected: '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['deletable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedOperations contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedOperations: ['indexable'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation is not array',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: 'invalid' }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation must be array',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['invalid'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "invalid" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=integer',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'integer', supportedAggregation: ['frequency'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "integer"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['mean'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['max'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['min'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['sum'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=string',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', supportedAggregation: ['frequency'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "string"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedAggregation: ['mean'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedAggregation: ['max'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedAggregation: ['min'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=boolean',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'boolean', supportedAggregation: ['sum'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['mean'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['max'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['min'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['sum'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['count'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "count" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=text',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'text', supportedAggregation: ['frequency'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "text"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=datetime',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'datetime', supportedAggregation: ['sum'] }],
+      },
+      expected: '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "datetime"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=datetime',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'datetime', supportedAggregation: ['frequency'] }],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "datetime"',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
     const config = {
       ...validBaseConfig,
       models: [
