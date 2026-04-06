@@ -163,7 +163,7 @@ const foreignKeySchema = {
     columns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string' },
+      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
       uniqueItems: true,
     },
     referenceTable: {
@@ -174,7 +174,7 @@ const foreignKeySchema = {
     referenceColumns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string' },
+      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
       uniqueItems: true,
     },
     onDelete: {

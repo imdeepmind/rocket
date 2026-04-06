@@ -29,6 +29,35 @@ const getDefaultModelConfig = (): ModelConfig[] => {
         },
       ],
     },
+    {
+      name: 'Post',
+      fields: [
+        {
+          name: 'title',
+          type: 'string',
+          nullable: false,
+          supportedOperations: ['searchable', 'sortable'],
+          supportedAggregation: ['count'],
+        },
+        {
+          name: 'body',
+          type: 'text',
+          nullable: true,
+        },
+        {
+          name: 'user_id',
+          type: 'integer',
+          nullable: false,
+          supportedOperations: ['equal', 'oneOf'],
+          supportedAggregation: ['count'],
+        },
+        {
+          name: 'created_at',
+          type: 'datetime',
+          supportedOperations: ['lessThan', 'greaterThan', 'sortable'],
+        },
+      ],
+    },
   ];
 };
 
@@ -1141,3 +1170,249 @@ describe('validateValidModelValidationConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+describe('validateInvalidModelForeignKeyConfig', () => {
+  it.each([
+    {
+      name: 'foreignKey.name is not string',
+      patch: {
+        foreignKeys: [
+          { name: 123, columns: ['id'], referenceTable: 'test', referenceColumns: ['id'] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.name is empty string',
+      patch: {
+        foreignKeys: [
+          { name: '', columns: ['id'], referenceTable: 'test', referenceColumns: ['id'] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.name is empty string',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['does_not_exist'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "Post"',
+    },
+    {
+      name: 'foreignKey.columns is not array',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: 'id', referenceTable: 'User', referenceColumns: ['id'] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/columns must be array',
+    },
+    {
+      name: 'foreignKey.columns is empty array',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: [], referenceTable: 'User', referenceColumns: ['id'] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/columns must NOT have fewer than 1 items',
+    },
+    {
+      name: 'foreignKey.columns contains non-string',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: [123], referenceTable: 'User', referenceColumns: ['id'] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.columns contains non-string',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['1321asdas'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.columns contains non-string',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['cat dog'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.columns contains duplicate items',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id', 'id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/columns must NOT have duplicate items (items ## 1 and 0 are identical)',
+    },
+    {
+      name: 'foreignKey.referenceTable is not string',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: ['id'], referenceTable: 123, referenceColumns: ['id'] },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/referenceTable must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.referenceTable is empty string',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: ['id'], referenceTable: '', referenceColumns: ['id'] },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/referenceTable must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.referenceTable is empty string',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id'],
+            referenceTable: 'does_not_exist',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0: referenceTable "does_not_exist" does not exist',
+    },
+    {
+      name: 'foreignKey.referenceColumns is not array',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: ['id'], referenceTable: 'User', referenceColumns: 'id' },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/referenceColumns must be array',
+    },
+    {
+      name: 'foreignKey.referenceColumns is empty array',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: ['id'], referenceTable: 'User', referenceColumns: [] },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/referenceColumns must NOT have fewer than 1 items',
+    },
+    {
+      name: 'foreignKey.referenceColumns contains non-string',
+      patch: {
+        foreignKeys: [
+          { name: 'fk_id_id', columns: ['id'], referenceTable: 'User', referenceColumns: [123] },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/referenceColumns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'foreignKey.referenceColumns contains non-existent column',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id'],
+            referenceTable: 'User',
+            referenceColumns: ['does_not_exist'],
+          },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "User"',
+    },
+    {
+      name: 'foreignKey.referenceColumns contains duplicate items',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id'],
+            referenceTable: 'User',
+            referenceColumns: ['id', 'id'],
+          },
+        ],
+      },
+      expected:
+        '/models/2/foreignKeys/0/referenceColumns must NOT have duplicate items (items ## 1 and 0 are identical)',
+    },
+    {
+      name: 'foreignKey.onDelete is not one of allowed values',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+            onDelete: 'INVALID',
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/onDelete must be equal to one of the allowed values',
+    },
+    {
+      name: 'foreignKey.onUpdate is not one of allowed values',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+            onUpdate: 'INVALID',
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0/onUpdate must be equal to one of the allowed values',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
+    const fkTable = validBaseConfig.models[1];
+    const config = {
+      ...validBaseConfig,
+      models: [
+        ...validBaseConfig.models,
+        {
+          ...fkTable,
+          ...patch,
+        },
+      ],
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
+  });
+});
+
+// describe('validateValidModelForeignKeyConfig', () => {});
