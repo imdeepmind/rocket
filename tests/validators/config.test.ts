@@ -324,6 +324,81 @@ describe('validateInvalidModelConfig', () => {
       expected: "/models/0 must have required property 'name'",
     },
     // ============== end of invalid name tests ===============
+    // ============== invalid fields tests ==============
+    {
+      name: 'invalid field.name',
+      patch: { name: 'test', fields: [{ name: '132234asd' }] },
+      expected: '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'invalid field.name',
+      patch: { name: 'test', fields: [{ name: 'sad asdas' }] },
+      expected: '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'invalid field.name',
+      patch: { name: 'test', fields: [{ name: undefined }] },
+      expected: "/models/0/fields/0 must have required property 'name'",
+    },
+    {
+      name: 'invalid field.type',
+      patch: { name: 'test', fields: [{ name: 'test', type: undefined }] },
+      expected: "/models/0/fields/0 must have required property 'type'",
+    },
+    {
+      name: 'invalid field.type',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'invalid' }] },
+      expected: '/models/0/fields/0/type must be equal to one of the allowed values',
+    },
+    {
+      name: 'invalid field.primaryKey',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'integer', primaryKey: 'invalid' }] },
+      expected: '/models/0/fields/0/primaryKey must be boolean',
+    },
+    {
+      name: 'invalid field.primaryKey',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'boolean', primaryKey: true }] },
+      expected:
+        '/models/0/fields/0: primaryKey field must be of type integer or string (found boolean)',
+    },
+    {
+      name: 'invalid field.primaryKey',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'text', primaryKey: true }] },
+      expected:
+        '/models/0/fields/0: primaryKey field must be of type integer or string (found text)',
+    },
+    {
+      name: 'invalid field.primaryKey',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'datetime', primaryKey: true }] },
+      expected:
+        '/models/0/fields/0: primaryKey field must be of type integer or string (found datetime)',
+    },
+    {
+      name: 'invalid field.unique',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'string', unique: 'invalid' }] },
+      expected: '/models/0/fields/0/unique must be boolean',
+    },
+    {
+      name: 'field.unique=False and primaryKey=True',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', primaryKey: true, unique: false }],
+      },
+      expected: '/models/0/fields/0: primaryKey field must have unique=true',
+    },
+    {
+      name: 'invalid field.nullable',
+      patch: { name: 'test', fields: [{ name: 'test', type: 'string', nullable: 'invalid' }] },
+      expected: '/models/0/fields/0/nullable must be boolean',
+    },
+    {
+      name: 'field.nullable=False and primaryKey=True',
+      patch: {
+        name: 'test',
+        fields: [{ name: 'test', type: 'string', primaryKey: true, unique: true, nullable: true }],
+      },
+      expected: '/models/0/fields/0: primaryKey field must have nullable=false',
+    },
   ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
     const config = {
       ...validBaseConfig,
