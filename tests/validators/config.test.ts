@@ -1031,6 +1031,102 @@ describe('validateValidModelIndexesConfig', () => {
         ],
       },
     },
+    {
+      name: 'not passing index',
+      patch: {
+        name: 'test',
+      },
+    },
+  ])('Scenario: $name -> should return the same config', ({ patch }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateInvalidModelValidationConfig', () => {
+  it.each([
+    {
+      name: 'validation.type is not object',
+      patch: {
+        name: 'test',
+        validation: 13,
+      },
+      expected: '/models/0/validation must be object',
+    },
+    {
+      name: 'validation property column does not exist',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'integer', minimum: 1 },
+            age: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+      expected: '/models/0/validation/properties/age: field does not exist in model',
+    },
+    {
+      name: 'validation property column data type does not match',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+      expected: '/models/0/validation/properties/id: type mismatch (model=integer, schema=string)',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
+  });
+});
+
+describe('validateValidModelValidationConfig', () => {
+  it.each([
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'integer' },
+          },
+        },
+      },
+    },
+    {
+      name: 'not passing validation',
+      patch: {
+        name: 'test',
+      },
+    },
   ])('Scenario: $name -> should return the same config', ({ patch }) => {
     const config = {
       ...validBaseConfig,

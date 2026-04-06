@@ -433,12 +433,6 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
 
     const path = `/models/${mi}/validation`;
 
-    // must be object
-    if (typeof validation !== 'object' || validation === null || Array.isArray(validation)) {
-      errors.push(`${path}: must be an object`);
-      return;
-    }
-
     const schema = validation as JsonSchemaObject;
 
     // validate JSON schema
