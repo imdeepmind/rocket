@@ -1415,4 +1415,40 @@ describe('validateInvalidModelForeignKeyConfig', () => {
   });
 });
 
-// describe('validateValidModelForeignKeyConfig', () => {});
+describe('validateValidModelForeignKeyConfig', () => {
+  it.each([
+    {
+      name: 'valid model',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['user_id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        foreignKeys: [],
+      },
+    },
+  ])('Scenario: $name -> should return the same config', ({ patch }) => {
+    const fkTable = validBaseConfig.models[1];
+    const config = {
+      ...validBaseConfig,
+      models: [
+        ...validBaseConfig.models,
+        {
+          ...fkTable,
+          ...patch,
+        },
+      ],
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
