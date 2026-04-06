@@ -423,6 +423,15 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
   const errors: string[] = [];
 
   config.models.forEach((model, mi) => {
+    // Primary key type validation
+    model.fields.forEach((field, fi) => {
+      if (field.primaryKey && field.type !== 'integer' && field.type !== 'string') {
+        errors.push(
+          `/models/${mi}/fields/${fi}: primaryKey field must be of type integer or string (found ${field.type})`
+        );
+      }
+    });
+
     const validation = (model as { validation?: unknown }).validation;
     if (!validation) return;
 
