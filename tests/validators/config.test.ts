@@ -304,3 +304,39 @@ describe('validateValidDatabaseConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+describe('validateInvalidModelConfig', () => {
+  it.each([
+    // ============== invalid name tests ==============
+    {
+      name: 'invalid name',
+      patch: { name: '132234asd' },
+      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'invalid name',
+      patch: { name: 'sad asdas' },
+      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'name as undefined',
+      patch: { name: undefined },
+      expected: "/models/0 must have required property 'name'",
+    },
+    // ============== end of invalid name tests ===============
+  ])('Scenario: $name -> should throw: "$expectedError"', ({ patch, expected }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
+  });
+});
+
+// describe('validateValidModelConfig', () => {});
