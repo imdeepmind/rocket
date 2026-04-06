@@ -283,6 +283,11 @@ function validateFieldConstraints(config: AppConfig): string[] {
       if (primaryKey) {
         if (nullable !== false) errors.push(`${path}: primaryKey field must have nullable=false`);
         if (unique !== true) errors.push(`${path}: primaryKey field must have unique=true`);
+        if (type !== 'integer' && type !== 'string') {
+          errors.push(
+            `${path}: primaryKey field must be of type integer or string (found ${type})`
+          );
+        }
       }
 
       // Validate supportedOperations against allowed list for this type
@@ -423,15 +428,6 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
   const errors: string[] = [];
 
   config.models.forEach((model, mi) => {
-    // Primary key type validation
-    model.fields.forEach((field, fi) => {
-      if (field.primaryKey && field.type !== 'integer' && field.type !== 'string') {
-        errors.push(
-          `/models/${mi}/fields/${fi}: primaryKey field must be of type integer or string (found ${field.type})`
-        );
-      }
-    });
-
     const validation = (model as { validation?: unknown }).validation;
     if (!validation) return;
 
