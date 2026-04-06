@@ -27,6 +27,14 @@ const getDefaultModelConfig = (): ModelConfig[] => {
           name: 'name',
           type: 'string',
         },
+        {
+          name: 'is_active',
+          type: 'boolean',
+        },
+        {
+          name: 'updated_at',
+          type: 'datetime',
+        },
       ],
     },
     {
@@ -983,6 +991,16 @@ describe('validateInvalidModelIndexesConfig', () => {
       expected: '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
     },
     {
+      name: 'index.name is duplicate',
+      patch: {
+        indexes: [
+          { name: 'valid_index', columns: ['id'] },
+          { name: 'valid_index', columns: ['id'] },
+        ],
+      },
+      expected: '/models/0/indexes/1: duplicate index name "valid_index"',
+    },
+    {
       name: 'index.column is pointing to wrong field',
       patch: {
         indexes: [{ name: 'valid_index', columns: ['age'] }],
@@ -1107,6 +1125,36 @@ describe('validateInvalidModelValidationConfig', () => {
       expected: '/models/0/validation/properties/age: field does not exist in model',
     },
     {
+      name: 'validation required is not array',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: 'wrong type',
+          properties: {
+            id: { type: 'integer', minimum: 1 },
+            age: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+      expected: '/models/0/validation/required: must be an array',
+    },
+    {
+      name: 'validation required is not array',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: ['wrong type'],
+          properties: {
+            id: { type: 'integer', minimum: 1 },
+            age: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+      expected: '/models/0/validation/required/0: field "wrong type" does not exist in model',
+    },
+    {
       name: 'validation property column data type does not match',
       patch: {
         name: 'test',
@@ -1146,6 +1194,25 @@ describe('validateValidModelValidationConfig', () => {
           required: ['id'],
           properties: {
             id: { type: 'integer' },
+            name: { type: 'string' },
+            is_active: { type: 'boolean' },
+            updated_at: { type: 'date-time' },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            is_active: { type: 'boolean' },
+            updated_at: { type: 'datetime' },
           },
         },
       },
@@ -1205,6 +1272,26 @@ describe('validateInvalidModelForeignKeyConfig', () => {
       },
       expected:
         '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "Post"',
+    },
+    {
+      name: 'foreignKey.name is duplicate',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['user_id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+          {
+            name: 'fk_id_id',
+            columns: ['user_id'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/1: duplicate foreign key name "fk_id_id"',
     },
     {
       name: 'foreignKey.columns is not array',
@@ -1367,6 +1454,34 @@ describe('validateInvalidModelForeignKeyConfig', () => {
       },
       expected:
         '/models/2/foreignKeys/0/referenceColumns must NOT have duplicate items (items ## 1 and 0 are identical)',
+    },
+    {
+      name: 'foreignKey.onUpdate is not one of allowed values',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['user_id'],
+            referenceTable: 'User',
+            referenceColumns: ['id', 'title'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
+    },
+    {
+      name: 'foreignKey.onUpdate is not one of allowed values',
+      patch: {
+        foreignKeys: [
+          {
+            name: 'fk_id_id',
+            columns: ['user_id', 'name'],
+            referenceTable: 'User',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+      expected: '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
     },
     {
       name: 'foreignKey.onDelete is not one of allowed values',

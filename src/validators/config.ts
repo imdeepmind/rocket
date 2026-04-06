@@ -418,10 +418,24 @@ function mapModelTypeToJsonSchema(type: string): string {
     case 'boolean':
       return 'boolean';
     case 'datetime':
-      return 'string';
+      return 'date-time';
     default:
       return 'string';
   }
+}
+
+function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
+  const normalized = JSON.parse(JSON.stringify(schema));
+  if (normalized.properties && typeof normalized.properties === 'object') {
+    Object.keys(normalized.properties).forEach((key) => {
+      const prop = (normalized.properties as Record<string, JsonSchemaProperty>)[key];
+      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
+        prop.type = 'string';
+        prop.format = 'date-time';
+      }
+    });
+  }
+  return normalized;
 }
 
 function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
@@ -436,7 +450,8 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
     const schema = validation as JsonSchemaObject;
 
     // validate JSON schema
-    const isValidSchema = ajv.validateSchema(schema);
+    const normalizedSchema = normalizeSchemaForAjv(schema);
+    const isValidSchema = ajv.validateSchema(normalizedSchema);
     if (!isValidSchema) {
       const schemaErrors = ajv.errors?.map((e) => `${path}: ${e.instancePath} ${e.message}`) ?? [];
       errors.push(...schemaErrors);
@@ -465,7 +480,13 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
         }
 
         if (schemaType && schemaType !== expectedType) {
-          errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+          const isDateMatch =
+            (schemaType === 'datetime' || schemaType === 'date-time') &&
+            (expectedType === 'datetime' || expectedType === 'date-time');
+
+          if (!isDateMatch) {
+            errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+          }
         }
       });
     }

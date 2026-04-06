@@ -1,4 +1,10 @@
-import { DataType, ModelFieldConfig, ModelBody, ModelConfig } from '../schema/config';
+import {
+  DataType,
+  ModelFieldConfig,
+  ModelBody,
+  ModelConfig,
+  JsonSchemaObject,
+} from '../schema/config';
 
 /**
  * Map config DataType to JSON Schema type definition for Swagger.
@@ -126,6 +132,23 @@ export const helloWorldResponseSchema = {
 };
 
 /**
+ * Normalize the schema for AJV by converting custom types to standard ones.
+ */
+function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
+  const normalized = JSON.parse(JSON.stringify(schema));
+  if (normalized.properties && typeof normalized.properties === 'object') {
+    Object.keys(normalized.properties).forEach((key) => {
+      const prop = (normalized.properties as Record<string, JsonSchemaObject>)[key];
+      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
+        prop.type = 'string';
+        prop.format = 'date-time';
+      }
+    });
+  }
+  return normalized;
+}
+
+/**
  * Build (or reuse) the JSON schema for a POST body based on the model.
  *
  * Rules for generated schema:
@@ -134,7 +157,7 @@ export const helloWorldResponseSchema = {
  * - If `model.validation` is provided, it is used verbatim.
  */
 export function buildPostBodyValidationSchema(model: ModelConfig): Record<string, unknown> {
-  if (model.validation) return model.validation;
+  if (model.validation) return normalizeSchemaForAjv(model.validation);
 
   const bodyProperties: Record<string, object> = {};
   for (const field of model.fields) {
