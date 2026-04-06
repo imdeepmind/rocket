@@ -163,7 +163,7 @@ const foreignKeySchema = {
     columns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string' },
+      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
       uniqueItems: true,
     },
     referenceTable: {
@@ -174,7 +174,7 @@ const foreignKeySchema = {
     referenceColumns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string' },
+      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
       uniqueItems: true,
     },
     onDelete: {
@@ -283,6 +283,11 @@ function validateFieldConstraints(config: AppConfig): string[] {
       if (primaryKey) {
         if (nullable !== false) errors.push(`${path}: primaryKey field must have nullable=false`);
         if (unique !== true) errors.push(`${path}: primaryKey field must have unique=true`);
+        if (type !== 'integer' && type !== 'string') {
+          errors.push(
+            `${path}: primaryKey field must be of type integer or string (found ${type})`
+          );
+        }
       }
 
       // Validate supportedOperations against allowed list for this type
@@ -413,10 +418,24 @@ function mapModelTypeToJsonSchema(type: string): string {
     case 'boolean':
       return 'boolean';
     case 'datetime':
-      return 'string';
+      return 'date-time';
     default:
       return 'string';
   }
+}
+
+function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
+  const normalized = JSON.parse(JSON.stringify(schema));
+  if (normalized.properties && typeof normalized.properties === 'object') {
+    Object.keys(normalized.properties).forEach((key) => {
+      const prop = (normalized.properties as Record<string, JsonSchemaProperty>)[key];
+      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
+        prop.type = 'string';
+        prop.format = 'date-time';
+      }
+    });
+  }
+  return normalized;
 }
 
 function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
@@ -428,16 +447,11 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
 
     const path = `/models/${mi}/validation`;
 
-    // must be object
-    if (typeof validation !== 'object' || validation === null || Array.isArray(validation)) {
-      errors.push(`${path}: must be an object`);
-      return;
-    }
-
     const schema = validation as JsonSchemaObject;
 
     // validate JSON schema
-    const isValidSchema = ajv.validateSchema(schema);
+    const normalizedSchema = normalizeSchemaForAjv(schema);
+    const isValidSchema = ajv.validateSchema(normalizedSchema);
     if (!isValidSchema) {
       const schemaErrors = ajv.errors?.map((e) => `${path}: ${e.instancePath} ${e.message}`) ?? [];
       errors.push(...schemaErrors);
@@ -466,7 +480,13 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
         }
 
         if (schemaType && schemaType !== expectedType) {
-          errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+          const isDateMatch =
+            (schemaType === 'datetime' || schemaType === 'date-time') &&
+            (expectedType === 'datetime' || expectedType === 'date-time');
+
+          if (!isDateMatch) {
+            errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+          }
         }
       });
     }

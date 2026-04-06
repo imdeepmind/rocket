@@ -78,7 +78,8 @@
                 "properties": {
                     "title": { "type": "string", "minLength": 5 },
                     "body": { "type": "string" },
-                    "user_id": { "type": "integer", "minimum": 1 }
+                    "user_id": { "type": "integer", "minimum": 1 },
+                    "created_at": { "type": "datetime" }
                 }
             },
             "fields": [
