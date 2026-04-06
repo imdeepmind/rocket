@@ -305,7 +305,7 @@ describe('validateValidDatabaseConfig', () => {
   });
 });
 
-describe('validateInvalidModelConfig', () => {
+describe('validateInvalidModelFieldsConfig', () => {
   it.each([
     // ============== invalid name tests ==============
     {
@@ -325,6 +325,11 @@ describe('validateInvalidModelConfig', () => {
     },
     // ============== end of invalid name tests ===============
     // ============== invalid fields tests ==============
+    {
+      name: 'empty field',
+      patch: { name: 'test', fields: [] },
+      expected: '/models/0/fields must NOT have fewer than 1 items',
+    },
     {
       name: 'invalid field.name',
       patch: { name: 'test', fields: [{ name: '132234asd' }] },
@@ -860,4 +865,183 @@ describe('validateInvalidModelConfig', () => {
   });
 });
 
-// describe('validateValidModelConfig', () => {});
+describe('validateValidModelFieldsConfig', () => {
+  it.each([
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        fields: [
+          {
+            name: 'id',
+            type: 'integer',
+            primaryKey: true,
+            unique: true,
+            nullable: false,
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        fields: [
+          {
+            name: 'id',
+            type: 'integer',
+            primaryKey: true,
+            unique: true,
+            nullable: false,
+            supportedOperations: ['indexable', 'sortable'],
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        fields: [
+          {
+            name: 'id',
+            type: 'integer',
+            primaryKey: true,
+            unique: true,
+            nullable: false,
+            supportedOperations: ['indexable', 'sortable'],
+            supportedAggregation: ['mean', 'max', 'min', 'count', 'sum'],
+          },
+        ],
+      },
+    },
+  ])('Scenario: $name -> should return the same config', ({ patch }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateInvalidModelIndexesConfig', () => {
+  it.each([
+    {
+      name: 'index.name is not string',
+      patch: {
+        indexes: [{ name: 123, columns: ['id'] }],
+      },
+      expected: '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'index.name starts with number',
+      patch: {
+        indexes: [{ name: '12121asdas', columns: ['id'] }],
+      },
+      expected: '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'index.name contains space',
+      patch: {
+        indexes: [{ name: 'cat dog', columns: ['id'] }],
+      },
+      expected: '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'index.column is pointing to wrong field',
+      patch: {
+        indexes: [{ name: 'valid_index', columns: ['age'] }],
+      },
+      expected: '/models/0/indexes/0/columns: column "age" does not exist in fields',
+    },
+    {
+      name: 'index.column is empty',
+      patch: {
+        indexes: [{ name: 'valid_index', columns: [''] }],
+      },
+      expected: '/models/0/indexes/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+    },
+    {
+      name: 'index.column is not array',
+      patch: {
+        indexes: [{ name: 'valid_index', columns: 'test' }],
+      },
+      expected: '/models/0/indexes/0/columns must be array',
+    },
+    {
+      name: 'index.unique is not boolean',
+      patch: {
+        indexes: [{ name: 'valid_index', columns: ['id'], unique: 'test' }],
+      },
+      expected: '/models/0/indexes/0/unique must be boolean',
+    },
+    {
+      name: 'index.unique is not boolean',
+      patch: {
+        indexes: [{ name: 'valid_index', columns: ['id'], unique: 123 }],
+      },
+      expected: '/models/0/indexes/0/unique must be boolean',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({ patch, expected }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(expected);
+  });
+});
+
+describe('validateValidModelIndexesConfig', () => {
+  it.each([
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        indexes: [
+          {
+            name: 'valid_index',
+            columns: ['id'],
+            unique: true,
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        name: 'test',
+        indexes: [
+          {
+            name: 'valid_index',
+            columns: ['id', 'name'],
+            unique: false,
+          },
+        ],
+      },
+    },
+  ])('Scenario: $name -> should return the same config', ({ patch }) => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          ...validBaseConfig.models[0],
+          ...patch,
+        },
+      ],
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
