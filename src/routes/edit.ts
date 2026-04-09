@@ -6,7 +6,6 @@ import {
   buildFilterQueryProperties,
   getResponseStructureSchema,
   stripAdditionalPostFields,
-  buildPostBodyValidationSchema,
 } from './schema-helpers';
 import { capitalizeFirstLetter } from '../utils/string';
 
@@ -67,6 +66,11 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
           };
         }
 
+        const responseDataSchema = { ...finalBodySchema } as Record<string, unknown>;
+        if (method === 'PATCH' && responseDataSchema.required) {
+          delete responseDataSchema.required;
+        }
+
         const schema: Record<string, unknown> = {
           summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
           description: `${method} update on records from the database by ${field.name}`,
@@ -82,11 +86,7 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
             required: [field.name],
           },
           body: finalBodySchema,
-          response: getResponseStructureSchema(
-            [200],
-            buildPostBodyValidationSchema(model),
-            buildPostBodyValidationSchema(model)
-          ),
+          response: getResponseStructureSchema([200], responseDataSchema),
         };
 
         if (Object.keys(queryProperties).length > 0) {

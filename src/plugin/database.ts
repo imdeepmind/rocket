@@ -58,7 +58,7 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       close: async () => pool.end(),
     };
   } else if (opts.engine === 'sqlite') {
-    const sqlite = new Database(opts.connection.urlOrPath || './database.db');
+    const sqlite = new Database(opts.connection.urlOrPath);
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {

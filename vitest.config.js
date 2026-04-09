@@ -9,11 +9,13 @@ export default defineConfig({
       exclude: ['node_modules/**', 'tests/**'], // Ignore external libs and tests themselves
       // intentinally keeping the coverage low for now as we just added test cases
       thresholds: {
-        lines: 15,
-        functions: 25,
-        branches: 15,
-        statements: 15,
+        lines: 80,
+        functions: 85,
+        branches: 70,
+        statements: 80,
       },
     },
+    setupFiles: ['./tests/setup.ts'],
+    exclude: ['**/node_modules/**', '**/build/**', '**/dist/**'],
   },
 });
