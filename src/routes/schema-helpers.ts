@@ -120,18 +120,6 @@ export function buildFilterQueryProperties(field: ModelFieldConfig): Record<stri
 }
 
 /**
- * Standard hello world response schema (placeholder).
- */
-export const helloWorldResponseSchema = {
-  200: {
-    type: 'object',
-    properties: {
-      message: { type: 'string' },
-    },
-  },
-};
-
-/**
  * Normalize the schema for AJV by converting custom types to standard ones.
  */
 function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
@@ -231,7 +219,7 @@ export const getResponseStructureSchema = (
         };
         break;
       default:
-        break;
+        throw new Error(`Unsupported HTTP status code: ${code}`);
     }
   }
 
