@@ -3,59 +3,15 @@ import Fastify from 'fastify';
 
 import databasePlugin from '../../src/plugin/database';
 import { DatabaseConfig } from '../../src/schema/config';
-
-const pgConfig: DatabaseConfig = {
-  engine: 'pg',
-  connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
-  },
-};
-
-const sqliteConfig: DatabaseConfig = {
-  engine: 'sqlite',
-  connection: {
-    urlOrPath: ':memory:',
-  },
-};
-
-// Mock pg
-const pgQueryMock = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
-const pgEndMock = vi.fn().mockResolvedValue(undefined);
-
-vi.mock('pg', () => {
-  return {
-    // prettier-ignore
-    // eslint-disable-next-line prefer-arrow-callback
-    Pool: vi.fn().mockImplementation(function () {
-      return {
-        query: pgQueryMock,
-        end: pgEndMock,
-      };
-    }),
-  };
-});
-
-// Mock better-sqlite3
-const sqliteAllMock = vi.fn().mockReturnValue([]);
-const sqliteRunMock = vi.fn().mockReturnValue({ changes: 0 });
-const sqlitePrepareMock = vi.fn().mockReturnValue({
-  all: sqliteAllMock,
-  run: sqliteRunMock,
-});
-const sqliteCloseMock = vi.fn();
-
-vi.mock('better-sqlite3', () => {
-  return {
-    // prettier-ignore
-    // eslint-disable-next-line prefer-arrow-callback
-    default: vi.fn().mockImplementation(function () {
-      return {
-        prepare: sqlitePrepareMock,
-        close: sqliteCloseMock,
-      };
-    }),
-  };
-});
+import { pgConfig, sqliteConfig } from '../helpers/test-app';
+import {
+  pgQueryMock,
+  pgEndMock,
+  sqliteAllMock,
+  sqliteRunMock,
+  sqlitePrepareMock,
+  sqliteCloseMock,
+} from '../helpers/db-mocks';
 
 describe('database plugin', () => {
   test('throws error for unsupported engine', async () => {

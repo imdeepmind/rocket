@@ -19,9 +19,9 @@
         }
     },
     "database": {
-        "engine": "pg",
+        "engine": "sqlite",
         "connection": {
-            "urlOrPath": "postgres://devuser:devpassword@db:5432/rocketdb"
+            "urlOrPath": "./database.db"
         }
     },
     "models": [
@@ -78,8 +78,7 @@
                 "properties": {
                     "title": { "type": "string", "minLength": 5 },
                     "body": { "type": "string" },
-                    "user_id": { "type": "integer", "minimum": 1 },
-                    "created_at": { "type": "datetime" }
+                    "user_id": { "type": "integer", "minimum": 1 }
                 }
             },
             "fields": [

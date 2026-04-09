@@ -15,5 +15,7 @@ export default defineConfig({
         statements: 15,
       },
     },
+    setupFiles: ['./tests/setup.ts'],
+    exclude: ['**/node_modules/**', '**/build/**', '**/dist/**'],
   },
 });
