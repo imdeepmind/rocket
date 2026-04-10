@@ -11,10 +11,10 @@ const migrateDatabase = (app: FastifyInstance, config: AppConfig) => {
 
   // get the current state of db
   const currentState = getCurrentStateOfDb(app, engine);
-  console.log({ currentState });
 
   // convert config to drizzle schema
-  const drizzleSchema = convertConfigToDrizzle(models);
+  const drizzleSchema = convertConfigToDrizzle(engine, models);
+  console.log({ drizzleSchema });
 
   // compare the two and generate the migration
   const migration = generateMigrationScript(currentState, drizzleSchema);
