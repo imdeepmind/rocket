@@ -82,9 +82,6 @@ const MODEL_COLORS = [
 ];
 
 export function showWelcomeScreen(config: AppConfig, port: number, routes: RouteInfo[]) {
-  // Clear console
-  process.stdout.write('\x1Bc');
-
   const coloredRocket = ROCKET_ASCII.split('\n')
     .map((line) => {
       return line
