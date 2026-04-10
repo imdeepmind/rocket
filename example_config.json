@@ -1,0 +1,136 @@
+{
+    "swagger": {
+        "enabled": true,
+        "basePath": "/api/docs",
+        "info": {
+            "title": "Rocket OSS",
+            "description": "This is the sample description",
+            "version": "v1.5.0",
+            "termsOfService": "https://example.com/terms",
+            "contact": {
+                "name": "John Doe",
+                "url": "https://example.com",
+                "email": "email@email.com"
+            },
+            "license": {
+                "name": "MIT",
+                "url": "https://opensource.org/licenses/MIT"
+            }
+        }
+    },
+    "database": {
+        "engine": "sqlite",
+        "connection": {
+            "urlOrPath": "./database.db"
+        }
+    },
+    "models": [
+        {
+            "name": "users",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "unique": true,
+                    "nullable": false,
+                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"]
+                },
+                {
+                    "name": "email",
+                    "type": "string",
+                    "unique": true,
+                    "nullable": false,
+                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
+                    "supportedAggregation": ["count"]
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "nullable": true,
+                    "supportedOperations": ["searchable", "sortable", "indexable"]
+                },
+                {
+                    "name": "is_active",
+                    "type": "boolean",
+                    "default": true,
+                    "supportedOperations": ["equal"]
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "users_email_idx",
+                    "columns": ["email"],
+                    "unique": true
+                },
+                {
+                    "name": "users_name_is_active_idx",
+                    "columns": ["name", "is_active"],
+                    "unique": false
+                }
+            ]
+        },
+        {
+            "name": "posts",
+            "validation": {
+                "type": "object",
+                "required": ["title", "user_id"],
+                "properties": {
+                    "title": { "type": "string", "minLength": 5 },
+                    "body": { "type": "string" },
+                    "user_id": { "type": "integer", "minimum": 1 }
+                }
+            },
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "integer",
+                    "primaryKey": true,
+                    "unique": true,
+                    "nullable": false,
+                    "supportedOperations": ["editable", "deletable"]
+                },
+                {
+                    "name": "title",
+                    "type": "string",
+                    "nullable": false,
+                    "supportedOperations": ["searchable", "sortable"]
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "nullable": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "integer",
+                    "nullable": false,
+                    "supportedOperations": ["equal", "oneOf"],
+                    "supportedAggregation": ["count"]
+                },
+                {
+                    "name": "created_at",
+                    "type": "datetime",
+                    "supportedOperations": ["lessThan", "greaterThan", "sortable"]
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "posts_user_id_idx",
+                    "columns": ["user_id"],
+                    "unique": false
+                }
+            ],
+            "foreignKeys": [
+                {
+                    "name": "fk_posts_user_id",
+                    "columns": ["user_id"],
+                    "referenceTable": "users",
+                    "referenceColumns": ["id"],
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE"
+                }
+            ]
+        }
+    ]
+}

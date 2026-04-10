@@ -1,3 +1,7 @@
+# Build
+build
+database.db
+
 # Logs
 logs
 *.log
