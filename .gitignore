@@ -1,6 +1,7 @@
 # Build
 build
 database.db
+.migrations
 
 # Logs
 logs

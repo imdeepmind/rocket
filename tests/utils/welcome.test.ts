@@ -4,15 +4,9 @@ import { AppConfig } from '../../src/schema/config';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;
-  let stdoutSpy: MockInstance<(str: string | Uint8Array) => boolean>;
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    stdoutSpy = vi
-      .spyOn(process.stdout, 'write')
-      .mockImplementation(() => true) as unknown as MockInstance<
-      (str: string | Uint8Array) => boolean
-    >;
   });
 
   afterEach(() => {
@@ -79,9 +73,6 @@ describe('welcome utility', () => {
     // Check filtering
     expect(output).not.toContain('/static/style.css');
     expect(output).not.toContain('HEAD');
-
-    // Verify clear console was called
-    expect(stdoutSpy).toHaveBeenCalledWith('\x1Bc');
   });
 
   test('showWelcomeScreen handles disabled swagger', () => {

@@ -1,3 +1,6 @@
+import type { Database } from 'better-sqlite3';
+import { Pool } from 'pg';
+
 export type Mode = 'dev' | 'prod';
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -14,6 +17,7 @@ export interface CLIOptions {
 }
 
 export interface DatabaseQuery {
+  dbPoolOrConnection: Pool | Database;
   query<Q>(sql: string, params?: unknown[]): Promise<{ changes: number; rows: Q[] }>;
   close: () => Promise<void>;
 }
