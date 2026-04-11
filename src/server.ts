@@ -69,15 +69,8 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   });
   await app.register(responsePlugin);
 
-  // Auto-generate tables, indexes, and foreign keys if models are provided
-  // if (config.models && config.models.length > 0) {
-  //   await createTables(app.db, config.models, config.database.engine, app.log);
-  //   await createIndexes(app.db, config.models, config.database.engine, app.log);
-  //   await createForeignKeys(app.db, config.models, config.database.engine, app.log);
-  // }
-
-  // New migrator for migrating the db
-  migrateDatabase(app, config);
+  // migrate the db based on config
+  await migrateDatabase(config);
 
   // register swagger
   await registerSwagger(config.swagger, app);

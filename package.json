@@ -17,7 +17,8 @@
     "prepare": "husky",
     "pretest": "npm run compile",
     "posttest": "npm run lint:check",
-    "commitlint": "commitlint --edit"
+    "commitlint": "commitlint --edit",
+    "generate:sql": "drizzle-kit push"
   },
   "repository": {
     "type": "git",
