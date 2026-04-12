@@ -1,6 +1,11 @@
 export type DBEngine = 'sqlite' | 'pg';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
-export type ForeignKeyAction = 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
+export type ForeignKeyAction =
+  | 'CASCADE'
+  | 'SET NULL'
+  | 'SET DEFAULT'
+  | 'RESTRICT'
+  | 'NO ACTION';
 export type SupportedOperations =
   | 'searchable'
   | 'sortable'
@@ -13,8 +18,17 @@ export type SupportedOperations =
   | 'equal'
   | 'oneOf'
   | 'indexable';
-export type SupportedAggregationOperation = 'mean' | 'max' | 'min' | 'count' | 'sum' | 'frequency';
-export type ModelBody = Record<string, string | number | boolean | null | undefined>;
+export type SupportedAggregationOperation =
+  | 'mean'
+  | 'max'
+  | 'min'
+  | 'count'
+  | 'sum'
+  | 'frequency';
+export type ModelBody = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
 export type JsonSchemaProperty = {
   type?: string;
   [key: string]: unknown;

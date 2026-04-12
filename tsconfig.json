@@ -6,7 +6,12 @@
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@tests/*": ["tests/*"]
+    }
   },
   "include": [
     "src/**/*.ts",

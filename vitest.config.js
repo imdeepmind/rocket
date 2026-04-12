@@ -1,6 +1,17 @@
-import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+import {defineConfig} from 'vitest/config';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@tests': path.resolve(__dirname, './tests'),
+    },
+  },
   test: {
     coverage: {
       provider: 'v8', // Uses the V8 engine for native performance
@@ -9,10 +20,10 @@ export default defineConfig({
       exclude: ['node_modules/**', 'tests/**'], // Ignore external libs and tests themselves
       // intentinally keeping the coverage low for now as we just added test cases
       thresholds: {
-        lines: 80,
-        functions: 85,
-        branches: 70,
-        statements: 80,
+        lines: 95,
+        functions: 100,
+        branches: 90,
+        statements: 95,
       },
     },
     setupFiles: ['./tests/setup.ts'],

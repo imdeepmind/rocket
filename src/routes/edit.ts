@@ -1,13 +1,15 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import { ModelConfig, ModelBody } from '../schema/config';
 import {
-  mapDataTypeToJsonSchema,
   buildFilterQueryProperties,
   getResponseStructureSchema,
+  mapDataTypeToJsonSchema,
   stripAdditionalPostFields,
-} from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+} from '@/routes/schema-helpers';
+
+import {ModelBody, ModelConfig} from '@/schema/config';
+
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register EDIT routes for editable fields.
@@ -20,9 +22,14 @@ import { capitalizeFirstLetter } from '../utils/string';
  * Body: all other fields as properties for updating.
  * Filters: if the field is not unique, filter params are available.
  */
-export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerEditRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
-    const editableFields = model.fields.filter((f) => f.supportedOperations?.includes('editable'));
+    const editableFields = model.fields.filter(f =>
+      f.supportedOperations?.includes('editable'),
+    );
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -53,7 +60,7 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
         let finalBodySchema: Record<string, unknown>;
 
         if (model.validation) {
-          finalBodySchema = { ...model.validation };
+          finalBodySchema = {...model.validation};
           if (method === 'PATCH') {
             // For PATCH, remove 'required' so partial updates are valid
             delete finalBodySchema.required;
@@ -66,7 +73,10 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
           };
         }
 
-        const responseDataSchema = { ...finalBodySchema } as Record<string, unknown>;
+        const responseDataSchema = {...finalBodySchema} as Record<
+          string,
+          unknown
+        >;
         if (method === 'PATCH' && responseDataSchema.required) {
           delete responseDataSchema.required;
         }
@@ -99,7 +109,10 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
         return schema;
       };
 
-      const handleEditRequest = async (request: FastifyRequest, reply: FastifyReply) => {
+      const handleEditRequest = async (
+        request: FastifyRequest,
+        reply: FastifyReply,
+      ) => {
         const queryParams = request.query as Record<string, unknown>;
         const params = request.params as Record<string, unknown>;
         const tableName = model.name;
@@ -113,7 +126,9 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
 
         const keys = Object.keys(body);
         if (keys.length === 0) {
-          return reply.status(400).send({ error: 'No fields provided for update' });
+          return reply
+            .status(400)
+            .send({error: 'No fields provided for update'});
         }
 
         const values: unknown[] = [];
@@ -133,26 +148,39 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
         if (!isUnique) {
           // Filters
           for (const key of Object.keys(queryParams)) {
-            if (['page', 'limit', 'orderBy', 'orderDir'].includes(key)) continue;
+            if (['page', 'limit', 'orderBy', 'orderDir'].includes(key))
+              continue;
 
             if (key.endsWith('_eq')) {
-              whereClauses.push(`"${key.replace('_eq', '')}" = $${paramIndex++}`);
+              whereClauses.push(
+                `"${key.replace('_eq', '')}" = $${paramIndex++}`,
+              );
               values.push(queryParams[key]);
             } else if (key.endsWith('_lt')) {
-              whereClauses.push(`"${key.replace('_lt', '')}" < $${paramIndex++}`);
+              whereClauses.push(
+                `"${key.replace('_lt', '')}" < $${paramIndex++}`,
+              );
               values.push(queryParams[key]);
             } else if (key.endsWith('_lte')) {
-              whereClauses.push(`"${key.replace('_lte', '')}" <= $${paramIndex++}`);
+              whereClauses.push(
+                `"${key.replace('_lte', '')}" <= $${paramIndex++}`,
+              );
               values.push(queryParams[key]);
             } else if (key.endsWith('_gt')) {
-              whereClauses.push(`"${key.replace('_gt', '')}" > $${paramIndex++}`);
+              whereClauses.push(
+                `"${key.replace('_gt', '')}" > $${paramIndex++}`,
+              );
               values.push(queryParams[key]);
             } else if (key.endsWith('_gte')) {
-              whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
+              whereClauses.push(
+                `"${key.replace('_gte', '')}" >= $${paramIndex++}`,
+              );
               values.push(queryParams[key]);
             } else if (key.endsWith('_in')) {
               const inValues = String(queryParams[key]).split(',');
-              const inParams = inValues.map(() => `$${paramIndex++}`).join(', ');
+              const inParams = inValues
+                .map(() => `$${paramIndex++}`)
+                .join(', ');
               whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
               values.push(...inValues);
             }
@@ -170,21 +198,21 @@ export function registerEditRoutes(app: FastifyInstance, models: ModelConfig[]):
               200,
               `Successfully updated records in the ${tableName} table`,
               body,
-              res
-            )
+              res,
+            ),
           );
       };
 
       app.patch(
         `/${model.name}/${field.name}/:${field.name}`,
-        { schema: buildRouteSchema('PATCH') },
-        handleEditRequest
+        {schema: buildRouteSchema('PATCH')},
+        handleEditRequest,
       );
 
       app.put(
         `/${model.name}/${field.name}/:${field.name}`,
-        { schema: buildRouteSchema('PUT') },
-        handleEditRequest
+        {schema: buildRouteSchema('PUT')},
+        handleEditRequest,
       );
     }
   }

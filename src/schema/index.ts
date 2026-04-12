@@ -7,14 +7,11 @@ export interface CLIOptions {
   mode: Mode;
 }
 
-export interface CLIOptions {
-  config: string;
-  port: number;
-  mode: Mode;
-}
-
 export interface DatabaseQuery {
-  query<Q>(sql: string, params?: unknown[]): Promise<{ changes: number; rows: Q[] }>;
+  query<Q>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{changes: number; rows: Q[]}>;
   close: () => Promise<void>;
 }
 

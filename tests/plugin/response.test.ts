@@ -1,6 +1,7 @@
-import { expect, test, describe } from 'vitest';
 import Fastify from 'fastify';
-import responsePlugin from '../../src/plugin/response';
+import {describe, expect, test} from 'vitest';
+
+import responsePlugin from '@/plugin/response';
 
 describe('response plugin', () => {
   test('response plugin decorates fastify with buildResponse', async () => {
@@ -18,8 +19,8 @@ describe('response plugin', () => {
 
     const code = 200;
     const message = 'Success';
-    const data = { id: 1, name: 'Test' };
-    const raw_data = { debug: 'info' };
+    const data = {id: 1, name: 'Test'};
+    const raw_data = {debug: 'info'};
 
     const response = fastify.buildResponse(code, message, data, raw_data);
 

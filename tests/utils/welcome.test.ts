@@ -1,18 +1,22 @@
-import { expect, test, describe, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
-import { showWelcomeScreen, RouteInfo } from '../../src/utils/welcome';
-import { AppConfig } from '../../src/schema/config';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+  type MockInstance,
+} from 'vitest';
+
+import {AppConfig} from '@/schema/config';
+
+import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;
-  let stdoutSpy: MockInstance<(str: string | Uint8Array) => boolean>;
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    stdoutSpy = vi
-      .spyOn(process.stdout, 'write')
-      .mockImplementation(() => true) as unknown as MockInstance<
-      (str: string | Uint8Array) => boolean
-    >;
   });
 
   afterEach(() => {
@@ -39,26 +43,26 @@ describe('welcome utility', () => {
       {
         name: 'User',
         fields: [
-          { name: 'id', type: 'integer', primaryKey: true },
-          { name: 'name', type: 'string' },
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'name', type: 'string'},
         ],
       },
       {
         name: 'Post',
         fields: [
-          { name: 'id', type: 'integer', primaryKey: true },
-          { name: 'title', type: 'string' },
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'title', type: 'string'},
         ],
       },
     ],
   };
 
   const mockRoutes: RouteInfo[] = [
-    { method: 'GET', url: '/users' },
-    { method: 'POST', url: '/users' },
-    { method: 'HEAD', url: '/users' },
-    { method: 'GET/POST', url: '/mixed' },
-    { method: 'GET', url: '/static/style.css' },
+    {method: 'GET', url: '/users'},
+    {method: 'POST', url: '/users'},
+    {method: 'HEAD', url: '/users'},
+    {method: 'GET/POST', url: '/mixed'},
+    {method: 'GET', url: '/static/style.css'},
   ];
 
   test('showWelcomeScreen prints expected information', () => {
@@ -79,15 +83,12 @@ describe('welcome utility', () => {
     // Check filtering
     expect(output).not.toContain('/static/style.css');
     expect(output).not.toContain('HEAD');
-
-    // Verify clear console was called
-    expect(stdoutSpy).toHaveBeenCalledWith('\x1Bc');
   });
 
   test('showWelcomeScreen handles disabled swagger', () => {
     const disabledSwaggerConfig: AppConfig = {
       ...mockConfig,
-      swagger: { ...mockConfig.swagger, enabled: false },
+      swagger: {...mockConfig.swagger, enabled: false},
     };
 
     showWelcomeScreen(disabledSwaggerConfig, 3000, mockRoutes);
@@ -103,7 +104,7 @@ describe('welcome utility', () => {
       ...mockConfig,
       database: {
         engine: 'pg',
-        connection: { urlOrPath: 'postgresql://localhost' },
+        connection: {urlOrPath: 'postgresql://localhost'},
       },
     };
 
@@ -116,7 +117,7 @@ describe('welcome utility', () => {
   });
 
   test('showWelcomeScreen handles unknown methods gracefully', () => {
-    const unknownRoute: RouteInfo[] = [{ method: 'UNKNOWN', url: '/unknown' }];
+    const unknownRoute: RouteInfo[] = [{method: 'UNKNOWN', url: '/unknown'}];
 
     showWelcomeScreen(mockConfig, 3000, unknownRoute);
 

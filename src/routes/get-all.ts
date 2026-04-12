@@ -1,14 +1,17 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import { ModelConfig } from '../schema/config';
 import {
+  applyFilters,
   buildFilterQueryProperties,
-  buildSortQueryProperties,
-  paginationQueryProperties,
-  getResponseStructureSchema,
   buildPostBodyValidationSchema,
-} from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+  buildSortQueryProperties,
+  getResponseStructureSchema,
+  paginationQueryProperties,
+} from '@/routes/schema-helpers';
+
+import {ModelConfig} from '@/schema/config';
+
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register GET_ALL routes for listing records (table-level).
@@ -21,7 +24,10 @@ import { capitalizeFirstLetter } from '../utils/string';
  *   - orderBy / orderDir for sortable fields
  *   - page / limit for pagination
  */
-export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerGetAllRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
     const queryProperties: Record<string, object> = {};
 
@@ -32,8 +38,8 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
 
     // Add sort params for sortable fields
     const sortableFields = model.fields
-      .filter((f) => f.supportedOperations?.includes('sortable'))
-      .map((f) => f.name);
+      .filter(f => f.supportedOperations?.includes('sortable'))
+      .map(f => f.name);
     Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 
     // Add pagination
@@ -62,13 +68,13 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
                 pagination: {
                   type: 'object',
                   properties: {
-                    page: { type: 'integer' },
-                    limit: { type: 'integer' },
+                    page: {type: 'integer'},
+                    limit: {type: 'integer'},
                   },
                 },
               },
             },
-            buildPostBodyValidationSchema(model)
+            buildPostBodyValidationSchema(model),
           ),
         },
       },
@@ -83,31 +89,15 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
         const whereClauses: string[] = [];
 
         // Filters
-        for (const key of Object.keys(queryParams)) {
-          if (['page', 'limit', 'orderBy', 'orderDir'].includes(key)) continue;
+        const {
+          whereClauses: filterClauses,
+          values: filterValues,
+          nextParamIndex,
+        } = applyFilters(queryParams, paramIndex);
 
-          if (key.endsWith('_eq')) {
-            whereClauses.push(`"${key.replace('_eq', '')}" = $${paramIndex++}`);
-            values.push(queryParams[key]);
-          } else if (key.endsWith('_lt')) {
-            whereClauses.push(`"${key.replace('_lt', '')}" < $${paramIndex++}`);
-            values.push(queryParams[key]);
-          } else if (key.endsWith('_lte')) {
-            whereClauses.push(`"${key.replace('_lte', '')}" <= $${paramIndex++}`);
-            values.push(queryParams[key]);
-          } else if (key.endsWith('_gt')) {
-            whereClauses.push(`"${key.replace('_gt', '')}" > $${paramIndex++}`);
-            values.push(queryParams[key]);
-          } else if (key.endsWith('_gte')) {
-            whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
-            values.push(queryParams[key]);
-          } else if (key.endsWith('_in')) {
-            const inValues = String(queryParams[key]).split(',');
-            const inParams = inValues.map(() => `$${paramIndex++}`).join(', ');
-            whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
-            values.push(...inValues);
-          }
-        }
+        whereClauses.push(...filterClauses);
+        values.push(...filterValues);
+        paramIndex = nextParamIndex;
 
         if (whereClauses.length > 0) {
           query += ` WHERE ${whereClauses.join(' AND ')}`;
@@ -134,12 +124,12 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
             `Successfully retrieved records from the ${tableName} table`,
             {
               data: res.rows || [],
-              pagination: { page, limit },
+              pagination: {page, limit},
             },
-            res
-          )
+            res,
+          ),
         );
-      }
+      },
     );
   }
 }

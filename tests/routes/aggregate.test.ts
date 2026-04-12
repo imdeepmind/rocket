@@ -1,13 +1,15 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {beforeEach, describe, expect, test} from 'vitest';
+
+import {ModelConfig} from '@/schema/config';
+
+import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const aggregateModel: ModelConfig[] = [
   {
     name: 'sales',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
+      {name: 'id', type: 'integer', primaryKey: true},
       {
         name: 'amount',
         type: 'integer',
@@ -18,7 +20,7 @@ const aggregateModel: ModelConfig[] = [
         type: 'string',
         supportedAggregation: ['frequency'],
       },
-      { name: 'date', type: 'string' }, // No aggregation
+      {name: 'date', type: 'string'}, // No aggregation
     ],
   },
 ];
@@ -31,7 +33,7 @@ describe('test aggregate api', () => {
   describe('happy path', () => {
     test('should return 200 with all numeric aggregations', async () => {
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{ mean: 50, max: 100, min: 10, sum: 500, count: 10 }],
+        rows: [{mean: 50, max: 100, min: 10, sum: 500, count: 10}],
         rowCount: 1,
       });
 
@@ -64,7 +66,7 @@ describe('test aggregate api', () => {
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT MAX("amount") AS max, MIN("amount") AS min FROM "sales"',
-        []
+        [],
       );
 
       await fastify.close();
@@ -73,8 +75,8 @@ describe('test aggregate api', () => {
     test('should return 200 with frequency aggregation', async () => {
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          { val: 'electronics', c: '5' },
-          { val: 'books', c: '12' },
+          {val: 'electronics', c: '5'},
+          {val: 'books', c: '12'},
         ],
         rowCount: 2,
       });
@@ -106,7 +108,7 @@ describe('test aggregate api', () => {
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT "category" as val, COUNT(*) as c FROM "sales" GROUP BY "category"',
-        []
+        [],
       );
 
       await fastify.close();
@@ -131,14 +133,14 @@ describe('test aggregate api', () => {
 
       // First call: numeric aggregation
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{ mean: 85 }],
+        rows: [{mean: 85}],
         rowCount: 1,
       });
       // Second call: frequency aggregation
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          { val: 80, c: 2 },
-          { val: 90, c: 1 },
+          {val: 80, c: 2},
+          {val: 90, c: 1},
         ],
         rowCount: 2,
       });
@@ -153,7 +155,7 @@ describe('test aggregate api', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().data).toEqual({
         mean: 85,
-        frequency: { '80': 2, '90': 1 },
+        frequency: {'80': 2, '90': 1},
       });
 
       await fastify.close();
@@ -184,7 +186,7 @@ describe('test aggregate api', () => {
 
       expect(response.statusCode).toBe(400);
       expect(response.json().message).toContain(
-        'At least one aggregation operation must be provided'
+        'At least one aggregation operation must be provided',
       );
 
       await fastify.close();
@@ -200,7 +202,7 @@ describe('test aggregate api', () => {
 
       expect(response.statusCode).toBe(400);
       expect(response.json().message).toBe(
-        "Unsupported aggregation operation 'frequency' for field amount"
+        "Unsupported aggregation operation 'frequency' for field amount",
       );
 
       await fastify.close();
