@@ -1,15 +1,19 @@
-import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
 import Fastify, {
   FastifyError,
-  FastifyRequest,
-  FastifyReply,
   FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
 } from 'fastify';
-import {startServer} from '@/server';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+
 import migrateDatabase from '@/migrator/index';
+import {startServer} from '@/server';
+
 import {registerModelRoutes} from '@/routes/index';
-import {showWelcomeScreen} from '@/utils/welcome';
+
 import {AppConfig} from '@/schema/config';
+
+import {showWelcomeScreen} from '@/utils/welcome';
 
 vi.mock('fastify', () => {
   const mockApp = {

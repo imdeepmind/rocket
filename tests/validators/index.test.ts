@@ -1,11 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {describe, expect, it, vi} from 'vitest';
+
 import {InvalidArgumentError} from 'commander';
+import {describe, expect, it, vi} from 'vitest';
+
 import {
   validateConfigPath,
-  validatePort,
   validateMode,
+  validatePort,
 } from '@/validators/index';
 
 vi.mock('fs');

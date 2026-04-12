@@ -1,5 +1,6 @@
-import 'fastify';
 import {DatabaseQuery, StructuredResponse} from '@/types';
+
+import 'fastify';
 
 declare module 'fastify' {
   interface FastifyInstance {

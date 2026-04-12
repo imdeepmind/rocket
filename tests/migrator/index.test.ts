@@ -1,8 +1,10 @@
-import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
-import * as fs from 'fs';
 import {execSync} from 'child_process';
+import * as fs from 'fs';
+
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+
 import {AppConfig} from '@/schema/config';
 
 vi.mock('fs', async importOriginal => {

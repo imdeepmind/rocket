@@ -1,14 +1,16 @@
 import {
+  afterEach,
+  beforeEach,
+  describe,
   expect,
   test,
-  describe,
   vi,
-  beforeEach,
-  afterEach,
   type MockInstance,
 } from 'vitest';
-import {showWelcomeScreen, RouteInfo} from '@/utils/welcome';
+
 import {AppConfig} from '@/schema/config';
+
+import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;

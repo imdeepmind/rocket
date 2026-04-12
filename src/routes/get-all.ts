@@ -1,13 +1,15 @@
-import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {ModelConfig} from '@/schema/config';
 import {
   buildFilterQueryProperties,
-  buildSortQueryProperties,
-  paginationQueryProperties,
-  getResponseStructureSchema,
   buildPostBodyValidationSchema,
+  buildSortQueryProperties,
+  getResponseStructureSchema,
+  paginationQueryProperties,
 } from '@/routes/schema-helpers';
+
+import {ModelConfig} from '@/schema/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**

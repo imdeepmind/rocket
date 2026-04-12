@@ -1,10 +1,12 @@
-import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {ModelConfig} from '@/schema/config';
 import {
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
+
+import {ModelConfig} from '@/schema/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**

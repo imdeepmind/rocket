@@ -1,14 +1,16 @@
-import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
+
+import {
+  buildFilterQueryProperties,
+  buildPostBodyValidationSchema,
+  buildSortQueryProperties,
+  getResponseStructureSchema,
+  mapDataTypeToJsonSchema,
+  paginationQueryProperties,
+} from '@/routes/schema-helpers';
 
 import {ModelConfig} from '@/schema/config';
-import {
-  mapDataTypeToJsonSchema,
-  buildFilterQueryProperties,
-  buildSortQueryProperties,
-  paginationQueryProperties,
-  getResponseStructureSchema,
-  buildPostBodyValidationSchema,
-} from '@/routes/schema-helpers';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**

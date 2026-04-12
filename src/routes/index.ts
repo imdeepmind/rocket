@@ -1,13 +1,14 @@
 import {FastifyInstance} from 'fastify';
 
-import {ModelConfig} from '@/schema/config';
-import {registerIndexRoutes} from '@/routes/index-route';
-import {registerSearchRoutes} from '@/routes/search';
-import {registerEditRoutes} from '@/routes/edit';
-import {registerDeleteRoutes} from '@/routes/delete';
 import {registerAggregateRoutes} from '@/routes/aggregate';
-import {registerPostRoutes} from '@/routes/post';
+import {registerDeleteRoutes} from '@/routes/delete';
+import {registerEditRoutes} from '@/routes/edit';
 import {registerGetAllRoutes} from '@/routes/get-all';
+import {registerIndexRoutes} from '@/routes/index-route';
+import {registerPostRoutes} from '@/routes/post';
+import {registerSearchRoutes} from '@/routes/search';
+
+import {ModelConfig} from '@/schema/config';
 
 /**
  * Register all config-driven model routes on the Fastify instance.

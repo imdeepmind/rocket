@@ -1,7 +1,9 @@
-import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
+
+import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {ModelConfig, SupportedAggregationOperation} from '@/schema/config';
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**

@@ -1,12 +1,14 @@
-import {describe, it, test, expect} from 'vitest';
+import {describe, expect, it, test} from 'vitest';
+
 import {
-  mapDataTypeToJsonSchema,
-  buildSortQueryProperties,
   buildFilterQueryProperties,
   buildPostBodyValidationSchema,
-  stripAdditionalPostFields,
+  buildSortQueryProperties,
   getResponseStructureSchema,
+  mapDataTypeToJsonSchema,
+  stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
+
 import {DataType, ModelConfig, ModelFieldConfig} from '@/schema/config';
 
 describe('test schema helper', () => {

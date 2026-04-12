@@ -1,12 +1,14 @@
-import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {ModelConfig, ModelBody} from '@/schema/config';
 import {
-  mapDataTypeToJsonSchema,
   buildFilterQueryProperties,
   getResponseStructureSchema,
+  mapDataTypeToJsonSchema,
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
+
+import {ModelBody, ModelConfig} from '@/schema/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**

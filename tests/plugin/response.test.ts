@@ -1,5 +1,6 @@
-import {expect, test, describe} from 'vitest';
 import Fastify from 'fastify';
+import {describe, expect, test} from 'vitest';
+
 import responsePlugin from '@/plugin/response';
 
 describe('response plugin', () => {

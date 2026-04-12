@@ -1,5 +1,7 @@
-import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
 import * as fs from 'fs';
+
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+
 import {startServer} from '@/server';
 
 // Setup Mock for Commander

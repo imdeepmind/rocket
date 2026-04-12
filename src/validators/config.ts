@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+
 import {AppConfig, JsonSchemaObject, JsonSchemaProperty} from '@/schema/config';
 
 const ajv = new Ajv({

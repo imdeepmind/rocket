@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+
 import {AppConfig} from '@/schema/config';
 
 export interface RouteInfo {

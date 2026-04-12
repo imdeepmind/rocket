@@ -1,9 +1,9 @@
 import {
   DataType,
-  ModelFieldConfig,
+  JsonSchemaObject,
   ModelBody,
   ModelConfig,
-  JsonSchemaObject,
+  ModelFieldConfig,
 } from '@/schema/config';
 
 /**

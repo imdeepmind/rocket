@@ -1,16 +1,19 @@
-import {expect, test, describe, vi} from 'vitest';
 import Fastify from 'fastify';
+import {describe, expect, test, vi} from 'vitest';
 
 import databasePlugin from '@/plugin/database';
+
 import {DatabaseConfig} from '@/schema/config';
+
 import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
+
 import {
-  pgQueryMock,
   pgEndMock,
+  pgQueryMock,
   sqliteAllMock,
-  sqliteRunMock,
-  sqlitePrepareMock,
   sqliteCloseMock,
+  sqlitePrepareMock,
+  sqliteRunMock,
 } from '../helpers/db-mocks';
 
 describe('database plugin', () => {
