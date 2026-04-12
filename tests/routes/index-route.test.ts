@@ -1,16 +1,16 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {expect, test, describe, beforeEach} from 'vitest';
+import {createTestApp, pgConfig} from '../helpers/test-app';
+import {ModelConfig} from '../../src/schema/config';
+import {pgQueryMock} from '../helpers/db-mocks';
 
 // Model with a unique (primaryKey) field — returns single record
 const uniqueFieldModel: ModelConfig[] = [
   {
     name: 'users',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'name', type: 'string' },
-      { name: 'email', type: 'string' },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {name: 'name', type: 'string'},
+      {name: 'email', type: 'string'},
     ],
   },
 ];
@@ -20,8 +20,8 @@ const uniqueNonPkModel: ModelConfig[] = [
   {
     name: 'users',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'email', type: 'string', unique: true },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {name: 'email', type: 'string', unique: true},
     ],
   },
 ];
@@ -78,7 +78,7 @@ const mixedFieldModel: ModelConfig[] = [
           'oneOf',
         ],
       },
-      { name: 'slug', type: 'string', unique: true },
+      {name: 'slug', type: 'string', unique: true},
       {
         name: 'tag',
         type: 'string',
@@ -93,8 +93,8 @@ const noIndexFieldModel: ModelConfig[] = [
   {
     name: 'logs',
     fields: [
-      { name: 'message', type: 'string' },
-      { name: 'level', type: 'string' },
+      {name: 'message', type: 'string'},
+      {name: 'level', type: 'string'},
     ],
   },
 ];
@@ -107,7 +107,7 @@ describe('test index-route api', () => {
   describe('unique field routes (primaryKey / unique)', () => {
     test('should return 200 with a single record for primaryKey lookup', async () => {
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{ id: 42, name: 'Alice', email: 'alice@example.com' }],
+        rows: [{id: 42, name: 'Alice', email: 'alice@example.com'}],
         rowCount: 1,
       });
 
@@ -131,19 +131,19 @@ describe('test index-route api', () => {
     test('should build correct SQL with LIMIT 1 for primaryKey field', async () => {
       const fastify = await createTestApp(pgConfig, uniqueFieldModel);
 
-      await fastify.inject({ method: 'GET', url: '/users/id/5' });
+      await fastify.inject({method: 'GET', url: '/users/id/5'});
 
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" = $1 LIMIT $2;',
-        [5, 1]
+        [5, 1],
       );
 
       await fastify.close();
     });
 
     test('should return null in data when no record is found for a unique field', async () => {
-      pgQueryMock.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
 
       const fastify = await createTestApp(pgConfig, uniqueFieldModel);
 
@@ -173,7 +173,7 @@ describe('test index-route api', () => {
 
     test('should also register route for a unique (non-PK) field', async () => {
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{ id: 1, email: 'bob@example.com' }],
+        rows: [{id: 1, email: 'bob@example.com'}],
         rowCount: 1,
       });
 
@@ -187,7 +187,7 @@ describe('test index-route api', () => {
       expect(response.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "email" = $1 LIMIT $2;',
-        ['bob@example.com', 1]
+        ['bob@example.com', 1],
       );
 
       await fastify.close();
@@ -201,7 +201,9 @@ describe('test index-route api', () => {
         url: '/users/id/1',
       });
 
-      expect(response.json().message).toBe('Successfully retrieved records from the users table');
+      expect(response.json().message).toBe(
+        'Successfully retrieved records from the users table',
+      );
 
       await fastify.close();
     });
@@ -211,8 +213,8 @@ describe('test index-route api', () => {
     test('should return 200 with an array of records for an indexable field', async () => {
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          { id: 1, category: 'tech', title: 'Post A' },
-          { id: 2, category: 'tech', title: 'Post B' },
+          {id: 1, category: 'tech', title: 'Post A'},
+          {id: 2, category: 'tech', title: 'Post B'},
         ],
         rowCount: 2,
       });
@@ -226,8 +228,8 @@ describe('test index-route api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data).toEqual([
-        { id: 1, category: 'tech', title: 'Post A' },
-        { id: 2, category: 'tech', title: 'Post B' },
+        {id: 1, category: 'tech', title: 'Post A'},
+        {id: 2, category: 'tech', title: 'Post B'},
       ]);
 
       await fastify.close();
@@ -243,7 +245,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
-        ['tech', 20, 0]
+        ['tech', 20, 0],
       );
 
       await fastify.close();
@@ -257,7 +259,7 @@ describe('test index-route api', () => {
         url: '/posts/category/tech?page=2&limit=5',
       });
 
-      expect(response.json().data.pagination).toEqual({ page: 2, limit: 5 });
+      expect(response.json().data.pagination).toEqual({page: 2, limit: 5});
 
       await fastify.close();
     });
@@ -272,7 +274,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
-        ['tech', 10, 20] // offset = (3-1) * 10 = 20
+        ['tech', 10, 20], // offset = (3-1) * 10 = 20
       );
 
       await fastify.close();
@@ -347,7 +349,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" < $2 LIMIT $3 OFFSET $4;',
-        ['tech', 100, 20, 0]
+        ['tech', 100, 20, 0],
       );
 
       await fastify.close();
@@ -363,7 +365,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" <= $2 LIMIT $3 OFFSET $4;',
-        ['tech', 50, 20, 0]
+        ['tech', 50, 20, 0],
       );
 
       await fastify.close();
@@ -379,7 +381,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" > $2 LIMIT $3 OFFSET $4;',
-        ['tech', 10, 20, 0]
+        ['tech', 10, 20, 0],
       );
 
       await fastify.close();
@@ -395,7 +397,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" >= $2 LIMIT $3 OFFSET $4;',
-        ['tech', 1, 20, 0]
+        ['tech', 1, 20, 0],
       );
 
       await fastify.close();
@@ -411,7 +413,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" IN ($2, $3, $4) LIMIT $5 OFFSET $6;',
-        ['tech', '1', '2', '3', 20, 0]
+        ['tech', '1', '2', '3', 20, 0],
       );
 
       await fastify.close();
@@ -441,11 +443,11 @@ describe('test index-route api', () => {
       const fastify = await createTestApp(pgConfig, mixedFieldModel);
 
       // unique route: /articles/id/:id
-      const byId = await fastify.inject({ method: 'GET', url: '/articles/id/1' });
+      const byId = await fastify.inject({method: 'GET', url: '/articles/id/1'});
       expect(byId.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenLastCalledWith(
         'SELECT * FROM "articles" WHERE "id" = $1 LIMIT $2;',
-        [1, 1]
+        [1, 1],
       );
 
       pgQueryMock.mockClear();
@@ -458,7 +460,7 @@ describe('test index-route api', () => {
       expect(bySlug.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenLastCalledWith(
         'SELECT * FROM "articles" WHERE "slug" = $1 LIMIT $2;',
-        ['my-article', 1]
+        ['my-article', 1],
       );
 
       pgQueryMock.mockClear();
@@ -471,7 +473,7 @@ describe('test index-route api', () => {
       expect(byTag.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenLastCalledWith(
         'SELECT * FROM "articles" WHERE "tag" = $1 LIMIT $2 OFFSET $3;',
-        ['news', 20, 0]
+        ['news', 20, 0],
       );
 
       await fastify.close();

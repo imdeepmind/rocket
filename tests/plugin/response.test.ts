@@ -1,4 +1,4 @@
-import { expect, test, describe } from 'vitest';
+import {expect, test, describe} from 'vitest';
 import Fastify from 'fastify';
 import responsePlugin from '../../src/plugin/response';
 
@@ -18,8 +18,8 @@ describe('response plugin', () => {
 
     const code = 200;
     const message = 'Success';
-    const data = { id: 1, name: 'Test' };
-    const raw_data = { debug: 'info' };
+    const data = {id: 1, name: 'Test'};
+    const raw_data = {debug: 'info'};
 
     const response = fastify.buildResponse(code, message, data, raw_data);
 

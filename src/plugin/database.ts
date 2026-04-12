@@ -1,10 +1,10 @@
 import fp from 'fastify-plugin';
-import { FastifyInstance } from 'fastify';
-import { Pool } from 'pg';
+import {FastifyInstance} from 'fastify';
+import {Pool} from 'pg';
 import Database from 'better-sqlite3';
 
-import { DatabaseQuery } from '../types';
-import { DatabaseConfig } from '../schema/config';
+import {DatabaseQuery} from '../types';
+import {DatabaseConfig} from '../schema/config';
 
 function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');

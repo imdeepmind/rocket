@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
-import { FastifyInstance } from 'fastify';
+import {FastifyInstance} from 'fastify';
 
-import { StructuredResponse } from '../types';
+import {StructuredResponse} from '../types';
 
 export default fp(async (fastify: FastifyInstance) => {
   fastify.decorate(
@@ -10,7 +10,7 @@ export default fp(async (fastify: FastifyInstance) => {
       code: number,
       message: string,
       data: T,
-      raw_data?: R
+      raw_data?: R,
     ): StructuredResponse<T, R> => {
       return {
         code,
@@ -18,6 +18,6 @@ export default fp(async (fastify: FastifyInstance) => {
         data,
         raw_data,
       };
-    }
+    },
   );
 });

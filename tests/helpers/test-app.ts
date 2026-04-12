@@ -1,16 +1,16 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, {FastifyInstance} from 'fastify';
 import databasePlugin from '../../src/plugin/database';
 import responsePlugin from '../../src/plugin/response';
-import { DatabaseConfig, ModelConfig } from '../../src/schema/config';
-import { registerModelRoutes } from '../../src/routes';
+import {DatabaseConfig, ModelConfig} from '../../src/schema/config';
+import {registerModelRoutes} from '../../src/routes';
 
 export const mockModels: ModelConfig[] = [
   {
     name: 'users',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'name', type: 'string' },
-      { name: 'email', type: 'string' },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {name: 'name', type: 'string'},
+      {name: 'email', type: 'string'},
     ],
   },
 ];
@@ -31,7 +31,7 @@ export const sqliteConfig: DatabaseConfig = {
 
 export async function createTestApp(
   dbConfig: DatabaseConfig,
-  models: ModelConfig[] = []
+  models: ModelConfig[] = [],
 ): Promise<FastifyInstance> {
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);

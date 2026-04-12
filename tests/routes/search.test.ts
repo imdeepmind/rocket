@@ -1,7 +1,7 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {expect, test, describe, beforeEach} from 'vitest';
+import {createTestApp, pgConfig} from '../helpers/test-app';
+import {ModelConfig} from '../../src/schema/config';
+import {pgQueryMock} from '../helpers/db-mocks';
 
 // Model with a single searchable field
 const searchableModel: ModelConfig[] = [
@@ -26,7 +26,7 @@ const searchableModel: ModelConfig[] = [
         type: 'string',
         supportedOperations: ['searchable', 'sortable', 'equal'],
       },
-      { name: 'email', type: 'string', supportedOperations: ['equal'] },
+      {name: 'email', type: 'string', supportedOperations: ['equal']},
     ],
   },
 ];
@@ -36,9 +36,17 @@ const multiSearchableModel: ModelConfig[] = [
   {
     name: 'products',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'title', type: 'string', supportedOperations: ['searchable', 'sortable'] },
-      { name: 'description', type: 'string', supportedOperations: ['searchable'] },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {
+        name: 'title',
+        type: 'string',
+        supportedOperations: ['searchable', 'sortable'],
+      },
+      {
+        name: 'description',
+        type: 'string',
+        supportedOperations: ['searchable'],
+      },
     ],
   },
 ];
@@ -48,8 +56,8 @@ const noSearchableModel: ModelConfig[] = [
   {
     name: 'logs',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'message', type: 'string' },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {name: 'message', type: 'string'},
     ],
   },
 ];
@@ -62,7 +70,7 @@ describe('test search api', () => {
   describe('happy path', () => {
     test('should return 200 with matching records', async () => {
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{ id: 1, name: 'Alice', email: 'alice@example.com' }],
+        rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
         rowCount: 1,
       });
 
@@ -75,7 +83,7 @@ describe('test search api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data).toEqual([
-        { id: 1, name: 'Alice', email: 'alice@example.com' },
+        {id: 1, name: 'Alice', email: 'alice@example.com'},
       ]);
 
       await fastify.close();
@@ -92,7 +100,7 @@ describe('test search api', () => {
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%alice%', 20, 0]
+        ['%alice%', 20, 0],
       );
 
       await fastify.close();
@@ -120,7 +128,9 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=test',
       });
 
-      expect(response.json().message).toBe('Successfully searched records from the users table');
+      expect(response.json().message).toBe(
+        'Successfully searched records from the users table',
+      );
 
       await fastify.close();
     });
@@ -133,7 +143,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=test',
       });
 
-      expect(response.json().data.pagination).toEqual({ page: 1, limit: 20 });
+      expect(response.json().data.pagination).toEqual({page: 1, limit: 20});
 
       await fastify.close();
     });
@@ -150,7 +160,7 @@ describe('test search api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%al%', 5, 5]
+        ['%al%', 5, 5],
       );
 
       await fastify.close();
@@ -166,7 +176,7 @@ describe('test search api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%al%', 10, 0]
+        ['%al%', 10, 0],
       );
 
       await fastify.close();
@@ -180,7 +190,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=bob&page=3&limit=7',
       });
 
-      expect(response.json().data.pagination).toEqual({ page: 3, limit: 7 });
+      expect(response.json().data.pagination).toEqual({page: 3, limit: 7});
 
       await fastify.close();
     });
@@ -339,7 +349,7 @@ describe('test search api', () => {
       expect(byTitle.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenLastCalledWith(
         'SELECT * FROM "products" WHERE LOWER("title") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%rocket%', 20, 0]
+        ['%rocket%', 20, 0],
       );
 
       pgQueryMock.mockClear();
@@ -352,7 +362,7 @@ describe('test search api', () => {
       expect(byDescription.statusCode).toBe(200);
       expect(pgQueryMock).toHaveBeenLastCalledWith(
         'SELECT * FROM "products" WHERE LOWER("description") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%fast%', 20, 0]
+        ['%fast%', 20, 0],
       );
 
       await fastify.close();
@@ -430,7 +440,7 @@ describe('test search api', () => {
       const callArgs = pgQueryMock.mock.calls[0];
       // Only the LIKE clause should appear, not any clause for `name_contains`
       expect(callArgs[0]).toBe(
-        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;'
+        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
       );
 
       await fastify.close();

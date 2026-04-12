@@ -1,7 +1,7 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {expect, test, describe, beforeEach} from 'vitest';
+import {createTestApp, pgConfig} from '../helpers/test-app';
+import {ModelConfig} from '../../src/schema/config';
+import {pgQueryMock} from '../helpers/db-mocks';
 
 const singleDeletableModel: ModelConfig[] = [
   {
@@ -13,7 +13,7 @@ const singleDeletableModel: ModelConfig[] = [
         primaryKey: true,
         supportedOperations: ['deletable'],
       },
-      { name: 'name', type: 'string' },
+      {name: 'name', type: 'string'},
     ],
   },
 ];
@@ -22,9 +22,14 @@ const multipleDeletableFieldsModel: ModelConfig[] = [
   {
     name: 'posts',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true, supportedOperations: ['deletable'] },
-      { name: 'slug', type: 'string', supportedOperations: ['deletable'] },
-      { name: 'title', type: 'string' },
+      {
+        name: 'id',
+        type: 'integer',
+        primaryKey: true,
+        supportedOperations: ['deletable'],
+      },
+      {name: 'slug', type: 'string', supportedOperations: ['deletable']},
+      {name: 'title', type: 'string'},
     ],
   },
 ];
@@ -33,8 +38,8 @@ const noDeletableFieldsModel: ModelConfig[] = [
   {
     name: 'logs',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
-      { name: 'message', type: 'string' },
+      {name: 'id', type: 'integer', primaryKey: true},
+      {name: 'message', type: 'string'},
     ],
   },
 ];
@@ -57,7 +62,10 @@ describe('test delete api', () => {
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
       expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith('DELETE FROM "users" WHERE "id" = $1;', [42]);
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "users" WHERE "id" = $1;',
+        [42],
+      );
 
       await fastify.close();
     });
@@ -66,7 +74,9 @@ describe('test delete api', () => {
       const customModels: ModelConfig[] = [
         {
           name: 'posts',
-          fields: [{ name: 'slug', type: 'string', supportedOperations: ['deletable'] }],
+          fields: [
+            {name: 'slug', type: 'string', supportedOperations: ['deletable']},
+          ],
         },
       ];
       const fastify = await createTestApp(pgConfig, customModels);
@@ -79,29 +89,43 @@ describe('test delete api', () => {
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
       expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith('DELETE FROM "posts" WHERE "slug" = $1;', [
-        'hello-world',
-      ]);
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "posts" WHERE "slug" = $1;',
+        ['hello-world'],
+      );
 
       await fastify.close();
     });
 
     test('should register separate routes for each deletable field on a model', async () => {
-      const fastify = await createTestApp(pgConfig, multipleDeletableFieldsModel);
+      const fastify = await createTestApp(
+        pgConfig,
+        multipleDeletableFieldsModel,
+      );
 
       // Delete by id
-      const byId = await fastify.inject({ method: 'DELETE', url: '/posts/id/10' });
+      const byId = await fastify.inject({
+        method: 'DELETE',
+        url: '/posts/id/10',
+      });
       expect(byId.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith('DELETE FROM "posts" WHERE "id" = $1;', [10]);
+      expect(pgQueryMock).toHaveBeenLastCalledWith(
+        'DELETE FROM "posts" WHERE "id" = $1;',
+        [10],
+      );
 
       pgQueryMock.mockClear();
 
       // Delete by slug
-      const bySlug = await fastify.inject({ method: 'DELETE', url: '/posts/slug/my-post' });
+      const bySlug = await fastify.inject({
+        method: 'DELETE',
+        url: '/posts/slug/my-post',
+      });
       expect(bySlug.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith('DELETE FROM "posts" WHERE "slug" = $1;', [
-        'my-post',
-      ]);
+      expect(pgQueryMock).toHaveBeenLastCalledWith(
+        'DELETE FROM "posts" WHERE "slug" = $1;',
+        ['my-post'],
+      );
 
       await fastify.close();
     });

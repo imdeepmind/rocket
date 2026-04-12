@@ -1,8 +1,8 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import { ModelConfig, SupportedAggregationOperation } from '../schema/config';
-import { getResponseStructureSchema } from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+import {ModelConfig, SupportedAggregationOperation} from '../schema/config';
+import {getResponseStructureSchema} from './schema-helpers';
+import {capitalizeFirstLetter} from '../utils/string';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.
@@ -13,10 +13,13 @@ import { capitalizeFirstLetter } from '../utils/string';
  * Query params:
  *   - operations (string) — comma-separated list of aggregation operations to perform
  */
-export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerAggregateRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
     const aggregatableFields = model.fields.filter(
-      (f) => f.supportedAggregation && f.supportedAggregation.length > 0
+      f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
     for (const field of aggregatableFields) {
@@ -44,18 +47,18 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
               {
                 type: 'object',
                 properties: {
-                  mean: { type: 'number', nullable: true },
-                  max: { type: 'number', nullable: true },
-                  min: { type: 'number', nullable: true },
-                  sum: { type: 'number', nullable: true },
-                  count: { type: 'number', nullable: true },
+                  mean: {type: 'number', nullable: true},
+                  max: {type: 'number', nullable: true},
+                  min: {type: 'number', nullable: true},
+                  sum: {type: 'number', nullable: true},
+                  count: {type: 'number', nullable: true},
                   frequency: {
                     type: 'object',
-                    additionalProperties: { type: 'integer' },
+                    additionalProperties: {type: 'integer'},
                   },
                 },
               },
-              { type: 'object', additionalProperties: true }
+              {type: 'object', additionalProperties: true},
             ),
           },
         },
@@ -63,14 +66,18 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
           const query = request.query as Record<string, unknown>;
           const requestedOps = String(query.operations || '')
             .split(',')
-            .map((s) => s.trim())
+            .map(s => s.trim())
             .filter(Boolean);
 
           if (requestedOps.length === 0) {
             return reply
               .status(400)
               .send(
-                app.buildResponse(400, 'At least one aggregation operation must be provided', null)
+                app.buildResponse(
+                  400,
+                  'At least one aggregation operation must be provided',
+                  null,
+                ),
               );
           }
 
@@ -82,8 +89,8 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
                   app.buildResponse(
                     400,
                     `Unsupported aggregation operation '${op}' for field ${field.name}`,
-                    null
-                  )
+                    null,
+                  ),
                 );
             }
           }
@@ -91,15 +98,20 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
           const result: Record<string, unknown> = {};
 
           const sqlAggs = [];
-          if (requestedOps.includes('mean')) sqlAggs.push(`AVG("${field.name}") AS mean`);
-          if (requestedOps.includes('max')) sqlAggs.push(`MAX("${field.name}") AS max`);
-          if (requestedOps.includes('min')) sqlAggs.push(`MIN("${field.name}") AS min`);
-          if (requestedOps.includes('sum')) sqlAggs.push(`SUM("${field.name}") AS sum`);
-          if (requestedOps.includes('count')) sqlAggs.push(`COUNT("${field.name}") AS count`);
+          if (requestedOps.includes('mean'))
+            sqlAggs.push(`AVG("${field.name}") AS mean`);
+          if (requestedOps.includes('max'))
+            sqlAggs.push(`MAX("${field.name}") AS max`);
+          if (requestedOps.includes('min'))
+            sqlAggs.push(`MIN("${field.name}") AS min`);
+          if (requestedOps.includes('sum'))
+            sqlAggs.push(`SUM("${field.name}") AS sum`);
+          if (requestedOps.includes('count'))
+            sqlAggs.push(`COUNT("${field.name}") AS count`);
 
           if (sqlAggs.length > 0) {
             const res = await app.db.query<Record<string, unknown>>(
-              `SELECT ${sqlAggs.join(', ')} FROM "${model.name}"`
+              `SELECT ${sqlAggs.join(', ')} FROM "${model.name}"`,
             );
             if (res.rows.length > 0) {
               const row = res.rows[0];
@@ -113,7 +125,7 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
 
           if (requestedOps.includes('frequency')) {
             const freqRes = await app.db.query<Record<string, unknown>>(
-              `SELECT "${field.name}" as val, COUNT(*) as c FROM "${model.name}" GROUP BY "${field.name}"`
+              `SELECT "${field.name}" as val, COUNT(*) as c FROM "${model.name}" GROUP BY "${field.name}"`,
             );
             const freq: Record<string, number> = {};
             for (const row of freqRes.rows) {
@@ -128,10 +140,10 @@ export function registerAggregateRoutes(app: FastifyInstance, models: ModelConfi
               app.buildResponse(
                 200,
                 `Successfully aggregated data for ${field.name} in ${model.name}`,
-                result
-              )
+                result,
+              ),
             );
-        }
+        },
       );
     }
   }

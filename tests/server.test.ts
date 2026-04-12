@@ -1,10 +1,15 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import Fastify, { FastifyError, FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
-import { startServer } from '../src/server';
+import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
+import Fastify, {
+  FastifyError,
+  FastifyRequest,
+  FastifyReply,
+  FastifyInstance,
+} from 'fastify';
+import {startServer} from '../src/server';
 import migrateDatabase from '../src/migrator/index';
-import { registerModelRoutes } from '../src/routes/index';
-import { showWelcomeScreen } from '../src/utils/welcome';
-import { AppConfig } from '../src/schema/config';
+import {registerModelRoutes} from '../src/routes/index';
+import {showWelcomeScreen} from '../src/utils/welcome';
+import {AppConfig} from '../src/schema/config';
 
 vi.mock('fastify', () => {
   const mockApp = {
@@ -12,8 +17,12 @@ vi.mock('fastify', () => {
     addHook: vi.fn(),
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
-    log: { error: vi.fn() },
-    buildResponse: vi.fn((statusCode, message, data, meta) => ({ statusCode, message, meta })),
+    log: {error: vi.fn()},
+    buildResponse: vi.fn((statusCode, message, data, meta) => ({
+      statusCode,
+      message,
+      meta,
+    })),
   };
   return {
     default: vi.fn(() => mockApp),
@@ -21,7 +30,7 @@ vi.mock('fastify', () => {
 });
 
 vi.mock('../src/validators/config', () => ({
-  validateConfig: vi.fn((c) => c),
+  validateConfig: vi.fn(c => c),
 }));
 
 vi.mock('../src/migrator/index', () => ({
@@ -39,17 +48,17 @@ vi.mock('../src/utils/welcome', () => ({
 const mockConfig: AppConfig = {
   database: {
     engine: 'sqlite',
-    connection: { urlOrPath: ':memory:' },
+    connection: {urlOrPath: ':memory:'},
   },
   swagger: {
     enabled: true,
     basePath: '/docs',
-    info: { title: 'Test', description: 'Test API', version: '1.0' },
+    info: {title: 'Test', description: 'Test API', version: '1.0'},
   },
   models: [
     {
       name: 'users',
-      fields: [{ name: 'id', type: 'integer', primaryKey: true }],
+      fields: [{name: 'id', type: 'integer', primaryKey: true}],
     },
   ],
 };
@@ -59,7 +68,7 @@ type MockedApp = FastifyInstance & {
   addHook: ReturnType<typeof vi.fn>;
   setErrorHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
-  log: { error: ReturnType<typeof vi.fn> };
+  log: {error: ReturnType<typeof vi.fn>};
   buildResponse: ReturnType<typeof vi.fn>;
 };
 
@@ -110,8 +119,8 @@ describe('Server', () => {
       url: string;
     }) => void;
 
-    hookCallback({ method: 'GET', url: '/test' });
-    hookCallback({ method: ['POST', 'PUT'], url: '/multi' });
+    hookCallback({method: 'GET', url: '/test'});
+    hookCallback({method: ['POST', 'PUT'], url: '/multi'});
 
     const showWelcomeMock = vi.mocked(showWelcomeScreen);
 
@@ -119,9 +128,9 @@ describe('Server', () => {
       mockConfig,
       3000,
       expect.arrayContaining([
-        { method: 'GET', url: '/test' },
-        { method: 'POST/PUT', url: '/multi' },
-      ])
+        {method: 'GET', url: '/test'},
+        {method: 'POST/PUT', url: '/multi'},
+      ]),
     );
   });
 
@@ -131,15 +140,18 @@ describe('Server', () => {
     expect(mockApp.register).toHaveBeenCalledTimes(4);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
-    expect(registerModelRoutes).toHaveBeenCalledWith(mockApp, mockConfig.models);
+    expect(registerModelRoutes).toHaveBeenCalledWith(
+      mockApp,
+      mockConfig.models,
+    );
     expect(showWelcomeScreen).toHaveBeenCalled();
-    expect(mockApp.listen).toHaveBeenCalledWith({ port: 3000, host: '0.0.0.0' });
+    expect(mockApp.listen).toHaveBeenCalledWith({port: 3000, host: '0.0.0.0'});
   });
 
   it('should not register swagger if disabled', async () => {
     const disabledSwaggerConfig = {
       ...mockConfig,
-      swagger: { ...mockConfig.swagger, enabled: false },
+      swagger: {...mockConfig.swagger, enabled: false},
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
@@ -147,7 +159,7 @@ describe('Server', () => {
   });
 
   it('should not register routes if models are missing/empty', async () => {
-    const noModelsConfig = { ...mockConfig, models: [] } as unknown as AppConfig;
+    const noModelsConfig = {...mockConfig, models: []} as unknown as AppConfig;
     await startServer(noModelsConfig, 3000, 'prod');
 
     expect(registerModelRoutes).not.toHaveBeenCalled();
@@ -156,7 +168,9 @@ describe('Server', () => {
   it('should handle app.listen failure and process.exit context', async () => {
     const exitSpy = vi
       .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (code?: string | number | null) => never);
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
     const mockErr = new Error('port in use');
     mockApp.listen.mockRejectedValueOnce(mockErr);
 
@@ -169,8 +183,15 @@ describe('Server', () => {
   });
 
   describe('Error Handler', () => {
-    type TestError = FastifyError & { code?: string; validation?: FastifyError['validation'] };
-    type ErrorHandler = (err: TestError, req: FastifyRequest, reply: FastifyReply) => void;
+    type TestError = FastifyError & {
+      code?: string;
+      validation?: FastifyError['validation'];
+    };
+    type ErrorHandler = (
+      err: TestError,
+      req: FastifyRequest,
+      reply: FastifyReply,
+    ) => void;
 
     let errorHandler: ErrorHandler;
     let mockReq: FastifyRequest;
@@ -181,7 +202,7 @@ describe('Server', () => {
       errorHandler = mockApp.setErrorHandler.mock.calls[0][0] as ErrorHandler;
 
       mockReq = {
-        log: { error: vi.fn() },
+        log: {error: vi.fn()},
       } as unknown as FastifyRequest;
 
       mockReply = {
@@ -194,7 +215,7 @@ describe('Server', () => {
       msg: string,
       code?: string,
       statusCode?: number,
-      validation?: FastifyError['validation']
+      validation?: FastifyError['validation'],
     ): TestError => {
       const e = new Error(msg) as TestError;
       if (code) e.code = code;
@@ -209,7 +230,7 @@ describe('Server', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 500, message: 'generic error' })
+        expect.objectContaining({statusCode: 500, message: 'generic error'}),
       );
     });
 
@@ -218,7 +239,9 @@ describe('Server', () => {
       errorHandler(err, mockReq, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({statusCode: 400}),
+      );
     });
 
     it('should process Integrity violations (23xxx) as 400', () => {
@@ -252,17 +275,22 @@ describe('Server', () => {
     it('should pass validation errors in metadata payload', () => {
       // Create a mock validation error block conforming to fastify's validation structure
       const validationPayload = [
-        { message: 'field required' },
+        {message: 'field required'},
       ] as unknown as FastifyError['validation'];
-      const err = createError('Validation failed', undefined, 400, validationPayload);
+      const err = createError(
+        'Validation failed',
+        undefined,
+        400,
+        validationPayload,
+      );
       errorHandler(err, mockReq, mockReply);
 
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
           meta: expect.objectContaining({
-            validation: [{ message: 'field required' }],
+            validation: [{message: 'field required'}],
           }),
-        })
+        }),
       );
     });
   });

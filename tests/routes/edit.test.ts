@@ -1,15 +1,20 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {expect, test, describe, beforeEach} from 'vitest';
+import {createTestApp, pgConfig} from '../helpers/test-app';
+import {ModelConfig} from '../../src/schema/config';
+import {pgQueryMock} from '../helpers/db-mocks';
 
 const defaultEditModel: ModelConfig[] = [
   {
     name: 'users',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true, supportedOperations: ['editable'] },
-      { name: 'name', type: 'string' },
-      { name: 'email', type: 'string' },
+      {
+        name: 'id',
+        type: 'integer',
+        primaryKey: true,
+        supportedOperations: ['editable'],
+      },
+      {name: 'name', type: 'string'},
+      {name: 'email', type: 'string'},
     ],
   },
 ];
@@ -18,13 +23,13 @@ const nonUniqueEditModel: ModelConfig[] = [
   {
     name: 'tasks',
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true },
+      {name: 'id', type: 'integer', primaryKey: true},
       {
         name: 'status',
         type: 'string',
         supportedOperations: ['editable', 'equal', 'lessThan'], // Non-unique identifier
       },
-      { name: 'title', type: 'string' },
+      {name: 'title', type: 'string'},
     ],
   },
 ];
@@ -35,15 +40,20 @@ const validatedEditModel: ModelConfig[] = [
     validation: {
       type: 'object',
       properties: {
-        title: { type: 'string' },
-        content: { type: 'string' },
+        title: {type: 'string'},
+        content: {type: 'string'},
       },
       required: ['title', 'content'],
     },
     fields: [
-      { name: 'id', type: 'integer', primaryKey: true, supportedOperations: ['editable'] },
-      { name: 'title', type: 'string' },
-      { name: 'content', type: 'string' },
+      {
+        name: 'id',
+        type: 'integer',
+        primaryKey: true,
+        supportedOperations: ['editable'],
+      },
+      {name: 'title', type: 'string'},
+      {name: 'content', type: 'string'},
     ],
   },
 ];
@@ -71,8 +81,10 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json().data).toEqual({ name: 'Bob' });
-      expect(response.json().message).toBe('Successfully updated records in the users table');
+      expect(response.json().data).toEqual({name: 'Bob'});
+      expect(response.json().message).toBe(
+        'Successfully updated records in the users table',
+      );
 
       await fastify.close();
     });
@@ -92,7 +104,9 @@ describe('test edit api', () => {
       expect(pgQueryMock).toHaveBeenCalledOnce();
       const callArgs = pgQueryMock.mock.calls[0];
       // Note: order of keys is not guaranteed by Object.keys, but usually preserved
-      expect(callArgs[0]).toMatch(/UPDATE "users" SET ".*" = \$1, ".*" = \$2 WHERE "id" = \$3/);
+      expect(callArgs[0]).toMatch(
+        /UPDATE "users" SET ".*" = \$1, ".*" = \$2 WHERE "id" = \$3/,
+      );
       expect(callArgs[1].length).toBe(3);
       expect(callArgs[1]).toContain(5); // The id path param should be the last param
 
@@ -126,10 +140,10 @@ describe('test edit api', () => {
       });
 
       // The update query should only set "name"
-      expect(pgQueryMock).toHaveBeenCalledWith('UPDATE "users" SET "name" = $1 WHERE "id" = $2', [
-        'Alice',
-        1,
-      ]);
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'UPDATE "users" SET "name" = $1 WHERE "id" = $2',
+        ['Alice', 1],
+      );
 
       await fastify.close();
     });
@@ -192,7 +206,7 @@ describe('test edit api', () => {
     test('should allow partial custom validation for PATCH (required removed)', async () => {
       const fastify = await createTestApp(pgConfig, validatedEditModel);
 
-      pgQueryMock.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
 
       const response = await fastify.inject({
         method: 'PATCH',
@@ -222,7 +236,7 @@ describe('test edit api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" < $3',
-        ['Urgent Pending Task', 'pending', '10']
+        ['Urgent Pending Task', 'pending', '10'],
       );
 
       await fastify.close();
@@ -234,12 +248,12 @@ describe('test edit api', () => {
       await fastify.inject({
         method: 'PATCH',
         url: '/tasks/status/pending?id_lte=5',
-        payload: { title: 'Update' },
+        payload: {title: 'Update'},
       });
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" <= $3',
-        ['Update', 'pending', '5']
+        ['Update', 'pending', '5'],
       );
 
       await fastify.close();
@@ -251,12 +265,12 @@ describe('test edit api', () => {
       await fastify.inject({
         method: 'PATCH',
         url: '/tasks/status/pending?id_gt=1',
-        payload: { title: 'Update' },
+        payload: {title: 'Update'},
       });
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" > $3',
-        ['Update', 'pending', '1']
+        ['Update', 'pending', '1'],
       );
 
       await fastify.close();
@@ -268,12 +282,12 @@ describe('test edit api', () => {
       await fastify.inject({
         method: 'PATCH',
         url: '/tasks/status/pending?id_gte=2',
-        payload: { title: 'Update' },
+        payload: {title: 'Update'},
       });
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" >= $3',
-        ['Update', 'pending', '2']
+        ['Update', 'pending', '2'],
       );
 
       await fastify.close();
@@ -293,7 +307,7 @@ describe('test edit api', () => {
       // Query should not include page, limit, or order stuff in WHERE
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2',
-        ['Ignored Params Task', 'pending']
+        ['Ignored Params Task', 'pending'],
       );
 
       await fastify.close();
@@ -312,7 +326,7 @@ describe('test edit api', () => {
 
       const callArgs = pgQueryMock.mock.calls[0];
       expect(callArgs[0]).toContain(
-        'WHERE "status" = $2 AND "title" = $3 AND "id" IN ($4, $5, $6)'
+        'WHERE "status" = $2 AND "title" = $3 AND "id" IN ($4, $5, $6)',
       );
 
       await fastify.close();

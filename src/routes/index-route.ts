@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import { ModelConfig } from '../schema/config';
+import {ModelConfig} from '../schema/config';
 import {
   mapDataTypeToJsonSchema,
   buildFilterQueryProperties,
@@ -9,7 +9,7 @@ import {
   getResponseStructureSchema,
   buildPostBodyValidationSchema,
 } from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+import {capitalizeFirstLetter} from '../utils/string';
 
 /**
  * Register INDEX routes for indexed fields.
@@ -20,11 +20,16 @@ import { capitalizeFirstLetter } from '../utils/string';
  * Includes filter query params based on the model's supportedOperations,
  * as well as sorting and pagination, ONLY if the field is not unique.
  */
-export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerIndexRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
     // Determine which fields need an index route
-    const indexFields = model.fields.filter((f) => {
-      return f.primaryKey || f.unique || f.supportedOperations?.includes('indexable');
+    const indexFields = model.fields.filter(f => {
+      return (
+        f.primaryKey || f.unique || f.supportedOperations?.includes('indexable')
+      );
     });
 
     for (const field of indexFields) {
@@ -41,9 +46,12 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
 
         // Add sort params for sortable fields
         const sortableFields = model.fields
-          .filter((f) => f.supportedOperations?.includes('sortable'))
-          .map((f) => f.name);
-        Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
+          .filter(f => f.supportedOperations?.includes('sortable'))
+          .map(f => f.name);
+        Object.assign(
+          queryProperties,
+          buildSortQueryProperties(sortableFields),
+        );
 
         // Add pagination
         Object.assign(queryProperties, paginationQueryProperties);
@@ -51,16 +59,16 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
 
       const responseSchemaProperties: Record<string, object> = {
         data: isUnique
-          ? { ...buildPostBodyValidationSchema(model), nullable: true }
-          : { type: 'array', items: buildPostBodyValidationSchema(model) },
+          ? {...buildPostBodyValidationSchema(model), nullable: true}
+          : {type: 'array', items: buildPostBodyValidationSchema(model)},
       };
 
       if (!isUnique) {
         responseSchemaProperties.pagination = {
           type: 'object',
           properties: {
-            page: { type: 'integer' },
-            limit: { type: 'integer' },
+            page: {type: 'integer'},
+            limit: {type: 'integer'},
           },
         };
       }
@@ -85,7 +93,7 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
             type: 'object',
             properties: responseSchemaProperties,
           },
-          buildPostBodyValidationSchema(model)
+          buildPostBodyValidationSchema(model),
         ),
       };
 
@@ -98,7 +106,7 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
 
       app.get(
         `/${model.name}/${field.name}/:${field.name}`,
-        { schema },
+        {schema},
         async (request: FastifyRequest, reply: FastifyReply) => {
           const queryParams = request.query as Record<string, unknown>;
           const params = request.params as Record<string, unknown>;
@@ -117,27 +125,42 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
           if (!isUnique) {
             // Filters
             for (const key of Object.keys(queryParams)) {
-              if (['page', 'limit', 'orderBy', 'orderDir'].includes(key)) continue;
+              if (['page', 'limit', 'orderBy', 'orderDir'].includes(key))
+                continue;
 
               if (key.endsWith('_eq')) {
-                whereClauses.push(`"${key.replace('_eq', '')}" = $${paramIndex++}`);
+                whereClauses.push(
+                  `"${key.replace('_eq', '')}" = $${paramIndex++}`,
+                );
                 values.push(queryParams[key]);
               } else if (key.endsWith('_lt')) {
-                whereClauses.push(`"${key.replace('_lt', '')}" < $${paramIndex++}`);
+                whereClauses.push(
+                  `"${key.replace('_lt', '')}" < $${paramIndex++}`,
+                );
                 values.push(queryParams[key]);
               } else if (key.endsWith('_lte')) {
-                whereClauses.push(`"${key.replace('_lte', '')}" <= $${paramIndex++}`);
+                whereClauses.push(
+                  `"${key.replace('_lte', '')}" <= $${paramIndex++}`,
+                );
                 values.push(queryParams[key]);
               } else if (key.endsWith('_gt')) {
-                whereClauses.push(`"${key.replace('_gt', '')}" > $${paramIndex++}`);
+                whereClauses.push(
+                  `"${key.replace('_gt', '')}" > $${paramIndex++}`,
+                );
                 values.push(queryParams[key]);
               } else if (key.endsWith('_gte')) {
-                whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
+                whereClauses.push(
+                  `"${key.replace('_gte', '')}" >= $${paramIndex++}`,
+                );
                 values.push(queryParams[key]);
               } else if (key.endsWith('_in')) {
                 const inValues = String(queryParams[key]).split(',');
-                const inParams = inValues.map(() => `$${paramIndex++}`).join(', ');
-                whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
+                const inParams = inValues
+                  .map(() => `$${paramIndex++}`)
+                  .join(', ');
+                whereClauses.push(
+                  `"${key.replace('_in', '')}" IN (${inParams})`,
+                );
                 values.push(...inValues);
               }
             }
@@ -175,7 +198,7 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
           };
 
           if (!isUnique) {
-            responsePayload.pagination = { page, limit };
+            responsePayload.pagination = {page, limit};
           }
 
           return reply
@@ -185,10 +208,10 @@ export function registerIndexRoutes(app: FastifyInstance, models: ModelConfig[])
                 200,
                 `Successfully retrieved records from the ${tableName} table`,
                 responsePayload,
-                res
-              )
+                res,
+              ),
             );
-        }
+        },
       );
     }
   }

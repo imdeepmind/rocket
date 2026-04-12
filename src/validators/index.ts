@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { InvalidArgumentError } from 'commander';
+import {InvalidArgumentError} from 'commander';
 
-import { Mode } from '../types';
+import {Mode} from '../types';
 
 // Validate config file path
 export function validateConfigPath(value: string): string {
@@ -40,7 +40,9 @@ export function validateMode(value: string): Mode {
   const allowed: Mode[] = ['dev', 'prod'];
 
   if (!allowed.includes(value as Mode)) {
-    throw new InvalidArgumentError(`Mode must be one of: ${allowed.join(', ')}`);
+    throw new InvalidArgumentError(
+      `Mode must be one of: ${allowed.join(', ')}`,
+    );
   }
 
   return value as Mode;

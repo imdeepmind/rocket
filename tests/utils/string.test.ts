@@ -1,5 +1,5 @@
-import { expect, test, describe } from 'vitest';
-import { capitalizeFirstLetter } from '../../src/utils/string';
+import {expect, test, describe} from 'vitest';
+import {capitalizeFirstLetter} from '../../src/utils/string';
 
 describe('string utils', () => {
   test('capitalizeFirstLetter', () => {

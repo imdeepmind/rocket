@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import { ModelConfig } from '../schema/config';
+import {ModelConfig} from '../schema/config';
 import {
   buildFilterQueryProperties,
   buildSortQueryProperties,
@@ -8,7 +8,7 @@ import {
   getResponseStructureSchema,
   buildPostBodyValidationSchema,
 } from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+import {capitalizeFirstLetter} from '../utils/string';
 
 /**
  * Register GET_ALL routes for listing records (table-level).
@@ -21,7 +21,10 @@ import { capitalizeFirstLetter } from '../utils/string';
  *   - orderBy / orderDir for sortable fields
  *   - page / limit for pagination
  */
-export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerGetAllRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
     const queryProperties: Record<string, object> = {};
 
@@ -32,8 +35,8 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
 
     // Add sort params for sortable fields
     const sortableFields = model.fields
-      .filter((f) => f.supportedOperations?.includes('sortable'))
-      .map((f) => f.name);
+      .filter(f => f.supportedOperations?.includes('sortable'))
+      .map(f => f.name);
     Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 
     // Add pagination
@@ -62,13 +65,13 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
                 pagination: {
                   type: 'object',
                   properties: {
-                    page: { type: 'integer' },
-                    limit: { type: 'integer' },
+                    page: {type: 'integer'},
+                    limit: {type: 'integer'},
                   },
                 },
               },
             },
-            buildPostBodyValidationSchema(model)
+            buildPostBodyValidationSchema(model),
           ),
         },
       },
@@ -93,13 +96,17 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
             whereClauses.push(`"${key.replace('_lt', '')}" < $${paramIndex++}`);
             values.push(queryParams[key]);
           } else if (key.endsWith('_lte')) {
-            whereClauses.push(`"${key.replace('_lte', '')}" <= $${paramIndex++}`);
+            whereClauses.push(
+              `"${key.replace('_lte', '')}" <= $${paramIndex++}`,
+            );
             values.push(queryParams[key]);
           } else if (key.endsWith('_gt')) {
             whereClauses.push(`"${key.replace('_gt', '')}" > $${paramIndex++}`);
             values.push(queryParams[key]);
           } else if (key.endsWith('_gte')) {
-            whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
+            whereClauses.push(
+              `"${key.replace('_gte', '')}" >= $${paramIndex++}`,
+            );
             values.push(queryParams[key]);
           } else if (key.endsWith('_in')) {
             const inValues = String(queryParams[key]).split(',');
@@ -134,12 +141,12 @@ export function registerGetAllRoutes(app: FastifyInstance, models: ModelConfig[]
             `Successfully retrieved records from the ${tableName} table`,
             {
               data: res.rows || [],
-              pagination: { page, limit },
+              pagination: {page, limit},
             },
-            res
-          )
+            res,
+          ),
         );
-      }
+      },
     );
   }
 }

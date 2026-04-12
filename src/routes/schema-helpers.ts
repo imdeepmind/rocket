@@ -15,17 +15,17 @@ export function mapDataTypeToJsonSchema(type: DataType): {
 } {
   switch (type) {
     case 'integer':
-      return { type: 'integer' };
+      return {type: 'integer'};
     case 'string':
-      return { type: 'string' };
+      return {type: 'string'};
     case 'boolean':
-      return { type: 'boolean' };
+      return {type: 'boolean'};
     case 'text':
-      return { type: 'string' };
+      return {type: 'string'};
     case 'datetime':
-      return { type: 'string', format: 'date-time' };
+      return {type: 'string', format: 'date-time'};
     default:
-      return { type: 'string' };
+      return {type: 'string'};
   }
 }
 
@@ -48,7 +48,9 @@ export const paginationQueryProperties: Record<string, object> = {
 /**
  * Build sort query parameter schema properties for sortable fields.
  */
-export function buildSortQueryProperties(sortableFields: string[]): Record<string, object> {
+export function buildSortQueryProperties(
+  sortableFields: string[],
+): Record<string, object> {
   if (sortableFields.length === 0) return {};
   return {
     orderBy: {
@@ -69,7 +71,9 @@ export function buildSortQueryProperties(sortableFields: string[]): Record<strin
  * Build filter query parameter schema properties for a field
  * based on its supportedOperations (lessThan, greaterThan, equal, oneOf, etc.).
  */
-export function buildFilterQueryProperties(field: ModelFieldConfig): Record<string, object> {
+export function buildFilterQueryProperties(
+  field: ModelFieldConfig,
+): Record<string, object> {
   const ops = field.supportedOperations || [];
   const jsonType = mapDataTypeToJsonSchema(field.type);
   const properties: Record<string, object> = {};
@@ -125,8 +129,10 @@ export function buildFilterQueryProperties(field: ModelFieldConfig): Record<stri
 function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
   const normalized = JSON.parse(JSON.stringify(schema));
   if (normalized.properties && typeof normalized.properties === 'object') {
-    Object.keys(normalized.properties).forEach((key) => {
-      const prop = (normalized.properties as Record<string, JsonSchemaObject>)[key];
+    Object.keys(normalized.properties).forEach(key => {
+      const prop = (normalized.properties as Record<string, JsonSchemaObject>)[
+        key
+      ];
       if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
         prop.type = 'string';
         prop.format = 'date-time';
@@ -144,7 +150,9 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
  * - `required` includes fields that are NOT marked `nullable` and have NO `default`.
  * - If `model.validation` is provided, it is used verbatim.
  */
-export function buildPostBodyValidationSchema(model: ModelConfig): Record<string, unknown> {
+export function buildPostBodyValidationSchema(
+  model: ModelConfig,
+): Record<string, unknown> {
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
   const bodyProperties: Record<string, object> = {};
@@ -156,21 +164,24 @@ export function buildPostBodyValidationSchema(model: ModelConfig): Record<string
   }
 
   const required = model.fields
-    .filter((field) => field.nullable !== true && field.default === undefined)
-    .map((field) => field.name);
+    .filter(field => field.nullable !== true && field.default === undefined)
+    .map(field => field.name);
 
   return {
     type: 'object',
     properties: bodyProperties,
-    ...(required.length > 0 ? { required } : {}),
+    ...(required.length > 0 ? {required} : {}),
   };
 }
 
 /**
  * Strip any fields from the request body that are not present in the model.
  */
-export function stripAdditionalPostFields(model: ModelConfig, body: ModelBody): ModelBody {
-  const allowed = new Set(model.fields.map((field) => field.name));
+export function stripAdditionalPostFields(
+  model: ModelConfig,
+  body: ModelBody,
+): ModelBody {
+  const allowed = new Set(model.fields.map(field => field.name));
   const filtered: ModelBody = {};
 
   for (const [key, value] of Object.entries(body)) {
@@ -185,7 +196,7 @@ export function stripAdditionalPostFields(model: ModelConfig, body: ModelBody): 
 export const getResponseStructureSchema = (
   codes: number[],
   dataSchema: Record<string, unknown>,
-  rowSchema?: Record<string, unknown>
+  rowSchema?: Record<string, unknown>,
 ): Record<number, object> => {
   const respSchema: Record<number, object> = {};
 
@@ -196,16 +207,19 @@ export const getResponseStructureSchema = (
         respSchema[code] = {
           type: 'object',
           properties: {
-            code: { type: 'integer' },
-            message: { type: 'string' },
+            code: {type: 'integer'},
+            message: {type: 'string'},
             data: dataSchema,
             raw_data: {
               type: 'object',
               properties: {
-                changes: { type: 'integer' },
+                changes: {type: 'integer'},
                 rows: {
                   type: 'array',
-                  items: rowSchema || { type: 'object', additionalProperties: true },
+                  items: rowSchema || {
+                    type: 'object',
+                    additionalProperties: true,
+                  },
                 },
               },
             },

@@ -1,8 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { describe, expect, it, vi } from 'vitest';
-import { InvalidArgumentError } from 'commander';
-import { validateConfigPath, validatePort, validateMode } from '../../src/validators/index';
+import {describe, expect, it, vi} from 'vitest';
+import {InvalidArgumentError} from 'commander';
+import {
+  validateConfigPath,
+  validatePort,
+  validateMode,
+} from '../../src/validators/index';
 
 vi.mock('fs');
 vi.mock('path');
@@ -15,7 +19,7 @@ describe('validators/index', () => {
 
       vi.mocked(path.resolve).mockReturnValue(resolved);
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ isFile: () => true } as fs.Stats);
+      vi.mocked(fs.statSync).mockReturnValue({isFile: () => true} as fs.Stats);
 
       expect(validateConfigPath(input)).toBe(resolved);
     });
@@ -28,7 +32,9 @@ describe('validators/index', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
       expect(() => validateConfigPath(input)).toThrow(InvalidArgumentError);
-      expect(() => validateConfigPath(input)).toThrow(`Config file not found: ${resolved}`);
+      expect(() => validateConfigPath(input)).toThrow(
+        `Config file not found: ${resolved}`,
+      );
     });
 
     it('should throw InvalidArgumentError if path is a directory', () => {
@@ -37,10 +43,12 @@ describe('validators/index', () => {
 
       vi.mocked(path.resolve).mockReturnValue(resolved);
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ isFile: () => false } as fs.Stats);
+      vi.mocked(fs.statSync).mockReturnValue({isFile: () => false} as fs.Stats);
 
       expect(() => validateConfigPath(input)).toThrow(InvalidArgumentError);
-      expect(() => validateConfigPath(input)).toThrow(`Not a file: ${resolved}`);
+      expect(() => validateConfigPath(input)).toThrow(
+        `Not a file: ${resolved}`,
+      );
     });
   });
 
@@ -57,7 +65,9 @@ describe('validators/index', () => {
 
     it('should throw if port is below 1', () => {
       expect(() => validatePort('0')).toThrow(InvalidArgumentError);
-      expect(() => validatePort('-1')).toThrow('Port must be between 1 and 65535');
+      expect(() => validatePort('-1')).toThrow(
+        'Port must be between 1 and 65535',
+      );
     });
 
     it('should throw if port is above 65535', () => {
@@ -73,7 +83,9 @@ describe('validators/index', () => {
 
     it('should throw if mode is invalid', () => {
       expect(() => validateMode('invalid')).toThrow(InvalidArgumentError);
-      expect(() => validateMode('invalid')).toThrow('Mode must be one of: dev, prod');
+      expect(() => validateMode('invalid')).toThrow(
+        'Mode must be one of: dev, prod',
+      );
     });
   });
 });

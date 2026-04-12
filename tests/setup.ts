@@ -1,5 +1,10 @@
-import { vi } from 'vitest';
-import { pgQueryMock, pgEndMock, sqlitePrepareMock, sqliteCloseMock } from './helpers/db-mocks';
+import {vi} from 'vitest';
+import {
+  pgQueryMock,
+  pgEndMock,
+  sqlitePrepareMock,
+  sqliteCloseMock,
+} from './helpers/db-mocks';
 
 vi.mock('pg', () => {
   return {
