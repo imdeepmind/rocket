@@ -1,4 +1,4 @@
-# Rocket
+# Rocket OSS
 
 <p align="center">
   <img src="assets/logo.png" alt="Rocket API Framework Logo" width="200" />

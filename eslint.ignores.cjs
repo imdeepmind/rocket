@@ -1,1 +1,1 @@
-module.exports = ['build/', 'commitlint.config.js'];
+module.exports = ['build/', 'commitlint.config.js', 'docs/'];
