@@ -192,7 +192,7 @@ const foreignKeySchema = {
 
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields', 'indexes', 'foreignKeys'],
+  required: ['name', 'fields'],
   additionalProperties: false,
   properties: {
     name: {
@@ -208,12 +208,10 @@ const modelSchema = {
     indexes: {
       type: 'array',
       items: indexSchema,
-      default: [],
     },
     foreignKeys: {
       type: 'array',
       items: foreignKeySchema,
-      default: [],
     },
     validation: {
       type: 'object',
