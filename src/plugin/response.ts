@@ -1,7 +1,7 @@
 import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
 
-import {StructuredResponse} from '@/types';
+import {StructuredResponse} from '@/schema';
 
 export default fp(async (fastify: FastifyInstance) => {
   fastify.decorate(

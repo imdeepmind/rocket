@@ -1,4 +1,4 @@
-import {DatabaseQuery, StructuredResponse} from '@/types';
+import {DatabaseQuery, StructuredResponse} from '@/schema';
 
 import 'fastify';
 

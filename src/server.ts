@@ -13,8 +13,8 @@ import responsePlugin from '@/plugin/response';
 
 import {registerModelRoutes} from '@/routes';
 
+import {Mode} from '@/schema';
 import {AppConfig, SwaggerConfig} from '@/schema/config';
-import {Mode} from '@/types';
 
 import {validateConfig} from '@/validators/config';
 import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';

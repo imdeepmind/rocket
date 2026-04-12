@@ -10,12 +10,6 @@ export interface CLIOptions {
   mode: Mode;
 }
 
-export interface CLIOptions {
-  config: string;
-  port: number;
-  mode: Mode;
-}
-
 export interface DatabaseQuery {
   dbPoolOrConnection: Pool | Database;
   query<Q>(

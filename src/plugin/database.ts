@@ -3,8 +3,8 @@ import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
 import {Pool} from 'pg';
 
+import {DatabaseQuery} from '@/schema';
 import {DatabaseConfig} from '@/schema/config';
-import {DatabaseQuery} from '@/types';
 
 function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');
