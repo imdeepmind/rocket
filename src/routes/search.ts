@@ -1,6 +1,7 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  applyFilters,
   buildFilterQueryProperties,
   buildPostBodyValidationSchema,
   buildSortQueryProperties,
@@ -105,52 +106,15 @@ export function registerSearchRoutes(
           values.push(`%${searchTerm.toLowerCase()}%`);
 
           // Filters
-          for (const key of Object.keys(queryParams)) {
-            if (
-              [
-                'page',
-                'limit',
-                'orderBy',
-                'orderDir',
-                `${field.name}_search`,
-              ].includes(key)
-            )
-              continue;
+          const {
+            whereClauses: filterClauses,
+            values: filterValues,
+            nextParamIndex,
+          } = applyFilters(queryParams, paramIndex, [`${field.name}_search`]);
 
-            if (key.endsWith('_eq')) {
-              whereClauses.push(
-                `"${key.replace('_eq', '')}" = $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_lt')) {
-              whereClauses.push(
-                `"${key.replace('_lt', '')}" < $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_lte')) {
-              whereClauses.push(
-                `"${key.replace('_lte', '')}" <= $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_gt')) {
-              whereClauses.push(
-                `"${key.replace('_gt', '')}" > $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_gte')) {
-              whereClauses.push(
-                `"${key.replace('_gte', '')}" >= $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_in')) {
-              const inValues = String(queryParams[key]).split(',');
-              const inParams = inValues
-                .map(() => `$${paramIndex++}`)
-                .join(', ');
-              whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
-              values.push(...inValues);
-            }
-          }
+          whereClauses.push(...filterClauses);
+          values.push(...filterValues);
+          paramIndex = nextParamIndex;
 
           if (whereClauses.length > 0) {
             query += ` WHERE ${whereClauses.join(' AND ')}`;
