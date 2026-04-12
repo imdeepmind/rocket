@@ -13,7 +13,7 @@
     "lint:write": "gts fix",
     "clean": "gts clean",
     "compile": "tsc",
-    "dev": "tsx ./src/main.ts",
+    "dev": "tsx watch ./src/main.ts",
     "prepare": "husky",
     "pretest": "npm run compile",
     "posttest": "npm run lint:check",
