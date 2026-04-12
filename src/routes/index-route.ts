@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {ModelConfig} from '../schema/config';
+import {ModelConfig} from '@/schema/config';
 import {
   mapDataTypeToJsonSchema,
   buildFilterQueryProperties,
@@ -8,8 +8,8 @@ import {
   paginationQueryProperties,
   getResponseStructureSchema,
   buildPostBodyValidationSchema,
-} from './schema-helpers';
-import {capitalizeFirstLetter} from '../utils/string';
+} from '@/routes/schema-helpers';
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register INDEX routes for indexed fields.

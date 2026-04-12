@@ -5,11 +5,11 @@ import Fastify, {
   FastifyReply,
   FastifyInstance,
 } from 'fastify';
-import {startServer} from '../src/server';
-import migrateDatabase from '../src/migrator/index';
-import {registerModelRoutes} from '../src/routes/index';
-import {showWelcomeScreen} from '../src/utils/welcome';
-import {AppConfig} from '../src/schema/config';
+import {startServer} from '@/server';
+import migrateDatabase from '@/migrator/index';
+import {registerModelRoutes} from '@/routes/index';
+import {showWelcomeScreen} from '@/utils/welcome';
+import {AppConfig} from '@/schema/config';
 
 vi.mock('fastify', () => {
   const mockApp = {
@@ -29,19 +29,19 @@ vi.mock('fastify', () => {
   };
 });
 
-vi.mock('../src/validators/config', () => ({
+vi.mock('@/validators/config', () => ({
   validateConfig: vi.fn(c => c),
 }));
 
-vi.mock('../src/migrator/index', () => ({
+vi.mock('@/migrator/index', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('../src/routes/index', () => ({
+vi.mock('@/routes/index', () => ({
   registerModelRoutes: vi.fn(),
 }));
 
-vi.mock('../src/utils/welcome', () => ({
+vi.mock('@/utils/welcome', () => ({
   showWelcomeScreen: vi.fn(),
 }));
 

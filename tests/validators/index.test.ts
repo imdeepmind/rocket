@@ -6,7 +6,7 @@ import {
   validateConfigPath,
   validatePort,
   validateMode,
-} from '../../src/validators/index';
+} from '@/validators/index';
 
 vi.mock('fs');
 vi.mock('path');

@@ -1,8 +1,8 @@
 import Fastify, {FastifyInstance} from 'fastify';
-import databasePlugin from '../../src/plugin/database';
-import responsePlugin from '../../src/plugin/response';
-import {DatabaseConfig, ModelConfig} from '../../src/schema/config';
-import {registerModelRoutes} from '../../src/routes';
+import databasePlugin from '@/plugin/database';
+import responsePlugin from '@/plugin/response';
+import {DatabaseConfig, ModelConfig} from '@/schema/config';
+import {registerModelRoutes} from '@/routes';
 
 export const mockModels: ModelConfig[] = [
   {

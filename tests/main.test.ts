@@ -1,5 +1,6 @@
 import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
 import * as fs from 'fs';
+import {startServer} from '@/server';
 
 // Setup Mock for Commander
 const mockAction = vi.fn();
@@ -26,7 +27,6 @@ vi.mock('commander', () => ({
 }));
 
 // Setup other Mocks
-import {startServer} from '../src/server';
 vi.mock('../src/server', () => ({
   startServer: vi.fn(),
 }));

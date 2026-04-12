@@ -1,11 +1,11 @@
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {ModelConfig} from '../schema/config';
+import {ModelConfig} from '@/schema/config';
 import {
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
-} from './schema-helpers';
-import {capitalizeFirstLetter} from '../utils/string';
+} from '@/routes/schema-helpers';
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register DELETE routes for deletable fields.

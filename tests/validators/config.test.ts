@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {validateConfig} from '../../src/validators/config';
-import {AppConfig, DatabaseConfig, ModelConfig} from '../../src/schema/config';
+import {validateConfig} from '@/validators/config';
+import {AppConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
 
 const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {

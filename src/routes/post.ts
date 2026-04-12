@@ -1,12 +1,12 @@
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {ModelBody, ModelConfig} from '../schema/config';
+import {ModelBody, ModelConfig} from '@/schema/config';
 import {
   buildPostBodyValidationSchema,
   stripAdditionalPostFields,
   getResponseStructureSchema,
-} from './schema-helpers';
-import {capitalizeFirstLetter} from '../utils/string';
+} from '@/routes/schema-helpers';
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register POST routes for creating records (table-level).

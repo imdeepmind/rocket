@@ -6,8 +6,8 @@ import {
   buildPostBodyValidationSchema,
   stripAdditionalPostFields,
   getResponseStructureSchema,
-} from '../../src/routes/schema-helpers';
-import {DataType, ModelConfig, ModelFieldConfig} from '../../src/schema/config';
+} from '@/routes/schema-helpers';
+import {DataType, ModelConfig, ModelFieldConfig} from '@/schema/config';
 
 describe('test schema helper', () => {
   // test cases for mapDataTypeToJsonSchema

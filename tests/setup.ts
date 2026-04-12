@@ -4,7 +4,7 @@ import {
   pgEndMock,
   sqlitePrepareMock,
   sqliteCloseMock,
-} from './helpers/db-mocks';
+} from '@tests/helpers/db-mocks';
 
 vi.mock('pg', () => {
   return {

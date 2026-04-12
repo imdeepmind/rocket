@@ -1,8 +1,8 @@
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {ModelConfig, SupportedAggregationOperation} from '../schema/config';
-import {getResponseStructureSchema} from './schema-helpers';
-import {capitalizeFirstLetter} from '../utils/string';
+import {ModelConfig, SupportedAggregationOperation} from '@/schema/config';
+import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.

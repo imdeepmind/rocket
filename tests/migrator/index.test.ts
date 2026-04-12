@@ -2,8 +2,8 @@ import {describe, expect, it, vi, beforeEach, afterEach} from 'vitest';
 import * as fs from 'fs';
 import {execSync} from 'child_process';
 
-import migrateDatabase from '../../src/migrator/index';
-import {AppConfig} from '../../src/schema/config';
+import migrateDatabase from '@/migrator/index';
+import {AppConfig} from '@/schema/config';
 
 vi.mock('fs', async importOriginal => {
   const actual = await importOriginal<typeof import('fs')>();

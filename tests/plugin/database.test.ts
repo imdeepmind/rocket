@@ -1,9 +1,9 @@
 import {expect, test, describe, vi} from 'vitest';
 import Fastify from 'fastify';
 
-import databasePlugin from '../../src/plugin/database';
-import {DatabaseConfig} from '../../src/schema/config';
-import {pgConfig, sqliteConfig} from '../helpers/test-app';
+import databasePlugin from '@/plugin/database';
+import {DatabaseConfig} from '@/schema/config';
+import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 import {
   pgQueryMock,
   pgEndMock,

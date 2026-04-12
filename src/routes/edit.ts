@@ -1,13 +1,13 @@
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 
-import {ModelConfig, ModelBody} from '../schema/config';
+import {ModelConfig, ModelBody} from '@/schema/config';
 import {
   mapDataTypeToJsonSchema,
   buildFilterQueryProperties,
   getResponseStructureSchema,
   stripAdditionalPostFields,
-} from './schema-helpers';
-import {capitalizeFirstLetter} from '../utils/string';
+} from '@/routes/schema-helpers';
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register EDIT routes for editable fields.

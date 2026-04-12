@@ -7,14 +7,14 @@ import Fastify, {
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 
-import {Mode} from './types';
-import {AppConfig, SwaggerConfig} from './schema/config';
-import dbPlugin from './plugin/database';
-import responsePlugin from './plugin/response';
-import {registerModelRoutes} from './routes';
-import {showWelcomeScreen, RouteInfo} from './utils/welcome';
-import {validateConfig} from './validators/config';
-import migrateDatabase from './migrator';
+import {Mode} from '@/types';
+import {AppConfig, SwaggerConfig} from '@/schema/config';
+import dbPlugin from '@/plugin/database';
+import responsePlugin from '@/plugin/response';
+import {registerModelRoutes} from '@/routes';
+import {showWelcomeScreen, RouteInfo} from '@/utils/welcome';
+import {validateConfig} from '@/validators/config';
+import migrateDatabase from '@/migrator';
 
 async function registerSwagger(
   swaggerConfig: SwaggerConfig,

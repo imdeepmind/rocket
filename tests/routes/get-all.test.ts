@@ -1,7 +1,7 @@
 import {expect, test, describe, beforeEach} from 'vitest';
-import {createTestApp, pgConfig} from '../helpers/test-app';
-import {ModelConfig} from '../../src/schema/config';
-import {pgQueryMock} from '../helpers/db-mocks';
+import {createTestApp, pgConfig} from '@tests/helpers/test-app';
+import {ModelConfig} from '@/schema/config';
+import {pgQueryMock} from '@tests/helpers/db-mocks';
 
 const getAllModel: ModelConfig[] = [
   {

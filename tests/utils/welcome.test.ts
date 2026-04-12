@@ -7,8 +7,8 @@ import {
   afterEach,
   type MockInstance,
 } from 'vitest';
-import {showWelcomeScreen, RouteInfo} from '../../src/utils/welcome';
-import {AppConfig} from '../../src/schema/config';
+import {showWelcomeScreen, RouteInfo} from '@/utils/welcome';
+import {AppConfig} from '@/schema/config';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;
