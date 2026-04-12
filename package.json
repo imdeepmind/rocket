@@ -13,7 +13,7 @@
     "lint:write": "gts fix",
     "clean": "gts clean",
     "compile": "tsc",
-    "dev": "tsx ./src/main.ts",
+    "dev": "tsx watch ./src/main.ts",
     "prepare": "husky",
     "pretest": "npm run compile",
     "posttest": "npm run lint:check",
@@ -35,6 +35,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.7.5",
     "@types/pg": "^8.20.0",
@@ -50,12 +51,14 @@
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
     "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
     "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "commander": "^14.0.3",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.4",
+    "fastify-plugin": "^5.1.0",
     "pg": "^8.20.0"
   }
 }

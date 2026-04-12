@@ -1,5 +1,6 @@
+import {DatabaseQuery, StructuredResponse} from '@/schema';
+
 import 'fastify';
-import { DatabaseQuery, StructuredResponse } from '.';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -8,7 +9,7 @@ declare module 'fastify' {
       code: number,
       message: string,
       data: T,
-      raw_data?: R
+      raw_data?: R,
     ) => StructuredResponse<T, R>;
   }
 }

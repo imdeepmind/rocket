@@ -1,6 +1,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { AppConfig, JsonSchemaObject, JsonSchemaProperty } from '../schema/config';
+
+import {AppConfig, JsonSchemaObject, JsonSchemaProperty} from '@/schema/config';
 
 const ajv = new Ajv({
   allErrors: true,
@@ -17,7 +18,7 @@ const swaggerSchema = {
   required: ['enabled', 'basePath', 'info'],
   additionalProperties: false,
   properties: {
-    enabled: { type: 'boolean' },
+    enabled: {type: 'boolean'},
     basePath: {
       type: 'string',
       pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
@@ -27,17 +28,17 @@ const swaggerSchema = {
       required: ['title'],
       additionalProperties: false,
       properties: {
-        title: { type: 'string', minLength: 5 },
-        description: { type: 'string', minLength: 25 },
-        version: { type: 'string' },
-        termsOfService: { type: 'string', format: 'uri' },
+        title: {type: 'string', minLength: 5},
+        description: {type: 'string', minLength: 25},
+        version: {type: 'string'},
+        termsOfService: {type: 'string', format: 'uri'},
         contact: {
           type: 'object',
           additionalProperties: false,
           properties: {
-            name: { type: 'string', minLength: 5 },
-            url: { type: 'string', format: 'uri' },
-            email: { type: 'string', format: 'email' },
+            name: {type: 'string', minLength: 5},
+            url: {type: 'string', format: 'uri'},
+            email: {type: 'string', format: 'email'},
           },
         },
         license: {
@@ -45,8 +46,8 @@ const swaggerSchema = {
           required: ['name'],
           additionalProperties: false,
           properties: {
-            name: { type: 'string', minLength: 1 },
-            url: { type: 'string', format: 'uri' },
+            name: {type: 'string', minLength: 1},
+            url: {type: 'string', format: 'uri'},
           },
         },
       },
@@ -59,13 +60,14 @@ const databaseSchema = {
   oneOf: [
     {
       properties: {
-        engine: { type: 'string', const: 'sqlite' },
+        engine: {type: 'string', const: 'sqlite'},
         connection: {
           type: 'object',
           properties: {
             urlOrPath: {
               type: 'string',
-              pattern: '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
+              pattern:
+                '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
             },
           },
           required: ['urlOrPath'],
@@ -77,11 +79,11 @@ const databaseSchema = {
     },
     {
       properties: {
-        engine: { type: 'string', const: 'pg' },
+        engine: {type: 'string', const: 'pg'},
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: { type: 'string', pattern: '^postgres(ql)?:\\/\\/' },
+            urlOrPath: {type: 'string', pattern: '^postgres(ql)?:\\/\\/'},
           },
           required: ['urlOrPath'],
           additionalProperties: false,
@@ -107,18 +109,18 @@ const fieldSchema = {
       type: 'string',
       enum: ['integer', 'string', 'boolean', 'text', 'datetime'],
     },
-    primaryKey: { type: 'boolean', default: false },
-    nullable: { type: 'boolean', default: true },
-    unique: { type: 'boolean', default: false },
+    primaryKey: {type: 'boolean', default: false},
+    nullable: {type: 'boolean', default: true},
+    unique: {type: 'boolean', default: false},
     default: true,
     supportedOperations: {
       type: 'array',
-      items: { type: 'string' },
+      items: {type: 'string'},
       uniqueItems: true,
     },
     supportedAggregation: {
       type: 'array',
-      items: { type: 'string' },
+      items: {type: 'string'},
       uniqueItems: true,
     },
   },
@@ -163,7 +165,7 @@ const foreignKeySchema = {
     columns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
+      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
       uniqueItems: true,
     },
     referenceTable: {
@@ -174,7 +176,7 @@ const foreignKeySchema = {
     referenceColumns: {
       type: 'array',
       minItems: 1,
-      items: { type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$' },
+      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
       uniqueItems: true,
     },
     onDelete: {
@@ -190,7 +192,7 @@ const foreignKeySchema = {
 
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields', 'indexes', 'foreignKeys'],
+  required: ['name', 'fields'],
   additionalProperties: false,
   properties: {
     name: {
@@ -206,12 +208,10 @@ const modelSchema = {
     indexes: {
       type: 'array',
       items: indexSchema,
-      default: [],
     },
     foreignKeys: {
       type: 'array',
       items: foreignKeySchema,
-      default: [],
     },
     validation: {
       type: 'object',
@@ -248,7 +248,15 @@ const ALLOWED_OPERATIONS: Record<string, string[]> = {
     'oneOf',
     'indexable',
   ],
-  string: ['searchable', 'sortable', 'editable', 'deletable', 'equal', 'oneOf', 'indexable'],
+  string: [
+    'searchable',
+    'sortable',
+    'editable',
+    'deletable',
+    'equal',
+    'oneOf',
+    'indexable',
+  ],
   boolean: ['equal'],
   text: [],
   datetime: [
@@ -276,16 +284,24 @@ function validateFieldConstraints(config: AppConfig): string[] {
   config.models.forEach((model, mi) => {
     model.fields.forEach((field, fi) => {
       const path = `/models/${mi}/fields/${fi}`;
-      const { type, primaryKey, nullable, unique, supportedOperations, supportedAggregation } =
-        field;
+      const {
+        type,
+        primaryKey,
+        nullable,
+        unique,
+        supportedOperations,
+        supportedAggregation,
+      } = field;
 
       // Primary key rules
       if (primaryKey) {
-        if (nullable !== false) errors.push(`${path}: primaryKey field must have nullable=false`);
-        if (unique !== true) errors.push(`${path}: primaryKey field must have unique=true`);
+        if (nullable !== false)
+          errors.push(`${path}: primaryKey field must have nullable=false`);
+        if (unique !== true)
+          errors.push(`${path}: primaryKey field must have unique=true`);
         if (type !== 'integer' && type !== 'string') {
           errors.push(
-            `${path}: primaryKey field must be of type integer or string (found ${type})`
+            `${path}: primaryKey field must be of type integer or string (found ${type})`,
           );
         }
       }
@@ -293,9 +309,11 @@ function validateFieldConstraints(config: AppConfig): string[] {
       // Validate supportedOperations against allowed list for this type
       if (supportedOperations) {
         const allowed = ALLOWED_OPERATIONS[type] ?? [];
-        supportedOperations.forEach((op) => {
+        supportedOperations.forEach(op => {
           if (!allowed.includes(op)) {
-            errors.push(`${path}/supportedOperations: "${op}" is not allowed for type "${type}"`);
+            errors.push(
+              `${path}/supportedOperations: "${op}" is not allowed for type "${type}"`,
+            );
           }
         });
       }
@@ -303,9 +321,11 @@ function validateFieldConstraints(config: AppConfig): string[] {
       // Validate supportedAggregation against allowed list for this type
       if (supportedAggregation) {
         const allowed = ALLOWED_AGGREGATIONS[type] ?? [];
-        supportedAggregation.forEach((agg) => {
+        supportedAggregation.forEach(agg => {
           if (!allowed.includes(agg)) {
-            errors.push(`${path}/supportedAggregation: "${agg}" is not allowed for type "${type}"`);
+            errors.push(
+              `${path}/supportedAggregation: "${agg}" is not allowed for type "${type}"`,
+            );
           }
         });
       }
@@ -324,7 +344,7 @@ function validateIndexes(config: AppConfig): string[] {
     if (!model.indexes) return;
 
     const indexNames = new Set<string>();
-    const fieldNames = new Set(model.fields.map((f) => f.name));
+    const fieldNames = new Set(model.fields.map(f => f.name));
 
     model.indexes.forEach((index, ii) => {
       const indexPath = `${path}/indexes/${ii}`;
@@ -337,9 +357,11 @@ function validateIndexes(config: AppConfig): string[] {
       }
 
       // 2. columns must exist
-      index.columns.forEach((col) => {
+      index.columns.forEach(col => {
         if (!fieldNames.has(col)) {
-          errors.push(`${indexPath}/columns: column "${col}" does not exist in fields`);
+          errors.push(
+            `${indexPath}/columns: column "${col}" does not exist in fields`,
+          );
         }
       });
     });
@@ -353,14 +375,14 @@ function validateForeignKeys(config: AppConfig): string[] {
 
   // Map of all models for quick lookup
   const modelMap = new Map<string, (typeof config.models)[0]>();
-  config.models.forEach((m) => modelMap.set(m.name, m));
+  config.models.forEach(m => modelMap.set(m.name, m));
 
   config.models.forEach((model, mi) => {
     const path = `/models/${mi}`;
 
     if (!model.foreignKeys) return;
 
-    const fieldNames = new Set(model.fields.map((f) => f.name));
+    const fieldNames = new Set(model.fields.map(f => f.name));
     const fkNames = new Set<string>();
 
     model.foreignKeys.forEach((fk, fi) => {
@@ -374,33 +396,39 @@ function validateForeignKeys(config: AppConfig): string[] {
       }
 
       // 2. local columns must exist
-      fk.columns.forEach((col) => {
+      fk.columns.forEach(col => {
         if (!fieldNames.has(col)) {
-          errors.push(`${fkPath}/columns: column "${col}" does not exist in model "${model.name}"`);
+          errors.push(
+            `${fkPath}/columns: column "${col}" does not exist in model "${model.name}"`,
+          );
         }
       });
 
       // 3. reference table must exist
       const refModel = modelMap.get(fk.referenceTable);
       if (!refModel) {
-        errors.push(`${fkPath}: referenceTable "${fk.referenceTable}" does not exist`);
+        errors.push(
+          `${fkPath}: referenceTable "${fk.referenceTable}" does not exist`,
+        );
         return;
       }
 
-      const refFieldNames = new Set(refModel.fields.map((f) => f.name));
+      const refFieldNames = new Set(refModel.fields.map(f => f.name));
 
       // 4. reference columns must exist
-      fk.referenceColumns.forEach((col) => {
+      fk.referenceColumns.forEach(col => {
         if (!refFieldNames.has(col)) {
           errors.push(
-            `${fkPath}/referenceColumns: column "${col}" does not exist in table "${fk.referenceTable}"`
+            `${fkPath}/referenceColumns: column "${col}" does not exist in table "${fk.referenceTable}"`,
           );
         }
       });
 
       // 5. column length match (VERY important)
       if (fk.columns.length !== fk.referenceColumns.length) {
-        errors.push(`${fkPath}: columns and referenceColumns must have same length`);
+        errors.push(
+          `${fkPath}: columns and referenceColumns must have same length`,
+        );
       }
     });
   });
@@ -427,8 +455,10 @@ function mapModelTypeToJsonSchema(type: string): string {
 function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
   const normalized = JSON.parse(JSON.stringify(schema));
   if (normalized.properties && typeof normalized.properties === 'object') {
-    Object.keys(normalized.properties).forEach((key) => {
-      const prop = (normalized.properties as Record<string, JsonSchemaProperty>)[key];
+    Object.keys(normalized.properties).forEach(key => {
+      const prop = (
+        normalized.properties as Record<string, JsonSchemaProperty>
+      )[key];
       if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
         prop.type = 'string';
         prop.format = 'date-time';
@@ -442,7 +472,7 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
   const errors: string[] = [];
 
   config.models.forEach((model, mi) => {
-    const validation = (model as { validation?: unknown }).validation;
+    const validation = (model as {validation?: unknown}).validation;
     if (!validation) return;
 
     const path = `/models/${mi}/validation`;
@@ -453,11 +483,12 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
     const normalizedSchema = normalizeSchemaForAjv(schema);
     const isValidSchema = ajv.validateSchema(normalizedSchema);
     if (!isValidSchema) {
-      const schemaErrors = ajv.errors?.map((e) => `${path}: ${e.instancePath} ${e.message}`) ?? [];
+      const schemaErrors =
+        ajv.errors?.map(e => `${path}: ${e.instancePath} ${e.message}`) ?? [];
       errors.push(...schemaErrors);
     }
 
-    const fieldMap = new Map(model.fields.map((f) => [f.name, f.type]));
+    const fieldMap = new Map(model.fields.map(f => [f.name, f.type]));
 
     // properties validation
     if (schema.properties && typeof schema.properties === 'object') {
@@ -485,7 +516,9 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
             (expectedType === 'datetime' || expectedType === 'date-time');
 
           if (!isDateMatch) {
-            errors.push(`${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`);
+            errors.push(
+              `${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`,
+            );
           }
         }
       });
@@ -498,7 +531,9 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
       } else {
         schema.required.forEach((field, idx) => {
           if (!fieldMap.has(field)) {
-            errors.push(`${path}/required/${idx}: field "${field}" does not exist in model`);
+            errors.push(
+              `${path}/required/${idx}: field "${field}" does not exist in model`,
+            );
           }
         });
       }
@@ -514,7 +549,7 @@ export function validateConfig(input: AppConfig) {
 
   const ajvErrors: string[] = valid
     ? []
-    : (validateSchema.errors?.map((e) => `${e.instancePath} ${e.message}`) ?? []);
+    : (validateSchema.errors?.map(e => `${e.instancePath} ${e.message}`) ?? []);
 
   const constraintErrors = valid
     ? [

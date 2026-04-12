@@ -1,13 +1,13 @@
+import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
 
-import { AppConfig, DBEngine, ModelConfig } from '../schema/config';
+import {AppConfig, DBEngine, ModelConfig} from '@/schema/config';
 
 function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
   if (engine === 'sqlite') {
     const columns = config.fields
-      .map((f) => {
+      .map(f => {
         let col = '';
         switch (f.type) {
           case 'integer':
@@ -28,14 +28,15 @@ function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
         if (f.primaryKey) col += '.primaryKey({ autoIncrement: true })';
         if (f.unique && !f.primaryKey) col += '.unique()';
         if (f.nullable === false) col += '.notNull()';
-        if (f.default !== undefined) col += `.default(${JSON.stringify(f.default)})`;
+        if (f.default !== undefined)
+          col += `.default(${JSON.stringify(f.default)})`;
         return `    ${f.name}: ${col}`;
       })
       .join(',\n');
 
     const indexes = (config.indexes ?? [])
-      .map((idx) => {
-        const cols = idx.columns.map((c) => `t.${c}`).join(', ');
+      .map(idx => {
+        const cols = idx.columns.map(c => `t.${c}`).join(', ');
         return idx.unique
           ? `    uniqueIndex('${idx.name}').on(${cols})`
           : `    index('${idx.name}').on(${cols})`;
@@ -51,7 +52,7 @@ ${columns}
 `.trim();
   } else {
     const columns = config.fields
-      .map((f) => {
+      .map(f => {
         let col = '';
         switch (f.type) {
           case 'integer':
@@ -74,14 +75,15 @@ ${columns}
         if (f.primaryKey) col += '.primaryKey()';
         if (f.unique && !f.primaryKey) col += '.unique()';
         if (f.nullable === false) col += '.notNull()';
-        if (f.default !== undefined) col += `.default(${JSON.stringify(f.default)})`;
+        if (f.default !== undefined)
+          col += `.default(${JSON.stringify(f.default)})`;
         return `    ${f.name}: ${col}`;
       })
       .join(',\n');
 
     const indexes = (config.indexes ?? [])
-      .map((idx) => {
-        const cols = idx.columns.map((c) => `t.${c}`).join(', ');
+      .map(idx => {
+        const cols = idx.columns.map(c => `t.${c}`).join(', ');
         return idx.unique
           ? `    uniqueIndex('${idx.name}').on(${cols})`
           : `    index('${idx.name}').on(${cols})`;
@@ -101,7 +103,7 @@ ${columns}
 async function generateMigrationSQL(
   config: ModelConfig[],
   engine: DBEngine,
-  dbUrl: string
+  dbUrl: string,
 ): Promise<void> {
   let tmpDir: string | undefined;
 
@@ -109,7 +111,7 @@ async function generateMigrationSQL(
     // Make sure test_data exists
     const testDataPath = path.join(process.cwd(), '.migrations');
     if (!fs.existsSync(testDataPath)) {
-      fs.mkdirSync(testDataPath, { recursive: true });
+      fs.mkdirSync(testDataPath, {recursive: true});
     }
 
     tmpDir = fs.mkdtempSync(path.join(testDataPath, 'drizzle-'));
@@ -137,7 +139,7 @@ async function generateMigrationSQL(
         out: '${migrationsPath}',
         dbCredentials: { url: '${dbUrl}' },
       });
-    `
+    `,
     );
 
     // Step 3: spawn drizzle-kit generate
@@ -151,7 +153,7 @@ async function generateMigrationSQL(
     // cleanup
     if (tmpDir && fs.existsSync(tmpDir)) {
       try {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
+        fs.rmSync(tmpDir, {recursive: true, force: true});
       } catch (cleanupError) {
         console.error('Failed to cleanup temp directory:', cleanupError);
       }
@@ -163,7 +165,11 @@ const migrateDatabase = async (config: AppConfig) => {
   const engine = config.database.engine;
   const models = config.models;
 
-  await generateMigrationSQL(models, engine, config.database.connection.urlOrPath);
+  await generateMigrationSQL(
+    models,
+    engine,
+    config.database.connection.urlOrPath,
+  );
 };
 
 export default migrateDatabase;

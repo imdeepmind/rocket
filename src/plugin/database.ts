@@ -1,10 +1,10 @@
-import fp from 'fastify-plugin';
-import { FastifyInstance } from 'fastify';
-import { Pool } from 'pg';
 import Database from 'better-sqlite3';
+import {FastifyInstance} from 'fastify';
+import fp from 'fastify-plugin';
+import {Pool} from 'pg';
 
-import { DatabaseQuery } from '../types';
-import { DatabaseConfig } from '../schema/config';
+import {DatabaseQuery} from '@/schema';
+import {DatabaseConfig} from '@/schema/config';
 
 function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');
@@ -37,7 +37,6 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     });
 
     db = {
-      dbPoolOrConnection: pool,
       query: async <Q>(sql: string, params?: unknown[]) => {
         const queryParams = params ?? [];
         const select = isSelectQuery(sql);
@@ -62,7 +61,6 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     const sqlite = new Database(opts.connection.urlOrPath);
 
     db = {
-      dbPoolOrConnection: sqlite,
       query: async <Q>(sql: string, params?: unknown[]) => {
         const normalizedSql = normalizeSqliteParams(sql);
         const stmt = sqlite.prepare(normalizedSql);

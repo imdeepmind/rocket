@@ -1,17 +1,28 @@
-import Fastify, { FastifyInstance, FastifyRequest, FastifyReply, FastifyError } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
+import Fastify, {
+  FastifyError,
+  FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
+} from 'fastify';
 
-import { Mode } from './types';
-import { AppConfig, SwaggerConfig } from './schema/config';
-import dbPlugin from './plugin/database';
-import responsePlugin from './plugin/response';
-import { registerModelRoutes } from './routes';
-import { showWelcomeScreen, RouteInfo } from './utils/welcome';
-import { validateConfig } from './validators/config';
-import migrateDatabase from './migrator';
+import migrateDatabase from '@/migrator';
+import dbPlugin from '@/plugin/database';
+import responsePlugin from '@/plugin/response';
 
-async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstance) {
+import {registerModelRoutes} from '@/routes';
+
+import {Mode} from '@/schema';
+import {AppConfig, SwaggerConfig} from '@/schema/config';
+
+import {validateConfig} from '@/validators/config';
+import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
+
+async function registerSwagger(
+  swaggerConfig: SwaggerConfig,
+  app: FastifyInstance,
+) {
   if (swaggerConfig.enabled) {
     // Swagger (OpenAPI spec)
     await app.register(swagger, {
@@ -31,7 +42,11 @@ async function registerSwagger(swaggerConfig: SwaggerConfig, app: FastifyInstanc
   }
 }
 
-export async function startServer(config: AppConfig, port: number, mode: Mode) {
+export async function startServer(
+  config: AppConfig,
+  port: number,
+  mode: Mode,
+): Promise<FastifyInstance> {
   // validate the schema
   config = validateConfig(config);
 
@@ -53,7 +68,7 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   });
 
   // Track each registered route
-  app.addHook('onRoute', (routeOptions) => {
+  app.addHook('onRoute', routeOptions => {
     routes.push({
       method: Array.isArray(routeOptions.method)
         ? routeOptions.method.join('/')
@@ -82,7 +97,11 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
 
   // Global error handler
   app.setErrorHandler(
-    (err: FastifyError & { code?: string }, req: FastifyRequest, reply: FastifyReply) => {
+    (
+      err: FastifyError & {code?: string},
+      req: FastifyRequest,
+      reply: FastifyReply,
+    ) => {
       req.log.error(err);
 
       // Default from Fastify or fallback
@@ -109,16 +128,18 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
       const payload = app.buildResponse(statusCode, err.message, null, {
         error: err.name,
         code: err.code,
-        ...(err.validation ? { validation: err.validation } : {}),
+        ...(err.validation ? {validation: err.validation} : {}),
       });
 
       reply.status(statusCode).send(payload);
-    }
+    },
   );
 
   try {
     showWelcomeScreen(config, port, routes);
-    await app.listen({ port, host: '0.0.0.0' });
+    await app.listen({port, host: '0.0.0.0'});
+
+    return app;
   } catch (err) {
     app.log.error(err);
     process.exit(1);

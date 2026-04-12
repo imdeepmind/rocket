@@ -1,11 +1,13 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {execSync} from 'child_process';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
 
-import migrateDatabase from '../../src/migrator/index';
-import { AppConfig } from '../../src/schema/config';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-vi.mock('fs', async (importOriginal) => {
+import migrateDatabase from '@/migrator/index';
+
+import {AppConfig} from '@/schema/config';
+
+vi.mock('fs', async importOriginal => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
@@ -37,7 +39,9 @@ describe('migrateDatabase', () => {
       name: 'test-app',
       database: {
         engine,
-        connection: { urlOrPath: engine === 'sqlite' ? 'test.db' : 'postgres://db' },
+        connection: {
+          urlOrPath: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+        },
       },
       models: [],
       routes: {},
@@ -49,17 +53,17 @@ describe('migrateDatabase', () => {
       {
         name: 'users',
         fields: [
-          { name: 'id', type: 'integer', primaryKey: true },
-          { name: 'isActive', type: 'boolean' },
-          { name: 'username', type: 'string', unique: true, nullable: false },
-          { name: 'bio', type: 'text', default: 'hello' },
-          { name: 'createdAt', type: 'datetime' },
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'isActive', type: 'boolean'},
+          {name: 'username', type: 'string', unique: true, nullable: false},
+          {name: 'bio', type: 'text', default: 'hello'},
+          {name: 'createdAt', type: 'datetime'},
           // @ts-expect-error testing fallback condition
-          { name: 'unknown', type: 'unknown_type' },
+          {name: 'unknown', type: 'unknown_type'},
         ],
         indexes: [
-          { name: 'username_idx', columns: ['username'], unique: true },
-          { name: 'bio_idx', columns: ['bio'], unique: false },
+          {name: 'username_idx', columns: ['username'], unique: true},
+          {name: 'bio_idx', columns: ['bio'], unique: false},
         ],
       },
     ];
@@ -73,16 +77,24 @@ describe('migrateDatabase', () => {
     // Call 1: schema.ts
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { sqliteTable, integer, text, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'"
+      "import { sqliteTable, integer, text, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'",
     );
     expect(schemaContent).toContain("export const users = sqliteTable('users'");
-    expect(schemaContent).toContain("id: integer('id').primaryKey({ autoIncrement: true })");
+    expect(schemaContent).toContain(
+      "id: integer('id').primaryKey({ autoIncrement: true })",
+    );
     expect(schemaContent).toContain("isActive: integer('isActive')");
-    expect(schemaContent).toContain("username: text('username').unique().notNull()");
+    expect(schemaContent).toContain(
+      "username: text('username').unique().notNull()",
+    );
     expect(schemaContent).toContain('bio: text(\'bio\').default("hello")');
-    expect(schemaContent).toContain("createdAt: integer('createdAt', { mode: 'timestamp' })");
+    expect(schemaContent).toContain(
+      "createdAt: integer('createdAt', { mode: 'timestamp' })",
+    );
     expect(schemaContent).toContain("unknown: text('unknown')");
-    expect(schemaContent).toContain("uniqueIndex('username_idx').on(t.username)");
+    expect(schemaContent).toContain(
+      "uniqueIndex('username_idx').on(t.username)",
+    );
     expect(schemaContent).toContain("index('bio_idx').on(t.bio)");
 
     // Call 2: drizzle.config.ts
@@ -92,7 +104,7 @@ describe('migrateDatabase', () => {
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      { stdio: 'inherit' }
+      {stdio: 'inherit'},
     );
   });
 
@@ -102,18 +114,18 @@ describe('migrateDatabase', () => {
       {
         name: 'posts',
         fields: [
-          { name: 'id', type: 'integer', primaryKey: true },
-          { name: 'count', type: 'integer' },
-          { name: 'title', type: 'string', unique: true, nullable: false },
-          { name: 'body', type: 'text', default: 'content' },
-          { name: 'published', type: 'boolean' },
-          { name: 'updatedAt', type: 'datetime' },
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'count', type: 'integer'},
+          {name: 'title', type: 'string', unique: true, nullable: false},
+          {name: 'body', type: 'text', default: 'content'},
+          {name: 'published', type: 'boolean'},
+          {name: 'updatedAt', type: 'datetime'},
           // @ts-expect-error testing fallback condition
-          { name: 'unknown', type: 'unknown_type' },
+          {name: 'unknown', type: 'unknown_type'},
         ],
         indexes: [
-          { name: 'title_idx', columns: ['title'], unique: true },
-          { name: 'body_idx', columns: ['body'], unique: false },
+          {name: 'title_idx', columns: ['title'], unique: true},
+          {name: 'body_idx', columns: ['body'], unique: false},
         ],
       },
     ];
@@ -125,7 +137,7 @@ describe('migrateDatabase', () => {
 
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp } from 'drizzle-orm/pg-core'"
+      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp } from 'drizzle-orm/pg-core'",
     );
     expect(schemaContent).toContain("export const posts = pgTable('posts'");
     expect(schemaContent).toContain("id: serial('id').primaryKey()");
@@ -144,7 +156,7 @@ describe('migrateDatabase', () => {
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      { stdio: 'inherit' }
+      {stdio: 'inherit'},
     );
   });
 
@@ -167,13 +179,16 @@ describe('migrateDatabase', () => {
 
     await migrateDatabase(getBaseConfig('sqlite'));
 
-    expect(fs.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('.migrations'), {
-      recursive: true,
-    });
+    expect(fs.mkdirSync).toHaveBeenCalledWith(
+      expect.stringContaining('.migrations'),
+      {
+        recursive: true,
+      },
+    );
   });
 
   it('should not create .migrations directory if it already exists', async () => {
-    vi.mocked(fs.existsSync).mockImplementation((pathToCheck) => {
+    vi.mocked(fs.existsSync).mockImplementation(pathToCheck => {
       if (
         typeof pathToCheck === 'string' &&
         pathToCheck.includes('.migrations') &&
@@ -196,7 +211,10 @@ describe('migrateDatabase', () => {
 
     await migrateDatabase(getBaseConfig('sqlite'));
 
-    expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', { recursive: true, force: true });
+    expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('should handle errors thrown by execSync and still cleanup', async () => {
@@ -208,16 +226,26 @@ describe('migrateDatabase', () => {
 
     vi.mocked(fs.existsSync).mockImplementation(() => true);
 
-    await expect(migrateDatabase(getBaseConfig('sqlite'))).rejects.toThrow('execSync failed');
+    await expect(migrateDatabase(getBaseConfig('sqlite'))).rejects.toThrow(
+      'execSync failed',
+    );
 
-    expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', { recursive: true, force: true });
-    expect(consoleLogSpy).toHaveBeenCalledWith('Migrationed failed to run: ', error);
+    expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', {
+      recursive: true,
+      force: true,
+    });
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      'Migrationed failed to run: ',
+      error,
+    );
 
     consoleLogSpy.mockRestore();
   });
 
   it('should handle errors thrown during cleanup gracefully', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
     vi.mocked(fs.existsSync).mockImplementation(() => true);
     vi.mocked(fs.rmSync).mockImplementation(() => {
@@ -228,7 +256,7 @@ describe('migrateDatabase', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to cleanup temp directory:',
-      expect.any(Error)
+      expect.any(Error),
     );
 
     consoleErrorSpy.mockRestore();

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import { AppConfig } from '../schema/config';
+
+import {AppConfig} from '@/schema/config';
 
 export interface RouteInfo {
   method: string;
@@ -62,7 +63,7 @@ function getMethodColor(method: string) {
   if (method.includes('/')) {
     return method
       .split('/')
-      .map((m) => {
+      .map(m => {
         const color = colors[m.toUpperCase()] || chalk.white;
         return color(m);
       })
@@ -81,13 +82,17 @@ const MODEL_COLORS = [
   chalk.redBright,
 ];
 
-export function showWelcomeScreen(config: AppConfig, port: number, routes: RouteInfo[]) {
+export function showWelcomeScreen(
+  config: AppConfig,
+  port: number,
+  routes: RouteInfo[],
+) {
   const coloredRocket = ROCKET_ASCII.split('\n')
-    .map((line) => {
+    .map(line => {
       return line
-        .replace(/[QLUCJFTYXIF]+/g, (m) => chalk.blueBright(m))
-        .replace(/[nzvxticulr]+/g, (m) => chalk.cyan(m))
-        .replace(/[;:,!]+/g, (m) => chalk.gray(m));
+        .replace(/[QLUCJFTYXIF]+/g, m => chalk.blueBright(m))
+        .replace(/[nzvxticulr]+/g, m => chalk.cyan(m))
+        .replace(/[;:,!]+/g, m => chalk.gray(m));
     })
     .join('\n');
 
@@ -104,12 +109,18 @@ export function showWelcomeScreen(config: AppConfig, port: number, routes: Route
 
   console.log('  ' + chalk.cyan('System Status:'));
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
-  console.log('  ' + chalk.white('API Host:    ') + chalk.green(`http://0.0.0.0:${port}`));
+  console.log(
+    '  ' + chalk.white('API Host:    ') + chalk.green(`http://0.0.0.0:${port}`),
+  );
   console.log('  ' + chalk.white('Swagger UI:  ') + chalk.green(swaggerUrl));
   console.log(
-    '  ' + chalk.white('Database:    ') + chalk.magenta(config.database.engine.toUpperCase())
+    '  ' +
+      chalk.white('Database:    ') +
+      chalk.magenta(config.database.engine.toUpperCase()),
   );
-  console.log('  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length));
+  console.log(
+    '  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length),
+  );
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
 
   // Log models
@@ -120,28 +131,35 @@ export function showWelcomeScreen(config: AppConfig, port: number, routes: Route
       '  ' +
         chalk.white('• ') +
         color(model.name.padEnd(15)) +
-        chalk.gray(` (${model.fields.length} fields)`)
+        chalk.gray(` (${model.fields.length} fields)`),
     );
   });
 
   // Log routes
   console.log('\n  ' + chalk.cyan('Routes:'));
   // Filter routes
-  const filteredRoutes = routes.filter((route) => {
+  const filteredRoutes = routes.filter(route => {
     const isHead = route.method.toUpperCase().split('/').includes('HEAD');
     const isStatic = route.url.includes('/static');
     return !isHead && !isStatic;
   });
 
-  const sortedRoutes = [...filteredRoutes].sort((a, b) => a.url.localeCompare(b.url));
+  const sortedRoutes = [...filteredRoutes].sort((a, b) =>
+    a.url.localeCompare(b.url),
+  );
 
   // Determine max method length for padding (ignoring color codes)
-  const maxMethodLength = Math.max(...filteredRoutes.map((r) => r.method.length), 7);
+  const maxMethodLength = Math.max(
+    ...filteredRoutes.map(r => r.method.length),
+    7,
+  );
 
-  sortedRoutes.forEach((route) => {
+  sortedRoutes.forEach(route => {
     const coloredMethod = getMethodColor(route.method);
     // Calculate padding manually to account for colors in getMethodColor result
-    const padding = ' '.repeat(Math.max(0, maxMethodLength - route.method.length));
+    const padding = ' '.repeat(
+      Math.max(0, maxMethodLength - route.method.length),
+    );
 
     console.log('  ' + coloredMethod + padding + chalk.white(`  ${route.url}`));
   });

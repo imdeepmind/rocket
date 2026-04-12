@@ -1,8 +1,13 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import { ModelConfig } from '../schema/config';
-import { getResponseStructureSchema, mapDataTypeToJsonSchema } from './schema-helpers';
-import { capitalizeFirstLetter } from '../utils/string';
+import {
+  getResponseStructureSchema,
+  mapDataTypeToJsonSchema,
+} from '@/routes/schema-helpers';
+
+import {ModelConfig} from '@/schema/config';
+
+import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
  * Register DELETE routes for deletable fields.
@@ -12,10 +17,13 @@ import { capitalizeFirstLetter } from '../utils/string';
  *
  * Path params: the column value identifying the record to delete.
  */
-export function registerDeleteRoutes(app: FastifyInstance, models: ModelConfig[]): void {
+export function registerDeleteRoutes(
+  app: FastifyInstance,
+  models: ModelConfig[],
+): void {
   for (const model of models) {
-    const deletableFields = model.fields.filter((f) =>
-      f.supportedOperations?.includes('deletable')
+    const deletableFields = model.fields.filter(f =>
+      f.supportedOperations?.includes('deletable'),
     );
 
     for (const field of deletableFields) {
@@ -42,7 +50,10 @@ export function registerDeleteRoutes(app: FastifyInstance, models: ModelConfig[]
           },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
-          const { [field.name]: value } = request.params as Record<string, unknown>;
+          const {[field.name]: value} = request.params as Record<
+            string,
+            unknown
+          >;
           const tableName = model.name;
           const columnName = field.name;
 
@@ -51,7 +62,7 @@ export function registerDeleteRoutes(app: FastifyInstance, models: ModelConfig[]
           await app.db.query(query, [value]);
 
           return reply.status(204).send();
-        }
+        },
       );
     }
   }

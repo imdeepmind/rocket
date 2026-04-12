@@ -1,7 +1,9 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { createTestApp, pgConfig, mockModels } from '../helpers/test-app';
-import { ModelConfig } from '../../src/schema/config';
-import { pgQueryMock } from '../helpers/db-mocks';
+import {beforeEach, describe, expect, test} from 'vitest';
+
+import {ModelConfig} from '@/schema/config';
+
+import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
 
 describe('test post api', () => {
   beforeEach(() => {
@@ -47,13 +49,13 @@ describe('test post api', () => {
       await fastify.inject({
         method: 'POST',
         url: '/users/',
-        payload: { id: 5, name: 'Alice', email: 'alice@example.com' },
+        payload: {id: 5, name: 'Alice', email: 'alice@example.com'},
       });
 
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("id", "name", "email") VALUES ($1, $2, $3);',
-        [5, 'Alice', 'alice@example.com']
+        [5, 'Alice', 'alice@example.com'],
       );
 
       await fastify.close();
@@ -78,7 +80,7 @@ describe('test post api', () => {
       // Only model-defined fields should appear in the query
       expect(pgQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("id", "name", "email") VALUES ($1, $2, $3);',
-        [2, 'Bob', 'bob@example.com']
+        [2, 'Bob', 'bob@example.com'],
       );
 
       await fastify.close();
@@ -91,15 +93,15 @@ describe('test post api', () => {
         {
           name: 'products',
           fields: [
-            { name: 'id', type: 'integer', primaryKey: true },
-            { name: 'title', type: 'string' },
+            {name: 'id', type: 'integer', primaryKey: true},
+            {name: 'title', type: 'string'},
           ],
           // Provide an explicit validation schema that marks fields as required
           validation: {
             type: 'object',
             properties: {
-              id: { type: 'integer' },
-              title: { type: 'string' },
+              id: {type: 'integer'},
+              title: {type: 'string'},
             },
             required: ['id', 'title'],
           },
@@ -111,7 +113,7 @@ describe('test post api', () => {
       const response = await fastify.inject({
         method: 'POST',
         url: '/products/',
-        payload: { id: 1 }, // missing 'title'
+        payload: {id: 1}, // missing 'title'
       });
 
       expect(response.statusCode).toBe(400);
@@ -124,11 +126,11 @@ describe('test post api', () => {
       const modelsWithRequired: ModelConfig[] = [
         {
           name: 'items',
-          fields: [{ name: 'count', type: 'integer' }],
+          fields: [{name: 'count', type: 'integer'}],
           validation: {
             type: 'object',
             properties: {
-              count: { type: 'integer' },
+              count: {type: 'integer'},
             },
             required: ['count'],
           },
@@ -140,7 +142,7 @@ describe('test post api', () => {
       const response = await fastify.inject({
         method: 'POST',
         url: '/items/',
-        payload: { count: 'not-a-number' }, // should be integer
+        payload: {count: 'not-a-number'}, // should be integer
       });
 
       expect(response.statusCode).toBe(400);
@@ -158,7 +160,7 @@ describe('test post api', () => {
       const response = await fastify.inject({
         method: 'POST',
         url: '/users/',
-        payload: { id: 1, name: 'Test', email: 'test@example.com' },
+        payload: {id: 1, name: 'Test', email: 'test@example.com'},
       });
 
       expect(response.statusCode).toBe(500);

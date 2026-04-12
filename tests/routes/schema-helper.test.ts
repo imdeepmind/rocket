@@ -1,26 +1,33 @@
-import { describe, it, test, expect } from 'vitest';
+import {describe, expect, it, test} from 'vitest';
+
 import {
-  mapDataTypeToJsonSchema,
-  buildSortQueryProperties,
   buildFilterQueryProperties,
   buildPostBodyValidationSchema,
-  stripAdditionalPostFields,
+  buildSortQueryProperties,
   getResponseStructureSchema,
-} from '../../src/routes/schema-helpers';
-import { DataType, ModelConfig, ModelFieldConfig } from '../../src/schema/config';
+  mapDataTypeToJsonSchema,
+  stripAdditionalPostFields,
+} from '@/routes/schema-helpers';
+
+import {DataType, ModelConfig, ModelFieldConfig} from '@/schema/config';
 
 describe('test schema helper', () => {
   // test cases for mapDataTypeToJsonSchema
   it.each([
-    { dataType: 'string', expectedSchema: { type: 'string' } },
-    { dataType: 'integer', expectedSchema: { type: 'integer' } },
-    { dataType: 'boolean', expectedSchema: { type: 'boolean' } },
-    { dataType: 'text', expectedSchema: { type: 'string' } },
-    { dataType: 'datetime', expectedSchema: { type: 'string', format: 'date-time' } },
-    { dataType: 'array', expectedSchema: { type: 'string' } },
-    { dataType: 'null', expectedSchema: { type: 'string' } },
-  ])('should map $dataType to JSON schema', ({ dataType, expectedSchema }) => {
-    expect(mapDataTypeToJsonSchema(dataType as DataType)).toEqual(expectedSchema);
+    {dataType: 'string', expectedSchema: {type: 'string'}},
+    {dataType: 'integer', expectedSchema: {type: 'integer'}},
+    {dataType: 'boolean', expectedSchema: {type: 'boolean'}},
+    {dataType: 'text', expectedSchema: {type: 'string'}},
+    {
+      dataType: 'datetime',
+      expectedSchema: {type: 'string', format: 'date-time'},
+    },
+    {dataType: 'array', expectedSchema: {type: 'string'}},
+    {dataType: 'null', expectedSchema: {type: 'string'}},
+  ])('should map $dataType to JSON schema', ({dataType, expectedSchema}) => {
+    expect(mapDataTypeToJsonSchema(dataType as DataType)).toEqual(
+      expectedSchema,
+    );
   });
 
   // test cases for buildSortQueryProperties
@@ -79,10 +86,13 @@ describe('test schema helper', () => {
       },
       age_in: {
         type: 'string',
-        description: 'Filter where age is one of the provided comma-separated values',
+        description:
+          'Filter where age is one of the provided comma-separated values',
       },
     };
-    expect(buildFilterQueryProperties(field as ModelFieldConfig)).toEqual(expectedSchema);
+    expect(buildFilterQueryProperties(field as ModelFieldConfig)).toEqual(
+      expectedSchema,
+    );
   });
 
   // test cases for buildPostBodyValidationSchema
@@ -90,10 +100,10 @@ describe('test schema helper', () => {
     const model: ModelConfig = {
       name: 'test',
       fields: [
-        { name: 'id', type: 'integer', primaryKey: true },
-        { name: 'name', type: 'string' },
-        { name: 'email', type: 'string' },
-        { name: 'age', type: 'integer', nullable: true },
+        {name: 'id', type: 'integer', primaryKey: true},
+        {name: 'name', type: 'string'},
+        {name: 'email', type: 'string'},
+        {name: 'age', type: 'integer', nullable: true},
       ],
     };
     const expectedSchema = {
@@ -125,10 +135,10 @@ describe('test schema helper', () => {
     const model: ModelConfig = {
       name: 'test',
       fields: [
-        { name: 'id', type: 'integer', primaryKey: true },
-        { name: 'name', type: 'string' },
-        { name: 'email', type: 'string' },
-        { name: 'age', type: 'integer', nullable: true },
+        {name: 'id', type: 'integer', primaryKey: true},
+        {name: 'name', type: 'string'},
+        {name: 'email', type: 'string'},
+        {name: 'age', type: 'integer', nullable: true},
       ],
       validation: {
         type: 'object',
@@ -199,7 +209,7 @@ describe('test schema helper', () => {
   test('should build post body validation schmea without and requird fields', () => {
     const model: ModelConfig = {
       name: 'test',
-      fields: [{ name: 'age', type: 'integer', nullable: true }],
+      fields: [{name: 'age', type: 'integer', nullable: true}],
     };
     const expectedSchema = {
       type: 'object',
@@ -219,10 +229,10 @@ describe('test schema helper', () => {
     const model: ModelConfig = {
       name: 'test',
       fields: [
-        { name: 'id', type: 'integer', primaryKey: true },
-        { name: 'name', type: 'string' },
-        { name: 'email', type: 'string' },
-        { name: 'age', type: 'integer', nullable: true },
+        {name: 'id', type: 'integer', primaryKey: true},
+        {name: 'name', type: 'string'},
+        {name: 'email', type: 'string'},
+        {name: 'age', type: 'integer', nullable: true},
       ],
     };
     const body = {
@@ -293,13 +303,13 @@ describe('test schema helper', () => {
       200: {
         type: 'object',
         properties: {
-          code: { type: 'integer' },
-          message: { type: 'string' },
+          code: {type: 'integer'},
+          message: {type: 'string'},
           data: dataSchema,
           raw_data: {
             type: 'object',
             properties: {
-              changes: { type: 'integer' },
+              changes: {type: 'integer'},
               rows: {
                 type: 'array',
                 items: rowSchema,
@@ -311,13 +321,13 @@ describe('test schema helper', () => {
       201: {
         type: 'object',
         properties: {
-          code: { type: 'integer' },
-          message: { type: 'string' },
+          code: {type: 'integer'},
+          message: {type: 'string'},
           data: dataSchema,
           raw_data: {
             type: 'object',
             properties: {
-              changes: { type: 'integer' },
+              changes: {type: 'integer'},
               rows: {
                 type: 'array',
                 items: rowSchema,
@@ -331,16 +341,18 @@ describe('test schema helper', () => {
         description: 'Successfully deleted the entry',
       },
     };
-    expect(getResponseStructureSchema(codes, dataSchema, rowSchema)).toEqual(expectedSchema);
+    expect(getResponseStructureSchema(codes, dataSchema, rowSchema)).toEqual(
+      expectedSchema,
+    );
   });
 
   test('should throw error for unsupported HTTP status code', () => {
     const codes = [999];
     const dataSchema = {};
     const rowSchema = {};
-    expect(() => getResponseStructureSchema(codes, dataSchema, rowSchema)).toThrow(
-      'Unsupported HTTP status code: 999'
-    );
+    expect(() =>
+      getResponseStructureSchema(codes, dataSchema, rowSchema),
+    ).toThrow('Unsupported HTTP status code: 999');
   });
 
   test('run getResponseStructureSchema with no rowSchema', () => {
@@ -350,22 +362,24 @@ describe('test schema helper', () => {
       200: {
         type: 'object',
         properties: {
-          code: { type: 'integer' },
-          message: { type: 'string' },
+          code: {type: 'integer'},
+          message: {type: 'string'},
           data: dataSchema,
           raw_data: {
             type: 'object',
             properties: {
-              changes: { type: 'integer' },
+              changes: {type: 'integer'},
               rows: {
                 type: 'array',
-                items: { type: 'object', additionalProperties: true },
+                items: {type: 'object', additionalProperties: true},
               },
             },
           },
         },
       },
     };
-    expect(getResponseStructureSchema(codes, dataSchema)).toEqual(expectedSchema);
+    expect(getResponseStructureSchema(codes, dataSchema)).toEqual(
+      expectedSchema,
+    );
   });
 });
