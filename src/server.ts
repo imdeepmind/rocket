@@ -42,7 +42,11 @@ async function registerSwagger(
   }
 }
 
-export async function startServer(config: AppConfig, port: number, mode: Mode) {
+export async function startServer(
+  config: AppConfig,
+  port: number,
+  mode: Mode,
+): Promise<FastifyInstance> {
   // validate the schema
   config = validateConfig(config);
 
@@ -134,6 +138,8 @@ export async function startServer(config: AppConfig, port: number, mode: Mode) {
   try {
     showWelcomeScreen(config, port, routes);
     await app.listen({port, host: '0.0.0.0'});
+
+    return app;
   } catch (err) {
     app.log.error(err);
     process.exit(1);

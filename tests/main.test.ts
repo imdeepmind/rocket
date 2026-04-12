@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 
+import {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {startServer} from '@/server';
@@ -34,15 +35,14 @@ vi.mock('../src/server', () => ({
 }));
 
 vi.mock('fs', async importOriginal => {
-  // prettier-ignore
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const actual = await importOriginal<any>();
+  const actual = await importOriginal<Record<string, unknown>>();
   return {...actual, readFileSync: vi.fn()};
 });
 
 vi.mock('chalk', () => ({
   default: {
     blue: vi.fn(s => s),
+    yellow: vi.fn(s => s),
   },
 }));
 
@@ -100,5 +100,60 @@ describe('main.ts CLI', () => {
 
     // Verify it delegates execution to the server instance
     expect(startServer).toHaveBeenCalledWith(mockAppConfig, 8080, 'prod');
+  });
+
+  it('should register graceful shutdown handlers and close app on signal', async () => {
+    await import('../src/main');
+
+    const mockApp = {
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
+    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
+    const onSpy = vi
+      .spyOn(process, 'on')
+      .mockImplementation(
+        (sig: string | symbol, cb: (...args: unknown[]) => void) => {
+          handlers[sig] = cb;
+          return process;
+        },
+      );
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    // Trigger action
+    const cliOptions = {config: 'test.json', port: 8080, mode: 'prod'};
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
+    await mockAction(cliOptions);
+
+    expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+    expect(onSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+
+    // Trigger SIGINT
+    if (handlers['SIGINT']) {
+      await handlers['SIGINT']();
+    }
+
+    expect(mockApp.close).toHaveBeenCalledTimes(1);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    // Reset mocks for next signal
+    vi.mocked(mockApp.close).mockClear();
+    vi.mocked(exitSpy).mockClear();
+
+    // Trigger SIGTERM
+    if (handlers['SIGTERM']) {
+      await handlers['SIGTERM']();
+    }
+
+    expect(mockApp.close).toHaveBeenCalledTimes(1);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    onSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

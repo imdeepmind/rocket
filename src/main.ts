@@ -54,8 +54,17 @@ program
     console.log(chalk.blue(`Mode: ${mode}`));
 
     const loadedConfig = loadConfig(config);
+    const app = await startServer(loadedConfig, port, mode);
 
-    await startServer(loadedConfig, port, mode);
+    // Graceful shutdown
+    const shutdown = async (signal: string) => {
+      console.log(chalk.yellow(`\nReceived ${signal}, closing server...`));
+      await app.close();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
   });
 
 program.parse();

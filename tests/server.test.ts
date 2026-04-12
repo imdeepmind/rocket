@@ -21,7 +21,11 @@ vi.mock('fastify', () => {
     addHook: vi.fn(),
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
-    log: {error: vi.fn()},
+    close: vi.fn(),
+    log: {
+      error: vi.fn(),
+      info: vi.fn(),
+    },
     buildResponse: vi.fn((statusCode, message, data, meta) => ({
       statusCode,
       message,
@@ -72,7 +76,11 @@ type MockedApp = FastifyInstance & {
   addHook: ReturnType<typeof vi.fn>;
   setErrorHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
-  log: {error: ReturnType<typeof vi.fn>};
+  close: ReturnType<typeof vi.fn>;
+  log: {
+    error: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+  };
   buildResponse: ReturnType<typeof vi.fn>;
 };
 
@@ -297,5 +305,10 @@ describe('Server', () => {
         }),
       );
     });
+  });
+
+  it('should return the app instance', async () => {
+    const app = await startServer(mockConfig, 3000, 'dev');
+    expect(app).toBe(mockApp);
   });
 });
