@@ -13,6 +13,18 @@ const ajv = new Ajv({
 
 addFormats(ajv);
 
+const applicationSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['logLevel'],
+  properties: {
+    logLevel: {
+      type: 'string',
+      enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
+    },
+  },
+};
+
 const swaggerSchema = {
   type: 'object',
   required: ['enabled', 'basePath', 'info'],
@@ -222,9 +234,10 @@ const modelSchema = {
 
 const schema = {
   type: 'object',
-  required: ['swagger', 'database', 'models'],
+  required: ['application', 'swagger', 'database', 'models'],
   additionalProperties: false,
   properties: {
+    application: applicationSchema,
     swagger: swaggerSchema,
     database: databaseSchema,
     models: {

@@ -72,6 +72,9 @@ const getDefaultModelConfig = (): ModelConfig[] => {
 };
 
 const validBaseConfig: AppConfig = {
+  application: {
+    logLevel: 'info',
+  },
   swagger: {
     enabled: true,
     basePath: '/api',
@@ -1844,5 +1847,70 @@ describe('validateValidModelForeignKeyConfig', () => {
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateInvalidApplicationConfig', () => {
+  it.each([
+    {
+      name: 'logLevel as invalid string',
+      patch: {logLevel: 'verbose'},
+      expected:
+        '/application/logLevel must be equal to one of the allowed values',
+    },
+    {
+      name: 'logLevel as number',
+      patch: {logLevel: 1},
+      expected:
+        '/application/logLevel must be equal to one of the allowed values',
+    },
+    {
+      name: 'logLevel as boolean',
+      patch: {logLevel: true},
+      expected:
+        '/application/logLevel must be equal to one of the allowed values',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    const config: AppConfig = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      } as AppConfig['application'],
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it('should throw when application is missing', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const configWithoutApp = {...validBaseConfig} as any;
+    delete configWithoutApp.application;
+    expect(() =>
+      validateConfig(configWithoutApp as unknown as AppConfig),
+    ).toThrow("must have required property 'application'");
+  });
+});
+
+describe('validateValidApplicationConfig', () => {
+  it.each([
+    {name: 'logLevel trace', patch: {logLevel: 'trace'}},
+    {name: 'logLevel debug', patch: {logLevel: 'debug'}},
+    {name: 'logLevel info', patch: {logLevel: 'info'}},
+    {name: 'logLevel warn', patch: {logLevel: 'warn'}},
+    {name: 'logLevel error', patch: {logLevel: 'error'}},
+    {name: 'logLevel fatal', patch: {logLevel: 'fatal'}},
+    {name: 'logLevel silent', patch: {logLevel: 'silent'}},
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config: AppConfig = {
+      ...validBaseConfig,
+      application: patch as AppConfig['application'],
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toMatchObject({
+      application: patch,
+    });
   });
 });

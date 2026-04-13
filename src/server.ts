@@ -53,18 +53,16 @@ export async function startServer(
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
-    logger:
-      mode === 'dev'
-        ? {
-            transport: {
-              target: 'pino-pretty',
-              options: {
-                translateTime: 'HH:MM:ss Z',
-                ignore: 'pid,hostname',
-              },
-            },
-          }
-        : true,
+    logger: {
+      level: mode === 'dev' ? 'debug' : config.application.logLevel,
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
+        },
+      },
+    },
   });
 
   // Track each registered route

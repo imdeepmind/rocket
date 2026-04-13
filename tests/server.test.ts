@@ -54,6 +54,9 @@ vi.mock('@/utils/welcome', () => ({
 }));
 
 const mockConfig: AppConfig = {
+  application: {
+    logLevel: 'info',
+  },
   database: {
     engine: 'sqlite',
     connection: {urlOrPath: ':memory:'},
@@ -106,9 +109,13 @@ describe('Server', () => {
 
     expect(fastifyMock).toHaveBeenCalledWith({
       logger: {
+        level: 'debug',
         transport: {
           target: 'pino-pretty',
-          options: expect.any(Object),
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
         },
       },
     });
@@ -117,8 +124,41 @@ describe('Server', () => {
 
     await startServer(mockConfig, 3000, 'prod');
     expect(fastifyMock).toHaveBeenCalledWith({
-      logger: true,
+      logger: {
+        level: mockConfig.application.logLevel,
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        },
+      },
     });
+  });
+
+  it('should respect custom logLevel from application config in prod mode', async () => {
+    const fastifyMock = vi.mocked(Fastify);
+    const customConfig: AppConfig = {
+      ...mockConfig,
+      application: {logLevel: 'warn'},
+    };
+
+    await startServer(customConfig, 3000, 'prod');
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'warn'}),
+      }),
+    );
+
+    fastifyMock.mockClear();
+
+    await startServer(customConfig, 3000, 'dev');
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'debug'}),
+      }),
+    );
   });
 
   it('should register routes hook correctly', async () => {
