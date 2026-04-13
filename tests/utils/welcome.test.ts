@@ -24,6 +24,9 @@ describe('welcome utility', () => {
   });
 
   const mockConfig: AppConfig = {
+    application: {
+      logLevel: 'info',
+    },
     swagger: {
       enabled: true,
       basePath: '/docs',
