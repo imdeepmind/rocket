@@ -1,4 +1,7 @@
 {
+    "application": {
+        "logLevel": "debug"
+    },
     "swagger": {
         "enabled": true,
         "basePath": "/api/docs",
