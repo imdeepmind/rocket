@@ -58,6 +58,9 @@ program
     console.log(chalk.blue(`Migrate: ${migrate}`));
 
     const loadedConfig = loadConfig(config);
+
+    // Set NODE_ENV based on mode
+    process.env.NODE_ENV = mode === 'prod' ? 'production' : 'development';
     const app = await startServer(loadedConfig, port, mode, verbose, migrate);
 
     // Graceful shutdown

@@ -56,7 +56,7 @@ export async function startServer(
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: verbose || mode === 'dev' ? 'debug' : config.application.logLevel,
+      level: verbose ? 'debug' : config.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {

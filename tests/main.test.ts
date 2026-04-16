@@ -132,6 +132,9 @@ describe('main.ts CLI', () => {
 
     // Verify it starts listening
     expect(mockApp.listen).toHaveBeenCalledWith({port: 8080, host: '0.0.0.0'});
+
+    // Verify NODE_ENV
+    expect(process.env.NODE_ENV).toBe('production');
   });
 
   it('should close app on SIGINT', async () => {

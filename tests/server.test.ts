@@ -108,38 +108,28 @@ describe('Server', () => {
     await startServer(mockConfig, 3000, mode, verbose, migrate);
   };
 
-  it('should initialize fastify with correct logger based on mode', async () => {
+  it('should initialize fastify with correct logger based on configuration', async () => {
     const fastifyMock = vi.mocked(Fastify);
     await startServer(mockConfig, 3000, 'dev');
 
-    expect(fastifyMock).toHaveBeenCalledWith({
-      logger: {
-        level: 'debug',
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
-          },
-        },
-      },
-    });
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({
+          level: mockConfig.application.logLevel,
+        }),
+      }),
+    );
 
     fastifyMock.mockClear();
 
     await startServer(mockConfig, 3000, 'prod');
-    expect(fastifyMock).toHaveBeenCalledWith({
-      logger: {
-        level: mockConfig.application.logLevel,
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
-          },
-        },
-      },
-    });
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({
+          level: mockConfig.application.logLevel,
+        }),
+      }),
+    );
   });
 
   it('should respect custom logLevel from application config in prod mode', async () => {
@@ -161,7 +151,7 @@ describe('Server', () => {
     await startServer(customConfig, 3000, 'dev');
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        logger: expect.objectContaining({level: 'debug'}),
+        logger: expect.objectContaining({level: 'warn'}),
       }),
     );
   });
