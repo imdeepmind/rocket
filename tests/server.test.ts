@@ -224,7 +224,6 @@ describe('Server', () => {
       mockConfig.models,
     );
     expect(showWelcomeScreen).toHaveBeenCalled();
-    expect(mockApp.listen).toHaveBeenCalledWith({port: 3000, host: '0.0.0.0'});
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -247,23 +246,6 @@ describe('Server', () => {
     await startServer(noModelsConfig, 3000, 'prod');
 
     expect(registerModelRoutes).not.toHaveBeenCalled();
-  });
-
-  it('should handle app.listen failure and process.exit context', async () => {
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (
-        code?: string | number | null,
-      ) => never);
-    const mockErr = new Error('port in use');
-    mockApp.listen.mockRejectedValueOnce(mockErr);
-
-    await runStart();
-
-    expect(mockApp.log.error).toHaveBeenCalledWith(mockErr);
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
   });
 
   describe('Error Handler', () => {
@@ -377,6 +359,25 @@ describe('Server', () => {
         }),
       );
     });
+  });
+
+  it('should handle errors in startServer finalization', async () => {
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+    const mockErr = new Error('welcome error');
+    vi.mocked(showWelcomeScreen).mockImplementationOnce(() => {
+      throw mockErr;
+    });
+
+    await startServer(mockConfig, 3000, 'dev');
+
+    expect(mockApp.log.error).toHaveBeenCalledWith(mockErr);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    exitSpy.mockRestore();
   });
 
   it('should return the app instance', async () => {

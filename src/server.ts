@@ -139,8 +139,6 @@ export async function startServer(
 
   try {
     showWelcomeScreen(config, port, routes);
-    await app.listen({port, host: '0.0.0.0'});
-
     return app;
   } catch (err) {
     app.log.error(err);

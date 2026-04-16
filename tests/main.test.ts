@@ -43,6 +43,8 @@ vi.mock('chalk', () => ({
   default: {
     blue: vi.fn(s => s),
     yellow: vi.fn(s => s),
+    green: vi.fn(s => s),
+    red: vi.fn(s => s),
   },
 }));
 
@@ -108,6 +110,11 @@ describe('main.ts CLI', () => {
     // Mock readFileSync behavior for config loading
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockAppConfig));
 
+    const mockApp = {
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
     // Execute the action manually
     await mockAction(cliOptions);
 
@@ -122,13 +129,17 @@ describe('main.ts CLI', () => {
       true,
       true,
     );
+
+    // Verify it starts listening
+    expect(mockApp.listen).toHaveBeenCalledWith({port: 8080, host: '0.0.0.0'});
   });
 
-  it('should register graceful shutdown handlers and close app on signal', async () => {
+  it('should close app on SIGINT', async () => {
     await import('../src/main');
 
     const mockApp = {
       close: vi.fn().mockResolvedValue(undefined),
+      listen: vi.fn().mockResolvedValue(undefined),
     } as unknown as FastifyInstance;
     vi.mocked(startServer).mockResolvedValue(mockApp);
 
@@ -147,7 +158,6 @@ describe('main.ts CLI', () => {
         code?: string | number | null,
       ) => never);
 
-    // Trigger action
     const cliOptions = {
       config: 'test.json',
       port: 8080,
@@ -158,10 +168,6 @@ describe('main.ts CLI', () => {
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
     await mockAction(cliOptions);
 
-    expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-    expect(onSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-
-    // Trigger SIGINT
     if (handlers['SIGINT']) {
       await handlers['SIGINT']();
     }
@@ -169,11 +175,44 @@ describe('main.ts CLI', () => {
     expect(mockApp.close).toHaveBeenCalledTimes(1);
     expect(exitSpy).toHaveBeenCalledWith(0);
 
-    // Reset mocks for next signal
-    vi.mocked(mockApp.close).mockClear();
-    vi.mocked(exitSpy).mockClear();
+    onSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
 
-    // Trigger SIGTERM
+  it('should close app on SIGTERM', async () => {
+    await import('../src/main');
+
+    const mockApp = {
+      close: vi.fn().mockResolvedValue(undefined),
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
+    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
+    const onSpy = vi
+      .spyOn(process, 'on')
+      .mockImplementation(
+        (sig: string | symbol, cb: (...args: unknown[]) => void) => {
+          handlers[sig] = cb;
+          return process;
+        },
+      );
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: false,
+      migrate: false,
+    };
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
+    await mockAction(cliOptions);
+
     if (handlers['SIGTERM']) {
       await handlers['SIGTERM']();
     }
@@ -183,5 +222,91 @@ describe('main.ts CLI', () => {
 
     onSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+
+  it('should force exit on shutdown timeout', async () => {
+    vi.useFakeTimers();
+    await import('../src/main');
+
+    const mockApp = {
+      close: vi.fn().mockImplementation(() => new Promise(() => {})), // Never resolves
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
+    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
+    vi.spyOn(process, 'on').mockImplementation(
+      (sig: string | symbol, cb: (...args: unknown[]) => void) => {
+        handlers[sig] = cb;
+        return process;
+      },
+    );
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    await mockAction({config: 'test.json'});
+
+    if (handlers['SIGINT']) {
+      handlers['SIGINT']();
+    }
+
+    // Advance time by 2 seconds
+    vi.advanceTimersByTime(2000);
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    vi.useRealTimers();
+  });
+
+  it('should exit with 1 on shutdown error', async () => {
+    await import('../src/main');
+
+    const mockApp = {
+      close: vi.fn().mockRejectedValue(new Error('close error')),
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
+    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
+    vi.spyOn(process, 'on').mockImplementation(
+      (sig: string | symbol, cb: (...args: unknown[]) => void) => {
+        handlers[sig] = cb;
+        return process;
+      },
+    );
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    await mockAction({config: 'test.json'});
+
+    if (handlers['SIGINT']) {
+      await handlers['SIGINT']();
+    }
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('should exit with 1 on listen error', async () => {
+    await import('../src/main');
+
+    const mockApp = {
+      listen: vi.fn().mockRejectedValue(new Error('listen error')),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue(mockApp);
+
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    await mockAction({config: 'test.json'});
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });
