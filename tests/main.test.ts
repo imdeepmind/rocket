@@ -82,11 +82,21 @@ describe('main.ts CLI', () => {
       expect.any(Function),
       'dev',
     );
+    expect(mockCommandObj.option).toHaveBeenCalledWith(
+      '-v, --verbose',
+      'Enable verbose logging',
+      false,
+    );
     expect(mockCommandObj.action).toHaveBeenCalled();
     expect(mockCommandObj.parse).toHaveBeenCalled();
 
     // Trigger the callback registered in `.action()`
-    const cliOptions = {config: 'test.json', port: 8080, mode: 'prod'};
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: true,
+    };
     const mockAppConfig = {database: {engine: 'pg'}};
 
     // Mock readFileSync behavior for config loading
@@ -99,7 +109,7 @@ describe('main.ts CLI', () => {
     expect(fs.readFileSync).toHaveBeenCalledWith('test.json', 'utf-8');
 
     // Verify it delegates execution to the server instance
-    expect(startServer).toHaveBeenCalledWith(mockAppConfig, 8080, 'prod');
+    expect(startServer).toHaveBeenCalledWith(mockAppConfig, 8080, 'prod', true);
   });
 
   it('should register graceful shutdown handlers and close app on signal', async () => {
@@ -126,7 +136,12 @@ describe('main.ts CLI', () => {
       ) => never);
 
     // Trigger action
-    const cliOptions = {config: 'test.json', port: 8080, mode: 'prod'};
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: false,
+    };
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
     await mockAction(cliOptions);
 

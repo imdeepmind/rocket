@@ -45,16 +45,18 @@ program
     validateMode,
     'dev',
   )
+  .option('-v, --verbose', 'Enable verbose logging', false)
   .action(async (options: CLIOptions) => {
-    const {config, port, mode} = options;
+    const {config, port, mode, verbose} = options;
 
     console.log(chalk.blue('Starting server with:'));
     console.log(chalk.blue(`Config: ${config}`));
     console.log(chalk.blue(`Port: ${port}`));
     console.log(chalk.blue(`Mode: ${mode}`));
+    console.log(chalk.blue(`Verbose: ${verbose}`));
 
     const loadedConfig = loadConfig(config);
-    const app = await startServer(loadedConfig, port, mode);
+    const app = await startServer(loadedConfig, port, mode, verbose);
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

@@ -46,6 +46,7 @@ export async function startServer(
   config: AppConfig,
   port: number,
   mode: Mode,
+  verbose: boolean = false,
 ): Promise<FastifyInstance> {
   // validate the schema
   config = validateConfig(config);
@@ -54,7 +55,7 @@ export async function startServer(
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: mode === 'dev' ? 'debug' : config.application.logLevel,
+      level: verbose || mode === 'dev' ? 'debug' : config.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {

@@ -161,6 +161,28 @@ describe('Server', () => {
     );
   });
 
+  it('should override logger level to debug when verbose is true', async () => {
+    const fastifyMock = vi.mocked(Fastify);
+
+    // Test verbose in prod mode
+    await startServer(mockConfig, 3000, 'prod', true);
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'debug'}),
+      }),
+    );
+
+    fastifyMock.mockClear();
+
+    // Test verbose in dev mode (should still be debug)
+    await startServer(mockConfig, 3000, 'dev', true);
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'debug'}),
+      }),
+    );
+  });
+
   it('should register routes hook correctly', async () => {
     await runStart();
     const addHookMock = mockApp.addHook;
