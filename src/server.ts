@@ -47,6 +47,7 @@ export async function startServer(
   port: number,
   mode: Mode,
   verbose: boolean = false,
+  migrate: boolean = false,
 ): Promise<FastifyInstance> {
   // validate the schema
   config = validateConfig(config);
@@ -84,7 +85,9 @@ export async function startServer(
   await app.register(responsePlugin);
 
   // migrate the db based on config
-  await migrateDatabase(config);
+  if (migrate) {
+    await migrateDatabase(config);
+  }
 
   // register swagger
   await registerSwagger(config.swagger, app);

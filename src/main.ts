@@ -46,17 +46,19 @@ program
     'dev',
   )
   .option('-v, --verbose', 'Enable verbose logging', false)
+  .option('--migrate', 'Run database migrations', false)
   .action(async (options: CLIOptions) => {
-    const {config, port, mode, verbose} = options;
+    const {config, port, mode, verbose, migrate} = options;
 
     console.log(chalk.blue('Starting server with:'));
     console.log(chalk.blue(`Config: ${config}`));
     console.log(chalk.blue(`Port: ${port}`));
     console.log(chalk.blue(`Mode: ${mode}`));
     console.log(chalk.blue(`Verbose: ${verbose}`));
+    console.log(chalk.blue(`Migrate: ${migrate}`));
 
     const loadedConfig = loadConfig(config);
-    const app = await startServer(loadedConfig, port, mode, verbose);
+    const app = await startServer(loadedConfig, port, mode, verbose, migrate);
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

@@ -87,6 +87,11 @@ describe('main.ts CLI', () => {
       'Enable verbose logging',
       false,
     );
+    expect(mockCommandObj.option).toHaveBeenCalledWith(
+      '--migrate',
+      'Run database migrations',
+      false,
+    );
     expect(mockCommandObj.action).toHaveBeenCalled();
     expect(mockCommandObj.parse).toHaveBeenCalled();
 
@@ -96,6 +101,7 @@ describe('main.ts CLI', () => {
       port: 8080,
       mode: 'prod',
       verbose: true,
+      migrate: true,
     };
     const mockAppConfig = {database: {engine: 'pg'}};
 
@@ -109,7 +115,13 @@ describe('main.ts CLI', () => {
     expect(fs.readFileSync).toHaveBeenCalledWith('test.json', 'utf-8');
 
     // Verify it delegates execution to the server instance
-    expect(startServer).toHaveBeenCalledWith(mockAppConfig, 8080, 'prod', true);
+    expect(startServer).toHaveBeenCalledWith(
+      mockAppConfig,
+      8080,
+      'prod',
+      true,
+      true,
+    );
   });
 
   it('should register graceful shutdown handlers and close app on signal', async () => {
@@ -141,6 +153,7 @@ describe('main.ts CLI', () => {
       port: 8080,
       mode: 'prod',
       verbose: false,
+      migrate: false,
     };
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
     await mockAction(cliOptions);

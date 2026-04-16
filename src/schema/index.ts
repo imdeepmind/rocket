@@ -6,6 +6,7 @@ export interface CLIOptions {
   port: number;
   mode: Mode;
   verbose: boolean;
+  migrate: boolean;
 }
 
 export interface DatabaseQuery {

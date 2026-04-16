@@ -11,6 +11,7 @@ import {startServer} from '@/server';
 
 import {registerModelRoutes} from '@/routes/index';
 
+import {Mode} from '@/schema';
 import {AppConfig} from '@/schema/config';
 
 import {showWelcomeScreen} from '@/utils/welcome';
@@ -99,8 +100,12 @@ describe('Server', () => {
     vi.restoreAllMocks();
   });
 
-  const runStart = async (mode: 'dev' | 'prod' = 'dev') => {
-    await startServer(mockConfig, 3000, mode);
+  const runStart = async (
+    mode: Mode = 'dev',
+    verbose: boolean = false,
+    migrate: boolean = false,
+  ) => {
+    await startServer(mockConfig, 3000, mode, verbose, migrate);
   };
 
   it('should initialize fastify with correct logger based on mode', async () => {
@@ -209,7 +214,7 @@ describe('Server', () => {
   });
 
   it('should register plugins and routes', async () => {
-    await runStart();
+    await runStart('dev', false, true);
 
     expect(mockApp.register).toHaveBeenCalledTimes(4);
 
@@ -220,6 +225,11 @@ describe('Server', () => {
     );
     expect(showWelcomeScreen).toHaveBeenCalled();
     expect(mockApp.listen).toHaveBeenCalledWith({port: 3000, host: '0.0.0.0'});
+  });
+
+  it('should skip migration when migrate is false', async () => {
+    await runStart('dev', false, false);
+    expect(migrateDatabase).not.toHaveBeenCalled();
   });
 
   it('should not register swagger if disabled', async () => {
