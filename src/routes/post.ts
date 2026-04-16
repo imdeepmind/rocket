@@ -40,7 +40,7 @@ export function registerPostRoutes(
         request: FastifyRequest<{Body: ModelBody}>,
         reply: FastifyReply,
       ) => {
-        const tableName = request.url.split('/')[1];
+        const tableName = model.name;
         const incomingBody = request.body;
         const body = stripAdditionalPostFields(model, incomingBody);
         const keys = Object.keys(body);
