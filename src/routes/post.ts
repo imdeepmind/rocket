@@ -23,7 +23,9 @@ export function registerPostRoutes(
   models: ModelConfig[],
 ): void {
   for (const model of models) {
-    const bodySchema = buildPostBodyValidationSchema(model);
+    const bodySchema = buildPostBodyValidationSchema(model, {
+      ignorePrimaryKey: true,
+    });
 
     app.post(
       `/${model.name}/`,
@@ -40,9 +42,11 @@ export function registerPostRoutes(
         request: FastifyRequest<{Body: ModelBody}>,
         reply: FastifyReply,
       ) => {
-        const tableName = request.url.split('/')[1];
+        const tableName = model.name;
         const incomingBody = request.body;
-        const body = stripAdditionalPostFields(model, incomingBody);
+        const body = stripAdditionalPostFields(model, incomingBody, {
+          ignorePrimaryKey: true,
+        });
         const keys = Object.keys(body);
         const values = Object.values(body);
 

@@ -19,7 +19,6 @@ describe('test post api', () => {
         method: 'POST',
         url: '/users/',
         payload: {
-          id: 1,
           name: 'Test User',
           email: 'test@example.com',
         },
@@ -30,7 +29,6 @@ describe('test post api', () => {
         code: 201,
         message: 'Successfully added the new entry to the users table',
         data: {
-          id: 1,
           name: 'Test User',
           email: 'test@example.com',
         },
@@ -49,13 +47,13 @@ describe('test post api', () => {
       await fastify.inject({
         method: 'POST',
         url: '/users/',
-        payload: {id: 5, name: 'Alice', email: 'alice@example.com'},
+        payload: {name: 'Alice', email: 'alice@example.com'},
       });
 
       expect(pgQueryMock).toHaveBeenCalledOnce();
       expect(pgQueryMock).toHaveBeenCalledWith(
-        'INSERT INTO "users" ("id", "name", "email") VALUES ($1, $2, $3);',
-        [5, 'Alice', 'alice@example.com'],
+        'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
+        ['Alice', 'alice@example.com'],
       );
 
       await fastify.close();
@@ -68,7 +66,6 @@ describe('test post api', () => {
         method: 'POST',
         url: '/users/',
         payload: {
-          id: 2,
           name: 'Bob',
           email: 'bob@example.com',
           // Extra fields that should be removed
@@ -79,8 +76,8 @@ describe('test post api', () => {
 
       // Only model-defined fields should appear in the query
       expect(pgQueryMock).toHaveBeenCalledWith(
-        'INSERT INTO "users" ("id", "name", "email") VALUES ($1, $2, $3);',
-        [2, 'Bob', 'bob@example.com'],
+        'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
+        ['Bob', 'bob@example.com'],
       );
 
       await fastify.close();
@@ -160,7 +157,7 @@ describe('test post api', () => {
       const response = await fastify.inject({
         method: 'POST',
         url: '/users/',
-        payload: {id: 1, name: 'Test', email: 'test@example.com'},
+        payload: {name: 'Test', email: 'test@example.com'},
       });
 
       expect(response.statusCode).toBe(500);

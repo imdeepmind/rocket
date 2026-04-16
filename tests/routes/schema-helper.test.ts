@@ -131,6 +131,39 @@ describe('test schema helper', () => {
     expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
   });
 
+  test('should build post body validation schema ignoring primary key', () => {
+    const model: ModelConfig = {
+      name: 'test',
+      fields: [
+        {name: 'id', type: 'integer', primaryKey: true},
+        {name: 'name', type: 'string'},
+        {name: 'email', type: 'string'},
+        {name: 'age', type: 'integer', nullable: true},
+      ],
+    };
+    const expectedSchema = {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Value for name',
+        },
+        email: {
+          type: 'string',
+          description: 'Value for email',
+        },
+        age: {
+          type: 'integer',
+          description: 'Value for age',
+        },
+      },
+      required: ['name', 'email'],
+    };
+    expect(
+      buildPostBodyValidationSchema(model, {ignorePrimaryKey: true}),
+    ).toEqual(expectedSchema);
+  });
+
   test('should build post body validation schema', () => {
     const model: ModelConfig = {
       name: 'test',
