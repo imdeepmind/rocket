@@ -14,8 +14,6 @@ import {registerModelRoutes} from '@/routes/index';
 import {Mode} from '@/schema';
 import {AppConfig} from '@/schema/config';
 
-import {showWelcomeScreen} from '@/utils/welcome';
-
 vi.mock('fastify', () => {
   const mockApp = {
     register: vi.fn(),
@@ -179,7 +177,7 @@ describe('Server', () => {
   });
 
   it('should register routes hook correctly', async () => {
-    await runStart();
+    const {routes} = await startServer(mockConfig, 3000, 'dev');
     const addHookMock = mockApp.addHook;
     expect(addHookMock).toHaveBeenCalledWith('onRoute', expect.any(Function));
 
@@ -191,11 +189,7 @@ describe('Server', () => {
     hookCallback({method: 'GET', url: '/test'});
     hookCallback({method: ['POST', 'PUT'], url: '/multi'});
 
-    const showWelcomeMock = vi.mocked(showWelcomeScreen);
-
-    expect(showWelcomeMock).toHaveBeenCalledWith(
-      mockConfig,
-      3000,
+    expect(routes).toEqual(
       expect.arrayContaining([
         {method: 'GET', url: '/test'},
         {method: 'POST/PUT', url: '/multi'},
@@ -213,7 +207,6 @@ describe('Server', () => {
       mockApp,
       mockConfig.models,
     );
-    expect(showWelcomeScreen).toHaveBeenCalled();
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -351,27 +344,9 @@ describe('Server', () => {
     });
   });
 
-  it('should handle errors in startServer finalization', async () => {
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (
-        code?: string | number | null,
-      ) => never);
-    const mockErr = new Error('welcome error');
-    vi.mocked(showWelcomeScreen).mockImplementationOnce(() => {
-      throw mockErr;
-    });
-
-    await startServer(mockConfig, 3000, 'dev');
-
-    expect(mockApp.log.error).toHaveBeenCalledWith(mockErr);
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
-  });
-
-  it('should return the app instance', async () => {
-    const app = await startServer(mockConfig, 3000, 'dev');
+  it('should return the app instance and routes', async () => {
+    const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
+    expect(Array.isArray(routes)).toBe(true);
   });
 });

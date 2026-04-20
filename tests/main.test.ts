@@ -34,6 +34,10 @@ vi.mock('../src/server', () => ({
   startServer: vi.fn(),
 }));
 
+vi.mock('../src/utils/welcome', () => ({
+  showWelcomeScreen: vi.fn(),
+}));
+
 vi.mock('fs', async importOriginal => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {...actual, readFileSync: vi.fn()};
@@ -113,7 +117,7 @@ describe('main.ts CLI', () => {
     const mockApp = {
       listen: vi.fn().mockResolvedValue(undefined),
     } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     // Execute the action manually
     await mockAction(cliOptions);
@@ -144,7 +148,7 @@ describe('main.ts CLI', () => {
       close: vi.fn().mockResolvedValue(undefined),
       listen: vi.fn().mockResolvedValue(undefined),
     } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
     const onSpy = vi
@@ -189,7 +193,7 @@ describe('main.ts CLI', () => {
       close: vi.fn().mockResolvedValue(undefined),
       listen: vi.fn().mockResolvedValue(undefined),
     } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
     const onSpy = vi
@@ -233,7 +237,7 @@ describe('main.ts CLI', () => {
     const mockApp = {
       listen: vi.fn().mockRejectedValue(new Error('listen error')),
     } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     const exitSpy = vi
       .spyOn(process, 'exit')

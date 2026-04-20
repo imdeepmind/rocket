@@ -10,6 +10,7 @@ import {CLIOptions} from '@/schema';
 import {AppConfig} from '@/schema/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
+import {showWelcomeScreen} from '@/utils/welcome';
 
 /**
  * Load Config
@@ -61,7 +62,13 @@ program
 
     // Set NODE_ENV based on mode
     process.env.NODE_ENV = mode === 'prod' ? 'production' : 'development';
-    const app = await startServer(loadedConfig, port, mode, verbose, migrate);
+    const {app, routes} = await startServer(
+      loadedConfig,
+      port,
+      mode,
+      verbose,
+      migrate,
+    );
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {
@@ -76,6 +83,7 @@ program
     // Start listening
     try {
       await app.listen({port, host: '0.0.0.0'});
+      showWelcomeScreen(loadedConfig, port, routes);
     } catch (err) {
       console.error(chalk.red('Failed to start server:'), err);
       process.exit(1);

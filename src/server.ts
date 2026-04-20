@@ -17,7 +17,12 @@ import {Mode} from '@/schema';
 import {AppConfig, SwaggerConfig} from '@/schema/config';
 
 import {validateConfig} from '@/validators/config';
-import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
+import {RouteInfo} from '@/utils/welcome';
+
+export interface StartServerResult {
+  app: FastifyInstance;
+  routes: RouteInfo[];
+}
 
 async function registerSwagger(
   swaggerConfig: SwaggerConfig,
@@ -48,7 +53,7 @@ export async function startServer(
   mode: Mode,
   verbose: boolean = false,
   migrate: boolean = false,
-): Promise<FastifyInstance> {
+): Promise<StartServerResult> {
   // validate the schema
   config = validateConfig(config);
 
@@ -137,11 +142,5 @@ export async function startServer(
     },
   );
 
-  try {
-    showWelcomeScreen(config, port, routes);
-    return app;
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
+  return {app, routes};
 }
