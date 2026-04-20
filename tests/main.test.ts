@@ -34,6 +34,10 @@ vi.mock('../src/server', () => ({
   startServer: vi.fn(),
 }));
 
+vi.mock('../src/utils/welcome', () => ({
+  showWelcomeScreen: vi.fn(),
+}));
+
 vi.mock('fs', async importOriginal => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {...actual, readFileSync: vi.fn()};
@@ -43,6 +47,8 @@ vi.mock('chalk', () => ({
   default: {
     blue: vi.fn(s => s),
     yellow: vi.fn(s => s),
+    green: vi.fn(s => s),
+    red: vi.fn(s => s),
   },
 }));
 
@@ -57,7 +63,7 @@ describe('main.ts CLI', () => {
 
   it('should configure commander and start server upon action invocation', async () => {
     // Dynamically import main to trigger CLI configuration
-    await import('../src/main');
+    await import('@/main');
 
     // Verify commander sets up the cli schema
     expect(mockCommandObj.name).toHaveBeenCalledWith('rocket');
@@ -82,15 +88,36 @@ describe('main.ts CLI', () => {
       expect.any(Function),
       'dev',
     );
+    expect(mockCommandObj.option).toHaveBeenCalledWith(
+      '-v, --verbose',
+      'Enable verbose logging',
+      false,
+    );
+    expect(mockCommandObj.option).toHaveBeenCalledWith(
+      '--migrate',
+      'Run database migrations',
+      false,
+    );
     expect(mockCommandObj.action).toHaveBeenCalled();
     expect(mockCommandObj.parse).toHaveBeenCalled();
 
     // Trigger the callback registered in `.action()`
-    const cliOptions = {config: 'test.json', port: 8080, mode: 'prod'};
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: true,
+      migrate: true,
+    };
     const mockAppConfig = {database: {engine: 'pg'}};
 
     // Mock readFileSync behavior for config loading
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockAppConfig));
+
+    const mockApp = {
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     // Execute the action manually
     await mockAction(cliOptions);
@@ -99,16 +126,29 @@ describe('main.ts CLI', () => {
     expect(fs.readFileSync).toHaveBeenCalledWith('test.json', 'utf-8');
 
     // Verify it delegates execution to the server instance
-    expect(startServer).toHaveBeenCalledWith(mockAppConfig, 8080, 'prod');
+    expect(startServer).toHaveBeenCalledWith(
+      mockAppConfig,
+      8080,
+      'prod',
+      true,
+      true,
+    );
+
+    // Verify it starts listening
+    expect(mockApp.listen).toHaveBeenCalledWith({port: 8080, host: '0.0.0.0'});
+
+    // Verify NODE_ENV
+    expect(process.env.NODE_ENV).toBe('production');
   });
 
-  it('should register graceful shutdown handlers and close app on signal', async () => {
-    await import('../src/main');
+  it('should close app on SIGINT', async () => {
+    await import('@/main');
 
     const mockApp = {
       close: vi.fn().mockResolvedValue(undefined),
+      listen: vi.fn().mockResolvedValue(undefined),
     } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
 
     const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
     const onSpy = vi
@@ -125,15 +165,16 @@ describe('main.ts CLI', () => {
         code?: string | number | null,
       ) => never);
 
-    // Trigger action
-    const cliOptions = {config: 'test.json', port: 8080, mode: 'prod'};
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: false,
+      migrate: false,
+    };
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
     await mockAction(cliOptions);
 
-    expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-    expect(onSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-
-    // Trigger SIGINT
     if (handlers['SIGINT']) {
       await handlers['SIGINT']();
     }
@@ -141,11 +182,44 @@ describe('main.ts CLI', () => {
     expect(mockApp.close).toHaveBeenCalledTimes(1);
     expect(exitSpy).toHaveBeenCalledWith(0);
 
-    // Reset mocks for next signal
-    vi.mocked(mockApp.close).mockClear();
-    vi.mocked(exitSpy).mockClear();
+    onSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
 
-    // Trigger SIGTERM
+  it('should close app on SIGTERM', async () => {
+    await import('@/main');
+
+    const mockApp = {
+      close: vi.fn().mockResolvedValue(undefined),
+      listen: vi.fn().mockResolvedValue(undefined),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
+
+    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
+    const onSpy = vi
+      .spyOn(process, 'on')
+      .mockImplementation(
+        (sig: string | symbol, cb: (...args: unknown[]) => void) => {
+          handlers[sig] = cb;
+          return process;
+        },
+      );
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    const cliOptions = {
+      config: 'test.json',
+      port: 8080,
+      mode: 'prod',
+      verbose: false,
+      migrate: false,
+    };
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({database: {}}));
+    await mockAction(cliOptions);
+
     if (handlers['SIGTERM']) {
       await handlers['SIGTERM']();
     }
@@ -155,5 +229,24 @@ describe('main.ts CLI', () => {
 
     onSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+
+  it('should exit with 1 on listen error', async () => {
+    await import('@/main');
+
+    const mockApp = {
+      listen: vi.fn().mockRejectedValue(new Error('listen error')),
+    } as unknown as FastifyInstance;
+    vi.mocked(startServer).mockResolvedValue({app: mockApp, routes: []});
+
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    await mockAction({config: 'test.json'});
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });

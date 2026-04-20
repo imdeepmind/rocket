@@ -10,6 +10,7 @@ import {CLIOptions} from '@/schema';
 import {AppConfig} from '@/schema/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
+import {showWelcomeScreen} from '@/utils/welcome';
 
 /**
  * Load Config
@@ -45,16 +46,29 @@ program
     validateMode,
     'dev',
   )
+  .option('-v, --verbose', 'Enable verbose logging', false)
+  .option('--migrate', 'Run database migrations', false)
   .action(async (options: CLIOptions) => {
-    const {config, port, mode} = options;
+    const {config, port, mode, verbose, migrate} = options;
 
     console.log(chalk.blue('Starting server with:'));
     console.log(chalk.blue(`Config: ${config}`));
     console.log(chalk.blue(`Port: ${port}`));
     console.log(chalk.blue(`Mode: ${mode}`));
+    console.log(chalk.blue(`Verbose: ${verbose}`));
+    console.log(chalk.blue(`Migrate: ${migrate}`));
 
     const loadedConfig = loadConfig(config);
-    const app = await startServer(loadedConfig, port, mode);
+
+    // Set NODE_ENV based on mode
+    process.env.NODE_ENV = mode === 'prod' ? 'production' : 'development';
+    const {app, routes} = await startServer(
+      loadedConfig,
+      port,
+      mode,
+      verbose,
+      migrate,
+    );
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {
@@ -65,6 +79,15 @@ program
 
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+    // Start listening
+    try {
+      await app.listen({port, host: '0.0.0.0'});
+      showWelcomeScreen(loadedConfig, port, routes);
+    } catch (err) {
+      console.error(chalk.red('Failed to start server:'), err);
+      process.exit(1);
+    }
   });
 
 program.parse();

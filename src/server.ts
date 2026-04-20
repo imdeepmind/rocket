@@ -17,7 +17,12 @@ import {Mode} from '@/schema';
 import {AppConfig, SwaggerConfig} from '@/schema/config';
 
 import {validateConfig} from '@/validators/config';
-import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
+import {RouteInfo} from '@/utils/welcome';
+
+export interface StartServerResult {
+  app: FastifyInstance;
+  routes: RouteInfo[];
+}
 
 async function registerSwagger(
   swaggerConfig: SwaggerConfig,
@@ -46,7 +51,9 @@ export async function startServer(
   config: AppConfig,
   port: number,
   mode: Mode,
-): Promise<FastifyInstance> {
+  verbose: boolean = false,
+  migrate: boolean = false,
+): Promise<StartServerResult> {
   // validate the schema
   config = validateConfig(config);
 
@@ -54,7 +61,7 @@ export async function startServer(
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: mode === 'dev' ? 'debug' : config.application.logLevel,
+      level: verbose ? 'debug' : config.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {
@@ -83,7 +90,9 @@ export async function startServer(
   await app.register(responsePlugin);
 
   // migrate the db based on config
-  await migrateDatabase(config);
+  if (migrate) {
+    await migrateDatabase(config);
+  }
 
   // register swagger
   await registerSwagger(config.swagger, app);
@@ -133,13 +142,5 @@ export async function startServer(
     },
   );
 
-  try {
-    showWelcomeScreen(config, port, routes);
-    await app.listen({port, host: '0.0.0.0'});
-
-    return app;
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
+  return {app, routes};
 }

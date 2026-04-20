@@ -92,6 +92,8 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
 
   // cleanup on shutdown
   fastify.addHook('onClose', async () => {
+    fastify.log.info('Closing database connection...');
     await db.close();
+    fastify.log.info('Database connection closed.');
   });
 });
