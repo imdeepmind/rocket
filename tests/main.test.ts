@@ -59,7 +59,7 @@ describe('main.ts CLI', () => {
 
   it('should configure commander and start server upon action invocation', async () => {
     // Dynamically import main to trigger CLI configuration
-    await import('../src/main');
+    await import('@/main');
 
     // Verify commander sets up the cli schema
     expect(mockCommandObj.name).toHaveBeenCalledWith('rocket');
@@ -138,7 +138,7 @@ describe('main.ts CLI', () => {
   });
 
   it('should close app on SIGINT', async () => {
-    await import('../src/main');
+    await import('@/main');
 
     const mockApp = {
       close: vi.fn().mockResolvedValue(undefined),
@@ -183,7 +183,7 @@ describe('main.ts CLI', () => {
   });
 
   it('should close app on SIGTERM', async () => {
-    await import('../src/main');
+    await import('@/main');
 
     const mockApp = {
       close: vi.fn().mockResolvedValue(undefined),
@@ -227,75 +227,8 @@ describe('main.ts CLI', () => {
     exitSpy.mockRestore();
   });
 
-  it('should force exit on shutdown timeout', async () => {
-    vi.useFakeTimers();
-    await import('../src/main');
-
-    const mockApp = {
-      close: vi.fn().mockImplementation(() => new Promise(() => {})), // Never resolves
-      listen: vi.fn().mockResolvedValue(undefined),
-    } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
-
-    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
-    vi.spyOn(process, 'on').mockImplementation(
-      (sig: string | symbol, cb: (...args: unknown[]) => void) => {
-        handlers[sig] = cb;
-        return process;
-      },
-    );
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (
-        code?: string | number | null,
-      ) => never);
-
-    await mockAction({config: 'test.json'});
-
-    if (handlers['SIGINT']) {
-      handlers['SIGINT']();
-    }
-
-    // Advance time by 2 seconds
-    vi.advanceTimersByTime(2000);
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    vi.useRealTimers();
-  });
-
-  it('should exit with 1 on shutdown error', async () => {
-    await import('../src/main');
-
-    const mockApp = {
-      close: vi.fn().mockRejectedValue(new Error('close error')),
-      listen: vi.fn().mockResolvedValue(undefined),
-    } as unknown as FastifyInstance;
-    vi.mocked(startServer).mockResolvedValue(mockApp);
-
-    const handlers: Record<string | symbol, (...args: unknown[]) => void> = {};
-    vi.spyOn(process, 'on').mockImplementation(
-      (sig: string | symbol, cb: (...args: unknown[]) => void) => {
-        handlers[sig] = cb;
-        return process;
-      },
-    );
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (
-        code?: string | number | null,
-      ) => never);
-
-    await mockAction({config: 'test.json'});
-
-    if (handlers['SIGINT']) {
-      await handlers['SIGINT']();
-    }
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-  });
-
   it('should exit with 1 on listen error', async () => {
-    await import('../src/main');
+    await import('@/main');
 
     const mockApp = {
       listen: vi.fn().mockRejectedValue(new Error('listen error')),

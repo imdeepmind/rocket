@@ -64,30 +64,10 @@ program
     const app = await startServer(loadedConfig, port, mode, verbose, migrate);
 
     // Graceful shutdown
-    let shuttingDown = false;
     const shutdown = async (signal: string) => {
-      if (shuttingDown) return;
-      shuttingDown = true;
-
       console.log(chalk.yellow(`\nReceived ${signal}, closing server...`));
-
-      // Force exit after a timeout
-      const forceExitTimeout = setTimeout(() => {
-        console.log(
-          chalk.red('\nGraceful shutdown timed out, forcing exit...'),
-        );
-        process.exit(1);
-      }, 2000); // 2 seconds
-
-      try {
-        await app.close();
-        clearTimeout(forceExitTimeout);
-        console.log(chalk.green('Server closed successfully.'));
-        process.exit(0);
-      } catch (err) {
-        console.error(chalk.red('\nError during shutdown:'), err);
-        process.exit(1);
-      }
+      await app.close();
+      process.exit(0);
     };
 
     process.on('SIGINT', () => shutdown('SIGINT'));
