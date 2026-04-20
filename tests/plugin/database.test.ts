@@ -111,6 +111,30 @@ describe('database plugin', () => {
       await fastify.close();
       expect(closeSpy).toHaveBeenCalled();
     });
+
+    test('query method blocks DDL queries', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, pgConfig);
+      await fastify.ready();
+
+      const ddlQueries = [
+        'CREATE TABLE users (id SERIAL PRIMARY KEY)',
+        'ALTER TABLE users ADD COLUMN name TEXT',
+        'DROP TABLE users',
+        'TRUNCATE users',
+        'RENAME TABLE users TO customers',
+        'GRANT ALL ON users TO guest',
+        'REVOKE ALL ON users FROM guest',
+      ];
+
+      for (const query of ddlQueries) {
+        await expect(fastify.db.query(query)).rejects.toThrow(
+          'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+        );
+      }
+
+      await fastify.close();
+    });
   });
 
   describe('sqlite engine', () => {
@@ -204,6 +228,30 @@ describe('database plugin', () => {
 
       await fastify.db.close();
       expect(sqliteCloseMock).toHaveBeenCalled();
+      await fastify.close();
+    });
+
+    test('query method blocks DDL queries', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, sqliteConfig);
+      await fastify.ready();
+
+      const ddlQueries = [
+        'CREATE TABLE users (id INTEGER PRIMARY KEY)',
+        'ALTER TABLE users ADD COLUMN name TEXT',
+        'DROP TABLE users',
+        'TRUNCATE users',
+        'RENAME TABLE users TO customers',
+        'GRANT ALL ON users TO guest',
+        'REVOKE ALL ON users FROM guest',
+      ];
+
+      for (const query of ddlQueries) {
+        await expect(fastify.db.query(query)).rejects.toThrow(
+          'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+        );
+      }
+
       await fastify.close();
     });
   });

@@ -24,8 +24,22 @@ function normalizeSqliteValue(value: unknown): unknown {
 }
 
 function isSelectQuery(sql: string): boolean {
-  const lowered = sql.trim().toLowerCase();
-  return lowered.startsWith('select') || lowered.startsWith('with');
+  const cleanSql = sql
+    .replace(/\/\*[\s\S]*?\*\/|--.*$/gm, '')
+    .trim()
+    .toLowerCase();
+  return cleanSql.startsWith('select') || cleanSql.startsWith('with');
+}
+
+function isDdlQuery(sql: string): boolean {
+  const cleanSql = sql
+    .replace(/\/\*[\s\S]*?\*\/|--.*$/gm, '')
+    .trim()
+    .toLowerCase();
+
+  const ddlPattern =
+    /^(create|alter|drop|truncate|rename|comment|grant|revoke)\b/i;
+  return ddlPattern.test(cleanSql);
 }
 
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
@@ -38,6 +52,12 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {
+        if (isDdlQuery(sql)) {
+          throw new Error(
+            'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+          );
+        }
+
         const queryParams = params ?? [];
         const select = isSelectQuery(sql);
 
@@ -62,6 +82,12 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {
+        if (isDdlQuery(sql)) {
+          throw new Error(
+            'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+          );
+        }
+
         const normalizedSql = normalizeSqliteParams(sql);
         const stmt = sqlite.prepare(normalizedSql);
         const queryParams = (params ?? []).map(normalizeSqliteValue);
