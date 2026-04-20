@@ -83,10 +83,7 @@ export async function startServer(
   });
 
   // config-driven DB
-  await app.register(dbPlugin, {
-    engine: config.database.engine,
-    connection: config.database.connection,
-  });
+  await app.register(dbPlugin, config.database);
   await app.register(responsePlugin);
 
   // migrate the db based on config

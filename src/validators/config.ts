@@ -69,10 +69,24 @@ const swaggerSchema = {
 
 const databaseSchema = {
   type: 'object',
+  required: ['engine', 'connection'],
+  properties: {
+    engine: {type: 'string', enum: ['sqlite', 'pg']},
+    connection: {
+      type: 'object',
+      required: ['urlOrPath'],
+      additionalProperties: false,
+      properties: {
+        urlOrPath: {type: 'string'},
+      },
+    },
+    dbTimeout: {type: 'integer', default: 10000, minimum: 1},
+  },
   oneOf: [
     {
+      type: 'object',
       properties: {
-        engine: {type: 'string', const: 'sqlite'},
+        engine: {const: 'sqlite'},
         connection: {
           type: 'object',
           properties: {
@@ -82,29 +96,26 @@ const databaseSchema = {
                 '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
             },
           },
-          required: ['urlOrPath'],
-          additionalProperties: false,
         },
       },
-      required: ['engine', 'connection'],
-      additionalProperties: false,
     },
     {
+      type: 'object',
       properties: {
-        engine: {type: 'string', const: 'pg'},
+        engine: {const: 'pg'},
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: {type: 'string', pattern: '^postgres(ql)?:\\/\\/'},
+            urlOrPath: {
+              type: 'string',
+              pattern: '^postgres(ql)?:\\/\\/',
+            },
           },
-          required: ['urlOrPath'],
-          additionalProperties: false,
         },
       },
-      required: ['engine', 'connection'],
-      additionalProperties: false,
     },
   ],
+  additionalProperties: false,
 };
 
 const fieldSchema = {

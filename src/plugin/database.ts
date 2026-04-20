@@ -44,10 +44,12 @@ function isDdlQuery(sql: string): boolean {
 
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
   let db: DatabaseQuery;
+  const timeout = opts.dbTimeout ?? 10000;
 
   if (opts.engine === 'pg') {
     const pool = new Pool({
       connectionString: opts.connection.urlOrPath,
+      statement_timeout: timeout,
     });
 
     db = {
@@ -92,18 +94,21 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
         const stmt = sqlite.prepare(normalizedSql);
         const queryParams = (params ?? []).map(normalizeSqliteValue);
 
-        if (isSelectQuery(normalizedSql)) {
-          return {
-            changes: 0,
-            rows: stmt.all(queryParams) as Q[],
-          };
-        }
-
-        const res = stmt.run(queryParams);
-        return {
-          changes: res.changes ?? 0,
-          rows: [] as Q[],
-        };
+        // SQLite with better-sqlite3 is synchronous and blocks the loop.
+        // We wrap it in a promise-based structure for API consistency with PG.
+        return new Promise<{changes: number; rows: Q[]}>((resolve, reject) => {
+          try {
+            if (isSelectQuery(normalizedSql)) {
+              const rows = stmt.all(queryParams) as Q[];
+              resolve({changes: 0, rows});
+            } else {
+              const res = stmt.run(queryParams);
+              resolve({changes: res.changes ?? 0, rows: [] as Q[]});
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
       },
       close: async () => {
         sqlite.close();
