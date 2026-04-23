@@ -127,6 +127,7 @@ describe('test schema helper', () => {
         },
       },
       required: ['id', 'name', 'email'],
+      additionalProperties: false,
     };
     expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
@@ -158,6 +159,7 @@ describe('test schema helper', () => {
         },
       },
       required: ['name', 'email'],
+      additionalProperties: false,
     };
     expect(
       generateJSONValidationSchema(model, {ignorePrimaryKey: true}),
@@ -252,6 +254,7 @@ describe('test schema helper', () => {
           description: 'Value for age',
         },
       },
+      additionalProperties: false,
     };
 
     expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);

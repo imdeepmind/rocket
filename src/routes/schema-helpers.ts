@@ -152,7 +152,7 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
  */
 export function generateJSONValidationSchema(
   model: ModelConfig,
-  options: {ignorePrimaryKey?: boolean} = {},
+  options: {ignorePrimaryKey?: boolean; additionalProperties?: boolean} = {},
 ): Record<string, unknown> {
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
@@ -176,6 +176,9 @@ export function generateJSONValidationSchema(
     type: 'object',
     properties: bodyProperties,
     ...(required.length > 0 ? {required} : {}),
+    ...(options.additionalProperties
+      ? {additionalProperties: true}
+      : {additionalProperties: false}),
   };
 }
 

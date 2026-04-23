@@ -50,42 +50,44 @@ export function registerGetAllRoutes(
     // defaults are page 1 and limit 20
     Object.assign(queryProperties, paginationQueryProperties);
 
+    const schema: Record<string, unknown> = {
+      summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
+      description: `Get all ${model.name} records from the database`,
+      tags: [capitalizeFirstLetter(model.name), 'Read'],
+      // defining the schema for query parameters we built above
+      querystring: {
+        type: 'object',
+        properties: queryProperties,
+        additionalProperties: false,
+      },
+      // generating the JSON schema for the response
+      // it includes the record data array and pagination metadata
+      response: getResponseStructureSchema(
+        [200],
+        {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: generateJSONValidationSchema(model),
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: {type: 'integer'},
+                limit: {type: 'integer'},
+              },
+            },
+          },
+        },
+        generateJSONValidationSchema(model),
+      ),
+    };
+
     app.get(
       `/${model.name}/`,
       {
-        schema: {
-          summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
-          description: `Get all ${model.name} records from the database`,
-          tags: [capitalizeFirstLetter(model.name), 'Read'],
-          // defining the schema for query parameters we built above
-          querystring: {
-            type: 'object',
-            properties: queryProperties,
-            additionalProperties: false,
-          },
-          // generating the JSON schema for the response
-          // it includes the record data array and pagination metadata
-          response: getResponseStructureSchema(
-            [200],
-            {
-              type: 'object',
-              properties: {
-                data: {
-                  type: 'array',
-                  items: generateJSONValidationSchema(model),
-                },
-                pagination: {
-                  type: 'object',
-                  properties: {
-                    page: {type: 'integer'},
-                    limit: {type: 'integer'},
-                  },
-                },
-              },
-            },
-            generateJSONValidationSchema(model),
-          ),
-        },
+        schema,
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
         const queryParams = request.query as Record<string, unknown>;
