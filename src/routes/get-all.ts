@@ -33,16 +33,21 @@ export function registerGetAllRoutes(
 
     // Add filter params for each field based on its supportedOperations
     for (const field of model.fields) {
+      // we are building the query parameter names based on the supported operations
+      // for example if there is a field called "status" with supported operations includes equal
+      // then in the query string, user can pass "status=active" to filter the data
       Object.assign(queryProperties, buildFilterQueryProperties(field));
     }
 
-    // Add sort params for sortable fields
+    // if "sortable" is included in the supportedOperations, then we add sort parameters
+    // two query parameters are added: "orderBy" (field name) and "orderDir" ("asc" or "desc")
     const sortableFields = model.fields
       .filter(f => f.supportedOperations?.includes('sortable'))
       .map(f => f.name);
     Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 
-    // Add pagination
+    // finally adding pagination parameters: "page" and "limit"
+    // defaults are page 1 and limit 20
     Object.assign(queryProperties, paginationQueryProperties);
 
     app.get(
@@ -50,12 +55,16 @@ export function registerGetAllRoutes(
       {
         schema: {
           summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
-          description: `Get all ${model.name} records`,
+          description: `Get all ${model.name} records from the database`,
           tags: [capitalizeFirstLetter(model.name), 'Read'],
+          // defining the schema for query parameters we built above
           querystring: {
             type: 'object',
             properties: queryProperties,
+            additionalProperties: false,
           },
+          // generating the JSON schema for the response
+          // it includes the record data array and pagination metadata
           response: getResponseStructureSchema(
             [200],
             {
@@ -82,13 +91,14 @@ export function registerGetAllRoutes(
         const queryParams = request.query as Record<string, unknown>;
         const tableName = model.name;
 
+        // building the base SELECT query to fetch all columns
         let query = `SELECT * FROM "${tableName}"`;
         const values: unknown[] = [];
         let paramIndex = 1;
 
         const whereClauses: string[] = [];
 
-        // Filters
+        // building the WHERE clause based on the filters passed in the query string
         const {
           whereClauses: filterClauses,
           values: filterValues,
@@ -99,32 +109,36 @@ export function registerGetAllRoutes(
         values.push(...filterValues);
         paramIndex = nextParamIndex;
 
+        // if any filters are present, append them to the query
         if (whereClauses.length > 0) {
           query += ` WHERE ${whereClauses.join(' AND ')}`;
         }
 
-        // Order By
+        // if orderBy is provided, append the ORDER BY clause
         if (queryParams.orderBy) {
           query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
         }
 
-        // Pagination
+        // calculating page, limit and offset for pagination
         const page = Math.max(Number(queryParams.page) || 1, 1);
         const limit = Math.max(Number(queryParams.limit) || 20, 1);
         const offset = (page - 1) * limit;
 
+        // appending LIMIT and OFFSET to the query using parameterized values for security
         query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
         values.push(limit, offset);
 
+        // executing the final query on the database
         const res = await app.db.query(query, values);
 
+        // returning the standardized response using app.buildResponse
         return reply.status(200).send(
           app.buildResponse(
             200,
             `Successfully retrieved records from the ${tableName} table`,
             {
-              data: res.rows || [],
-              pagination: {page, limit},
+              data: res.rows || [], // returning the rows (or an empty array if none found)
+              pagination: {page, limit}, // including the pagination metadata
             },
             res,
           ),
