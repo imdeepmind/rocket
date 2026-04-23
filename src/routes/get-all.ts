@@ -3,8 +3,8 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   applyFilters,
   buildFilterQueryProperties,
-  buildPostBodyValidationSchema,
   buildSortQueryProperties,
+  generateJSONValidationSchema,
   getResponseStructureSchema,
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
@@ -63,7 +63,7 @@ export function registerGetAllRoutes(
               properties: {
                 data: {
                   type: 'array',
-                  items: buildPostBodyValidationSchema(model),
+                  items: generateJSONValidationSchema(model),
                 },
                 pagination: {
                   type: 'object',
@@ -74,7 +74,7 @@ export function registerGetAllRoutes(
                 },
               },
             },
-            buildPostBodyValidationSchema(model),
+            generateJSONValidationSchema(model),
           ),
         },
       },

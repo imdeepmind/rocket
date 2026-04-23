@@ -3,8 +3,8 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   applyFilters,
   buildFilterQueryProperties,
-  buildPostBodyValidationSchema,
   buildSortQueryProperties,
+  generateJSONValidationSchema,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   paginationQueryProperties,
@@ -29,25 +29,43 @@ export function registerIndexRoutes(
 ): void {
   for (const model of models) {
     // Determine which fields need an index route
+    // a field is considered as indeaxable if it is unique or it is a primary key field
+    // or supported operations include indexable
     const indexFields = model.fields.filter(f => {
       return (
         f.primaryKey || f.unique || f.supportedOperations?.includes('indexable')
       );
     });
 
+    // index apis means for these APIs, we can fetch data using the indexable fields
+    // for example, if we have a field user_id in the users table, and it is indexed,
+    // then we can fetch data using the user_id field like /user/<user_id>
     for (const field of indexFields) {
       const isUnique = field.primaryKey || field.unique;
-      const paramSchema = mapDataTypeToJsonSchema(field.type);
+      // converting the data type of the indexable field to json schema supported type
+      const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
 
       const queryProperties: Record<string, object> = {};
 
+      // if indexable field is not unque, that means this API can return multiple data records
+      // if multiple records are being returned, then we can apply filters, sorting and pagination
+      // on the other hand, if the indexable field is unique, then this API can return only one data record
+      // hence there is no need to have filtering, or sorting, or pagination
       if (!isUnique) {
         // Add filter params for each field based on its supportedOperations
         for (const f of model.fields) {
+          // what is happenign is here is we are building the query parameter names based on the supported operations
+          // and the field name so if there is a field called "age" with sopported operations includes lessThanEqual
+          // then in the query string, user can pass a query string variable like "age_lte=18"
+          // and the value of this variable will be used to filter the data
+          // another thing to note is that these fields are optional, users can pass if they want to trigger the filter
+          // else they can ignore it
           Object.assign(queryProperties, buildFilterQueryProperties(f));
         }
 
-        // Add sort params for sortable fields
+        // the story is same for storing, if sortable included in the supportedOperations, then bingo, we can sort
+        // we supprt two querystring fields, one for the name of the field "orderBy" and another is
+        // "orderDir" which can be "asc" or "desc"
         const sortableFields = model.fields
           .filter(f => f.supportedOperations?.includes('sortable'))
           .map(f => f.name);
@@ -56,16 +74,26 @@ export function registerIndexRoutes(
           buildSortQueryProperties(sortableFields),
         );
 
-        // Add pagination
+        // finally pagination, here users can pass "page" and "limit" as query parameters
+        // "page" is the page number and "limit" is the number of records per page
+        // default value of "page" is 1 and default value of "limit" is 20
         Object.assign(queryProperties, paginationQueryProperties);
       }
 
+      // now here we are basically generating the JSON schema for the return response
+      // based on the model, we can figureout what data we are going to return
+      // if say model "user" contains two fields, "id" and "name"
+      // then this will generate a schema for the fields "id" and "name"
+      // another thing to keep in mind if the unique case
+      // if unique, then we return an object
+      // else we return an array of objects
       const responseSchemaProperties: Record<string, object> = {
         data: isUnique
-          ? {...buildPostBodyValidationSchema(model), nullable: true}
-          : {type: 'array', items: buildPostBodyValidationSchema(model)},
+          ? {...generateJSONValidationSchema(model), nullable: true}
+          : {type: 'array', items: generateJSONValidationSchema(model)},
       };
 
+      // injecting the pagination state in the returned response
       if (!isUnique) {
         responseSchemaProperties.pagination = {
           type: 'object',
@@ -76,6 +104,8 @@ export function registerIndexRoutes(
         };
       }
 
+      // here we're configuring the swagger schema for the fastify API
+      // it uses the model details to generate the schema
       const schema: Record<string, unknown> = {
         summary: `Get ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
         description: `Get ${model.name} record(s) from the database by ${field.name}`,
@@ -83,27 +113,34 @@ export function registerIndexRoutes(
         params: {
           type: 'object',
           properties: {
+            // as mentioned earlier, this is the index API, so we will only have one parameter
+            // which is the indexable field
             [field.name]: {
-              ...paramSchema,
+              ...fieldSchemaType,
               description: `The ${field.name} value to look up`,
             },
           },
           required: [field.name],
         },
+        // here we are generating the schema for the response
         response: getResponseStructureSchema(
           [200],
           {
             type: 'object',
             properties: responseSchemaProperties,
           },
-          buildPostBodyValidationSchema(model),
+          generateJSONValidationSchema(model),
         ),
       };
 
+      // injecting the query parameters schema
+      // as the query string is optional, we are not making it required
+      // we are conditionally checking if there is any query parameter
       if (Object.keys(queryProperties).length > 0) {
         schema.querystring = {
           type: 'object',
           properties: queryProperties,
+          additionalProperties: false,
         };
       }
 
@@ -111,22 +148,26 @@ export function registerIndexRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {schema},
         async (request: FastifyRequest, reply: FastifyReply) => {
+          // extracting the parameters
           const queryParams = request.query as Record<string, unknown>;
           const params = request.params as Record<string, unknown>;
           const tableName = model.name;
 
+          // building the base SELECT query
           let query = `SELECT * FROM "${tableName}"`;
           const values: unknown[] = [];
           let paramIndex = 1;
 
           const whereClauses: string[] = [];
 
-          // The base path param condition:
+          // the base path param condition:
           whereClauses.push(`"${field.name}" = $${paramIndex++}`);
           values.push(params[field.name]);
 
+          // if the indexable field is not unique, then we can apply filters
+          // if field unique, no need to apply filters as we only have one data to return
           if (!isUnique) {
-            // Filters
+            // building the WHERE query
             const {
               whereClauses: filterClauses,
               values: filterValues,
@@ -138,20 +179,23 @@ export function registerIndexRoutes(
             paramIndex = nextParamIndex;
           }
 
+          // if we have something in where clause, then append it to the base query
           if (whereClauses.length > 0) {
             query += ` WHERE ${whereClauses.join(' AND ')}`;
           }
 
+          // default values for pagination
           let page = 1;
           let limit = 20;
 
+          // if the indexable field is not unique, then we can apply sorting and pagination
           if (!isUnique) {
-            // Order By
+            // building the ORDER BY query
             if (queryParams.orderBy) {
               query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
             }
 
-            // Pagination
+            // building the LIMIT and OFFSET query
             page = Math.max(Number(queryParams.page) || 1, 1);
             limit = Math.max(Number(queryParams.limit) || 20, 1);
             const offset = (page - 1) * limit;
@@ -163,12 +207,15 @@ export function registerIndexRoutes(
             values.push(1);
           }
 
+          // executing the query
           const res = await app.db.query(query, values);
 
+          // building the response payload
           const responsePayload: Record<string, unknown> = {
             data: isUnique ? res.rows[0] || null : res.rows || [],
           };
 
+          // injecting the pagination state in the returned response if not unique
           if (!isUnique) {
             responsePayload.pagination = {page, limit};
           }

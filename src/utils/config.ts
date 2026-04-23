@@ -9,7 +9,6 @@ export function resolveEnvVars<T>(config: T): T {
   if (typeof config === 'string') {
     if (config.startsWith('env:')) {
       const envVarName = config.substring(4);
-      console.log('test', envVarName, process.env);
       return (process.env[envVarName] || config) as unknown as T;
     }
     return config;

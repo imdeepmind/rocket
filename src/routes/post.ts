@@ -1,7 +1,7 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  buildPostBodyValidationSchema,
+  generateJSONValidationSchema,
   getResponseStructureSchema,
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
@@ -23,7 +23,7 @@ export function registerPostRoutes(
   models: ModelConfig[],
 ): void {
   for (const model of models) {
-    const bodySchema = buildPostBodyValidationSchema(model, {
+    const bodySchema = generateJSONValidationSchema(model, {
       ignorePrimaryKey: true,
     });
 
