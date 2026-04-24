@@ -14,15 +14,17 @@ type ParamSource = {
 };
 
 // Helper to cast value to the declared type
-const cast = (value: unknown, type: DataType): string => {
+const cast = (value: unknown, type: DataType): unknown => {
   if (value === undefined || value === null) {
     throw new Error('Missing value for parameter');
   }
   switch (type) {
     case 'integer':
-      return String(Math.trunc(Number(value)));
+      return Math.trunc(Number(value));
     case 'boolean':
-      return String(Boolean(value));
+      if (value === 'true') return true;
+      if (value === 'false') return false;
+      return Boolean(value);
     case 'string':
       return String(value);
     case 'text':
@@ -37,38 +39,32 @@ const cast = (value: unknown, type: DataType): string => {
 function interpolateQuery(
   queryTemplate: string,
   {body = {}, params = {}, query = {}}: ParamSource,
-): string {
-  // $$ ... $$ → path/params
-  let result = queryTemplate.replace(
-    /\$\$([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\$\$/g,
-    (_, name, type) => {
-      const val = params[name];
+): {sql: string; values: unknown[]} {
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  // Single regex to match any of the three magic variable types in order of appearance
+  const regex = /(\$\$|@@|&&)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+
+  const sql = queryTemplate.replace(regex, (_, typeSymbol, name, type) => {
+    let val: unknown;
+
+    if (typeSymbol === '$$') {
+      val = params[name];
       if (val === undefined) throw new Error(`Missing path param: "${name}"`);
-      return cast(val, type as DataType);
-    },
-  );
-
-  // @@ ... @@ → body
-  result = result.replace(
-    /@@([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)@@/g,
-    (_, name, type) => {
-      const val = body[name];
+    } else if (typeSymbol === '@@') {
+      val = body[name];
       if (val === undefined) throw new Error(`Missing body param: "${name}"`);
-      return cast(val, type as DataType);
-    },
-  );
-
-  // && ... && → query string
-  result = result.replace(
-    /&&([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)&&/g,
-    (_, name, type) => {
-      const val = query[name];
+    } else if (typeSymbol === '&&') {
+      val = query[name];
       if (val === undefined) throw new Error(`Missing query param: "${name}"`);
-      return cast(val, type as DataType);
-    },
-  );
+    }
 
-  return result;
+    values.push(cast(val, type as DataType));
+    return `$${paramIndex++}`;
+  });
+
+  return {sql, values};
 }
 
 export function registerCustomQueryRoutes(
@@ -195,13 +191,13 @@ export function registerCustomQueryRoutes(
         const query = request.query as Record<string, unknown>;
         const body = request.body as Record<string, unknown>;
 
-        const interpolatedQuery = interpolateQuery(cq.query, {
+        const interpolated = interpolateQuery(cq.query, {
           params,
           query,
           body,
         });
 
-        const res = await app.db.query(interpolatedQuery);
+        const res = await app.db.query(interpolated.sql, interpolated.values);
 
         return reply.status(200).send(
           app.buildResponse(200, 'Success', {
