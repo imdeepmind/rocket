@@ -123,7 +123,10 @@ export function registerGetAllRoutes(
 
         // calculating page, limit and offset for pagination
         const page = Math.max(Number(queryParams.page) || 1, 1);
-        const limit = Math.max(Number(queryParams.limit) || 20, 1);
+        const limit = Math.min(
+          Math.max(Number(queryParams.limit) || 20, 10),
+          100,
+        );
         const offset = (page - 1) * limit;
 
         // appending LIMIT and OFFSET to the query using parameterized values for security

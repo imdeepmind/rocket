@@ -148,12 +148,12 @@ describe('test get-all api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/?page=3&limit=5',
+        url: '/users/?page=3&limit=15',
       });
 
       expect(response.json().data.pagination).toEqual({
         page: 3,
-        limit: 5,
+        limit: 15,
       });
 
       await fastify.close();

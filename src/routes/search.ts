@@ -136,7 +136,10 @@ export function registerSearchRoutes(
 
           // pagination logic
           const page = Math.max(Number(queryParams.page) || 1, 1);
-          const limit = Math.max(Number(queryParams.limit) || 20, 1);
+          const limit = Math.min(
+            Math.max(Number(queryParams.limit) || 20, 10),
+            100,
+          );
           const offset = (page - 1) * limit;
 
           // finalizing query with LIMIT and OFFSET

@@ -258,10 +258,10 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?page=2&limit=5',
+        url: '/posts/category/tech?page=2&limit=15',
       });
 
-      expect(response.json().data.pagination).toEqual({page: 2, limit: 5});
+      expect(response.json().data.pagination).toEqual({page: 2, limit: 15});
 
       await fastify.close();
     });

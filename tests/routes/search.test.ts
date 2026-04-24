@@ -157,12 +157,12 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&page=2&limit=5',
+        url: '/users/search/name?name_search=al&page=2&limit=15',
       });
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
-        ['%al%', 5, 5],
+        ['%al%', 15, 15],
       );
 
       await fastify.close();
@@ -189,10 +189,10 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=bob&page=3&limit=7',
+        url: '/users/search/name?name_search=bob&page=3&limit=10',
       });
 
-      expect(response.json().data.pagination).toEqual({page: 3, limit: 7});
+      expect(response.json().data.pagination).toEqual({page: 3, limit: 10});
 
       await fastify.close();
     });

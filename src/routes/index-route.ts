@@ -197,7 +197,10 @@ export function registerIndexRoutes(
 
             // building the LIMIT and OFFSET query
             page = Math.max(Number(queryParams.page) || 1, 1);
-            limit = Math.max(Number(queryParams.limit) || 20, 1);
+            limit = Math.min(
+              Math.max(Number(queryParams.limit) || 20, 10),
+              100,
+            );
             const offset = (page - 1) * limit;
 
             query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
