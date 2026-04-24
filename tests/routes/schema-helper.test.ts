@@ -2,8 +2,8 @@ import {describe, expect, it, test} from 'vitest';
 
 import {
   buildFilterQueryProperties,
-  buildPostBodyValidationSchema,
   buildSortQueryProperties,
+  generateJSONValidationSchema,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   stripAdditionalPostFields,
@@ -127,8 +127,43 @@ describe('test schema helper', () => {
         },
       },
       required: ['id', 'name', 'email'],
+      additionalProperties: false,
     };
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
+  });
+
+  test('should build post body validation schema ignoring primary key', () => {
+    const model: ModelConfig = {
+      name: 'test',
+      fields: [
+        {name: 'id', type: 'integer', primaryKey: true},
+        {name: 'name', type: 'string'},
+        {name: 'email', type: 'string'},
+        {name: 'age', type: 'integer', nullable: true},
+      ],
+    };
+    const expectedSchema = {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Value for name',
+        },
+        email: {
+          type: 'string',
+          description: 'Value for email',
+        },
+        age: {
+          type: 'integer',
+          description: 'Value for age',
+        },
+      },
+      required: ['name', 'email'],
+      additionalProperties: false,
+    };
+    expect(
+      generateJSONValidationSchema(model, {ignorePrimaryKey: true}),
+    ).toEqual(expectedSchema);
   });
 
   test('should build post body validation schema', () => {
@@ -203,7 +238,7 @@ describe('test schema helper', () => {
       },
       required: ['id', 'name', 'email'],
     };
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
 
   test('should build post body validation schmea without and requird fields', () => {
@@ -219,9 +254,10 @@ describe('test schema helper', () => {
           description: 'Value for age',
         },
       },
+      additionalProperties: false,
     };
 
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
 
   // test cases for stripAdditionalPostFields

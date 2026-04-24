@@ -17,7 +17,12 @@ import {Mode} from '@/schema';
 import {AppConfig, SwaggerConfig} from '@/schema/config';
 
 import {validateConfig} from '@/validators/config';
-import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
+import {RouteInfo} from '@/utils/welcome';
+
+export interface StartServerResult {
+  app: FastifyInstance;
+  routes: RouteInfo[];
+}
 
 async function registerSwagger(
   swaggerConfig: SwaggerConfig,
@@ -46,25 +51,25 @@ export async function startServer(
   config: AppConfig,
   port: number,
   mode: Mode,
-): Promise<FastifyInstance> {
+  verbose: boolean = false,
+  migrate: boolean = false,
+): Promise<StartServerResult> {
   // validate the schema
   config = validateConfig(config);
 
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
-    logger:
-      mode === 'dev'
-        ? {
-            transport: {
-              target: 'pino-pretty',
-              options: {
-                translateTime: 'HH:MM:ss Z',
-                ignore: 'pid,hostname',
-              },
-            },
-          }
-        : true,
+    logger: {
+      level: verbose ? 'debug' : config.application.logLevel,
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
+        },
+      },
+    },
   });
 
   // Track each registered route
@@ -78,14 +83,13 @@ export async function startServer(
   });
 
   // config-driven DB
-  await app.register(dbPlugin, {
-    engine: config.database.engine,
-    connection: config.database.connection,
-  });
+  await app.register(dbPlugin, config.database);
   await app.register(responsePlugin);
 
   // migrate the db based on config
-  await migrateDatabase(config);
+  if (migrate) {
+    await migrateDatabase(config);
+  }
 
   // register swagger
   await registerSwagger(config.swagger, app);
@@ -135,13 +139,5 @@ export async function startServer(
     },
   );
 
-  try {
-    showWelcomeScreen(config, port, routes);
-    await app.listen({port, host: '0.0.0.0'});
-
-    return app;
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
+  return {app, routes};
 }

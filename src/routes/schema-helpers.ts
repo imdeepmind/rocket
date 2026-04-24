@@ -42,6 +42,8 @@ export const paginationQueryProperties: Record<string, object> = {
     type: 'integer',
     description: 'Number of records per page',
     default: 20,
+    minimum: 10,
+    maximum: 100,
   },
 };
 
@@ -150,20 +152,25 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
  * - `required` includes fields that are NOT marked `nullable` and have NO `default`.
  * - If `model.validation` is provided, it is used verbatim.
  */
-export function buildPostBodyValidationSchema(
+export function generateJSONValidationSchema(
   model: ModelConfig,
+  options: {ignorePrimaryKey?: boolean; additionalProperties?: boolean} = {},
 ): Record<string, unknown> {
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
+  const fields = options.ignorePrimaryKey
+    ? model.fields.filter(field => field.primaryKey !== true)
+    : model.fields;
+
   const bodyProperties: Record<string, object> = {};
-  for (const field of model.fields) {
+  for (const field of fields) {
     bodyProperties[field.name] = {
       ...mapDataTypeToJsonSchema(field.type),
       description: `Value for ${field.name}`,
     };
   }
 
-  const required = model.fields
+  const required = fields
     .filter(field => field.nullable !== true && field.default === undefined)
     .map(field => field.name);
 
@@ -171,6 +178,9 @@ export function buildPostBodyValidationSchema(
     type: 'object',
     properties: bodyProperties,
     ...(required.length > 0 ? {required} : {}),
+    ...(options.additionalProperties
+      ? {additionalProperties: true}
+      : {additionalProperties: false}),
   };
 }
 
@@ -180,8 +190,13 @@ export function buildPostBodyValidationSchema(
 export function stripAdditionalPostFields(
   model: ModelConfig,
   body: ModelBody,
+  options: {ignorePrimaryKey?: boolean} = {},
 ): ModelBody {
-  const allowed = new Set(model.fields.map(field => field.name));
+  const allowedFields = options.ignorePrimaryKey
+    ? model.fields.filter(field => field.primaryKey !== true)
+    : model.fields;
+
+  const allowed = new Set(allowedFields.map(field => field.name));
   const filtered: ModelBody = {};
 
   for (const [key, value] of Object.entries(body)) {

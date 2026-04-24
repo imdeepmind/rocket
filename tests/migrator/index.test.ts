@@ -77,7 +77,7 @@ describe('migrateDatabase', () => {
     // Call 1: schema.ts
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { sqliteTable, integer, text, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'",
+      "import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core'",
     );
     expect(schemaContent).toContain("export const users = sqliteTable('users'");
     expect(schemaContent).toContain(
@@ -137,7 +137,7 @@ describe('migrateDatabase', () => {
 
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp } from 'drizzle-orm/pg-core'",
+      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, foreignKey } from 'drizzle-orm/pg-core'",
     );
     expect(schemaContent).toContain("export const posts = pgTable('posts'");
     expect(schemaContent).toContain("id: serial('id').primaryKey()");
@@ -260,5 +260,298 @@ describe('migrateDatabase', () => {
     );
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should generate foreign keys for sqlite with onDelete and onUpdate', async () => {
+    const config = getBaseConfig('sqlite');
+    config.models = [
+      {
+        name: 'users',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'posts',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'user_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_posts_user_id',
+            columns: ['user_id'],
+            referenceTable: 'users',
+            referenceColumns: ['id'],
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_posts_user_id', columns: [t.user_id], foreignColumns: [users.id] })",
+    );
+    expect(schemaContent).toContain(".onDelete('cascade')");
+    expect(schemaContent).toContain(".onUpdate('cascade')");
+  });
+
+  it('should generate foreign keys for pg with onDelete and onUpdate', async () => {
+    const config = getBaseConfig('pg');
+    config.models = [
+      {
+        name: 'users',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'posts',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'user_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_posts_user_id',
+            columns: ['user_id'],
+            referenceTable: 'users',
+            referenceColumns: ['id'],
+            onDelete: 'CASCADE',
+            onUpdate: 'SET NULL',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_posts_user_id', columns: [t.user_id], foreignColumns: [users.id] })",
+    );
+    expect(schemaContent).toContain(".onDelete('cascade')");
+    expect(schemaContent).toContain(".onUpdate('set null')");
+  });
+
+  it('should generate foreign key with only onDelete action', async () => {
+    const config = getBaseConfig('pg');
+    config.models = [
+      {
+        name: 'categories',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'products',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'category_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_products_category',
+            columns: ['category_id'],
+            referenceTable: 'categories',
+            referenceColumns: ['id'],
+            onDelete: 'RESTRICT',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(".onDelete('restrict')");
+    expect(schemaContent).not.toContain('.onUpdate');
+  });
+
+  it('should generate foreign key without onDelete or onUpdate actions', async () => {
+    const config = getBaseConfig('sqlite');
+    config.models = [
+      {
+        name: 'authors',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'books',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'author_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_books_author',
+            columns: ['author_id'],
+            referenceTable: 'authors',
+            referenceColumns: ['id'],
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_books_author', columns: [t.author_id], foreignColumns: [authors.id] })",
+    );
+    expect(schemaContent).not.toContain('.onDelete');
+    expect(schemaContent).not.toContain('.onUpdate');
+  });
+
+  it('should generate multiple foreign keys on a single table', async () => {
+    const config = getBaseConfig('pg');
+    config.models = [
+      {
+        name: 'users',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'categories',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'posts',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'user_id', type: 'integer'},
+          {name: 'category_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_posts_user',
+            columns: ['user_id'],
+            referenceTable: 'users',
+            referenceColumns: ['id'],
+            onDelete: 'CASCADE',
+          },
+          {
+            name: 'fk_posts_category',
+            columns: ['category_id'],
+            referenceTable: 'categories',
+            referenceColumns: ['id'],
+            onDelete: 'SET NULL',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_posts_user', columns: [t.user_id], foreignColumns: [users.id] })",
+    );
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_posts_category', columns: [t.category_id], foreignColumns: [categories.id] })",
+    );
+  });
+
+  it('should generate foreign keys alongside indexes', async () => {
+    const config = getBaseConfig('sqlite');
+    config.models = [
+      {
+        name: 'users',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'posts',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'title', type: 'string'},
+          {name: 'user_id', type: 'integer'},
+        ],
+        indexes: [{name: 'title_idx', columns: ['title'], unique: false}],
+        foreignKeys: [
+          {
+            name: 'fk_posts_user',
+            columns: ['user_id'],
+            referenceTable: 'users',
+            referenceColumns: ['id'],
+            onDelete: 'CASCADE',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    // Both index and foreign key should be present
+    expect(schemaContent).toContain("index('title_idx').on(t.title)");
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_posts_user', columns: [t.user_id], foreignColumns: [users.id] })",
+    );
+  });
+
+  it('should generate foreign keys without indexes', async () => {
+    const config = getBaseConfig('pg');
+    config.models = [
+      {
+        name: 'users',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+      {
+        name: 'comments',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'user_id', type: 'integer'},
+        ],
+        foreignKeys: [
+          {
+            name: 'fk_comments_user',
+            columns: ['user_id'],
+            referenceTable: 'users',
+            referenceColumns: ['id'],
+            onDelete: 'NO ACTION',
+            onUpdate: 'SET DEFAULT',
+          },
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'fk_comments_user', columns: [t.user_id], foreignColumns: [users.id] })",
+    );
+    expect(schemaContent).toContain(".onDelete('no action')");
+    expect(schemaContent).toContain(".onUpdate('set default')");
+  });
+
+  it('should generate schema without foreign keys when none are defined', async () => {
+    const config = getBaseConfig('pg');
+    config.models = [
+      {
+        name: 'simple',
+        fields: [
+          {name: 'id', type: 'integer', primaryKey: true},
+          {name: 'name', type: 'string'},
+        ],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).not.toContain('foreignKey(');
   });
 });

@@ -4,6 +4,27 @@ import * as path from 'path';
 
 import {AppConfig, DBEngine, ModelConfig} from '@/schema/config';
 
+function generateForeignKeys(
+  foreignKeys: NonNullable<ModelConfig['foreignKeys']>,
+): string {
+  return foreignKeys
+    .map(fk => {
+      const cols = fk.columns.map(c => `t.${c}`).join(', ');
+      const refCols = fk.referenceColumns
+        .map(c => `${fk.referenceTable}.${c}`)
+        .join(', ');
+      let fkDef = `    foreignKey({ name: '${fk.name}', columns: [${cols}], foreignColumns: [${refCols}] })`;
+      if (fk.onDelete) {
+        fkDef += `.onDelete('${fk.onDelete.toLowerCase()}')`;
+      }
+      if (fk.onUpdate) {
+        fkDef += `.onUpdate('${fk.onUpdate.toLowerCase()}')`;
+      }
+      return fkDef;
+    })
+    .join(',\n');
+}
+
 function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
   if (engine === 'sqlite') {
     const columns = config.fields
@@ -43,12 +64,19 @@ function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
       })
       .join(',\n');
 
+    const foreignKeys =
+      config.foreignKeys && config.foreignKeys.length > 0
+        ? generateForeignKeys(config.foreignKeys)
+        : '';
+
+    const extras = [indexes, foreignKeys].filter(Boolean).join(',\n');
+
     return `
-import { sqliteTable, integer, text, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core';
 
 export const ${config.name} = sqliteTable('${config.name}', {
 ${columns}
-}${indexes ? `, (t) => [\n${indexes}\n]` : ''});
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
   } else {
     const columns = config.fields
@@ -90,12 +118,19 @@ ${columns}
       })
       .join(',\n');
 
+    const foreignKeys =
+      config.foreignKeys && config.foreignKeys.length > 0
+        ? generateForeignKeys(config.foreignKeys)
+        : '';
+
+    const extras = [indexes, foreignKeys].filter(Boolean).join(',\n');
+
     return `
-import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, foreignKey } from 'drizzle-orm/pg-core';
 
 export const ${config.name} = pgTable('${config.name}', {
 ${columns}
-}${indexes ? `, (t) => [\n${indexes}\n]` : ''});
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
   }
 }

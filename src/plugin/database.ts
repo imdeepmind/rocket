@@ -24,20 +24,43 @@ function normalizeSqliteValue(value: unknown): unknown {
 }
 
 function isSelectQuery(sql: string): boolean {
-  const lowered = sql.trim().toLowerCase();
-  return lowered.startsWith('select') || lowered.startsWith('with');
+  const cleanSql = sql
+    .replace(/\/\*[\s\S]*?\*\/|--.*$/gm, '')
+    .trim()
+    .toLowerCase();
+  return cleanSql.startsWith('select') || cleanSql.startsWith('with');
+}
+
+function isDdlQuery(sql: string): boolean {
+  const cleanSql = sql
+    .replace(/\/\*[\s\S]*?\*\/|--.*$/gm, '')
+    .trim()
+    .toLowerCase();
+
+  const ddlPattern =
+    /^(create|alter|drop|truncate|rename|comment|grant|revoke)\b/i;
+  return ddlPattern.test(cleanSql);
 }
 
 export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
   let db: DatabaseQuery;
+  const timeout = opts.dbTimeout ?? 10000;
 
   if (opts.engine === 'pg') {
     const pool = new Pool({
       connectionString: opts.connection.urlOrPath,
+      statement_timeout: timeout,
+      query_timeout: timeout, // client-side timeout to cancel the query
     });
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {
+        if (isDdlQuery(sql)) {
+          throw new Error(
+            'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+          );
+        }
+
         const queryParams = params ?? [];
         const select = isSelectQuery(sql);
 
@@ -58,26 +81,36 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       close: async () => pool.end(),
     };
   } else if (opts.engine === 'sqlite') {
-    const sqlite = new Database(opts.connection.urlOrPath);
+    // SQLite busy timeout (how long to wait for table locks)
+    const sqlite = new Database(opts.connection.urlOrPath, {timeout});
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {
+        if (isDdlQuery(sql)) {
+          throw new Error(
+            'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+          );
+        }
+
         const normalizedSql = normalizeSqliteParams(sql);
         const stmt = sqlite.prepare(normalizedSql);
         const queryParams = (params ?? []).map(normalizeSqliteValue);
 
-        if (isSelectQuery(normalizedSql)) {
-          return {
-            changes: 0,
-            rows: stmt.all(queryParams) as Q[],
-          };
-        }
-
-        const res = stmt.run(queryParams);
-        return {
-          changes: res.changes ?? 0,
-          rows: [] as Q[],
-        };
+        // SQLite with better-sqlite3 is synchronous and blocks the loop.
+        // We wrap it in a promise-based structure for API consistency with PG.
+        return new Promise<{changes: number; rows: Q[]}>((resolve, reject) => {
+          try {
+            if (isSelectQuery(normalizedSql)) {
+              const rows = stmt.all(queryParams) as Q[];
+              resolve({changes: 0, rows});
+            } else {
+              const res = stmt.run(queryParams);
+              resolve({changes: res.changes ?? 0, rows: [] as Q[]});
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
       },
       close: async () => {
         sqlite.close();
@@ -92,6 +125,8 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
 
   // cleanup on shutdown
   fastify.addHook('onClose', async () => {
+    fastify.log.info('Closing database connection...');
     await db.close();
+    fastify.log.info('Database connection closed.');
   });
 });

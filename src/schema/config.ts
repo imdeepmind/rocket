@@ -1,5 +1,13 @@
 export type DBEngine = 'sqlite' | 'pg';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
+export type LogLevel =
+  | 'trace'
+  | 'debug'
+  | 'info'
+  | 'warn'
+  | 'error'
+  | 'fatal'
+  | 'silent';
 export type ForeignKeyAction =
   | 'CASCADE'
   | 'SET NULL'
@@ -65,6 +73,7 @@ export interface DatabaseConfig {
   connection: {
     urlOrPath: string;
   };
+  dbTimeout?: number;
 }
 
 export interface ModelFieldConfig {
@@ -101,7 +110,12 @@ export interface ModelConfig {
   validation?: Record<string, unknown>;
 }
 
+export interface ApplicationConfig {
+  logLevel: LogLevel;
+}
+
 export interface AppConfig {
+  application: ApplicationConfig;
   swagger: SwaggerConfig;
   database: DatabaseConfig;
   models: ModelConfig[];

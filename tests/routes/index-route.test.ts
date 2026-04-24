@@ -213,13 +213,15 @@ describe('test index-route api', () => {
 
   describe('indexable field routes (non-unique, returns array)', () => {
     test('should return 200 with an array of records for an indexable field', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, category: 'tech', title: 'Post A'},
-          {id: 2, category: 'tech', title: 'Post B'},
-        ],
-        rowCount: 2,
-      });
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 2}]})
+        .mockResolvedValueOnce({
+          rows: [
+            {id: 1, category: 'tech', title: 'Post A'},
+            {id: 2, category: 'tech', title: 'Post B'},
+          ],
+          rowCount: 2,
+        });
 
       const fastify = await createTestApp(pgConfig, indexableFieldModel);
 
@@ -258,10 +260,14 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?page=2&limit=5',
+        url: '/posts/category/tech?page=2&limit=15',
       });
 
-      expect(response.json().data.pagination).toEqual({page: 2, limit: 5});
+      expect(response.json().data.pagination).toEqual({
+        page: 2,
+        limit: 15,
+        total: 0,
+      });
 
       await fastify.close();
     });
@@ -290,7 +296,7 @@ describe('test index-route api', () => {
         url: '/posts/category/tech?title_eq=Post+A',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"category" = $1');
       expect(callArgs[0]).toContain('"title" = $2');
       expect(callArgs[0]).toContain('AND');
@@ -307,7 +313,7 @@ describe('test index-route api', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('ORDER BY "title" ASC');
 
       await fastify.close();
@@ -321,7 +327,7 @@ describe('test index-route api', () => {
         url: '/posts/category/tech?orderBy=category&orderDir=desc',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('ORDER BY "category" DESC');
 
       await fastify.close();
@@ -429,7 +435,7 @@ describe('test index-route api', () => {
         url: '/posts/category/tech?id_gt=10&title_eq=Hello',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"category" = $1');
       expect(callArgs[0]).toContain('"id" > $2');
       expect(callArgs[0]).toContain('"title" = $3');

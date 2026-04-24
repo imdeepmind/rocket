@@ -11,9 +11,8 @@ import {startServer} from '@/server';
 
 import {registerModelRoutes} from '@/routes/index';
 
+import {Mode} from '@/schema';
 import {AppConfig} from '@/schema/config';
-
-import {showWelcomeScreen} from '@/utils/welcome';
 
 vi.mock('fastify', () => {
   const mockApp = {
@@ -54,6 +53,9 @@ vi.mock('@/utils/welcome', () => ({
 }));
 
 const mockConfig: AppConfig = {
+  application: {
+    logLevel: 'info',
+  },
   database: {
     engine: 'sqlite',
     connection: {urlOrPath: ':memory:'},
@@ -96,33 +98,86 @@ describe('Server', () => {
     vi.restoreAllMocks();
   });
 
-  const runStart = async (mode: 'dev' | 'prod' = 'dev') => {
-    await startServer(mockConfig, 3000, mode);
+  const runStart = async (
+    mode: Mode = 'dev',
+    verbose: boolean = false,
+    migrate: boolean = false,
+  ) => {
+    await startServer(mockConfig, 3000, mode, verbose, migrate);
   };
 
-  it('should initialize fastify with correct logger based on mode', async () => {
+  it('should initialize fastify with correct logger based on configuration', async () => {
     const fastifyMock = vi.mocked(Fastify);
     await startServer(mockConfig, 3000, 'dev');
 
-    expect(fastifyMock).toHaveBeenCalledWith({
-      logger: {
-        transport: {
-          target: 'pino-pretty',
-          options: expect.any(Object),
-        },
-      },
-    });
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({
+          level: mockConfig.application.logLevel,
+        }),
+      }),
+    );
 
     fastifyMock.mockClear();
 
     await startServer(mockConfig, 3000, 'prod');
-    expect(fastifyMock).toHaveBeenCalledWith({
-      logger: true,
-    });
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({
+          level: mockConfig.application.logLevel,
+        }),
+      }),
+    );
+  });
+
+  it('should respect custom logLevel from application config in prod mode', async () => {
+    const fastifyMock = vi.mocked(Fastify);
+    const customConfig: AppConfig = {
+      ...mockConfig,
+      application: {logLevel: 'warn'},
+    };
+
+    await startServer(customConfig, 3000, 'prod');
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'warn'}),
+      }),
+    );
+
+    fastifyMock.mockClear();
+
+    await startServer(customConfig, 3000, 'dev');
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'warn'}),
+      }),
+    );
+  });
+
+  it('should override logger level to debug when verbose is true', async () => {
+    const fastifyMock = vi.mocked(Fastify);
+
+    // Test verbose in prod mode
+    await startServer(mockConfig, 3000, 'prod', true);
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'debug'}),
+      }),
+    );
+
+    fastifyMock.mockClear();
+
+    // Test verbose in dev mode (should still be debug)
+    await startServer(mockConfig, 3000, 'dev', true);
+    expect(fastifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logger: expect.objectContaining({level: 'debug'}),
+      }),
+    );
   });
 
   it('should register routes hook correctly', async () => {
-    await runStart();
+    const {routes} = await startServer(mockConfig, 3000, 'dev');
     const addHookMock = mockApp.addHook;
     expect(addHookMock).toHaveBeenCalledWith('onRoute', expect.any(Function));
 
@@ -134,11 +189,7 @@ describe('Server', () => {
     hookCallback({method: 'GET', url: '/test'});
     hookCallback({method: ['POST', 'PUT'], url: '/multi'});
 
-    const showWelcomeMock = vi.mocked(showWelcomeScreen);
-
-    expect(showWelcomeMock).toHaveBeenCalledWith(
-      mockConfig,
-      3000,
+    expect(routes).toEqual(
       expect.arrayContaining([
         {method: 'GET', url: '/test'},
         {method: 'POST/PUT', url: '/multi'},
@@ -147,7 +198,7 @@ describe('Server', () => {
   });
 
   it('should register plugins and routes', async () => {
-    await runStart();
+    await runStart('dev', false, true);
 
     expect(mockApp.register).toHaveBeenCalledTimes(4);
 
@@ -156,8 +207,11 @@ describe('Server', () => {
       mockApp,
       mockConfig.models,
     );
-    expect(showWelcomeScreen).toHaveBeenCalled();
-    expect(mockApp.listen).toHaveBeenCalledWith({port: 3000, host: '0.0.0.0'});
+  });
+
+  it('should skip migration when migrate is false', async () => {
+    await runStart('dev', false, false);
+    expect(migrateDatabase).not.toHaveBeenCalled();
   });
 
   it('should not register swagger if disabled', async () => {
@@ -175,23 +229,6 @@ describe('Server', () => {
     await startServer(noModelsConfig, 3000, 'prod');
 
     expect(registerModelRoutes).not.toHaveBeenCalled();
-  });
-
-  it('should handle app.listen failure and process.exit context', async () => {
-    const exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation((() => {}) as unknown as (
-        code?: string | number | null,
-      ) => never);
-    const mockErr = new Error('port in use');
-    mockApp.listen.mockRejectedValueOnce(mockErr);
-
-    await runStart();
-
-    expect(mockApp.log.error).toHaveBeenCalledWith(mockErr);
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
   });
 
   describe('Error Handler', () => {
@@ -307,8 +344,9 @@ describe('Server', () => {
     });
   });
 
-  it('should return the app instance', async () => {
-    const app = await startServer(mockConfig, 3000, 'dev');
+  it('should return the app instance and routes', async () => {
+    const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
+    expect(Array.isArray(routes)).toBe(true);
   });
 });
