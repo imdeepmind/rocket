@@ -66,6 +66,33 @@ describe('test custom-queries api', () => {
 
       await fastify.close();
     });
+
+    test('should support all data types in magic variables', async () => {
+      const allTypesApis: ApisConfig = {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/all-types',
+            query:
+              'INSERT INTO test (b, t, d) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@);',
+          },
+        ],
+      };
+      const fastify = await createTestApp(pgConfig, [], allTypesApis);
+
+      const res = await fastify.inject({
+        method: 'POST',
+        url: '/custom-queries/all-types',
+        payload: {
+          b: true,
+          t: 'some long text',
+          d: '2023-01-01T00:00:00Z',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      await fastify.close();
+    });
   });
 
   describe('schema checking and rejections', () => {
@@ -117,6 +144,69 @@ describe('test custom-queries api', () => {
       });
 
       expect(invalidPathResponse.statusCode).toBe(400);
+
+      await fastify.close();
+    });
+  });
+
+  describe('interpolation error handling', () => {
+    test('should throw error when a required variable is missing in request', async () => {
+      const fastify = await createTestApp(pgConfig, [], {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/missing-param',
+            query: 'SELECT * FROM users WHERE status = &&status:string&&;',
+          },
+        ],
+      });
+
+      // To hit the "Missing value for parameter" error or "Missing query param",
+      // we need a query that expects a param that isn't provided.
+      // But Fastify's AJV will normally catch this if it's required.
+      // However, we don't mark these as "required" in the JSON schema currently!
+      // In registerCustomQueryRoutes, we only list them in `properties`.
+
+      const res = await fastify.inject({
+        method: 'POST',
+        url: '/custom-queries/missing-param',
+        // Omitting 'status' query string
+      });
+
+      // It should still return 200 because status is optional in schema,
+      // but the handler will throw during interpolation.
+      // Fastify will catch the error and return 500.
+      expect(res.statusCode).toBe(500);
+      expect(JSON.parse(res.body).message).toContain(
+        'Missing query param: "status"',
+      );
+
+      await fastify.close();
+    });
+
+    test('should throw error when a required body variable is missing', async () => {
+      const fastify = await createTestApp(pgConfig, [], {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/missing-body',
+            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+          },
+        ],
+      });
+
+      const res = await fastify.inject({
+        method: 'POST',
+        url: '/custom-queries/missing-body',
+        payload: {
+          // 'id' is missing
+        },
+      });
+
+      expect(res.statusCode).toBe(500);
+      expect(JSON.parse(res.body).message).toContain(
+        'Missing body param: "id"',
+      );
 
       await fastify.close();
     });
