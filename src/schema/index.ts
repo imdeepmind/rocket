@@ -1,5 +1,5 @@
 export type Mode = 'dev' | 'prod';
-export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface CLIOptions {
   config: string;

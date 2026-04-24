@@ -95,8 +95,8 @@ export async function startServer(
   await registerSwagger(config.swagger, app);
 
   // register config-driven model routes
-  if (config.models && config.models.length > 0) {
-    registerModelRoutes(app, config.models);
+  if ((config.models && config.models.length > 0) || config.apis) {
+    registerModelRoutes(app, config.models || [], config.apis);
   }
 
   // Global error handler

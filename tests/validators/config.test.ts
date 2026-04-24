@@ -1914,3 +1914,296 @@ describe('validateValidApplicationConfig', () => {
     });
   });
 });
+
+describe('validateInvalidApisConfig', () => {
+  it.each([
+    {
+      name: 'method as invalid',
+      patch: {
+        customQueries: [{method: 'OPTIONS', path: '/test', query: 'SELECT 1;'}],
+      },
+      expected:
+        '/apis/customQueries/0/method must be equal to one of the allowed values',
+    },
+    {
+      name: 'path without slash',
+      patch: {
+        customQueries: [{method: 'GET', path: 'test', query: 'SELECT 1;'}],
+      },
+      expected:
+        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'path with space and uppercase',
+      patch: {
+        customQueries: [
+          {method: 'GET', path: '/test-api asdas', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'empty query',
+      patch: {customQueries: [{method: 'GET', path: '/test', query: ''}]},
+      expected:
+        '/apis/customQueries/0/query must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'DDL query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'CREATE TABLE x (id INTEGER);',
+          },
+        ],
+      },
+      expected: '/apis/customQueries/0/query: DDL queries are not allowed',
+    },
+    {
+      name: 'GET method with DML query',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'INSERT INTO x (id) VALUES (1);',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: only DQL queries are allowed for GET method',
+    },
+    {
+      name: 'POST method with invalid SQL starting word',
+      patch: {
+        customQueries: [
+          {method: 'POST', path: '/test', query: 'RANDOM COMMAND;'},
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: only DQL and DML queries are allowed',
+    },
+    {
+      name: 'GET method with body magic variables (@@)',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+    },
+    {
+      name: 'Invalid body variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@first name:string@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+    },
+    {
+      name: 'Invalid path variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+    },
+    {
+      name: 'Invalid query variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query:
+              'SELECT * FROM users WHERE country = &&country space:string&&;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+    },
+    {
+      name: 'Mixed delimiters ($$id&&)',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+    },
+    {
+      name: 'Unclosed delimiter (@@id@)',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@id@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: unclosed magic variable delimiter "@@"',
+    },
+    {
+      name: 'Multiple datatype declarations',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+    },
+    {
+      name: 'Invalid datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name:varchar@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+    },
+    {
+      name: 'Missing datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidApisConfig', () => {
+  it.each([
+    {
+      name: 'valid GET query',
+      patch: {
+        customQueries: [
+          {method: 'GET', path: '/test', query: 'SELECT * FROM User;'},
+        ],
+      },
+    },
+    {
+      name: 'valid POST insert query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'INSERT INTO User (name) VALUES (1);',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid WITH query',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid variables in POST query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/update-user',
+            query:
+              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@ WHERE id = $$id:integer$$ AND status = '&&status:string&&';",
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid path and query variables in GET',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/search',
+            query:
+              'SELECT * FROM users WHERE id = $$id:integer$$ AND category = &&cat:string&&;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid typed variables in POST query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/update-user',
+            query:
+              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@, updated_at = '@@updated_at:datetime@@' WHERE id = $$id:integer$$ AND status = &&status:boolean&&;",
+          },
+        ],
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
