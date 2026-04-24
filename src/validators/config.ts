@@ -243,6 +243,37 @@ const modelSchema = {
   },
 };
 
+const customQuerySchema = {
+  type: 'object',
+  required: ['method', 'path', 'query'],
+  additionalProperties: false,
+  properties: {
+    method: {
+      type: 'string',
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    },
+    path: {
+      type: 'string',
+      pattern: '^\\/[a-z_\\-\\/]+$',
+    },
+    query: {
+      type: 'string',
+      minLength: 1,
+    },
+  },
+};
+
+const apisSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    customQueries: {
+      type: 'array',
+      items: customQuerySchema,
+    },
+  },
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'swagger', 'database', 'models'],
@@ -256,6 +287,7 @@ const schema = {
       minItems: 1,
       items: modelSchema,
     },
+    apis: apisSchema,
   },
 };
 
@@ -566,6 +598,43 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
 
   return errors;
 }
+
+function validateApisConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+  if (!config.apis || !config.apis.customQueries) return errors;
+
+  config.apis.customQueries.forEach((cq, i) => {
+    const path = `/apis/customQueries/${i}`;
+
+    const q = cq.query.trim().toUpperCase();
+
+    // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
+    const ddlPrefixes = ['CREATE ', 'ALTER ', 'DROP ', 'TRUNCATE ', 'RENAME '];
+    if (ddlPrefixes.some(prefix => q.startsWith(prefix))) {
+      errors.push(`${path}/query: DDL queries are not allowed`);
+      return;
+    }
+
+    const isDql = q.startsWith('SELECT ') || q.startsWith('WITH ');
+    const dmlPrefixes = ['INSERT ', 'UPDATE ', 'DELETE '];
+    const isDml = dmlPrefixes.some(prefix => q.startsWith(prefix));
+
+    if (cq.method === 'GET') {
+      if (!isDql) {
+        errors.push(
+          `${path}/query: only DQL queries are allowed for GET method`,
+        );
+      }
+    } else {
+      if (!isDql && !isDml) {
+        errors.push(`${path}/query: only DQL and DML queries are allowed`);
+      }
+    }
+  });
+
+  return errors;
+}
+
 const validateSchema = ajv.compile(schema);
 
 export function validateConfig(input: AppConfig) {
@@ -581,6 +650,7 @@ export function validateConfig(input: AppConfig) {
         ...validateIndexes(input as AppConfig),
         ...validateForeignKeys(input as AppConfig),
         ...validateModelValidation(input as AppConfig, ajv),
+        ...validateApisConstraints(input as AppConfig),
       ]
     : [];
 

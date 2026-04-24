@@ -1,3 +1,5 @@
+import {HTTPMethod} from './index';
+
 export type DBEngine = 'sqlite' | 'pg';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
 export type LogLevel =
@@ -114,9 +116,20 @@ export interface ApplicationConfig {
   logLevel: LogLevel;
 }
 
+export interface CustomQueryConfig {
+  method: HTTPMethod;
+  path: string;
+  query: string;
+}
+
+export interface ApisConfig {
+  customQueries?: CustomQueryConfig[];
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   swagger: SwaggerConfig;
   database: DatabaseConfig;
   models: ModelConfig[];
+  apis?: ApisConfig;
 }

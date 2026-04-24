@@ -1914,3 +1914,130 @@ describe('validateValidApplicationConfig', () => {
     });
   });
 });
+
+describe('validateInvalidApisConfig', () => {
+  it.each([
+    {
+      name: 'method as invalid',
+      patch: {
+        customQueries: [{method: 'OPTIONS', path: '/test', query: 'SELECT 1;'}],
+      },
+      expected:
+        '/apis/customQueries/0/method must be equal to one of the allowed values',
+    },
+    {
+      name: 'path without slash',
+      patch: {
+        customQueries: [{method: 'GET', path: 'test', query: 'SELECT 1;'}],
+      },
+      expected:
+        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'path with space and uppercase',
+      patch: {
+        customQueries: [
+          {method: 'GET', path: '/test-api asdas', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'empty query',
+      patch: {customQueries: [{method: 'GET', path: '/test', query: ''}]},
+      expected:
+        '/apis/customQueries/0/query must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'DDL query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'CREATE TABLE x (id INTEGER);',
+          },
+        ],
+      },
+      expected: '/apis/customQueries/0/query: DDL queries are not allowed',
+    },
+    {
+      name: 'GET method with DML query',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'INSERT INTO x (id) VALUES (1);',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: only DQL queries are allowed for GET method',
+    },
+    {
+      name: 'POST method with invalid SQL starting word',
+      patch: {
+        customQueries: [
+          {method: 'POST', path: '/test', query: 'RANDOM COMMAND;'},
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: only DQL and DML queries are allowed',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidApisConfig', () => {
+  it.each([
+    {
+      name: 'valid GET query',
+      patch: {
+        customQueries: [
+          {method: 'GET', path: '/test', query: 'SELECT * FROM User;'},
+        ],
+      },
+    },
+    {
+      name: 'valid POST insert query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'INSERT INTO User (name) VALUES (1);',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid WITH query',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+          },
+        ],
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});

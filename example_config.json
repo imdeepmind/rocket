@@ -137,5 +137,14 @@
                 }
             ]
         }
-    ]
+    ],
+    "apis": {
+        "customQueries": [
+            {
+                "method": "GET",
+                "path": "/test-api-asdas_asdas",
+                "query": "SELECT * FROM USERS;"
+            }
+        ]
+    }
 }
