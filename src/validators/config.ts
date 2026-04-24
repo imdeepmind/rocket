@@ -630,6 +630,61 @@ function validateApisConstraints(config: AppConfig): string[] {
         errors.push(`${path}/query: only DQL and DML queries are allowed`);
       }
     }
+
+    // Magic variables validation
+    const delims = ['@@', '$$', '&&'];
+    const foundDelims: {pos: number; type: string}[] = [];
+
+    delims.forEach(d => {
+      let pos = cq.query.indexOf(d);
+      while (pos !== -1) {
+        foundDelims.push({pos, type: d});
+        pos = cq.query.indexOf(d, pos + 2);
+      }
+    });
+
+    foundDelims.sort((a, b) => a.pos - b.pos);
+
+    for (let i = 0; i < foundDelims.length; i += 2) {
+      const start = foundDelims[i];
+      const end = foundDelims[i + 1];
+
+      if (!end) {
+        errors.push(
+          `${path}/query: unclosed magic variable delimiter "${start.type}"`,
+        );
+        break;
+      }
+
+      if (start.type !== end.type) {
+        errors.push(
+          `${path}/query: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
+        );
+        continue;
+      }
+
+      const varName = cq.query.substring(start.pos + 2, end.pos);
+
+      // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
+      if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
+        const typeName =
+          start.type === '@@'
+            ? 'body (@@)'
+            : start.type === '$$'
+              ? 'path ($$)'
+              : 'query (&&)';
+        errors.push(
+          `${path}/query: invalid magic variable name "${varName}" for ${typeName} parameter`,
+        );
+      }
+
+      // 2. GET method should not have body magic variables (@@)
+      if (cq.method === 'GET' && start.type === '@@') {
+        errors.push(
+          `${path}/query: body magic variables (@@) are not allowed for GET method`,
+        );
+      }
+    }
   });
 
   return errors;

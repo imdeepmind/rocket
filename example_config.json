@@ -143,7 +143,7 @@
             {
                 "method": "GET",
                 "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS;"
+                "query": "SELECT * FROM USERS WHERE id = $$id$$;"
             }
         ]
     }

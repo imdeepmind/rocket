@@ -1986,6 +1986,90 @@ describe('validateInvalidApisConfig', () => {
       expected:
         '/apis/customQueries/0/query: only DQL and DML queries are allowed',
     },
+    {
+      name: 'GET method with body magic variables (@@)',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = @@id@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+    },
+    {
+      name: 'Invalid body variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@first name@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+    },
+    {
+      name: 'Invalid path variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id!$$;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+    },
+    {
+      name: 'Invalid query variable name',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE country = &&country space&&;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+    },
+    {
+      name: 'Mixed delimiters ($$id&&)',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id&&;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+    },
+    {
+      name: 'Unclosed delimiter (@@id@)',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@id@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: unclosed magic variable delimiter "@@"',
+    },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -2028,6 +2112,32 @@ describe('validateValidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid variables in POST query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/update-user',
+            query:
+              "UPDATE users SET name = '@@name@@', age = @@age@@ WHERE id = $$id$$ AND status = '&&status&&';",
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid path and query variables in GET',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/search',
+            query:
+              'SELECT * FROM users WHERE id = $$id$$ AND category = &&cat&&;',
           },
         ],
       },
