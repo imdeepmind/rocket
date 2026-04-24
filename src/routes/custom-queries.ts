@@ -7,6 +7,70 @@ import {
 
 import {ApisConfig, DataType} from '@/schema/config';
 
+type ParamSource = {
+  body?: Record<string, unknown>;
+  params?: Record<string, unknown>;
+  query?: Record<string, unknown>;
+};
+
+// Helper to cast value to the declared type
+const cast = (value: unknown, type: DataType): string => {
+  if (value === undefined || value === null) {
+    throw new Error('Missing value for parameter');
+  }
+  switch (type) {
+    case 'integer':
+      return String(Math.trunc(Number(value)));
+    case 'boolean':
+      return String(Boolean(value));
+    case 'string':
+      return String(value);
+    case 'text':
+      return String(value);
+    case 'datetime':
+      return String(value);
+    default:
+      return String(value);
+  }
+};
+
+function interpolateQuery(
+  queryTemplate: string,
+  {body = {}, params = {}, query = {}}: ParamSource,
+): string {
+  // $$ ... $$ → path/params
+  let result = queryTemplate.replace(
+    /\$\$([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\$\$/g,
+    (_, name, type) => {
+      const val = params[name];
+      if (val === undefined) throw new Error(`Missing path param: "${name}"`);
+      return cast(val, type as DataType);
+    },
+  );
+
+  // @@ ... @@ → body
+  result = result.replace(
+    /@@([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)@@/g,
+    (_, name, type) => {
+      const val = body[name];
+      if (val === undefined) throw new Error(`Missing body param: "${name}"`);
+      return cast(val, type as DataType);
+    },
+  );
+
+  // && ... && → query string
+  result = result.replace(
+    /&&([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)&&/g,
+    (_, name, type) => {
+      const val = query[name];
+      if (val === undefined) throw new Error(`Missing query param: "${name}"`);
+      return cast(val, type as DataType);
+    },
+  );
+
+  return result;
+}
+
 export function registerCustomQueryRoutes(
   app: FastifyInstance,
   apis?: ApisConfig,
@@ -113,7 +177,11 @@ export function registerCustomQueryRoutes(
     schema.response = getResponseStructureSchema([200], {
       type: 'object',
       properties: {
-        data: {type: 'string'},
+        data: {
+          type: 'array',
+          items: {type: 'object', additionalProperties: true},
+        },
+        res: {type: 'object', additionalProperties: true},
       },
     });
 
@@ -122,9 +190,23 @@ export function registerCustomQueryRoutes(
       url: routePath,
       schema,
       handler: async (request: FastifyRequest, reply: FastifyReply) => {
+        // extract the body, path, and query parameters from the request
+        const params = request.params as Record<string, unknown>;
+        const query = request.query as Record<string, unknown>;
+        const body = request.body as Record<string, unknown>;
+
+        const interpolatedQuery = interpolateQuery(cq.query, {
+          params,
+          query,
+          body,
+        });
+
+        const res = await app.db.query(interpolatedQuery);
+
         return reply.status(200).send(
           app.buildResponse(200, 'Success', {
-            data: 'Hello world',
+            data: res.rows,
+            res,
           }),
         );
       },

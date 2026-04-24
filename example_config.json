@@ -143,7 +143,7 @@
             {
                 "method": "POST",
                 "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$ AND something = '@@name:string@@' AND awesome = &&age:integer&&;"
+                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
             }
         ]
     }

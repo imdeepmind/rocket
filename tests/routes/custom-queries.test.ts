@@ -38,7 +38,8 @@ describe('test custom-queries api', () => {
 
       expect(validResponse.statusCode).toBe(200);
       expect(JSON.parse(validResponse.body).data).toEqual({
-        data: 'Hello world',
+        data: [],
+        res: {rows: [], changes: 0},
       });
 
       await fastify.close();
@@ -59,7 +60,8 @@ describe('test custom-queries api', () => {
 
       expect(validResponse.statusCode).toBe(200);
       expect(JSON.parse(validResponse.body).data).toEqual({
-        data: 'Hello world',
+        data: [],
+        res: {rows: [], changes: 0},
       });
 
       await fastify.close();
