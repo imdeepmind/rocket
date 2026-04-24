@@ -24,7 +24,7 @@
     "database": {
         "engine": "pg",
         "connection": {
-            "urlOrPath": "postgres://devuser:devpassword@localhost:5432/rocketdb"
+            "urlOrPath": "env:DB"
         }
     },
     "models": [
@@ -37,7 +37,8 @@
                     "primaryKey": true,
                     "unique": true,
                     "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"]
+                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
+                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
                 },
                 {
                     "name": "email",

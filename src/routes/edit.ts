@@ -1,10 +1,10 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  applyFilters,
   buildFilterQueryProperties,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
-  stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
 import {ModelBody, ModelConfig} from '@/schema/config';
@@ -27,6 +27,7 @@ export function registerEditRoutes(
   models: ModelConfig[],
 ): void {
   for (const model of models) {
+    // identifying fields that are marked as editable in the configuration
     const editableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('editable'),
     );
@@ -35,15 +36,17 @@ export function registerEditRoutes(
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
 
+      // if the field is not unique, we can apply filters to target specific records
+      // for example, if we edit by "status", we might want to only update records where "age > 18"
       const queryProperties: Record<string, object> = {};
       if (!isUnique) {
-        // Add filter params for each field based on its supportedOperations
         for (const f of model.fields) {
           Object.assign(queryProperties, buildFilterQueryProperties(f));
         }
       }
 
-      // Body contains all other fields as update targets
+      // the body will contain all other fields that can be updated
+      // we exclude the current field we are using to identify the records
       const bodyProperties: Record<string, object> = {};
       const allBodyFieldNames: string[] = [];
 
@@ -56,20 +59,25 @@ export function registerEditRoutes(
         allBodyFieldNames.push(otherField.name);
       }
 
+      // building the schema for both PATCH (partial) and PUT (complete) updates
       const buildRouteSchema = (method: 'PATCH' | 'PUT') => {
         let finalBodySchema: Record<string, unknown>;
 
+        // if a custom validation schema is provided in the model, we use it
         if (model.validation) {
           finalBodySchema = {...model.validation};
           if (method === 'PATCH') {
-            // For PATCH, remove 'required' so partial updates are valid
+            // for PATCH requests, we remove 'required' to allow partial updates
             delete finalBodySchema.required;
           }
         } else {
+          // otherwise, we generate a default object schema
           finalBodySchema = {
             type: 'object',
             properties: bodyProperties,
+            // for PUT, all fields are required; for PATCH, they are optional
             required: method === 'PUT' ? allBodyFieldNames : [],
+            additionalProperties: false,
           };
         }
 
@@ -94,6 +102,7 @@ export function registerEditRoutes(
               },
             },
             required: [field.name],
+            additionalProperties: false,
           },
           body: finalBodySchema,
           response: getResponseStructureSchema([200], responseDataSchema),
@@ -103,6 +112,7 @@ export function registerEditRoutes(
           schema.querystring = {
             type: 'object',
             properties: queryProperties,
+            additionalProperties: false,
           };
         }
 
@@ -116,10 +126,7 @@ export function registerEditRoutes(
         const queryParams = request.query as Record<string, unknown>;
         const params = request.params as Record<string, unknown>;
         const tableName = model.name;
-
-        // Strip unexpected fields from body
-        const incomingBody = request.body as ModelBody;
-        const body = stripAdditionalPostFields(model, incomingBody);
+        const body = request.body as ModelBody;
 
         // Remove the identifying field from the body if it was mistakenly provided
         delete body[field.name];
@@ -134,6 +141,7 @@ export function registerEditRoutes(
         const values: unknown[] = [];
         let paramIndex = 1;
 
+        // building the SET clause of the UPDATE query
         const setClauses: string[] = [];
         for (const key of keys) {
           setClauses.push(`"${key}" = $${paramIndex++}`);
@@ -141,54 +149,27 @@ export function registerEditRoutes(
         }
 
         const whereClauses: string[] = [];
-        // The base path param condition:
+        // primary condition: match the record by the identifying field from the URL path
         whereClauses.push(`"${field.name}" = $${paramIndex++}`);
         values.push(params[field.name]);
 
+        // if the field is not unique, we apply additional filters from the query string
         if (!isUnique) {
-          // Filters
-          for (const key of Object.keys(queryParams)) {
-            if (['page', 'limit', 'orderBy', 'orderDir'].includes(key))
-              continue;
+          const {
+            whereClauses: filterClauses,
+            values: filterValues,
+            nextParamIndex,
+          } = applyFilters(queryParams, paramIndex, [field.name]);
 
-            if (key.endsWith('_eq')) {
-              whereClauses.push(
-                `"${key.replace('_eq', '')}" = $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_lt')) {
-              whereClauses.push(
-                `"${key.replace('_lt', '')}" < $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_lte')) {
-              whereClauses.push(
-                `"${key.replace('_lte', '')}" <= $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_gt')) {
-              whereClauses.push(
-                `"${key.replace('_gt', '')}" > $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_gte')) {
-              whereClauses.push(
-                `"${key.replace('_gte', '')}" >= $${paramIndex++}`,
-              );
-              values.push(queryParams[key]);
-            } else if (key.endsWith('_in')) {
-              const inValues = String(queryParams[key]).split(',');
-              const inParams = inValues
-                .map(() => `$${paramIndex++}`)
-                .join(', ');
-              whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
-              values.push(...inValues);
-            }
-          }
+          whereClauses.push(...filterClauses);
+          values.push(...filterValues);
+          paramIndex = nextParamIndex;
         }
 
+        // join all parts to form the final UPDATE query
         const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
+        // executing the update in the database
         const res = await app.db.query(query, values);
 
         return reply

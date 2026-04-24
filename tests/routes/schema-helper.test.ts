@@ -2,8 +2,8 @@ import {describe, expect, it, test} from 'vitest';
 
 import {
   buildFilterQueryProperties,
-  buildPostBodyValidationSchema,
   buildSortQueryProperties,
+  generateJSONValidationSchema,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   stripAdditionalPostFields,
@@ -127,8 +127,9 @@ describe('test schema helper', () => {
         },
       },
       required: ['id', 'name', 'email'],
+      additionalProperties: false,
     };
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
 
   test('should build post body validation schema ignoring primary key', () => {
@@ -158,9 +159,10 @@ describe('test schema helper', () => {
         },
       },
       required: ['name', 'email'],
+      additionalProperties: false,
     };
     expect(
-      buildPostBodyValidationSchema(model, {ignorePrimaryKey: true}),
+      generateJSONValidationSchema(model, {ignorePrimaryKey: true}),
     ).toEqual(expectedSchema);
   });
 
@@ -236,7 +238,7 @@ describe('test schema helper', () => {
       },
       required: ['id', 'name', 'email'],
     };
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
 
   test('should build post body validation schmea without and requird fields', () => {
@@ -252,9 +254,10 @@ describe('test schema helper', () => {
           description: 'Value for age',
         },
       },
+      additionalProperties: false,
     };
 
-    expect(buildPostBodyValidationSchema(model)).toEqual(expectedSchema);
+    expect(generateJSONValidationSchema(model)).toEqual(expectedSchema);
   });
 
   // test cases for stripAdditionalPostFields

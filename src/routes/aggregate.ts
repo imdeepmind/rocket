@@ -20,57 +20,69 @@ export function registerAggregateRoutes(
   models: ModelConfig[],
 ): void {
   for (const model of models) {
+    // We only create an aggregation route for fields that have non-empty supportedAggregation
+    // if a field is not aggregatable, we skip it
     const aggregatableFields = model.fields.filter(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
+    // for each aggregatable field, we create a GET route
+    // /<model_name>/aggregation/<field_name>
     for (const field of aggregatableFields) {
       const operations = field.supportedAggregation!;
+
+      // defining the swagger/ajv validation schema for the route
+      const schema: Record<string, unknown> = {
+        summary: `Aggregate ${field.name} on ${capitalizeFirstLetter(model.name)}`,
+        description: `Get aggregation data for ${field.name} in ${model.name}`,
+        tags: [capitalizeFirstLetter(model.name), 'Read'],
+        querystring: {
+          type: 'object',
+          properties: {
+            // users can pass a comma-separated list of operations like ?operations=mean,max,min
+            operations: {
+              type: 'string',
+              description: `Comma-separated list of operations to perform: ${operations.join(', ')}`,
+            },
+          },
+          required: ['operations'],
+          additionalProperties: false,
+        },
+        // generating the response structure based on common aggregation keys
+        response: getResponseStructureSchema(
+          [200],
+          {
+            type: 'object',
+            properties: {
+              mean: {type: 'number', nullable: true},
+              max: {type: 'number', nullable: true},
+              min: {type: 'number', nullable: true},
+              sum: {type: 'number', nullable: true},
+              count: {type: 'number', nullable: true},
+              frequency: {
+                type: 'object',
+                additionalProperties: {type: 'integer'},
+              },
+            },
+          },
+          {type: 'object', additionalProperties: true},
+        ),
+      };
 
       app.get(
         `/${model.name}/aggregation/${field.name}`,
         {
-          schema: {
-            summary: `Aggregate ${field.name} on ${capitalizeFirstLetter(model.name)}`,
-            description: `Get aggregation data for ${field.name} in ${model.name}`,
-            tags: [capitalizeFirstLetter(model.name), 'Read'],
-            querystring: {
-              type: 'object',
-              properties: {
-                operations: {
-                  type: 'string',
-                  description: `Comma-separated list of operations to perform: ${operations.join(', ')}`,
-                },
-              },
-              required: ['operations'],
-            },
-            response: getResponseStructureSchema(
-              [200],
-              {
-                type: 'object',
-                properties: {
-                  mean: {type: 'number', nullable: true},
-                  max: {type: 'number', nullable: true},
-                  min: {type: 'number', nullable: true},
-                  sum: {type: 'number', nullable: true},
-                  count: {type: 'number', nullable: true},
-                  frequency: {
-                    type: 'object',
-                    additionalProperties: {type: 'integer'},
-                  },
-                },
-              },
-              {type: 'object', additionalProperties: true},
-            ),
-          },
+          schema,
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
           const query = request.query as Record<string, unknown>;
+          // parsing the operations string into a clean array
           const requestedOps = String(query.operations || '')
             .split(',')
             .map(s => s.trim())
             .filter(Boolean);
 
+          // validation: we must have at least one valid operation
           if (requestedOps.length === 0) {
             return reply
               .status(400)
@@ -83,6 +95,7 @@ export function registerAggregateRoutes(
               );
           }
 
+          // validation: check if all requested operations are supported by this field's config
           for (const op of requestedOps) {
             if (!operations.includes(op as SupportedAggregationOperation)) {
               return reply
@@ -99,6 +112,8 @@ export function registerAggregateRoutes(
 
           const result: Record<string, unknown> = {};
 
+          // building the SQL for standard aggregations (mean, max, min, sum, count)
+          // we consolidate these into a single query for efficiency
           const sqlAggs = [];
           if (requestedOps.includes('mean'))
             sqlAggs.push(`AVG("${field.name}") AS mean`);
@@ -111,10 +126,12 @@ export function registerAggregateRoutes(
           if (requestedOps.includes('count'))
             sqlAggs.push(`COUNT("${field.name}") AS count`);
 
+          // if we have any SQL aggregations to perform, execute the query
           if (sqlAggs.length > 0) {
             const res = await app.db.query<Record<string, unknown>>(
               `SELECT ${sqlAggs.join(', ')} FROM "${model.name}"`,
             );
+            // map the database result columns back to our result object
             if (res.rows.length > 0) {
               const row = res.rows[0];
               if (requestedOps.includes('mean')) result.mean = row.mean;
@@ -125,6 +142,7 @@ export function registerAggregateRoutes(
             }
           }
 
+          // frequency is special because it requires a GROUP BY, so it's a separate query
           if (requestedOps.includes('frequency')) {
             const freqRes = await app.db.query<Record<string, unknown>>(
               `SELECT "${field.name}" as val, COUNT(*) as c FROM "${model.name}" GROUP BY "${field.name}"`,
@@ -136,6 +154,7 @@ export function registerAggregateRoutes(
             result.frequency = freq;
           }
 
+          // sending the final aggregated response
           return reply
             .status(200)
             .send(

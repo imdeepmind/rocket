@@ -10,6 +10,7 @@ import {CLIOptions} from '@/schema';
 import {AppConfig} from '@/schema/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
+import {resolveEnvVars} from '@/utils/config';
 import {showWelcomeScreen} from '@/utils/welcome';
 
 /**
@@ -17,7 +18,8 @@ import {showWelcomeScreen} from '@/utils/welcome';
  */
 function loadConfig(configPath: string): AppConfig {
   const raw = fs.readFileSync(configPath, 'utf-8');
-  return JSON.parse(raw);
+  const config = JSON.parse(raw);
+  return resolveEnvVars(config);
 }
 
 /**

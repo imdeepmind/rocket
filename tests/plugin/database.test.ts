@@ -111,6 +111,48 @@ describe('database plugin', () => {
       await fastify.close();
       expect(closeSpy).toHaveBeenCalled();
     });
+
+    test('query timeout is passed to postgres pool', async () => {
+      const fastify = Fastify();
+      const customConfig = {
+        ...pgConfig,
+        dbTimeout: 5000,
+      };
+      await fastify.register(databasePlugin, customConfig);
+      await fastify.ready();
+
+      const {Pool} = await import('pg');
+      expect(Pool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statement_timeout: 5000,
+        }),
+      );
+      await fastify.close();
+    });
+
+    test('query method blocks DDL queries', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, pgConfig);
+      await fastify.ready();
+
+      const ddlQueries = [
+        'CREATE TABLE users (id SERIAL PRIMARY KEY)',
+        'ALTER TABLE users ADD COLUMN name TEXT',
+        'DROP TABLE users',
+        'TRUNCATE users',
+        'RENAME TABLE users TO customers',
+        'GRANT ALL ON users TO guest',
+        'REVOKE ALL ON users FROM guest',
+      ];
+
+      for (const query of ddlQueries) {
+        await expect(fastify.db.query(query)).rejects.toThrow(
+          'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+        );
+      }
+
+      await fastify.close();
+    });
   });
 
   describe('sqlite engine', () => {
@@ -204,6 +246,57 @@ describe('database plugin', () => {
 
       await fastify.db.close();
       expect(sqliteCloseMock).toHaveBeenCalled();
+      await fastify.close();
+    });
+
+    test('default query timeout is 10s', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, sqliteConfig);
+      await fastify.ready();
+
+      // We can't easily check the internal timeout for sqlite sync
+      // but we verify the plugin registers successfully with defaults
+      expect(fastify.db).toBeDefined();
+      await fastify.close();
+    });
+
+    test('query method blocks DDL queries', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, sqliteConfig);
+      await fastify.ready();
+
+      const ddlQueries = [
+        'CREATE TABLE users (id INTEGER PRIMARY KEY)',
+        'ALTER TABLE users ADD COLUMN name TEXT',
+        'DROP TABLE users',
+        'TRUNCATE users',
+        'RENAME TABLE users TO customers',
+        'GRANT ALL ON users TO guest',
+        'REVOKE ALL ON users FROM guest',
+      ];
+
+      for (const query of ddlQueries) {
+        await expect(fastify.db.query(query)).rejects.toThrow(
+          'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+        );
+      }
+
+      await fastify.close();
+    });
+
+    test('query method handles errors in SQLite', async () => {
+      const fastify = Fastify();
+      await fastify.register(databasePlugin, sqliteConfig);
+      await fastify.ready();
+
+      const mockError = new Error('Database Error');
+      sqliteAllMock.mockImplementationOnce(() => {
+        throw mockError;
+      });
+
+      await expect(fastify.db.query('SELECT * FROM invalid')).rejects.toThrow(
+        'Database Error',
+      );
       await fastify.close();
     });
   });

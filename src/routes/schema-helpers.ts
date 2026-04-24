@@ -150,9 +150,9 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
  * - `required` includes fields that are NOT marked `nullable` and have NO `default`.
  * - If `model.validation` is provided, it is used verbatim.
  */
-export function buildPostBodyValidationSchema(
+export function generateJSONValidationSchema(
   model: ModelConfig,
-  options: {ignorePrimaryKey?: boolean} = {},
+  options: {ignorePrimaryKey?: boolean; additionalProperties?: boolean} = {},
 ): Record<string, unknown> {
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
@@ -176,6 +176,9 @@ export function buildPostBodyValidationSchema(
     type: 'object',
     properties: bodyProperties,
     ...(required.length > 0 ? {required} : {}),
+    ...(options.additionalProperties
+      ? {additionalProperties: true}
+      : {additionalProperties: false}),
   };
 }
 

@@ -25,13 +25,24 @@ const nonUniqueEditModel: ModelConfig[] = [
   {
     name: 'tasks',
     fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
+      {
+        name: 'id',
+        type: 'integer',
+        primaryKey: true,
+        supportedOperations: [
+          'lessThan',
+          'lessThanEqual',
+          'greaterThan',
+          'greaterThanEqual',
+          'oneOf',
+        ],
+      },
       {
         name: 'status',
         type: 'string',
         supportedOperations: ['editable', 'equal', 'lessThan'], // Non-unique identifier
       },
-      {name: 'title', type: 'string'},
+      {name: 'title', type: 'string', supportedOperations: ['equal']},
     ],
   },
 ];
@@ -238,7 +249,7 @@ describe('test edit api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" < $3',
-        ['Urgent Pending Task', 'pending', '10'],
+        ['Urgent Pending Task', 'pending', 10],
       );
 
       await fastify.close();
@@ -255,7 +266,7 @@ describe('test edit api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" <= $3',
-        ['Update', 'pending', '5'],
+        ['Update', 'pending', 5],
       );
 
       await fastify.close();
@@ -272,7 +283,7 @@ describe('test edit api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" > $3',
-        ['Update', 'pending', '1'],
+        ['Update', 'pending', 1],
       );
 
       await fastify.close();
@@ -289,7 +300,7 @@ describe('test edit api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" >= $3',
-        ['Update', 'pending', '2'],
+        ['Update', 'pending', 2],
       );
 
       await fastify.close();
@@ -336,20 +347,21 @@ describe('test edit api', () => {
   });
 
   describe('error handling / edge cases', () => {
-    test('should return 400 for unknown keys in body (they get stripped)', async () => {
+    test('should return 400 for unknown keys in body (schema rejects them)', async () => {
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
       const response = await fastify.inject({
         method: 'PATCH',
         url: '/users/id/1',
         payload: {
-          unknownField: 'value', // This is stripped
+          unknownField: 'value',
         },
       });
 
-      // Because unknownField is stripped and the resulting body is empty, it fails length == 0
+      // with additionalProperties: false, Fastify rejects the request with 400
       expect(response.statusCode).toBe(400);
-      expect(response.json().error).toBe('No fields provided for update');
+      const json = response.json();
+      expect(json.message || json.error).toBeDefined();
 
       await fastify.close();
     });

@@ -73,6 +73,7 @@ export interface DatabaseConfig {
   connection: {
     urlOrPath: string;
   };
+  dbTimeout?: number;
 }
 
 export interface ModelFieldConfig {
