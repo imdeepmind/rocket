@@ -25,7 +25,8 @@
         "engine": "pg",
         "connection": {
             "urlOrPath": "env:DB"
-        }
+        },
+        "dbTimeout": 10000
     },
     "models": [
         {
