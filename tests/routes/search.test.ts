@@ -71,10 +71,12 @@ describe('test search api', () => {
 
   describe('happy path', () => {
     test('should return 200 with matching records', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
-        rowCount: 1,
-      });
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 1}]})
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        });
 
       const fastify = await createTestApp(pgConfig, searchableModel);
 
@@ -99,7 +101,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=Alice',
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
+      expect(pgQueryMock).toHaveBeenCalledTimes(2);
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%alice%', 20, 0],
@@ -145,7 +147,11 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=test',
       });
 
-      expect(response.json().data.pagination).toEqual({page: 1, limit: 20});
+      expect(response.json().data.pagination).toEqual({
+        page: 1,
+        limit: 20,
+        total: 0,
+      });
 
       await fastify.close();
     });
@@ -192,7 +198,11 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=bob&page=3&limit=10',
       });
 
-      expect(response.json().data.pagination).toEqual({page: 3, limit: 10});
+      expect(response.json().data.pagination).toEqual({
+        page: 3,
+        limit: 10,
+        total: 0,
+      });
 
       await fastify.close();
     });
@@ -207,7 +217,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=ali&email_eq=alice@example.com',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('LOWER("name") LIKE $1');
       expect(callArgs[0]).toContain('"email" = $2');
       expect(callArgs[0]).toContain('AND');
@@ -225,7 +235,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&id_lt=100',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" < $2');
       expect(callArgs[1][1]).toBe(100);
 
@@ -240,7 +250,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&id_gt=0',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" > $2');
       expect(callArgs[1][1]).toBe(0);
 
@@ -255,7 +265,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&id_gte=1',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" >= $2');
       expect(callArgs[1][1]).toBe(1);
 
@@ -270,7 +280,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&id_lte=50',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" <= $2');
       expect(callArgs[1][1]).toBe(50);
 
@@ -285,7 +295,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&id_in=1,2,3',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" IN ($2, $3, $4)');
       expect(callArgs[1][1]).toBe('1');
       expect(callArgs[1][2]).toBe('2');
@@ -304,7 +314,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&orderBy=name',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('ORDER BY "name" ASC');
 
       await fastify.close();
@@ -318,7 +328,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al&orderBy=name&orderDir=desc',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('ORDER BY "name" DESC');
 
       await fastify.close();
@@ -332,7 +342,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=al',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).not.toContain('ORDER BY');
 
       await fastify.close();
@@ -424,7 +434,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       // empty search term becomes %%
       expect(callArgs[1][0]).toBe('%%');
 
@@ -439,7 +449,7 @@ describe('test search api', () => {
         url: '/users/search/name?name_search=alice&name_contains=foo',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       // Only the LIKE clause should appear, not any clause for `name_contains`
       expect(callArgs[0]).toBe(
         'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',

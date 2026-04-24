@@ -44,13 +44,15 @@ describe('test get-all api', () => {
 
   describe('happy path', () => {
     test('should return 200 with data and pagination', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, name: 'Alice', email: 'alice@example.com'},
-          {id: 2, name: 'Bob', email: 'bob@example.com'},
-        ],
-        rowCount: 2,
-      });
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 2}]})
+        .mockResolvedValueOnce({
+          rows: [
+            {id: 1, name: 'Alice', email: 'alice@example.com'},
+            {id: 2, name: 'Bob', email: 'bob@example.com'},
+          ],
+          rowCount: 2,
+        });
 
       const fastify = await createTestApp(pgConfig, getAllModel);
 
@@ -63,7 +65,11 @@ describe('test get-all api', () => {
       const body = response.json();
       expect(body.data.data).toHaveLength(2);
       expect(body.data.data[0].name).toBe('Alice');
-      expect(body.data.pagination).toBeDefined();
+      expect(body.data.pagination).toEqual({
+        page: 1,
+        limit: 20,
+        total: 2,
+      });
 
       await fastify.close();
     });
@@ -73,7 +79,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/'});
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
+      expect(pgQueryMock).toHaveBeenCalledTimes(2);
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
@@ -83,7 +89,9 @@ describe('test get-all api', () => {
     });
 
     test('should return empty data array when no rows are found', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 0}]})
+        .mockResolvedValueOnce({rows: [], rowCount: 0});
 
       const fastify = await createTestApp(pgConfig, getAllModel);
 
@@ -154,6 +162,7 @@ describe('test get-all api', () => {
       expect(response.json().data.pagination).toEqual({
         page: 3,
         limit: 15,
+        total: 0,
       });
 
       await fastify.close();
@@ -247,7 +256,7 @@ describe('test get-all api', () => {
         url: '/users/?name_eq=Bob&id_gt=10',
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"name" = $1');
       expect(callArgs[0]).toContain('"id" > $2');
       expect(callArgs[0]).toContain('AND');
@@ -336,7 +345,9 @@ describe('test get-all api', () => {
       const emptyModel: ModelConfig[] = [
         {name: 'tags', fields: [{name: 'id', type: 'integer'}]},
       ];
-      pgQueryMock.mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1});
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 1}]})
+        .mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1});
 
       const fastify = await createTestApp(pgConfig, emptyModel);
 

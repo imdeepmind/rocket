@@ -76,6 +76,7 @@ export function registerGetAllRoutes(
               properties: {
                 page: {type: 'integer'},
                 limit: {type: 'integer'},
+                total: {type: 'integer'},
               },
             },
           },
@@ -116,6 +117,13 @@ export function registerGetAllRoutes(
           query += ` WHERE ${whereClauses.join(' AND ')}`;
         }
 
+        const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
+        const countRes = await app.db.query<{total: number | string}>(
+          countQuery,
+          filterValues,
+        );
+        const total = Number(countRes.rows[0]?.total || 0);
+
         // if orderBy is provided, append the ORDER BY clause
         if (queryParams.orderBy) {
           query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
@@ -143,7 +151,7 @@ export function registerGetAllRoutes(
             `Successfully retrieved records from the ${tableName} table`,
             {
               data: res.rows || [], // returning the rows (or an empty array if none found)
-              pagination: {page, limit}, // including the pagination metadata
+              pagination: {page, limit, total}, // including the pagination metadata
             },
             res,
           ),
