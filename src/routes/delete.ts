@@ -38,29 +38,31 @@ export function registerDeleteRoutes(
 
       // now we're configuring the swagger schema for the DELETE API
       // it uses the model details to generate the schema
+
+      const schema: Record<string, unknown> = {
+        summary: `Delete ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
+        description: `Delete records from ${capitalizeFirstLetter(model.name)} table where ${field.name} matches the provided value`,
+        tags: [capitalizeFirstLetter(model.name), 'Delete'],
+        params: {
+          type: 'object',
+          properties: {
+            // this is the identifier field we're using to locate the record(s) to delete
+            [field.name]: {
+              ...paramSchema,
+              description: `The ${field.name} value identifying the record to delete`,
+            },
+          },
+          required: [field.name],
+          // we set additionalProperties to false for strict validation of the path parameters
+          additionalProperties: false,
+        },
+        // standard response structure for successful deletion (204 No Content)
+        response: getResponseStructureSchema([204], {}),
+      };
       app.delete(
         `/${model.name}/${field.name}/:${field.name}`,
         {
-          schema: {
-            summary: `Delete ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
-            description: `Delete records from ${capitalizeFirstLetter(model.name)} table where ${field.name} matches the provided value`,
-            tags: [capitalizeFirstLetter(model.name), 'Delete'],
-            params: {
-              type: 'object',
-              properties: {
-                // this is the identifier field we're using to locate the record(s) to delete
-                [field.name]: {
-                  ...paramSchema,
-                  description: `The ${field.name} value identifying the record to delete`,
-                },
-              },
-              required: [field.name],
-              // we set additionalProperties to false for strict validation of the path parameters
-              additionalProperties: false,
-            },
-            // standard response structure for successful deletion (204 No Content)
-            response: getResponseStructureSchema([204], {}),
-          },
+          schema,
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
           // extracting the parameter value from the request

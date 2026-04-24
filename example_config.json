@@ -37,7 +37,8 @@
                     "primaryKey": true,
                     "unique": true,
                     "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"]
+                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
+                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
                 },
                 {
                     "name": "email",
