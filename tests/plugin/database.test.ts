@@ -125,6 +125,7 @@ describe('database plugin', () => {
       expect(Pool).toHaveBeenCalledWith(
         expect.objectContaining({
           statement_timeout: 5000,
+          query_timeout: 5000,
         }),
       );
       await fastify.close();
@@ -249,14 +250,22 @@ describe('database plugin', () => {
       await fastify.close();
     });
 
-    test('default query timeout is 10s', async () => {
+    test('query timeout is passed to sqlite constructor', async () => {
       const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const customConfig = {
+        ...sqliteConfig,
+        dbTimeout: 3000,
+      };
+      await fastify.register(databasePlugin, customConfig);
       await fastify.ready();
 
-      // We can't easily check the internal timeout for sqlite sync
-      // but we verify the plugin registers successfully with defaults
-      expect(fastify.db).toBeDefined();
+      const Database = (await import('better-sqlite3')).default;
+      expect(Database).toHaveBeenCalledWith(
+        sqliteConfig.connection.urlOrPath,
+        expect.objectContaining({
+          timeout: 3000,
+        }),
+      );
       await fastify.close();
     });
 

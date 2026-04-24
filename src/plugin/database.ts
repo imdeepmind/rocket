@@ -50,6 +50,7 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
     const pool = new Pool({
       connectionString: opts.connection.urlOrPath,
       statement_timeout: timeout,
+      query_timeout: timeout, // client-side timeout to cancel the query
     });
 
     db = {
@@ -80,7 +81,8 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       close: async () => pool.end(),
     };
   } else if (opts.engine === 'sqlite') {
-    const sqlite = new Database(opts.connection.urlOrPath);
+    // SQLite busy timeout (how long to wait for table locks)
+    const sqlite = new Database(opts.connection.urlOrPath, {timeout});
 
     db = {
       query: async <Q>(sql: string, params?: unknown[]) => {

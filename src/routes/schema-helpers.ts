@@ -42,6 +42,8 @@ export const paginationQueryProperties: Record<string, object> = {
     type: 'integer',
     description: 'Number of records per page',
     default: 20,
+    minimum: 10,
+    maximum: 100,
   },
 };
 

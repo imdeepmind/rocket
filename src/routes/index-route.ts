@@ -100,6 +100,7 @@ export function registerIndexRoutes(
           properties: {
             page: {type: 'integer'},
             limit: {type: 'integer'},
+            total: {type: 'integer'},
           },
         };
       }
@@ -184,6 +185,16 @@ export function registerIndexRoutes(
             query += ` WHERE ${whereClauses.join(' AND ')}`;
           }
 
+          let total = 0;
+          if (!isUnique) {
+            const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
+            const countRes = await app.db.query<{total: number | string}>(
+              countQuery,
+              values,
+            );
+            total = Number(countRes.rows[0]?.total || 0);
+          }
+
           // default values for pagination
           let page = 1;
           let limit = 20;
@@ -197,7 +208,10 @@ export function registerIndexRoutes(
 
             // building the LIMIT and OFFSET query
             page = Math.max(Number(queryParams.page) || 1, 1);
-            limit = Math.max(Number(queryParams.limit) || 20, 1);
+            limit = Math.min(
+              Math.max(Number(queryParams.limit) || 20, 10),
+              100,
+            );
             const offset = (page - 1) * limit;
 
             query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
@@ -217,7 +231,7 @@ export function registerIndexRoutes(
 
           // injecting the pagination state in the returned response if not unique
           if (!isUnique) {
-            responsePayload.pagination = {page, limit};
+            responsePayload.pagination = {page, limit, total};
           }
 
           return reply
