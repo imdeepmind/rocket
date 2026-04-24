@@ -663,22 +663,42 @@ function validateApisConstraints(config: AppConfig): string[] {
         continue;
       }
 
-      const varName = cq.query.substring(start.pos + 2, end.pos);
+      const varString = cq.query.substring(start.pos + 2, end.pos);
+      const parts = varString.split(':');
+      const varName = parts[0];
+      const varType = parts[1];
+      const typeName =
+        start.type === '@@'
+          ? 'body (@@)'
+          : start.type === '$$'
+            ? 'path ($$)'
+            : 'query (&&)';
 
       // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
       if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
-        const typeName =
-          start.type === '@@'
-            ? 'body (@@)'
-            : start.type === '$$'
-              ? 'path ($$)'
-              : 'query (&&)';
         errors.push(
           `${path}/query: invalid magic variable name "${varName}" for ${typeName} parameter`,
         );
       }
 
-      // 2. GET method should not have body magic variables (@@)
+      // 2. Validate datatype
+      if (parts.length > 2) {
+        errors.push(
+          `${path}/query: invalid magic variable format "${varString}", multiple types provided`,
+        );
+      } else if (!varType) {
+        errors.push(
+          `${path}/query: missing data type for magic variable "${varName}" in ${typeName} parameter`,
+        );
+      } else if (
+        !['integer', 'string', 'boolean', 'text', 'datetime'].includes(varType)
+      ) {
+        errors.push(
+          `${path}/query: invalid magic variable type "${varType}" for ${typeName} parameter`,
+        );
+      }
+
+      // 3. GET method should not have body magic variables (@@)
       if (cq.method === 'GET' && start.type === '@@') {
         errors.push(
           `${path}/query: body magic variables (@@) are not allowed for GET method`,

@@ -206,6 +206,7 @@ describe('Server', () => {
     expect(registerModelRoutes).toHaveBeenCalledWith(
       mockApp,
       mockConfig.models,
+      mockConfig.apis,
     );
   });
 

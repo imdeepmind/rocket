@@ -141,9 +141,9 @@
     "apis": {
         "customQueries": [
             {
-                "method": "GET",
+                "method": "POST",
                 "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id$$;"
+                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$ AND something = '@@name:string@@' AND awesome = &&age:integer&&;"
             }
         ]
     }

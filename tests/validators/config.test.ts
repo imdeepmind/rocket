@@ -1993,7 +1993,7 @@ describe('validateInvalidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = @@id@@;',
+            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
           },
         ],
       },
@@ -2007,7 +2007,7 @@ describe('validateInvalidApisConfig', () => {
           {
             method: 'POST',
             path: '/test',
-            query: 'UPDATE users SET name = @@first name@@;',
+            query: 'UPDATE users SET name = @@first name:string@@;',
           },
         ],
       },
@@ -2021,7 +2021,7 @@ describe('validateInvalidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id!$$;',
+            query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
           },
         ],
       },
@@ -2035,7 +2035,8 @@ describe('validateInvalidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM users WHERE country = &&country space&&;',
+            query:
+              'SELECT * FROM users WHERE country = &&country space:string&&;',
           },
         ],
       },
@@ -2049,7 +2050,7 @@ describe('validateInvalidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id&&;',
+            query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
           },
         ],
       },
@@ -2069,6 +2070,48 @@ describe('validateInvalidApisConfig', () => {
       },
       expected:
         '/apis/customQueries/0/query: unclosed magic variable delimiter "@@"',
+    },
+    {
+      name: 'Multiple datatype declarations',
+      patch: {
+        customQueries: [
+          {
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+    },
+    {
+      name: 'Invalid datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name:varchar@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+    },
+    {
+      name: 'Missing datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name@@;',
+          },
+        ],
+      },
+      expected:
+        '/apis/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
@@ -2124,7 +2167,7 @@ describe('validateValidApisConfig', () => {
             method: 'POST',
             path: '/update-user',
             query:
-              "UPDATE users SET name = '@@name@@', age = @@age@@ WHERE id = $$id$$ AND status = '&&status&&';",
+              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@ WHERE id = $$id:integer$$ AND status = '&&status:string&&';",
           },
         ],
       },
@@ -2137,7 +2180,20 @@ describe('validateValidApisConfig', () => {
             method: 'GET',
             path: '/search',
             query:
-              'SELECT * FROM users WHERE id = $$id$$ AND category = &&cat&&;',
+              'SELECT * FROM users WHERE id = $$id:integer$$ AND category = &&cat:string&&;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid typed variables in POST query',
+      patch: {
+        customQueries: [
+          {
+            method: 'POST',
+            path: '/update-user',
+            query:
+              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@, updated_at = '@@updated_at:datetime@@' WHERE id = $$id:integer$$ AND status = &&status:boolean&&;",
           },
         ],
       },

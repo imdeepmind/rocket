@@ -5,7 +5,7 @@ import responsePlugin from '@/plugin/response';
 
 import {registerModelRoutes} from '@/routes';
 
-import {DatabaseConfig, ModelConfig} from '@/schema/config';
+import {ApisConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
 
 export const mockModels: ModelConfig[] = [
   {
@@ -35,12 +35,13 @@ export const sqliteConfig: DatabaseConfig = {
 export async function createTestApp(
   dbConfig: DatabaseConfig,
   models: ModelConfig[] = [],
+  apis?: ApisConfig,
 ): Promise<FastifyInstance> {
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
-  if (models.length > 0) {
-    registerModelRoutes(fastify, models);
+  if (models.length > 0 || apis) {
+    registerModelRoutes(fastify, models, apis);
   }
   await fastify.ready();
   return fastify;
