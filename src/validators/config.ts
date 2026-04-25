@@ -794,6 +794,13 @@ function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
         `${path}: webhook must have at least one of triggerOnRequest or triggerOnResponse`,
       );
     }
+
+    // data resp cannot be used when triggerOnRequest is true
+    if (webhook.triggerOnRequest && webhook.data.includes('resp')) {
+      errors.push(
+        `${path}: data resp cannot be used when triggerOnRequest is true`,
+      );
+    }
   });
 
   return errors;
@@ -954,6 +961,27 @@ function validateApisConstraints(config: AppConfig): string[] {
         errors.push(`apis${error}`);
       });
     }
+
+    // validate the webhooks in modelAPIs
+    Object.keys(config.apis.modelAPIs).forEach((modelName, mi) => {
+      const modelConfig = config.apis!.modelAPIs![modelName];
+      Object.entries(modelConfig).forEach(([operation, opConfig]) => {
+        if (
+          opConfig &&
+          (opConfig as unknown as {webhooks?: unknown}).webhooks
+        ) {
+          const webhookErrors = validateWebhookConstraints(
+            (opConfig as unknown as {webhooks?: unknown})
+              .webhooks as WebhookConfig[],
+          );
+          if (webhookErrors.length > 0) {
+            webhookErrors.forEach(error => {
+              errors.push(`apis/apis/modelAPIs/${mi}/${operation}${error}`);
+            });
+          }
+        }
+      });
+    });
   }
 
   return errors;

@@ -2803,6 +2803,27 @@ describe('validateInvalidModelAPIsConfig', () => {
       },
       expected: 'apis/apis/modelAPIs/0: model does not exist',
     },
+    {
+      name: 'invalid data resp cannot be used when triggerOnRequest is true',
+      patch: {
+        modelAPIs: {
+          User: {
+            aggregate: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+          },
+        },
+      },
+      expected:
+        'apis/apis/modelAPIs/0/aggregate/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+    },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -2829,7 +2850,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2839,7 +2860,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2849,7 +2870,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2859,7 +2880,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2869,7 +2890,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2879,7 +2900,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],
@@ -2889,7 +2910,7 @@ describe('validateValidModelAPIsConfig', () => {
                 {
                   url: 'https://google.com',
                   data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
+                  triggerOnRequest: false,
                   triggerOnResponse: true,
                 },
               ],

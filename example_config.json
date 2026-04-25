@@ -162,7 +162,7 @@
                     {
                         "url": "https://example.com",
                         "data": ["query", "body", "params", "resp"],
-                        "triggerOnRequest": true,
+                        "triggerOnRequest": false,
                         "triggerOnResponse": true
                     }
                 ]
@@ -175,7 +175,7 @@
                         {
                             "url": "https://example.com",
                             "data": ["query", "body", "params", "resp"],
-                            "triggerOnRequest": true,
+                            "triggerOnRequest": false,
                             "triggerOnResponse": true
                         }
                     ]
