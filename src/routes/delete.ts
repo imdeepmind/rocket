@@ -5,9 +5,10 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ModelConfig} from '@/schema/config';
+import {ApisConfig, ModelConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register DELETE routes for deletable fields.
@@ -20,6 +21,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerDeleteRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   // We're iterating over all models provided in the configuration.
   // For each model, we'll check if there are any fields that support the 'deletable' operation.
@@ -63,6 +65,24 @@ export function registerDeleteRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
+          preHandler: async request => {
+            await callWebhook(
+              'request',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              null,
+              app.log,
+            );
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              payload,
+              app.log,
+            );
+          },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
           // extracting the parameter value from the request

@@ -9,9 +9,10 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {ModelConfig} from '@/schema/config';
+import {ApisConfig, ModelConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register GET_ALL routes for listing records (table-level).
@@ -27,6 +28,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerGetAllRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   for (const model of models) {
     const queryProperties: Record<string, object> = {};
@@ -89,6 +91,24 @@ export function registerGetAllRoutes(
       `/${model.name}/`,
       {
         schema,
+        preHandler: async request => {
+          await callWebhook(
+            'request',
+            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            request,
+            null,
+            app.log,
+          );
+        },
+        onSend: async (request, _, payload) => {
+          await callWebhook(
+            'response',
+            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            request,
+            payload,
+            app.log,
+          );
+        },
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
         const queryParams = request.query as Record<string, unknown>;

@@ -2,9 +2,14 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {ModelConfig, SupportedAggregationOperation} from '@/schema/config';
+import {
+  ApisConfig,
+  ModelConfig,
+  SupportedAggregationOperation,
+} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.
@@ -18,6 +23,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerAggregateRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   for (const model of models) {
     // We only create an aggregation route for fields that have non-empty supportedAggregation
@@ -73,6 +79,24 @@ export function registerAggregateRoutes(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
+          preHandler: async request => {
+            await callWebhook(
+              'request',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              null,
+              app.log,
+            );
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              payload,
+              app.log,
+            );
+          },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
           const query = request.query as Record<string, unknown>;

@@ -3,7 +3,7 @@
         "logLevel": "debug",
         "rateLimit": {
             "enabled": true,
-            "max": 10,
+            "max": 1000,
             "timeWindow": "15m",
             "useRedis": true
         }

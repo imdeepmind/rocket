@@ -6,9 +6,10 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {ModelBody, ModelConfig} from '@/schema/config';
+import {ApisConfig, ModelBody, ModelConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -21,6 +22,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerPostRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   for (const model of models) {
     // generating the JSON schema for the request body
@@ -45,6 +47,24 @@ export function registerPostRoutes(
       `/${model.name}/`,
       {
         schema,
+        preHandler: async request => {
+          await callWebhook(
+            'request',
+            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            request,
+            null,
+            app.log,
+          );
+        },
+        onSend: async (request, _, payload) => {
+          await callWebhook(
+            'response',
+            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            request,
+            payload,
+            app.log,
+          );
+        },
       },
       async (
         request: FastifyRequest<{Body: ModelBody}>,

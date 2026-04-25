@@ -23,21 +23,19 @@ import {ApisConfig, ModelConfig} from '@/schema/config';
  *   - AGGREGATE (fields with supportedAggregation)
  *   - POST (table-level, create record)
  *   - GET_ALL (table-level, list all records)
+ *   - CUSTOM_QUERIES (custom queries)
  */
 export function registerModelRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
   apis?: ApisConfig,
 ): void {
-  registerIndexRoutes(app, models);
-  registerSearchRoutes(app, models);
-  registerEditRoutes(app, models);
-  registerDeleteRoutes(app, models);
-  registerAggregateRoutes(app, models);
-  registerPostRoutes(app, models);
-  registerGetAllRoutes(app, models);
-
-  if (apis) {
-    registerCustomQueryRoutes(app, apis);
-  }
+  registerIndexRoutes(app, models, apis);
+  registerSearchRoutes(app, models, apis);
+  registerEditRoutes(app, models, apis);
+  registerDeleteRoutes(app, models, apis);
+  registerAggregateRoutes(app, models, apis);
+  registerPostRoutes(app, models, apis);
+  registerGetAllRoutes(app, models, apis);
+  registerCustomQueryRoutes(app, apis);
 }
