@@ -275,6 +275,33 @@ const modelSchema = {
   },
 };
 
+const webhookSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['url'],
+  properties: {
+    url: {
+      type: 'string',
+      pattern: '^https?:\\/\\/',
+    },
+    data: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['query', 'body', 'params', 'resp'],
+      },
+    },
+    triggerOnRequest: {
+      type: 'boolean',
+      default: false,
+    },
+    triggerOnResponse: {
+      type: 'boolean',
+      default: false,
+    },
+  },
+};
+
 const customQuerySchema = {
   type: 'object',
   required: ['method', 'path', 'query'],
@@ -292,6 +319,87 @@ const customQuerySchema = {
       type: 'string',
       minLength: 1,
     },
+    webhooks: {
+      type: 'array',
+      items: webhookSchema,
+    },
+  },
+};
+
+const modelAPISchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    aggregate: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    delete: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    edit: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    'get-all': {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    index: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    post: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
+    search: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+        },
+      },
+    },
   },
 };
 
@@ -302,6 +410,10 @@ const apisSchema = {
     customQueries: {
       type: 'array',
       items: customQuerySchema,
+    },
+    modelAPIs: {
+      type: 'object',
+      additionalProperties: modelAPISchema,
     },
   },
 };
