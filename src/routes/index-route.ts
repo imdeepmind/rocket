@@ -10,9 +10,10 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {ModelConfig} from '@/schema/config';
+import {ApisConfig, ModelConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register INDEX routes for indexed fields.
@@ -26,6 +27,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerIndexRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   for (const model of models) {
     // Determine which fields need an index route
@@ -147,7 +149,27 @@ export function registerIndexRoutes(
 
       app.get(
         `/${model.name}/${field.name}/:${field.name}`,
-        {schema},
+        {
+          schema,
+          preHandler: async request => {
+            await callWebhook(
+              'request',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              null,
+              app.log,
+            );
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              payload,
+              app.log,
+            );
+          },
+        },
         async (request: FastifyRequest, reply: FastifyReply) => {
           // extracting the parameters
           const queryParams = request.query as Record<string, unknown>;

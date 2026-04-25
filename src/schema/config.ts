@@ -50,6 +50,7 @@ export type JsonSchemaObject = {
   required?: string[];
   [key: string]: unknown;
 };
+export type WebhookData = 'query' | 'body' | 'params' | 'resp';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -133,14 +134,47 @@ export interface ApplicationConfig {
   rateLimit?: RateLimitConfig;
 }
 
+export interface WebhookConfig {
+  url: string;
+  data: WebhookData[];
+  triggerOnRequest: boolean;
+  triggerOnResponse: boolean;
+}
+
 export interface CustomQueryConfig {
   method: HTTPMethod;
   path: string;
   query: string;
+  webhooks?: WebhookConfig[];
+}
+
+export interface ModelAPIConfig {
+  aggregate?: {
+    webhooks?: WebhookConfig[];
+  };
+  delete?: {
+    webhooks?: WebhookConfig[];
+  };
+  edit?: {
+    webhooks?: WebhookConfig[];
+  };
+  ['get-all']?: {
+    webhooks?: WebhookConfig[];
+  };
+  index?: {
+    webhooks?: WebhookConfig[];
+  };
+  post?: {
+    webhooks?: WebhookConfig[];
+  };
+  search?: {
+    webhooks?: WebhookConfig[];
+  };
 }
 
 export interface ApisConfig {
   customQueries?: CustomQueryConfig[];
+  modelAPIs?: Record<string, ModelAPIConfig>;
 }
 
 export interface AppConfig {

@@ -7,9 +7,10 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ModelBody, ModelConfig} from '@/schema/config';
+import {ApisConfig, ModelBody, ModelConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
 
 /**
  * Register EDIT routes for editable fields.
@@ -25,6 +26,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 export function registerEditRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
+  apis?: ApisConfig,
 ): void {
   for (const model of models) {
     // identifying fields that are marked as editable in the configuration
@@ -186,13 +188,53 @@ export function registerEditRoutes(
 
       app.patch(
         `/${model.name}/${field.name}/:${field.name}`,
-        {schema: buildRouteSchema('PATCH')},
+        {
+          schema: buildRouteSchema('PATCH'),
+          preHandler: async request => {
+            await callWebhook(
+              'request',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              null,
+              app.log,
+            );
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              payload,
+              app.log,
+            );
+          },
+        },
         handleEditRequest,
       );
 
       app.put(
         `/${model.name}/${field.name}/:${field.name}`,
-        {schema: buildRouteSchema('PUT')},
+        {
+          schema: buildRouteSchema('PUT'),
+          preHandler: async request => {
+            await callWebhook(
+              'request',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              null,
+              app.log,
+            );
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              request,
+              payload,
+              app.log,
+            );
+          },
+        },
         handleEditRequest,
       );
     }

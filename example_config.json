@@ -3,7 +3,7 @@
         "logLevel": "debug",
         "rateLimit": {
             "enabled": true,
-            "max": 10,
+            "max": 1000,
             "timeWindow": "15m",
             "useRedis": true
         }
@@ -157,8 +157,30 @@
             {
                 "method": "POST",
                 "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;",
+                "webhooks": [
+                    {
+                        "url": "https://example.com",
+                        "data": ["query", "body", "params", "resp"],
+                        "triggerOnRequest": false,
+                        "triggerOnResponse": true
+                    }
+                ]
             }
-        ]
+        ],
+        "modelAPIs": {
+            "users": {
+                "aggregate": {
+                    "webhooks": [
+                        {
+                            "url": "https://example.com",
+                            "data": ["query", "body", "params", "resp"],
+                            "triggerOnRequest": false,
+                            "triggerOnResponse": true
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

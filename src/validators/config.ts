@@ -1,13 +1,18 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-import {AppConfig, JsonSchemaObject, JsonSchemaProperty} from '@/schema/config';
+import {
+  AppConfig,
+  JsonSchemaObject,
+  JsonSchemaProperty,
+  WebhookConfig,
+} from '@/schema/config';
 
 const ajv = new Ajv({
   allErrors: true,
-  removeAdditional: 'all',
+  removeAdditional: false,
   useDefaults: true,
-  coerceTypes: true,
+  coerceTypes: false,
   strict: true,
 });
 
@@ -275,6 +280,34 @@ const modelSchema = {
   },
 };
 
+const webhookSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['url'],
+  properties: {
+    url: {
+      type: 'string',
+      pattern: '^https?:\\/\\/',
+    },
+    data: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['query', 'body', 'params', 'resp'],
+      },
+      minItems: 1,
+    },
+    triggerOnRequest: {
+      type: 'boolean',
+      default: false,
+    },
+    triggerOnResponse: {
+      type: 'boolean',
+      default: false,
+    },
+  },
+};
+
 const customQuerySchema = {
   type: 'object',
   required: ['method', 'path', 'query'],
@@ -292,6 +325,95 @@ const customQuerySchema = {
       type: 'string',
       minLength: 1,
     },
+    webhooks: {
+      type: 'array',
+      items: webhookSchema,
+    },
+  },
+};
+
+const modelAPISchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    aggregate: {
+      type: 'object',
+      required: ['webhooks'],
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    delete: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    edit: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    'get-all': {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    index: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    post: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
+    search: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+    },
   },
 };
 
@@ -302,6 +424,10 @@ const apisSchema = {
     customQueries: {
       type: 'array',
       items: customQuerySchema,
+    },
+    modelAPIs: {
+      type: 'object',
+      additionalProperties: modelAPISchema,
     },
   },
 };
@@ -657,113 +783,206 @@ function validateCacheDbConstraints(config: AppConfig): string[] {
   return errors;
 }
 
-function validateApisConstraints(config: AppConfig): string[] {
+function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   const errors: string[] = [];
-  if (!config.apis || !config.apis.customQueries) return errors;
 
-  config.apis.customQueries.forEach((cq, i) => {
-    const path = `/apis/customQueries/${i}`;
-
-    const q = cq.query.trim().toUpperCase();
-
-    // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
-    const ddlPrefixes = ['CREATE ', 'ALTER ', 'DROP ', 'TRUNCATE ', 'RENAME '];
-    if (ddlPrefixes.some(prefix => q.startsWith(prefix))) {
-      errors.push(`${path}/query: DDL queries are not allowed`);
-      return;
+  webhooks.forEach((webhook, i) => {
+    const path = `/webhooks/${i}`;
+    // make sure atleast triggerOnRequest or triggerOnResponse is true
+    if (!webhook.triggerOnRequest && !webhook.triggerOnResponse) {
+      errors.push(
+        `${path}: webhook must have at least one of triggerOnRequest or triggerOnResponse`,
+      );
     }
 
-    const isDql = q.startsWith('SELECT ') || q.startsWith('WITH ');
-    const dmlPrefixes = ['INSERT ', 'UPDATE ', 'DELETE '];
-    const isDml = dmlPrefixes.some(prefix => q.startsWith(prefix));
-
-    if (cq.method === 'GET') {
-      if (!isDql) {
-        errors.push(
-          `${path}/query: only DQL queries are allowed for GET method`,
-        );
-      }
-    } else {
-      if (!isDql && !isDml) {
-        errors.push(`${path}/query: only DQL and DML queries are allowed`);
-      }
-    }
-
-    // Magic variables validation
-    const delims = ['@@', '$$', '&&'];
-    const foundDelims: {pos: number; type: string}[] = [];
-
-    delims.forEach(d => {
-      let pos = cq.query.indexOf(d);
-      while (pos !== -1) {
-        foundDelims.push({pos, type: d});
-        pos = cq.query.indexOf(d, pos + 2);
-      }
-    });
-
-    foundDelims.sort((a, b) => a.pos - b.pos);
-
-    for (let i = 0; i < foundDelims.length; i += 2) {
-      const start = foundDelims[i];
-      const end = foundDelims[i + 1];
-
-      if (!end) {
-        errors.push(
-          `${path}/query: unclosed magic variable delimiter "${start.type}"`,
-        );
-        break;
-      }
-
-      if (start.type !== end.type) {
-        errors.push(
-          `${path}/query: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
-        );
-        continue;
-      }
-
-      const varString = cq.query.substring(start.pos + 2, end.pos);
-      const parts = varString.split(':');
-      const varName = parts[0];
-      const varType = parts[1];
-      const typeName =
-        start.type === '@@'
-          ? 'body (@@)'
-          : start.type === '$$'
-            ? 'path ($$)'
-            : 'query (&&)';
-
-      // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
-      if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
-        errors.push(
-          `${path}/query: invalid magic variable name "${varName}" for ${typeName} parameter`,
-        );
-      }
-
-      // 2. Validate datatype
-      if (parts.length > 2) {
-        errors.push(
-          `${path}/query: invalid magic variable format "${varString}", multiple types provided`,
-        );
-      } else if (!varType) {
-        errors.push(
-          `${path}/query: missing data type for magic variable "${varName}" in ${typeName} parameter`,
-        );
-      } else if (
-        !['integer', 'string', 'boolean', 'text', 'datetime'].includes(varType)
-      ) {
-        errors.push(
-          `${path}/query: invalid magic variable type "${varType}" for ${typeName} parameter`,
-        );
-      }
-
-      // 3. GET method should not have body magic variables (@@)
-      if (cq.method === 'GET' && start.type === '@@') {
-        errors.push(
-          `${path}/query: body magic variables (@@) are not allowed for GET method`,
-        );
-      }
+    // data resp cannot be used when triggerOnRequest is true
+    if (webhook.triggerOnRequest && webhook.data.includes('resp')) {
+      errors.push(
+        `${path}: data resp cannot be used when triggerOnRequest is true`,
+      );
     }
   });
+
+  return errors;
+}
+
+function validateModelNameInModelAPIs(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  // extra all the model names
+  const modelNames = config.models.map(m => m.name);
+
+  // iterate through all modelAPIs and check the name
+  const modelAPIs = config.apis?.modelAPIs ?? {};
+  Object.keys(modelAPIs).forEach((modelName, i) => {
+    const path = `/apis/modelAPIs/${i}`;
+
+    if (!modelNames.includes(modelName)) {
+      errors.push(`${path}: model does not exist`);
+    }
+  });
+
+  return errors;
+}
+
+function validateApisConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+  if (!config.apis) return errors;
+
+  if (config.apis.customQueries) {
+    config.apis.customQueries.forEach((cq, i) => {
+      const path = `/apis/customQueries/${i}`;
+
+      const q = cq.query.trim().toUpperCase();
+
+      // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
+      const ddlPrefixes = [
+        'CREATE ',
+        'ALTER ',
+        'DROP ',
+        'TRUNCATE ',
+        'RENAME ',
+      ];
+      if (ddlPrefixes.some(prefix => q.startsWith(prefix))) {
+        errors.push(`${path}/query: DDL queries are not allowed`);
+        return;
+      }
+
+      const isDql = q.startsWith('SELECT ') || q.startsWith('WITH ');
+      const dmlPrefixes = ['INSERT ', 'UPDATE ', 'DELETE '];
+      const isDml = dmlPrefixes.some(prefix => q.startsWith(prefix));
+
+      if (cq.method === 'GET') {
+        if (!isDql) {
+          errors.push(
+            `${path}/query: only DQL queries are allowed for GET method`,
+          );
+        }
+      } else {
+        if (!isDql && !isDml) {
+          errors.push(`${path}/query: only DQL and DML queries are allowed`);
+        }
+      }
+
+      // Magic variables validation
+      const delims = ['@@', '$$', '&&'];
+      const foundDelims: {pos: number; type: string}[] = [];
+
+      delims.forEach(d => {
+        let pos = cq.query.indexOf(d);
+        while (pos !== -1) {
+          foundDelims.push({pos, type: d});
+          pos = cq.query.indexOf(d, pos + 2);
+        }
+      });
+
+      foundDelims.sort((a, b) => a.pos - b.pos);
+
+      for (let i = 0; i < foundDelims.length; i += 2) {
+        const start = foundDelims[i];
+        const end = foundDelims[i + 1];
+
+        if (!end) {
+          errors.push(
+            `${path}/query: unclosed magic variable delimiter "${start.type}"`,
+          );
+          break;
+        }
+
+        if (start.type !== end.type) {
+          errors.push(
+            `${path}/query: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
+          );
+          continue;
+        }
+
+        const varString = cq.query.substring(start.pos + 2, end.pos);
+        const parts = varString.split(':');
+        const varName = parts[0];
+        const varType = parts[1];
+        const typeName =
+          start.type === '@@'
+            ? 'body (@@)'
+            : start.type === '$$'
+              ? 'path ($$)'
+              : 'query (&&)';
+
+        // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
+        if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
+          errors.push(
+            `${path}/query: invalid magic variable name "${varName}" for ${typeName} parameter`,
+          );
+        }
+
+        // 2. Validate datatype
+        if (parts.length > 2) {
+          errors.push(
+            `${path}/query: invalid magic variable format "${varString}", multiple types provided`,
+          );
+        } else if (!varType) {
+          errors.push(
+            `${path}/query: missing data type for magic variable "${varName}" in ${typeName} parameter`,
+          );
+        } else if (
+          !['integer', 'string', 'boolean', 'text', 'datetime'].includes(
+            varType,
+          )
+        ) {
+          errors.push(
+            `${path}/query: invalid magic variable type "${varType}" for ${typeName} parameter`,
+          );
+        }
+
+        // 3. GET method should not have body magic variables (@@)
+        if (cq.method === 'GET' && start.type === '@@') {
+          errors.push(
+            `${path}/query: body magic variables (@@) are not allowed for GET method`,
+          );
+        }
+      }
+
+      // validate the webhook
+      if (cq.webhooks) {
+        const webhookErrors = validateWebhookConstraints(cq.webhooks);
+        if (webhookErrors.length > 0) {
+          webhookErrors.forEach(error => {
+            errors.push(`${path}${error}`);
+          });
+        }
+      }
+    });
+  }
+
+  // validate the modelAPIs
+  if (config.apis?.modelAPIs) {
+    const modelAPIErrors = validateModelNameInModelAPIs(config);
+    if (modelAPIErrors.length > 0) {
+      modelAPIErrors.forEach(error => {
+        errors.push(`apis${error}`);
+      });
+    }
+
+    // validate the webhooks in modelAPIs
+    Object.keys(config.apis.modelAPIs).forEach((modelName, mi) => {
+      const modelConfig = config.apis!.modelAPIs![modelName];
+      Object.entries(modelConfig).forEach(([operation, opConfig]) => {
+        if (
+          opConfig &&
+          (opConfig as unknown as {webhooks?: unknown}).webhooks
+        ) {
+          const webhookErrors = validateWebhookConstraints(
+            (opConfig as unknown as {webhooks?: unknown})
+              .webhooks as WebhookConfig[],
+          );
+          if (webhookErrors.length > 0) {
+            webhookErrors.forEach(error => {
+              errors.push(`apis/apis/modelAPIs/${mi}/${operation}${error}`);
+            });
+          }
+        }
+      });
+    });
+  }
 
   return errors;
 }
