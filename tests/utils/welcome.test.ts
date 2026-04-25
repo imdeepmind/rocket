@@ -130,4 +130,53 @@ describe('welcome utility', () => {
     expect(output).toContain('UNKNOWN');
     expect(output).toContain('/unknown');
   });
+
+  test('showWelcomeScreen handles cache_db and rateLimit', () => {
+    const fullConfig: AppConfig = {
+      ...mockConfig,
+      cache_db: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost'},
+      },
+      application: {
+        logLevel: 'info',
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: true,
+        },
+      },
+    };
+
+    showWelcomeScreen(fullConfig, 3000, mockRoutes);
+
+    const calls = consoleSpy.mock.calls.map((call: unknown[]) => call[0]);
+    const output = calls.join('\n');
+
+    expect(output).toContain('Cache DB:    REDIS');
+    expect(output).toContain('Rate Limit:  100 req / 15m');
+  });
+
+  test('showWelcomeScreen handles disabled rateLimit', () => {
+    const disabledRateLimitConfig: AppConfig = {
+      ...mockConfig,
+      application: {
+        logLevel: 'info',
+        rateLimit: {
+          enabled: false,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+    };
+
+    showWelcomeScreen(disabledRateLimitConfig, 3000, mockRoutes);
+
+    const calls = consoleSpy.mock.calls.map((call: unknown[]) => call[0]);
+    const output = calls.join('\n');
+
+    expect(output).toContain('Rate Limit:  Disabled');
+  });
 });
