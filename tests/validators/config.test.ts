@@ -2834,6 +2834,66 @@ describe('validateValidModelAPIsConfig', () => {
                 },
               ],
             },
+            delete: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+            edit: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+            'get-all': {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+            index: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+            post: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
+            search: {
+              webhooks: [
+                {
+                  url: 'https://google.com',
+                  data: ['query', 'body', 'params', 'resp'],
+                  triggerOnRequest: true,
+                  triggerOnResponse: true,
+                },
+              ],
+            },
           },
         },
       },
