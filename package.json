@@ -6,13 +6,16 @@
   "directories": {
     "test": "test"
   },
+  "bin": {
+    "ross": "./build/src/main.js"
+  },
   "scripts": {
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "lint:check": "gts lint",
     "lint:write": "gts fix",
     "clean": "gts clean",
-    "compile": "tsc",
+    "compile": "tsc && tsc-alias",
     "dev": "tsx watch ./src/main.ts",
     "prepare": "husky",
     "pretest": "npm run compile",
@@ -43,6 +46,7 @@
     "gts": "^7.0.0",
     "husky": "^9.1.7",
     "pino-pretty": "^10.0.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vitest": "^4.1.2"
