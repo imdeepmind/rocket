@@ -2,6 +2,8 @@ import {DatabaseQuery, StructuredResponse} from '@/schema';
 
 import 'fastify';
 
+import type Redis from 'ioredis';
+
 declare module 'fastify' {
   interface FastifyInstance {
     db: DatabaseQuery;
@@ -11,5 +13,6 @@ declare module 'fastify' {
       data: T,
       raw_data?: R,
     ) => StructuredResponse<T, R>;
+    redis?: Redis;
   }
 }

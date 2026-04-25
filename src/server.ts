@@ -9,6 +9,8 @@ import Fastify, {
 
 import migrateDatabase from '@/migrator';
 import dbPlugin from '@/plugin/database';
+import rateLimitPlugin from '@/plugin/rate-limit';
+import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
 
 import {registerModelRoutes} from '@/routes';
@@ -84,6 +86,24 @@ export async function startServer(
 
   // config-driven DB
   await app.register(dbPlugin, config.database);
+
+  // config-driven Redis cache (if configured)
+  if (config.cache_db) {
+    await app.register(redisPlugin, config.cache_db);
+  }
+
+  // config-driven rate limit
+  if (config.application.rateLimit) {
+    const redis =
+      config.cache_db && config.application.rateLimit.useRedis
+        ? app.redis
+        : undefined;
+    await app.register(rateLimitPlugin, {
+      rateLimit: config.application.rateLimit,
+      redis,
+    });
+  }
+
   await app.register(responsePlugin);
 
   // migrate the db based on config

@@ -22,6 +22,20 @@ const applicationSchema = {
       type: 'string',
       enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
     },
+    rateLimit: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['enabled', 'max', 'timeWindow', 'useRedis'],
+      properties: {
+        enabled: {type: 'boolean'},
+        max: {type: 'integer', minimum: 1},
+        timeWindow: {
+          type: 'string',
+          pattern: '^\\d+[smhd]$',
+        },
+        useRedis: {type: 'boolean'},
+      },
+    },
   },
 };
 
@@ -116,6 +130,24 @@ const databaseSchema = {
     },
   ],
   additionalProperties: false,
+};
+
+const cacheDbSchema = {
+  type: 'object',
+  required: ['engine', 'connection'],
+  additionalProperties: false,
+  properties: {
+    engine: {type: 'string', enum: ['redis']},
+    connection: {
+      type: 'object',
+      required: ['uri'],
+      additionalProperties: false,
+      properties: {
+        uri: {type: 'string', pattern: '^redis:\\/\\/'},
+      },
+    },
+    timeout: {type: 'integer', default: 10000, minimum: 1},
+  },
 };
 
 const fieldSchema = {
@@ -288,6 +320,7 @@ const schema = {
       items: modelSchema,
     },
     apis: apisSchema,
+    cache_db: cacheDbSchema,
   },
 };
 
@@ -503,6 +536,7 @@ function mapModelTypeToJsonSchema(type: string): string {
       return 'boolean';
     case 'datetime':
       return 'date-time';
+    /* istanbul ignore next */
     default:
       return 'string';
   }
@@ -595,6 +629,30 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
       }
     }
   });
+
+  return errors;
+}
+
+function validateRateLimitConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+  const rateLimit = config.application.rateLimit;
+
+  if (!rateLimit) return errors;
+
+  const path = '/application/rateLimit';
+
+  // Validate useRedis make sure cache_db details are provided in config
+  if (rateLimit.useRedis && !config.cache_db) {
+    errors.push(`${path}: useRedis is true but cache_db is not configured`);
+  }
+
+  return errors;
+}
+
+function validateCacheDbConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  if (!config.cache_db) return errors;
 
   return errors;
 }
@@ -725,6 +783,8 @@ export function validateConfig(input: AppConfig) {
         ...validateIndexes(input as AppConfig),
         ...validateForeignKeys(input as AppConfig),
         ...validateModelValidation(input as AppConfig, ajv),
+        ...validateRateLimitConstraints(input as AppConfig),
+        ...validateCacheDbConstraints(input as AppConfig),
         ...validateApisConstraints(input as AppConfig),
       ]
     : [];

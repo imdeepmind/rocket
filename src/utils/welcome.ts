@@ -105,7 +105,16 @@ export function showWelcomeScreen(
 
   const swaggerUrl = config.swagger.enabled
     ? `http://0.0.0.0:${port}${config.swagger.basePath}`
-    : 'Disabled';
+    : chalk.gray('Disabled');
+
+  const cacheDbStatus = config.cache_db
+    ? chalk.magenta(config.cache_db.engine.toUpperCase())
+    : chalk.gray('Disabled');
+
+  const rateLimit = config.application.rateLimit;
+  const rateLimitStatus = rateLimit?.enabled
+    ? chalk.green(`${rateLimit.max} req / ${rateLimit.timeWindow}`)
+    : chalk.gray('Disabled');
 
   console.log('  ' + chalk.cyan('System Status:'));
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
@@ -118,6 +127,8 @@ export function showWelcomeScreen(
       chalk.white('Database:    ') +
       chalk.magenta(config.database.engine.toUpperCase()),
   );
+  console.log('  ' + chalk.white('Cache DB:    ') + cacheDbStatus);
+  console.log('  ' + chalk.white('Rate Limit:  ') + rateLimitStatus);
   console.log(
     '  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length),
   );

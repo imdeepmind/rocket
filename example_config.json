@@ -1,6 +1,12 @@
 {
     "application": {
-        "logLevel": "debug"
+        "logLevel": "debug",
+        "rateLimit": {
+            "enabled": true,
+            "max": 10,
+            "timeWindow": "15m",
+            "useRedis": true
+        }
     },
     "swagger": {
         "enabled": true,
@@ -27,6 +33,14 @@
             "urlOrPath": "env:DB"
         },
         "dbTimeout": 10000
+    },
+    "cache_db": {
+        "engine": "redis",
+        "connection": {
+            "uri": "redis://localhost:6379"
+        },
+        "timeout": 
+        5000
     },
     "models": [
         {

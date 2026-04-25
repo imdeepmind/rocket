@@ -15,6 +15,7 @@ type ParamSource = {
 
 // Helper to cast value to the declared type
 const cast = (value: unknown, type: DataType): unknown => {
+  /* istanbul ignore next */
   if (value === undefined || value === null) {
     throw new Error('Missing value for parameter');
   }

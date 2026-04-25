@@ -2207,3 +2207,333 @@ describe('validateValidApisConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+// ----- Rate Limit Config Tests -----
+
+describe('validateRateLimitConfig', () => {
+  it.each([
+    {
+      name: 'enabled as string instead of boolean',
+      patch: {
+        rateLimit: {
+          enabled: 'asdasdas',
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/enabled must be boolean',
+    },
+    {
+      name: 'max as negative integer',
+      patch: {
+        rateLimit: {enabled: true, max: -5, timeWindow: '15m', useRedis: false},
+      },
+      expected: '/application/rateLimit/max must be >= 1',
+    },
+    {
+      name: 'max as zero',
+      patch: {
+        rateLimit: {enabled: true, max: 0, timeWindow: '15m', useRedis: false},
+      },
+      expected: '/application/rateLimit/max must be >= 1',
+    },
+    {
+      name: 'max as string',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 'sadfg',
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/max must be integer',
+    },
+    {
+      name: 'timeWindow with invalid format (no unit)',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: '15', useRedis: false},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'timeWindow with invalid format (wrong unit)',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15x',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'timeWindow with invalid format (no number)',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: 'm', useRedis: false},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'useRedis as string instead of boolean',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: 'asdasdassadas',
+        },
+      },
+      expected: '/application/rateLimit/useRedis must be boolean',
+    },
+    {
+      name: 'missing enabled property',
+      patch: {
+        rateLimit: {
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'enabled'",
+    },
+    {
+      name: 'missing max property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          timeWindow: '15m',
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'max'",
+    },
+    {
+      name: 'missing timeWindow property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected:
+        "/application/rateLimit must have required property 'timeWindow'",
+    },
+    {
+      name: 'missing useRedis property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'useRedis'",
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'valid rate limit with seconds',
+      patch: {
+        rateLimit: {enabled: true, max: 50, timeWindow: '30s', useRedis: false},
+      },
+    },
+    {
+      name: 'valid rate limit with minutes',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+    },
+    {
+      name: 'valid rate limit with hours',
+      patch: {
+        rateLimit: {enabled: true, max: 1000, timeWindow: '1h', useRedis: true},
+      },
+    },
+    {
+      name: 'valid rate limit with days',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 10000,
+          timeWindow: '7d',
+          useRedis: true,
+        },
+      },
+    },
+    {
+      name: 'rate limit disabled',
+      patch: {
+        rateLimit: {
+          enabled: false,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+      cache_db: {
+        engine: 'redis',
+        connection: {
+          uri: 'redis://localhost:6379',
+        },
+        timeout: 5000,
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Cache DB Config Tests -----
+
+describe('validateCacheDbConfig', () => {
+  it.each([
+    {
+      name: 'engine as invalid value',
+      patch: {engine: 'memcached', connection: {uri: 'redis://localhost:6379'}},
+      expected: '/cache_db/engine must be equal to one of the allowed values',
+    },
+    {
+      name: 'connection uri with invalid format (http)',
+      patch: {engine: 'redis', connection: {uri: 'http://localhost:6379'}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'connection uri without protocol',
+      patch: {engine: 'redis', connection: {uri: 'localhost:6379'}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'connection uri empty string',
+      patch: {engine: 'redis', connection: {uri: ''}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'timeout as negative integer',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: -100,
+      },
+      expected: '/cache_db/timeout must be >= 1',
+    },
+    {
+      name: 'timeout as zero',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: 0,
+      },
+      expected: '/cache_db/timeout must be >= 1',
+    },
+    {
+      name: 'missing required engine',
+      patch: {
+        connection: {uri: 'redis://localhost:6379'},
+      } as unknown as typeof validBaseConfig,
+      expected: "/cache_db must have required property 'engine'",
+    },
+    {
+      name: 'missing required connection',
+      patch: {engine: 'redis'} as unknown as typeof validBaseConfig,
+      expected: "/cache_db must have required property 'connection'",
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'valid cache_db with redis localhost',
+      patch: {engine: 'redis', connection: {uri: 'redis://localhost:6379'}},
+    },
+    {
+      name: 'valid cache_db with redis and timeout',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: 5000,
+      },
+    },
+    {
+      name: 'valid cache_db with redis remote host',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://redis.example.com:6379'},
+      },
+    },
+    {
+      name: 'valid cache_db with redis and password',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://:mypassword@localhost:6379'},
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Optional Cache DB Config Tests -----
+
+describe('validateCacheDbOptional', () => {
+  it('cache_db is completely optional and config should validate', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('config without cache_db and without rateLimit should validate', () => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        logLevel: 'info',
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
