@@ -7,6 +7,8 @@ import {
 
 import {ApisConfig, DataType} from '@/schema/config';
 
+import {callWebhook} from '@/utils/webhook';
+
 type ParamSource = {
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
@@ -186,6 +188,24 @@ export function registerCustomQueryRoutes(
       method: cq.method,
       url: routePath,
       schema,
+      preHandler: async request => {
+        await callWebhook(
+          'request',
+          cq.webhooks ? cq.webhooks : null,
+          request,
+          null,
+          app.log,
+        );
+      },
+      onSend: async (request, _, payload) => {
+        await callWebhook(
+          'response',
+          cq.webhooks ? cq.webhooks : null,
+          request,
+          payload,
+          app.log,
+        );
+      },
       handler: async (request: FastifyRequest, reply: FastifyReply) => {
         // extract the body, path, and query parameters from the request
         const params = request.params as Record<string, unknown>;
