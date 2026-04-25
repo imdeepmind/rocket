@@ -343,11 +343,143 @@ describe('Server', () => {
         }),
       );
     });
+
+    it('should default to 500 if an invalid status code is provided with an error code (hits line 148)', () => {
+      const err = createError('Bad error', 'SOME_CODE', 200);
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+    });
   });
 
   it('should return the app instance and routes', async () => {
     const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
     expect(Array.isArray(routes)).toBe(true);
+  });
+
+  describe('Redis and Rate Limit Configuration', () => {
+    it('should register redis plugin when cache_db is configured', async () => {
+      const configWithRedis: AppConfig = {
+        ...mockConfig,
+        cache_db: {
+          engine: 'redis',
+          connection: {uri: 'redis://localhost:6379'},
+          timeout: 5000,
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithRedis, 3000, 'dev');
+
+      // Verify redis plugin was registered
+      const redisRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
+      );
+      expect(redisRegistration).toBeDefined();
+    });
+
+    it('should not register redis plugin when cache_db is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Verify redis plugin was not registered
+      const redisRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
+      );
+      expect(redisRegistration).toBeUndefined();
+    });
+
+    it('should register rate-limit plugin when rateLimit is configured', async () => {
+      const configWithRateLimit: AppConfig = {
+        ...mockConfig,
+        application: {
+          logLevel: 'info',
+          rateLimit: {
+            enabled: true,
+            max: 100,
+            timeWindow: '15m',
+            useRedis: false,
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithRateLimit, 3000, 'dev');
+
+      // Verify rate-limit plugin was registered
+      const rateLimitRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+      );
+      expect(rateLimitRegistration).toBeDefined();
+    });
+
+    it('should not register rate-limit plugin when rateLimit is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Verify rate-limit plugin was not registered
+      const rateLimitRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+      );
+      expect(rateLimitRegistration).toBeUndefined();
+    });
+
+    it('should pass redis client to rate-limit when both cache_db and rateLimit with useRedis are configured', async () => {
+      const configWithBoth: AppConfig = {
+        ...mockConfig,
+        cache_db: {
+          engine: 'redis',
+          connection: {uri: 'redis://localhost:6379'},
+          timeout: 5000,
+        },
+        application: {
+          logLevel: 'info',
+          rateLimit: {
+            enabled: true,
+            max: 100,
+            timeWindow: '15m',
+            useRedis: true,
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithBoth, 3000, 'dev');
+
+      // Verify rate-limit registration includes redis option
+      const rateLimitRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) =>
+          (call[1] as {rateLimit?: {useRedis?: boolean}})?.rateLimit
+            ?.useRedis === true,
+      );
+      expect(rateLimitRegistration).toBeDefined();
+    });
+
+    it('should disable rate-limit when enabled is false', async () => {
+      const configWithDisabledRateLimit: AppConfig = {
+        ...mockConfig,
+        application: {
+          logLevel: 'info',
+          rateLimit: {
+            enabled: false,
+            max: 100,
+            timeWindow: '15m',
+            useRedis: false,
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithDisabledRateLimit, 3000, 'dev');
+
+      // Verify rate-limit plugin was still registered but with enabled: false
+      const rateLimitRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) =>
+          (call[1] as {rateLimit?: {enabled?: boolean}})?.rateLimit?.enabled ===
+          false,
+      );
+      expect(rateLimitRegistration).toBeDefined();
+    });
   });
 });

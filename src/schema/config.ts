@@ -1,6 +1,7 @@
 import {HTTPMethod} from './index';
 
 export type DBEngine = 'sqlite' | 'pg';
+export type CacheDbEngine = 'redis';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
 export type LogLevel =
   | 'trace'
@@ -78,6 +79,21 @@ export interface DatabaseConfig {
   dbTimeout?: number;
 }
 
+export interface CacheDbConfig {
+  engine: CacheDbEngine;
+  connection: {
+    uri: string;
+  };
+  timeout?: number;
+}
+
+export interface RateLimitConfig {
+  enabled: boolean;
+  max: number;
+  timeWindow: string;
+  useRedis: boolean;
+}
+
 export interface ModelFieldConfig {
   name: string;
   type: DataType;
@@ -114,6 +130,7 @@ export interface ModelConfig {
 
 export interface ApplicationConfig {
   logLevel: LogLevel;
+  rateLimit?: RateLimitConfig;
 }
 
 export interface CustomQueryConfig {
@@ -132,4 +149,5 @@ export interface AppConfig {
   database: DatabaseConfig;
   models: ModelConfig[];
   apis?: ApisConfig;
+  cache_db?: CacheDbConfig;
 }
