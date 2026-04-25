@@ -82,7 +82,7 @@ describe('webhook utils', () => {
       const webhookConfig: WebhookConfig[] = [
         {
           url: 'https://example.com/webhook',
-          data: [],
+          data: ['resp'],
           triggerOnRequest: false,
           triggerOnResponse: true,
         },
@@ -202,10 +202,236 @@ describe('webhook utils', () => {
       const body = JSON.parse(callArgs[1].body);
 
       expect(body).toEqual({
+        body: undefined,
+        query: undefined,
+        params: undefined,
+        resp: undefined,
+      });
+    });
+
+    it('should send only specified data fields when data array contains specific fields', async () => {
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['body', 'resp'],
+          triggerOnRequest: true,
+          triggerOnResponse: false,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'request',
+        webhookConfig,
+        mockRequest,
+        {result: 'success'},
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: mockRequest.body,
+        query: undefined,
+        params: undefined,
+        resp: {result: 'success'},
+      });
+    });
+
+    it('should send only body when data array contains only body', async () => {
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['body'],
+          triggerOnRequest: true,
+          triggerOnResponse: false,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'request',
+        webhookConfig,
+        mockRequest,
+        null,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: mockRequest.body,
+        query: undefined,
+        params: undefined,
+        resp: undefined,
+      });
+    });
+
+    it('should send only query when data array contains only query', async () => {
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['query'],
+          triggerOnRequest: true,
+          triggerOnResponse: false,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'request',
+        webhookConfig,
+        mockRequest,
+        null,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: undefined,
+        query: mockRequest.query,
+        params: undefined,
+        resp: undefined,
+      });
+    });
+
+    it('should send only params when data array contains only params', async () => {
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['params'],
+          triggerOnRequest: true,
+          triggerOnResponse: false,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'request',
+        webhookConfig,
+        mockRequest,
+        null,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: undefined,
+        query: undefined,
+        params: mockRequest.params,
+        resp: undefined,
+      });
+    });
+
+    it('should send only resp when data array contains only resp', async () => {
+      const responsePayload = {success: true, message: 'Created'};
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['resp'],
+          triggerOnRequest: false,
+          triggerOnResponse: true,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'response',
+        webhookConfig,
+        mockRequest,
+        responsePayload,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: undefined,
+        query: undefined,
+        params: undefined,
+        resp: responsePayload,
+      });
+    });
+
+    it('should send all data fields when data array contains all field names', async () => {
+      const responsePayload = {success: true};
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['body', 'query', 'params', 'resp'],
+          triggerOnRequest: false,
+          triggerOnResponse: true,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'response',
+        webhookConfig,
+        mockRequest,
+        responsePayload,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
         body: mockRequest.body,
         query: mockRequest.query,
         params: mockRequest.params,
-        resp: null,
+        resp: responsePayload,
+      });
+    });
+
+    it('should handle combination of body and query', async () => {
+      const webhookConfig: WebhookConfig[] = [
+        {
+          url: 'https://example.com/webhook',
+          data: ['body', 'query'],
+          triggerOnRequest: true,
+          triggerOnResponse: false,
+        },
+      ];
+
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({ok: true});
+
+      await callWebhook(
+        'request',
+        webhookConfig,
+        mockRequest,
+        null,
+        mockLogger,
+      );
+
+      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body).toEqual({
+        body: mockRequest.body,
+        query: mockRequest.query,
+        params: undefined,
+        resp: undefined,
       });
     });
 

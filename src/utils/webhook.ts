@@ -45,17 +45,16 @@ export async function callWebhook(
   logger: FastifyInstance['log'],
 ): Promise<void> {
   if (!webhookConfigs?.length) return;
-
-  const webhookPayload: WebhookPayload = {
-    body: request.body,
-    query: request.query,
-    params: request.params,
-    resp: payload,
-  };
-
   const isRequestTrigger = trigger === 'request';
 
   for (const config of webhookConfigs) {
+    const dataToSend = config.data;
+    const webhookPayload: WebhookPayload = {
+      body: dataToSend.includes('body') ? request.body : undefined,
+      query: dataToSend.includes('query') ? request.query : undefined,
+      params: dataToSend.includes('params') ? request.params : undefined,
+      resp: dataToSend.includes('resp') ? payload : undefined,
+    };
     const shouldCall = isRequestTrigger
       ? config.triggerOnRequest
       : config.triggerOnResponse;
