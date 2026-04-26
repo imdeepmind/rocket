@@ -1,4 +1,4 @@
-import Ajv from 'ajv';
+import Ajv, {SchemaValidateFunction} from 'ajv';
 import addFormats from 'ajv-formats';
 
 import {
@@ -7,6 +7,8 @@ import {
   JsonSchemaProperty,
   WebhookConfig,
 } from '@/schema/config';
+
+import {validateEntityName} from './entity';
 
 const ajv = new Ajv({
   allErrors: true,
@@ -17,6 +19,28 @@ const ajv = new Ajv({
 });
 
 addFormats(ajv);
+
+ajv.addKeyword({
+  keyword: 'isEntityName',
+  type: 'string',
+  schema: false,
+  errors: true,
+  validate: function validate(data: string) {
+    try {
+      validateEntityName(data);
+      return true;
+    } catch (e: unknown) {
+      (validate as SchemaValidateFunction).errors = [
+        {
+          keyword: 'isEntityName',
+          message: (e as Error).message || 'Entity name is invalid',
+          params: {keyword: 'isEntityName'},
+        },
+      ];
+      return false;
+    }
+  } as SchemaValidateFunction,
+});
 
 const applicationSchema = {
   type: 'object',
@@ -163,7 +187,7 @@ const fieldSchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     type: {
       type: 'string',
@@ -194,14 +218,14 @@ const indexSchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     columns: {
       type: 'array',
       minItems: 1,
       items: {
         type: 'string',
-        pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+        isEntityName: true,
       },
       uniqueItems: true,
     },
@@ -220,23 +244,23 @@ const foreignKeySchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     columns: {
       type: 'array',
       minItems: 1,
-      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
+      items: {type: 'string', isEntityName: true},
       uniqueItems: true,
     },
     referenceTable: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     referenceColumns: {
       type: 'array',
       minItems: 1,
-      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
+      items: {type: 'string', isEntityName: true},
       uniqueItems: true,
     },
     onDelete: {
@@ -257,7 +281,7 @@ const modelSchema = {
   properties: {
     name: {
       type: 'string',
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
       minLength: 1,
     },
     fields: {

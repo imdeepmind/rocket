@@ -18,7 +18,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): ModelConfig[] => {
   return [
     {
-      name: 'User',
+      name: 'users',
       fields: [
         {
           name: 'id',

@@ -16,7 +16,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): ModelConfig[] => {
   return [
     {
-      name: 'User',
+      name: 'users',
       fields: [
         {
           name: 'id',
@@ -40,7 +40,7 @@ const getDefaultModelConfig = (): ModelConfig[] => {
       ],
     },
     {
-      name: 'Post',
+      name: 'posts',
       fields: [
         {
           name: 'title',
@@ -395,12 +395,14 @@ describe('validateInvalidModelFieldsConfig', () => {
     {
       name: 'invalid name',
       patch: {name: '132234asd'},
-      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected:
+        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid name',
       patch: {name: 'sad asdas'},
-      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected:
+        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'name as undefined',
@@ -418,13 +420,13 @@ describe('validateInvalidModelFieldsConfig', () => {
       name: 'invalid field.name',
       patch: {name: 'test', fields: [{name: '132234asd'}]},
       expected:
-        '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid field.name',
       patch: {name: 'test', fields: [{name: 'sad asdas'}]},
       expected:
-        '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid field.name',
@@ -1187,7 +1189,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: '12121asdas', columns: ['id']}],
       },
       expected:
-        '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "12121asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.name contains space',
@@ -1195,7 +1197,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: 'cat dog', columns: ['id']}],
       },
       expected:
-        '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.name is duplicate',
@@ -1221,7 +1223,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: 'valid_index', columns: ['']}],
       },
       expected:
-        '/models/0/indexes/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.column is not array',
@@ -1483,7 +1485,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.name is empty string',
@@ -1492,13 +1494,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['does_not_exist'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "Post"',
+        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "posts"',
     },
     {
       name: 'foreignKey.name is duplicate',
@@ -1507,13 +1509,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1528,7 +1530,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: 'id',
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1542,7 +1544,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: [],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1557,7 +1559,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: [123],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1571,13 +1573,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['1321asdas'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.columns contains non-string',
@@ -1586,13 +1588,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['cat dog'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.columns contains duplicate items',
@@ -1601,7 +1603,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id', 'id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1636,7 +1638,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/referenceTable must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.referenceTable is empty string',
@@ -1660,7 +1662,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: 'id',
           },
         ],
@@ -1674,7 +1676,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: [],
           },
         ],
@@ -1689,7 +1691,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: [123],
           },
         ],
@@ -1703,13 +1705,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['does_not_exist'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "User"',
+        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "users"',
     },
     {
       name: 'foreignKey.referenceColumns contains duplicate items',
@@ -1718,7 +1720,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id', 'id'],
           },
         ],
@@ -1733,7 +1735,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id', 'title'],
           },
         ],
@@ -1748,7 +1750,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id', 'name'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1763,7 +1765,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
             onDelete: 'INVALID',
           },
@@ -1779,7 +1781,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
             onUpdate: 'INVALID',
           },
@@ -1816,7 +1818,7 @@ describe('validateValidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -2269,7 +2271,7 @@ describe('validateValidApisConfig', () => {
       name: 'valid GET query',
       patch: {
         customQueries: [
-          {method: 'GET', path: '/test', query: 'SELECT * FROM User;'},
+          {method: 'GET', path: '/test', query: 'SELECT * FROM users;'},
         ],
       },
     },
@@ -2280,7 +2282,7 @@ describe('validateValidApisConfig', () => {
           {
             method: 'POST',
             path: '/test',
-            query: 'INSERT INTO User (name) VALUES (1);',
+            query: 'INSERT INTO users (name) VALUES (1);',
           },
         ],
       },
@@ -2343,7 +2345,7 @@ describe('validateValidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM User;',
+            query: 'SELECT * FROM users;',
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2363,7 +2365,7 @@ describe('validateValidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM User;',
+            query: 'SELECT * FROM users;',
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2383,7 +2385,7 @@ describe('validateValidApisConfig', () => {
           {
             method: 'GET',
             path: '/test',
-            query: 'SELECT * FROM User;',
+            query: 'SELECT * FROM users;',
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2807,7 +2809,7 @@ describe('validateInvalidModelAPIsConfig', () => {
       name: 'invalid data resp cannot be used when triggerOnRequest is true',
       patch: {
         modelAPIs: {
-          User: {
+          users: {
             aggregate: {
               webhooks: [
                 {
@@ -2844,7 +2846,7 @@ describe('validateValidModelAPIsConfig', () => {
       name: 'valid modelAPIs',
       patch: {
         modelAPIs: {
-          User: {
+          users: {
             aggregate: {
               webhooks: [
                 {
