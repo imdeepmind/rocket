@@ -2932,3 +2932,208 @@ describe('validateValidModelAPIsConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+describe('validateInvalidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'invalid value for enableAuth',
+      patch: {
+        auth: {
+          enableAuth: 'true',
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+        },
+      },
+      expected: '/auth/enableAuth must be boolean',
+    },
+    {
+      name: 'invalid authEngine',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'invalid',
+          apiKey: 'xxx',
+        },
+      },
+      expected: '/auth/authEngine must be equal to one of the allowed values',
+    },
+    {
+      name: 'providing authModel when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          apiKey: 'xxx',
+        },
+      },
+      expected:
+        '/auth/authModel: authModel should not be present when authEngine is api-key',
+    },
+    {
+      name: 'not providing apiKey when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+        },
+      },
+      expected: '/auth/apiKey: apiKey is required when authEngine is api-key',
+    },
+    {
+      name: 'invalid authModel',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: 'invalid',
+        },
+      },
+      expected: '/auth/authModel must be object',
+    },
+    {
+      name: 'invalid authModel.modelName',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'invalid',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/modelName: model does not exist',
+    },
+    {
+      name: 'invalid authModel.idColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'invalid',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/idColumn: field does not exist in model',
+    },
+    {
+      name: 'invalid authModel.usernameColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'invalid',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/usernameColumn: field does not exist in model',
+    },
+    {
+      name: 'invalid authModel.passwordColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'invalid',
+          },
+        },
+      },
+      expected: '/auth/authModel/passwordColumn: field does not exist in model',
+    },
+    {
+      name: 'providing apiKey when authEngine is up-auth',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'invalid',
+            passwordColumn: 'name',
+          },
+          apiKey: 'xxx',
+        },
+      },
+      expected:
+        '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
+    },
+    {
+      name: 'not providing authModel when authEngine is up-auth',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+        },
+      },
+      expected:
+        '/auth/authModel: authModel is required when authEngine is up-auth',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'valid auth config',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+        },
+      },
+    },
+    {
+      name: 'valid auth config',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});

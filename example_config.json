@@ -44,14 +44,13 @@
     },
     "auth": {
         "enableAuth": true,
-        "authEngine": "api-key",
+        "authEngine": "up-auth",
         "authModel": {
             "modelName": "users",
             "idColumn": "id",
             "usernameColumn": "email",
-            "passwordColumn": "password"
-        },
-        "apiKey": "xxx" 
+            "passwordColumn": "name"
+        }
     },
     "models": [
         {
