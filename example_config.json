@@ -42,6 +42,17 @@
         "timeout": 
         5000
     },
+    "auth": {
+        "enableAuth": true,
+        "authEngine": "api-key",
+        "authModel": {
+            "modelName": "users",
+            "idColumn": "id",
+            "usernameColumn": "email",
+            "passwordColumn": "password"
+        },
+        "apiKey": "xxx" 
+    },
     "models": [
         {
             "name": "users",

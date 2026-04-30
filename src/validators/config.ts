@@ -456,6 +456,50 @@ const apisSchema = {
   },
 };
 
+const authSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['enableAuth', 'authEngine', 'authModel'],
+  properties: {
+    enableAuth: {
+      type: 'boolean',
+    },
+    authEngine: {
+      type: 'string',
+      enum: ['api-key', 'up-auth'],
+    },
+    authModel: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['modelName', 'idColumn', 'usernameColumn', 'passwordColumn'],
+      properties: {
+        modelName: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        idColumn: {
+          type: 'string',
+          minLength: 1,
+        },
+        usernameColumn: {
+          type: 'string',
+          minLength: 1,
+        },
+        passwordColumn: {
+          type: 'string',
+          minLength: 1,
+        },
+      },
+    },
+    apiKey: {
+      type: 'string',
+      minLength: 1,
+      nullable: true,
+    },
+  },
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'swagger', 'database', 'models'],
@@ -471,6 +515,7 @@ const schema = {
     },
     apis: apisSchema,
     cache_db: cacheDbSchema,
+    auth: authSchema,
   },
 };
 
@@ -1011,6 +1056,54 @@ function validateApisConstraints(config: AppConfig): string[] {
   return errors;
 }
 
+function validateAuthConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  // check if authModel.modelName exists in models
+  if (
+    config.auth?.authModel.modelName &&
+    !config.models.some(m => m.name === config.auth?.authModel.modelName)
+  ) {
+    errors.push('/auth/authModel/modelName: model does not exist');
+  }
+
+  // check if authModel.idColumn exists in models
+  if (
+    config.auth?.authModel.idColumn &&
+    !config.models.some(m =>
+      m.fields.some(f => f.name === config.auth?.authModel.idColumn),
+    )
+  ) {
+    errors.push('/auth/authModel/idColumn: field does not exist in model');
+  }
+
+  // check if authModel.usernameColumn exists in models
+  if (
+    config.auth?.authModel.usernameColumn &&
+    !config.models.some(m =>
+      m.fields.some(f => f.name === config.auth?.authModel.usernameColumn),
+    )
+  ) {
+    errors.push(
+      '/auth/authModel/usernameColumn: field does not exist in model',
+    );
+  }
+
+  // check if authModel.passwordColumn exists in models
+  if (
+    config.auth?.authModel.passwordColumn &&
+    !config.models.some(m =>
+      m.fields.some(f => f.name === config.auth?.authModel.passwordColumn),
+    )
+  ) {
+    errors.push(
+      '/auth/authModel/passwordColumn: field does not exist in model',
+    );
+  }
+
+  return errors;
+}
+
 const validateSchema = ajv.compile(schema);
 
 export function validateConfig(input: AppConfig) {
@@ -1029,6 +1122,7 @@ export function validateConfig(input: AppConfig) {
         ...validateRateLimitConstraints(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
         ...validateApisConstraints(input as AppConfig),
+        ...validateAuthConstraints(input as AppConfig),
       ]
     : [];
 

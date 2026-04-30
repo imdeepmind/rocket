@@ -51,6 +51,7 @@ export type JsonSchemaObject = {
   [key: string]: unknown;
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
+export type AuthEngine = 'api-key' | 'up-auth';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -177,6 +178,18 @@ export interface ApisConfig {
   modelAPIs?: Record<string, ModelAPIConfig>;
 }
 
+export interface AuthConfig {
+  enableAuth: boolean;
+  authEngine: AuthEngine;
+  authModel: {
+    modelName: string;
+    idColumn: string;
+    usernameColumn: string;
+    passwordColumn: string;
+  };
+  apiKey?: string;
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   swagger: SwaggerConfig;
@@ -184,4 +197,5 @@ export interface AppConfig {
   models: ModelConfig[];
   apis?: ApisConfig;
   cache_db?: CacheDbConfig;
+  auth?: AuthConfig;
 }
