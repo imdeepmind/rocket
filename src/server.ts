@@ -14,6 +14,7 @@ import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
 
 import {registerRoutes} from '@/routes';
+import {registerLoginRoute} from '@/routes/auth/login';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/schema';
@@ -123,6 +124,7 @@ export async function startServer(
   // register auth routes (only when up-auth is configured)
   if (config.auth) {
     registerRegistrationRoute(app, config.models || [], config.auth);
+    registerLoginRoute(app, config.models || [], config.auth);
   }
 
   // Global error handler
