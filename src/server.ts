@@ -13,7 +13,8 @@ import rateLimitPlugin from '@/plugin/rate-limit';
 import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
 
-import {registerModelRoutes} from '@/routes';
+import {registerRoutes} from '@/routes';
+import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/schema';
 import {AppConfig, SwaggerConfig} from '@/schema/config';
@@ -116,7 +117,12 @@ export async function startServer(
 
   // register config-driven model routes
   if ((config.models && config.models.length > 0) || config.apis) {
-    registerModelRoutes(app, config.models || [], config.apis);
+    registerRoutes(app, config.models || [], config.apis);
+  }
+
+  // register auth routes (only when up-auth is configured)
+  if (config.auth) {
+    registerRegistrationRoute(app, config.models || [], config.auth);
   }
 
   // Global error handler

@@ -9,7 +9,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import migrateDatabase from '@/migrator/index';
 import {startServer} from '@/server';
 
-import {registerModelRoutes} from '@/routes/index';
+import {registerRoutes} from '@/routes/index';
 
 import {Mode} from '@/schema';
 import {AppConfig} from '@/schema/config';
@@ -45,7 +45,11 @@ vi.mock('@/migrator/index', () => ({
 }));
 
 vi.mock('@/routes/index', () => ({
-  registerModelRoutes: vi.fn(),
+  registerRoutes: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/registration', () => ({
+  registerRegistrationRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -203,7 +207,7 @@ describe('Server', () => {
     expect(mockApp.register).toHaveBeenCalledTimes(4);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
-    expect(registerModelRoutes).toHaveBeenCalledWith(
+    expect(registerRoutes).toHaveBeenCalledWith(
       mockApp,
       mockConfig.models,
       mockConfig.apis,
@@ -229,7 +233,7 @@ describe('Server', () => {
     const noModelsConfig = {...mockConfig, models: []} as unknown as AppConfig;
     await startServer(noModelsConfig, 3000, 'prod');
 
-    expect(registerModelRoutes).not.toHaveBeenCalled();
+    expect(registerRoutes).not.toHaveBeenCalled();
   });
 
   describe('Error Handler', () => {

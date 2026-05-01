@@ -49,7 +49,7 @@
             "modelName": "users",
             "idColumn": "id",
             "usernameColumn": "email",
-            "passwordColumn": "name"
+            "passwordColumn": "password"
         }
     },
     "models": [
@@ -72,6 +72,12 @@
                     "nullable": false,
                     "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
                     "supportedAggregation": ["count"]
+                },
+                {
+                    "name": "password",
+                    "type": "string",
+                    "unique": false,
+                    "nullable": false
                 },
                 {
                     "name": "name",

@@ -3,7 +3,7 @@ import Fastify, {FastifyInstance} from 'fastify';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
-import {registerModelRoutes} from '@/routes';
+import {registerRoutes} from '@/routes';
 
 import {ApisConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
 
@@ -41,7 +41,7 @@ export async function createTestApp(
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
   if (models.length > 0 || apis) {
-    registerModelRoutes(fastify, models, apis);
+    registerRoutes(fastify, models, apis);
   }
   await fastify.ready();
   return fastify;

@@ -20,22 +20,29 @@ import {ApisConfig, ModelConfig} from '@/schema/config';
  *   - SEARCH (searchable fields)
  *   - EDIT (editable fields)
  *   - DELETE (deletable fields)
- *   - AGGREGATE (fields with supportedAggregation)
  *   - POST (table-level, create record)
  *   - GET_ALL (table-level, list all records)
+ *
+ *   - AGGREGATE (fields with supportedAggregation)
+ *
  *   - CUSTOM_QUERIES (custom queries)
  */
-export function registerModelRoutes(
+export function registerRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
   apis?: ApisConfig,
 ): void {
+  // operations
   registerIndexRoutes(app, models, apis);
   registerSearchRoutes(app, models, apis);
   registerEditRoutes(app, models, apis);
   registerDeleteRoutes(app, models, apis);
-  registerAggregateRoutes(app, models, apis);
   registerPostRoutes(app, models, apis);
   registerGetAllRoutes(app, models, apis);
+
+  // aggregations
+  registerAggregateRoutes(app, models, apis);
+
+  // custom queries
   registerCustomQueryRoutes(app, apis);
 }
