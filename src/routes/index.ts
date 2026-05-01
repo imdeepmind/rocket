@@ -1,13 +1,13 @@
 import {FastifyInstance} from 'fastify';
 
-import {registerAggregateRoutes} from '@/routes/aggregate';
-import {registerCustomQueryRoutes} from '@/routes/custom-queries';
-import {registerDeleteRoutes} from '@/routes/delete';
-import {registerEditRoutes} from '@/routes/edit';
-import {registerGetAllRoutes} from '@/routes/get-all';
-import {registerIndexRoutes} from '@/routes/index-route';
-import {registerPostRoutes} from '@/routes/post';
-import {registerSearchRoutes} from '@/routes/search';
+import {registerAggregateRoutes} from '@/routes/aggregate/aggregate';
+import {registerCustomQueryRoutes} from '@/routes/custom-queries/custom-queries';
+import {registerDeleteRoutes} from '@/routes/operations/delete';
+import {registerEditRoutes} from '@/routes/operations/edit';
+import {registerGetAllRoutes} from '@/routes/operations/get-all';
+import {registerIndexRoutes} from '@/routes/operations/index-route';
+import {registerPostRoutes} from '@/routes/operations/post';
+import {registerSearchRoutes} from '@/routes/operations/search';
 
 import {ApisConfig, ModelConfig} from '@/schema/config';
 
