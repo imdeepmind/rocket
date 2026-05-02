@@ -54,6 +54,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
+    "@fastify/jwt": "^10.0.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/redis": "^7.2.0",
     "@fastify/swagger": "^9.7.0",

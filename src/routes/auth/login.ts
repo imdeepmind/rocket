@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
-import jwt from 'jsonwebtoken';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
@@ -57,7 +56,7 @@ export function registerLoginRoute(
   const dataSchema = {
     type: 'object',
     properties: {
-      access_token: {type: 'string', description: 'JWT access token'},
+      accessToken: {type: 'string', description: 'JWT access token'},
     },
   };
 
@@ -101,23 +100,19 @@ export function registerLoginRoute(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
-      // Generate JWT
-      // Use a secret from environment or fallback
-      const secret = process.env.JWT_SECRET || 'super-secret-key';
-
       // We include the user ID and username in the payload
       const payload = {
         id: user[auth.authModel.idColumn],
         [usernameColumn]: user[usernameColumn],
       };
 
-      const token = jwt.sign(payload, secret, {
-        expiresIn: '1d', // 1 day expiry as requested
+      const token = app.jwt.sign(payload, {
+        expiresIn: '1d',
       });
 
       return reply.status(200).send(
         app.buildResponse(200, 'Login successful', {
-          access_token: token,
+          accessToken: token,
         }),
       );
     },

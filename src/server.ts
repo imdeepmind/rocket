@@ -8,6 +8,7 @@ import Fastify, {
 } from 'fastify';
 
 import migrateDatabase from '@/migrator';
+import authPlugin from '@/plugin/auth';
 import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import redisPlugin from '@/plugin/redis';
@@ -18,7 +19,7 @@ import {registerLoginRoute} from '@/routes/auth/login';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/schema';
-import {AppConfig, SwaggerConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
 import {validateConfig} from '@/validators/config';
 import {RouteInfo} from '@/utils/welcome';
@@ -28,15 +29,36 @@ export interface StartServerResult {
   routes: RouteInfo[];
 }
 
-async function registerSwagger(
-  swaggerConfig: SwaggerConfig,
-  app: FastifyInstance,
-) {
+async function registerSwagger(app: FastifyInstance, config: AppConfig) {
+  const {swagger: swaggerConfig, auth} = config;
+  const components: Record<string, unknown> = {};
+
+  if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
+    components['securitySchemes'] = {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    };
+  }
+
+  if (auth?.enableAuth && auth.authEngine === 'api-key') {
+    components['securitySchemes'] = {
+      apiKeyAuth: {
+        type: 'apiKey',
+        name: 'api_key',
+        in: 'header',
+      },
+    };
+  }
+
   if (swaggerConfig.enabled) {
     // Swagger (OpenAPI spec)
     await app.register(swagger, {
       openapi: {
         info: swaggerConfig.info,
+        components,
       },
     });
 
@@ -107,6 +129,9 @@ export async function startServer(
   }
 
   await app.register(responsePlugin);
+  if (config.auth) {
+    await app.register(authPlugin);
+  }
 
   // migrate the db based on config
   if (migrate) {
@@ -114,7 +139,7 @@ export async function startServer(
   }
 
   // register swagger
-  await registerSwagger(config.swagger, app);
+  await registerSwagger(app, config);
 
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);

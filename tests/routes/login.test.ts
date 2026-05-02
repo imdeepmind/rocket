@@ -3,6 +3,7 @@ import Fastify, {FastifyInstance} from 'fastify';
 import jwt from 'jsonwebtoken';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 
+import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
@@ -62,6 +63,7 @@ async function createAuthApp(
   const app = Fastify();
   await app.register(databasePlugin, dbConfig);
   await app.register(responsePlugin);
+  await app.register(authPlugin);
 
   const config: AppConfig = {
     application: {logLevel: 'error'},
@@ -132,11 +134,11 @@ describe('POST /auth/login', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.message).toBe('Login successful');
-      expect(body.data.access_token).toBeDefined();
+      expect(body.data.accessToken).toBeDefined();
 
       // Verify JWT payload
-      const secret = 'super-secret-key';
-      const decoded = jwt.verify(body.data.access_token, secret) as Record<
+      const secret = 'your-super-secret-key';
+      const decoded = jwt.verify(body.data.accessToken, secret) as Record<
         string,
         unknown
       >;
