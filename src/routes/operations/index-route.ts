@@ -154,11 +154,40 @@ export function registerIndexRoutes(
         };
       }
 
+      const security: Array<{[key: string]: string[]}> = [];
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+        security.push({bearerAuth: []});
+      }
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+        security.push({apiKeyAuth: []});
+      }
+
+      if (security.length > 0) {
+        schema.security = security;
+      }
+
       app.get(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
-          preHandler: async request => {
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {

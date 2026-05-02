@@ -1,5 +1,6 @@
 import Fastify, {FastifyInstance} from 'fastify';
 
+import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
@@ -8,6 +9,7 @@ import {registerRoutes} from '@/routes';
 import {
   ApisConfig,
   AppConfig,
+  AuthConfig,
   CustomAPIConfig,
   DatabaseConfig,
   ModelConfig,
@@ -43,10 +45,12 @@ export async function createTestApp(
   models: ModelConfig[] = [],
   apis?: ApisConfig,
   customAPIs?: CustomAPIConfig,
+  auth?: AuthConfig,
 ): Promise<FastifyInstance> {
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
+  await fastify.register(authPlugin);
   const appConfig: AppConfig = {
     application: {logLevel: 'error'},
     swagger: {
@@ -58,6 +62,7 @@ export async function createTestApp(
     models,
     apis,
     customAPIs,
+    auth,
   };
 
   if (models.length > 0 || apis || customAPIs) {

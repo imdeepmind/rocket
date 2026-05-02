@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/schema/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -24,6 +24,17 @@ const aggregateModel: ModelConfig[] = [
     ],
   },
 ];
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 describe('test aggregate api', () => {
   beforeEach(() => {
@@ -252,6 +263,55 @@ describe('test aggregate api', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().data).toEqual({});
 
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    test('should return 401 when auth is enabled and no token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=count',
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 200 when auth is enabled and valid token is provided', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{count: 10}],
+        rowCount: 1,
+      });
+
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=count',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.count).toBe(10);
       await fastify.close();
     });
   });

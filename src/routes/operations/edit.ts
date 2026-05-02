@@ -117,6 +117,20 @@ export function registerEditRoutes(
           response: getResponseStructureSchema([200], responseDataSchema),
         };
 
+        const security: Array<{[key: string]: string[]}> = [];
+
+        if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+          security.push({bearerAuth: []});
+        }
+
+        if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+          security.push({apiKeyAuth: []});
+        }
+
+        if (security.length > 0) {
+          schema.security = security;
+        }
+
         if (Object.keys(queryProperties).length > 0) {
           schema.querystring = {
             type: 'object',
@@ -197,7 +211,22 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PATCH'),
-          preHandler: async request => {
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
@@ -217,7 +246,22 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PUT'),
-          preHandler: async request => {
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {

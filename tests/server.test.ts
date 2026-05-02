@@ -21,6 +21,11 @@ vi.mock('fastify', () => {
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
     close: vi.fn(),
+    post: vi.fn(),
+    get: vi.fn(),
+    patch: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
     log: {
       error: vi.fn(),
       info: vi.fn(),
@@ -83,6 +88,11 @@ type MockedApp = FastifyInstance & {
   setErrorHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  patch: ReturnType<typeof vi.fn>;
+  put: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
   log: {
     error: ReturnType<typeof vi.fn>;
     info: ReturnType<typeof vi.fn>;
@@ -483,6 +493,84 @@ describe('Server', () => {
           false,
       );
       expect(rateLimitRegistration).toBeDefined();
+    });
+  });
+
+  describe('Authentication Configuration', () => {
+    it('should register auth plugin when auth is configured', async () => {
+      const configWithAuth: AppConfig = {
+        ...mockConfig,
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'email',
+            passwordColumn: 'password',
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithAuth, 3000, 'dev');
+
+      // Our startServer calls register(authPlugin) if config.auth is present
+      expect(registerMock).toHaveBeenCalledWith(
+        expect.any(Function), // authPlugin
+      );
+    });
+
+    it('should include bearerAuth in swagger components when up-auth is enabled', async () => {
+      const configWithUpAuth: AppConfig = {
+        ...mockConfig,
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'email',
+            passwordColumn: 'password',
+          },
+        },
+      };
+
+      await startServer(configWithUpAuth, 3000, 'dev');
+
+      const swaggerRegistration = mockApp.register.mock.calls.find(
+        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
+      );
+      expect(swaggerRegistration).toBeDefined();
+      expect(
+        swaggerRegistration![1].openapi.components.securitySchemes,
+      ).toHaveProperty('bearerAuth');
+    });
+
+    it('should include apiKeyAuth in swagger components when api-key is enabled', async () => {
+      const configWithApiKey: AppConfig = {
+        ...mockConfig,
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'email',
+            passwordColumn: 'password',
+          },
+        },
+      };
+
+      await startServer(configWithApiKey, 3000, 'dev');
+
+      const swaggerRegistration = mockApp.register.mock.calls.find(
+        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
+      );
+      expect(swaggerRegistration).toBeDefined();
+      expect(
+        swaggerRegistration![1].openapi.components.securitySchemes,
+      ).toHaveProperty('apiKeyAuth');
     });
   });
 });
