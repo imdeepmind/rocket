@@ -174,8 +174,11 @@ export interface ModelAPIConfig {
 }
 
 export interface ApisConfig {
-  customQueries?: CustomQueryConfig[];
   modelAPIs?: Record<string, ModelAPIConfig>;
+}
+
+export interface CustomAPIConfig {
+  customQueries?: CustomQueryConfig[];
 }
 
 export interface AuthConfig {
@@ -197,5 +200,6 @@ export interface AppConfig {
   models: ModelConfig[];
   apis?: ApisConfig;
   cache_db?: CacheDbConfig;
+  customAPIs?: CustomAPIConfig;
   auth?: AuthConfig;
 }

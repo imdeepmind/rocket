@@ -1,11 +1,11 @@
 import {describe, expect, test} from 'vitest';
 
-import {ApisConfig} from '@/schema/config';
+import {CustomAPIConfig} from '@/schema/config';
 
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 describe('test custom-queries api', () => {
-  const customApis: ApisConfig = {
+  const customApis: CustomAPIConfig = {
     customQueries: [
       {
         method: 'GET',
@@ -24,7 +24,7 @@ describe('test custom-queries api', () => {
 
   describe('happy path', () => {
     test('should register GET custom queries and validate querystrings', async () => {
-      const fastify = await createTestApp(pgConfig, [], customApis);
+      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
 
       // Successfully call the endpoint with correct schema
       const validResponse = await fastify.inject({
@@ -46,7 +46,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should register POST custom queries and validate path params and body schemas', async () => {
-      const fastify = await createTestApp(pgConfig, [], customApis);
+      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
 
       // Successfully call the endpoint with correct schema
       // Since it's a POST with path variables, we use the injected /:id
@@ -68,7 +68,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should support all data types in magic variables', async () => {
-      const allTypesApis: ApisConfig = {
+      const allTypesApis: CustomAPIConfig = {
         customQueries: [
           {
             method: 'POST',
@@ -78,7 +78,12 @@ describe('test custom-queries api', () => {
           },
         ],
       };
-      const fastify = await createTestApp(pgConfig, [], allTypesApis);
+      const fastify = await createTestApp(
+        pgConfig,
+        [],
+        undefined,
+        allTypesApis,
+      );
 
       const res = await fastify.inject({
         method: 'POST',
@@ -97,7 +102,7 @@ describe('test custom-queries api', () => {
 
   describe('schema checking and rejections', () => {
     test('should fail GET query when omitting required querystrings not passed depending on fastify settings or passing invalid type', async () => {
-      const fastify = await createTestApp(pgConfig, [], customApis);
+      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
 
       // minAge is expected to be integer. If we pass a string that isn't parseable as int, fastify fails
       const invalidResponse = await fastify.inject({
@@ -115,7 +120,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when extra body parameters passed', async () => {
-      const fastify = await createTestApp(pgConfig, [], customApis);
+      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
 
       const invalidBodyResponse = await fastify.inject({
         method: 'POST',
@@ -133,7 +138,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when path param type fails cast', async () => {
-      const fastify = await createTestApp(pgConfig, [], customApis);
+      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
 
       const invalidPathResponse = await fastify.inject({
         method: 'POST',
@@ -151,7 +156,7 @@ describe('test custom-queries api', () => {
 
   describe('interpolation error handling', () => {
     test('should throw error when a required variable is missing in request', async () => {
-      const fastify = await createTestApp(pgConfig, [], {
+      const fastify = await createTestApp(pgConfig, [], undefined, {
         customQueries: [
           {
             method: 'POST',
@@ -185,7 +190,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should throw error when a required body variable is missing', async () => {
-      const fastify = await createTestApp(pgConfig, [], {
+      const fastify = await createTestApp(pgConfig, [], undefined, {
         customQueries: [
           {
             method: 'POST',

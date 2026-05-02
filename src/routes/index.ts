@@ -9,7 +9,7 @@ import {registerIndexRoutes} from '@/routes/operations/index-route';
 import {registerPostRoutes} from '@/routes/operations/post';
 import {registerSearchRoutes} from '@/routes/operations/search';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {ApisConfig, CustomAPIConfig, ModelConfig} from '@/schema/config';
 
 /**
  * Register all config-driven model routes on the Fastify instance.
@@ -31,6 +31,7 @@ export function registerRoutes(
   app: FastifyInstance,
   models: ModelConfig[],
   apis?: ApisConfig,
+  customApis?: CustomAPIConfig,
 ): void {
   // operations
   registerIndexRoutes(app, models, apis);
@@ -44,5 +45,5 @@ export function registerRoutes(
   registerAggregateRoutes(app, models, apis);
 
   // custom queries
-  registerCustomQueryRoutes(app, apis);
+  registerCustomQueryRoutes(app, customApis);
 }

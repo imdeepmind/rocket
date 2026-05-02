@@ -456,6 +456,17 @@ const apisSchema = {
   },
 };
 
+const customAPIsSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    customQueries: {
+      type: 'array',
+      items: customQuerySchema,
+    },
+  },
+};
+
 const authSchema = {
   type: 'object',
   additionalProperties: false,
@@ -518,6 +529,7 @@ const schema = {
     },
     apis: apisSchema,
     cache_db: cacheDbSchema,
+    customAPIs: customAPIsSchema,
     auth: authSchema,
   },
 };
@@ -899,11 +911,12 @@ function validateModelNameInModelAPIs(config: AppConfig): string[] {
 
 function validateApisConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
-  if (!config.apis) return errors;
 
-  if (config.apis.customQueries) {
-    config.apis.customQueries.forEach((cq, i) => {
-      const path = `/apis/customQueries/${i}`;
+  const customQueries = config.customAPIs?.customQueries ?? [];
+
+  if (customQueries.length > 0) {
+    customQueries.forEach((cq, i) => {
+      const path = `/customAPIs/customQueries/${i}`;
 
       const q = cq.query.trim().toUpperCase();
 

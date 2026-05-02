@@ -5,7 +5,7 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, DataType} from '@/schema/config';
+import {CustomAPIConfig, DataType} from '@/schema/config';
 
 import {callWebhook} from '@/utils/webhook';
 
@@ -72,11 +72,11 @@ function interpolateQuery(
 
 export function registerCustomQueryRoutes(
   app: FastifyInstance,
-  apis?: ApisConfig,
+  customAPIs?: CustomAPIConfig,
 ): void {
-  if (!apis || !apis.customQueries) return;
+  if (!customAPIs || !customAPIs.customQueries) return;
 
-  for (const cq of apis.customQueries) {
+  for (const cq of customAPIs.customQueries) {
     // in magic variables we support 3 types of variables
     // body, path, and query
     const paramsProperties: Record<string, object> = {};

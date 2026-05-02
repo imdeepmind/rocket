@@ -117,8 +117,8 @@ export async function startServer(
   await registerSwagger(config.swagger, app);
 
   // register config-driven model routes
-  if ((config.models && config.models.length > 0) || config.apis) {
-    registerRoutes(app, config.models || [], config.apis);
+  if (config.models && config.models.length > 0) {
+    registerRoutes(app, config.models || [], config.apis, config.customAPIs);
   }
 
   // register auth routes (only when up-auth is configured)

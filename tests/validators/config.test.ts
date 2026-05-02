@@ -1920,7 +1920,7 @@ describe('validateInvalidApisConfig', () => {
         customQueries: [{method: 'OPTIONS', path: '/test', query: 'SELECT 1;'}],
       },
       expected:
-        '/apis/customQueries/0/method must be equal to one of the allowed values',
+        '/customAPIs/customQueries/0/method must be equal to one of the allowed values',
     },
     {
       name: 'path without slash',
@@ -1928,7 +1928,7 @@ describe('validateInvalidApisConfig', () => {
         customQueries: [{method: 'GET', path: 'test', query: 'SELECT 1;'}],
       },
       expected:
-        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
     },
     {
       name: 'path with space and uppercase',
@@ -1938,13 +1938,13 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
     },
     {
       name: 'empty query',
       patch: {customQueries: [{method: 'GET', path: '/test', query: ''}]},
       expected:
-        '/apis/customQueries/0/query must NOT have fewer than 1 characters',
+        '/customAPIs/customQueries/0/query must NOT have fewer than 1 characters',
     },
     {
       name: 'DDL query',
@@ -1957,7 +1957,8 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
       },
-      expected: '/apis/customQueries/0/query: DDL queries are not allowed',
+      expected:
+        '/customAPIs/customQueries/0/query: DDL queries are not allowed',
     },
     {
       name: 'GET method with DML query',
@@ -1971,7 +1972,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: only DQL queries are allowed for GET method',
+        '/customAPIs/customQueries/0/query: only DQL queries are allowed for GET method',
     },
     {
       name: 'POST method with invalid SQL starting word',
@@ -1981,7 +1982,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: only DQL and DML queries are allowed',
+        '/customAPIs/customQueries/0/query: only DQL and DML queries are allowed',
     },
     {
       name: 'GET method with body magic variables (@@)',
@@ -1995,7 +1996,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+        '/customAPIs/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
@@ -2009,7 +2010,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+        '/customAPIs/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
@@ -2023,7 +2024,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+        '/customAPIs/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
@@ -2038,7 +2039,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+        '/customAPIs/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
@@ -2052,7 +2053,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+        '/customAPIs/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
@@ -2066,7 +2067,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: unclosed magic variable delimiter "@@"',
+        '/customAPIs/customQueries/0/query: unclosed magic variable delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
@@ -2080,7 +2081,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customAPIs/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
@@ -2094,7 +2095,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customAPIs/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
@@ -2108,7 +2109,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
+        '/customAPIs/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
     },
     {
       name: 'invalid webhook url',
@@ -2128,7 +2129,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/customAPIs/customQueries/0/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2147,7 +2148,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
       },
-      expected: '/apis/customQueries/0/webhooks/0/data must be array',
+      expected: '/customAPIs/customQueries/0/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2167,7 +2168,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0/data must NOT have fewer than 1 items',
+        '/customAPIs/customQueries/0/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2187,7 +2188,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/customAPIs/customQueries/0/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2208,7 +2209,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0/triggerOnRequest must be boolean',
+        '/customAPIs/customQueries/0/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2229,7 +2230,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0/triggerOnResponse must be boolean',
+        '/customAPIs/customQueries/0/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2251,12 +2252,12 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/apis/customQueries/0/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        '/customAPIs/customQueries/0/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      apis: patch,
+      customAPIs: patch,
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -2401,7 +2402,7 @@ describe('validateValidApisConfig', () => {
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      apis: patch,
+      customAPIs: patch,
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);

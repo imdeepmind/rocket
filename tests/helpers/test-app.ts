@@ -5,7 +5,12 @@ import responsePlugin from '@/plugin/response';
 
 import {registerRoutes} from '@/routes';
 
-import {ApisConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
+import {
+  ApisConfig,
+  CustomAPIConfig,
+  DatabaseConfig,
+  ModelConfig,
+} from '@/schema/config';
 
 export const mockModels: ModelConfig[] = [
   {
@@ -36,12 +41,13 @@ export async function createTestApp(
   dbConfig: DatabaseConfig,
   models: ModelConfig[] = [],
   apis?: ApisConfig,
+  customAPIs?: CustomAPIConfig,
 ): Promise<FastifyInstance> {
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
-  if (models.length > 0 || apis) {
-    registerRoutes(fastify, models, apis);
+  if (models.length > 0 || apis || customAPIs) {
+    registerRoutes(fastify, models, apis, customAPIs);
   }
   await fastify.ready();
   return fastify;

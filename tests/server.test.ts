@@ -211,6 +211,7 @@ describe('Server', () => {
       mockApp,
       mockConfig.models,
       mockConfig.apis,
+      mockConfig.customAPIs,
     );
   });
 
