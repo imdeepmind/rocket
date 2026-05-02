@@ -334,9 +334,14 @@ const webhookSchema = {
 
 const customQuerySchema = {
   type: 'object',
-  required: ['method', 'path', 'query'],
+  required: ['name', 'method', 'path', 'query'],
   additionalProperties: false,
   properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
+    },
     method: {
       type: 'string',
       enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -909,16 +914,24 @@ function validateModelNameInModelAPIs(config: AppConfig): string[] {
   return errors;
 }
 
-function validateApisConstraints(config: AppConfig): string[] {
+function validateCustomAPIs(config: AppConfig): string[] {
   const errors: string[] = [];
 
   const customQueries = config.customAPIs?.customQueries ?? [];
+
+  const existingNames = new Set<string>();
 
   if (customQueries.length > 0) {
     customQueries.forEach((cq, i) => {
       const path = `/customAPIs/customQueries/${i}`;
 
       const q = cq.query.trim().toUpperCase();
+
+      // validate the name to make sure it is unique and follow naming convention
+      if (!cq.name || existingNames.has(cq.name)) {
+        errors.push(`${path}/name: name must be unique and non-empty`);
+      }
+      existingNames.add(cq.name);
 
       // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
       const ddlPrefixes = [
@@ -1037,6 +1050,12 @@ function validateApisConstraints(config: AppConfig): string[] {
       }
     });
   }
+
+  return errors;
+}
+
+function validateApisConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
 
   // validate the modelAPIs
   if (config.apis?.modelAPIs) {
@@ -1165,6 +1184,7 @@ export function validateConfig(input: AppConfig) {
         ...validateModelValidation(input as AppConfig, ajv),
         ...validateRateLimitConstraints(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
+        ...validateCustomAPIs(input as AppConfig),
         ...validateApisConstraints(input as AppConfig),
         ...validateAuthConstraints(input as AppConfig),
       ]

@@ -171,6 +171,7 @@
     "customAPIs": {
         "customQueries": [
             {
+                "name": "get_user_by_id",
                 "method": "POST",
                 "path": "/test-api-asdas_asdas",
                 "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;",

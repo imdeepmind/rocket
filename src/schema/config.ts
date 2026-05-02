@@ -143,6 +143,7 @@ export interface WebhookConfig {
 }
 
 export interface CustomQueryConfig {
+  name: string;
   method: HTTPMethod;
   path: string;
   query: string;

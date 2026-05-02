@@ -1915,9 +1915,57 @@ describe('validateValidApplicationConfig', () => {
 describe('validateInvalidApisConfig', () => {
   it.each([
     {
+      name: 'name as invalid',
+      patch: {
+        customQueries: [
+          {name: '123_asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'name as invalid',
+      patch: {
+        customQueries: [
+          {name: 'asd&*asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'name as duplicate',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT 1;',
+          },
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test-different',
+            query: 'SELECT 1;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/1/name: name must be unique and non-empty',
+    },
+    {
       name: 'method as invalid',
       patch: {
-        customQueries: [{method: 'OPTIONS', path: '/test', query: 'SELECT 1;'}],
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'OPTIONS',
+            path: '/test',
+            query: 'SELECT 1;',
+          },
+        ],
       },
       expected:
         '/customAPIs/customQueries/0/method must be equal to one of the allowed values',
@@ -1925,7 +1973,14 @@ describe('validateInvalidApisConfig', () => {
     {
       name: 'path without slash',
       patch: {
-        customQueries: [{method: 'GET', path: 'test', query: 'SELECT 1;'}],
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: 'test',
+            query: 'SELECT 1;',
+          },
+        ],
       },
       expected:
         '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
@@ -1934,7 +1989,12 @@ describe('validateInvalidApisConfig', () => {
       name: 'path with space and uppercase',
       patch: {
         customQueries: [
-          {method: 'GET', path: '/test-api asdas', query: 'SELECT 1;'},
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test-api asdas',
+            query: 'SELECT 1;',
+          },
         ],
       },
       expected:
@@ -1942,7 +2002,11 @@ describe('validateInvalidApisConfig', () => {
     },
     {
       name: 'empty query',
-      patch: {customQueries: [{method: 'GET', path: '/test', query: ''}]},
+      patch: {
+        customQueries: [
+          {name: 'sample_query', method: 'GET', path: '/test', query: ''},
+        ],
+      },
       expected:
         '/customAPIs/customQueries/0/query must NOT have fewer than 1 characters',
     },
@@ -1951,6 +2015,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/test',
             query: 'CREATE TABLE x (id INTEGER);',
@@ -1965,6 +2030,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'INSERT INTO x (id) VALUES (1);',
@@ -1978,7 +2044,12 @@ describe('validateInvalidApisConfig', () => {
       name: 'POST method with invalid SQL starting word',
       patch: {
         customQueries: [
-          {method: 'POST', path: '/test', query: 'RANDOM COMMAND;'},
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'RANDOM COMMAND;',
+          },
         ],
       },
       expected:
@@ -1989,6 +2060,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
@@ -2003,6 +2075,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/test',
             query: 'UPDATE users SET name = @@first name:string@@;',
@@ -2017,6 +2090,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
@@ -2031,6 +2105,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query:
@@ -2046,6 +2121,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
@@ -2060,6 +2136,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/test',
             query: 'UPDATE users SET name = @@id@;',
@@ -2074,6 +2151,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
@@ -2088,6 +2166,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/test',
             query: 'UPDATE users SET name = @@name:varchar@@;',
@@ -2102,6 +2181,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'update_users',
             method: 'POST',
             path: '/test',
             query: 'UPDATE users SET name = @@name@@;',
@@ -2116,6 +2196,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2136,6 +2217,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2155,6 +2237,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2175,6 +2258,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2195,6 +2279,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2216,6 +2301,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2237,6 +2323,7 @@ describe('validateInvalidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
@@ -2272,7 +2359,12 @@ describe('validateValidApisConfig', () => {
       name: 'valid GET query',
       patch: {
         customQueries: [
-          {method: 'GET', path: '/test', query: 'SELECT * FROM users;'},
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
         ],
       },
     },
@@ -2281,6 +2373,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/test',
             query: 'INSERT INTO users (name) VALUES (1);',
@@ -2293,6 +2386,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
@@ -2305,6 +2399,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/update-user',
             query:
@@ -2318,6 +2413,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/search',
             query:
@@ -2331,6 +2427,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'POST',
             path: '/update-user',
             query:
@@ -2344,6 +2441,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users;',
@@ -2364,6 +2462,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users;',
@@ -2384,6 +2483,7 @@ describe('validateValidApisConfig', () => {
       patch: {
         customQueries: [
           {
+            name: 'sample_query',
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users;',

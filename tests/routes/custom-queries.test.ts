@@ -8,12 +8,14 @@ describe('test custom-queries api', () => {
   const customApis: CustomAPIConfig = {
     customQueries: [
       {
+        name: 'searchUsers',
         method: 'GET',
         path: '/search-users',
         query:
           'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
       },
       {
+        name: 'updateUser',
         method: 'POST',
         path: '/update-user',
         query:
@@ -71,6 +73,7 @@ describe('test custom-queries api', () => {
       const allTypesApis: CustomAPIConfig = {
         customQueries: [
           {
+            name: 'allTypes',
             method: 'POST',
             path: '/all-types',
             query:
@@ -159,6 +162,7 @@ describe('test custom-queries api', () => {
       const fastify = await createTestApp(pgConfig, [], undefined, {
         customQueries: [
           {
+            name: 'missingParam',
             method: 'POST',
             path: '/missing-param',
             query: 'SELECT * FROM users WHERE status = &&status:string&&;',
@@ -193,6 +197,7 @@ describe('test custom-queries api', () => {
       const fastify = await createTestApp(pgConfig, [], undefined, {
         customQueries: [
           {
+            name: 'missingBody',
             method: 'POST',
             path: '/missing-body',
             query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
