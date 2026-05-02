@@ -147,7 +147,6 @@ export interface CustomQueryConfig {
   method: HTTPMethod;
   path: string;
   query: string;
-  webhooks?: WebhookConfig[];
 }
 
 export interface ModelAPIConfig {
@@ -175,7 +174,9 @@ export interface ModelAPIConfig {
 }
 
 export interface ApisConfig {
-  modelAPIs?: Record<string, ModelAPIConfig>;
+  [key: string]: {
+    webhooks: WebhookConfig[];
+  };
 }
 
 export interface CustomAPIConfig {

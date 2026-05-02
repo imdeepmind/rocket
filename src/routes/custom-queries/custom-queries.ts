@@ -5,7 +5,7 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {CustomAPIConfig, DataType} from '@/schema/config';
+import {AppConfig, DataType} from '@/schema/config';
 
 import {callWebhook} from '@/utils/webhook';
 
@@ -72,8 +72,10 @@ function interpolateQuery(
 
 export function registerCustomQueryRoutes(
   app: FastifyInstance,
-  customAPIs?: CustomAPIConfig,
+  config: AppConfig,
 ): void {
+  const {customAPIs} = config;
+
   if (!customAPIs || !customAPIs.customQueries) return;
 
   for (const cq of customAPIs.customQueries) {
@@ -82,6 +84,10 @@ export function registerCustomQueryRoutes(
     const paramsProperties: Record<string, object> = {};
     const queryProperties: Record<string, object> = {};
     const bodyProperties: Record<string, object> = {};
+
+    // uniqie api identifier
+    const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     // body parameters are always in between @@
     // path parameters are always in between $$
@@ -189,22 +195,10 @@ export function registerCustomQueryRoutes(
       url: routePath,
       schema,
       preHandler: async request => {
-        await callWebhook(
-          'request',
-          cq.webhooks ? cq.webhooks : null,
-          request,
-          null,
-          app.log,
-        );
+        await callWebhook('request', webhookConfig, request, null, app.log);
       },
       onSend: async (request, _, payload) => {
-        await callWebhook(
-          'response',
-          cq.webhooks ? cq.webhooks : null,
-          request,
-          payload,
-          app.log,
-        );
+        await callWebhook('response', webhookConfig, request, payload, app.log);
       },
       handler: async (request: FastifyRequest, reply: FastifyReply) => {
         // extract the body, path, and query parameters from the request

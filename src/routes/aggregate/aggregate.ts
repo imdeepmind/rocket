@@ -2,14 +2,10 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {
-  ApisConfig,
-  ModelConfig,
-  SupportedAggregationOperation,
-} from '@/schema/config';
+import {AppConfig, SupportedAggregationOperation} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.
@@ -22,15 +18,21 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerAggregateRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     // We only create an aggregation route for fields that have non-empty supportedAggregation
     // if a field is not aggregatable, we skip it
     const aggregatableFields = model.fields.filter(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
+
+    // API unique idenfier
+    const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
+    const webhookConfig =
+      config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
 
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
@@ -80,18 +82,12 @@ export function registerAggregateRoutes(
         {
           schema,
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,

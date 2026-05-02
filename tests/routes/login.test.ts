@@ -8,7 +8,12 @@ import responsePlugin from '@/plugin/response';
 
 import {registerLoginRoute} from '@/routes/auth/login';
 
-import {AuthConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
+import {
+  AppConfig,
+  AuthConfig,
+  DatabaseConfig,
+  ModelConfig,
+} from '@/schema/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 
@@ -57,7 +62,20 @@ async function createAuthApp(
   const app = Fastify();
   await app.register(databasePlugin, dbConfig);
   await app.register(responsePlugin);
-  registerLoginRoute(app, models, auth);
+
+  const config: AppConfig = {
+    application: {logLevel: 'error'},
+    swagger: {
+      enabled: false,
+      basePath: '/docs',
+      info: {title: 'Test', description: 'Test', version: '1.0.0'},
+    },
+    database: dbConfig,
+    models,
+    auth,
+  };
+
+  registerLoginRoute(app, config);
   await app.ready();
   return app;
 }

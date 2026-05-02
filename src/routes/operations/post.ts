@@ -6,10 +6,10 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelBody, ModelConfig} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -21,9 +21,10 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerPostRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     // generating the JSON schema for the request body
     // we ignore the primary key since it's typically auto-generated (like serial or uuid)
@@ -32,6 +33,10 @@ export function registerPostRoutes(
       ignorePrimaryKey: true,
       additionalProperties: false,
     });
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->insert->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     // defining the swagger schema for the POST API
     const schema: Record<string, unknown> = {
@@ -48,18 +53,12 @@ export function registerPostRoutes(
       {
         schema,
         preHandler: async request => {
-          await callWebhook(
-            'request',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
-            request,
-            null,
-            app.log,
-          );
+          await callWebhook('request', webhookConfig, request, null, app.log);
         },
         onSend: async (request, _, payload) => {
           await callWebhook(
             'response',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            webhookConfig,
             request,
             payload,
             app.log,

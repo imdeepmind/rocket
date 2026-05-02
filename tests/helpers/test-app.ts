@@ -7,6 +7,7 @@ import {registerRoutes} from '@/routes';
 
 import {
   ApisConfig,
+  AppConfig,
   CustomAPIConfig,
   DatabaseConfig,
   ModelConfig,
@@ -46,8 +47,21 @@ export async function createTestApp(
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
+  const appConfig: AppConfig = {
+    application: {logLevel: 'error'},
+    swagger: {
+      enabled: false,
+      basePath: '/docs',
+      info: {title: 'Test', description: 'Test', version: '1.0.0'},
+    },
+    database: dbConfig,
+    models,
+    apis,
+    customAPIs,
+  };
+
   if (models.length > 0 || apis || customAPIs) {
-    registerRoutes(fastify, models, apis, customAPIs);
+    registerRoutes(fastify, appConfig);
   }
   await fastify.ready();
   return fastify;

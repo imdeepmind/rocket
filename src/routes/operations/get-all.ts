@@ -9,10 +9,10 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register GET_ALL routes for listing records (table-level).
@@ -27,11 +27,18 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerGetAllRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  // We're iterating over all models provided in the configuration.
+  // For each model, we'll check if there are any fields that support the 'gettable' operation.
+  const {models} = config;
+
   for (const model of models) {
     const queryProperties: Record<string, object> = {};
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->getAll->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     // Add filter params for each field based on its supportedOperations
     for (const field of model.fields) {
@@ -92,18 +99,12 @@ export function registerGetAllRoutes(
       {
         schema,
         preHandler: async request => {
-          await callWebhook(
-            'request',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
-            request,
-            null,
-            app.log,
-          );
+          await callWebhook('request', webhookConfig, request, null, app.log);
         },
         onSend: async (request, _, payload) => {
           await callWebhook(
             'response',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            webhookConfig,
             request,
             payload,
             app.log,

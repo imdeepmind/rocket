@@ -207,12 +207,7 @@ describe('Server', () => {
     expect(mockApp.register).toHaveBeenCalledTimes(4);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
-    expect(registerRoutes).toHaveBeenCalledWith(
-      mockApp,
-      mockConfig.models,
-      mockConfig.apis,
-      mockConfig.customAPIs,
-    );
+    expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -234,7 +229,10 @@ describe('Server', () => {
     const noModelsConfig = {...mockConfig, models: []} as unknown as AppConfig;
     await startServer(noModelsConfig, 3000, 'prod');
 
-    expect(registerRoutes).not.toHaveBeenCalled();
+    expect(registerRoutes).toHaveBeenCalledWith(
+      expect.any(Object),
+      noModelsConfig,
+    );
   });
 
   describe('Error Handler', () => {

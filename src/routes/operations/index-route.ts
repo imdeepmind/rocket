@@ -10,10 +10,10 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register INDEX routes for indexed fields.
@@ -26,9 +26,12 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerIndexRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  // We're iterating over all models provided in the configuration.
+  // For each model, we'll check if there are any fields that support the 'indexable' operation.
+  const {models} = config;
+
   for (const model of models) {
     // Determine which fields need an index route
     // a field is considered as indeaxable if it is unique or it is a primary key field
@@ -38,6 +41,10 @@ export function registerIndexRoutes(
         f.primaryKey || f.unique || f.supportedOperations?.includes('indexable')
       );
     });
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->index->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,
@@ -152,18 +159,12 @@ export function registerIndexRoutes(
         {
           schema,
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,

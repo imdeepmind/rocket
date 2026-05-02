@@ -5,10 +5,10 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register DELETE routes for deletable fields.
@@ -20,11 +20,12 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerDeleteRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
   // We're iterating over all models provided in the configuration.
   // For each model, we'll check if there are any fields that support the 'deletable' operation.
+  const {models} = config;
+
   for (const model of models) {
     // Identifying fields that are marked as deletable in the configuration.
     // If a field has 'deletable' in its supportedOperations array, it means
@@ -32,6 +33,10 @@ export function registerDeleteRoutes(
     const deletableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('deletable'),
     );
+
+    // Unique api identifier
+    const apiIdentifier = `modelAPIs->delete->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     // If we have deletable fields, we register a DELETE route for each.
     for (const field of deletableFields) {
@@ -66,18 +71,12 @@ export function registerDeleteRoutes(
         {
           schema,
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,

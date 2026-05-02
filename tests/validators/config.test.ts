@@ -1,6 +1,12 @@
 import {describe, expect, it} from 'vitest';
 
-import {AppConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
+import {
+  ApisConfig,
+  AppConfig,
+  CustomQueryConfig,
+  DatabaseConfig,
+  ModelConfig,
+} from '@/schema/config';
 
 import {validateConfig} from '@/validators/config';
 
@@ -2200,17 +2206,22 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'invalid',
                 data: ['query'],
+                triggerOnRequest: true,
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2221,16 +2232,22 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
                 data: 'query',
+                triggerOnRequest: true,
               },
             ],
           },
-        ],
+        },
       },
-      expected: '/customAPIs/customQueries/0/webhooks/0/data must be array',
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2241,17 +2258,22 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
                 data: [],
+                triggerOnRequest: true,
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2262,17 +2284,22 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
                 data: ['query', 'invalid'],
+                triggerOnRequest: true,
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2283,6 +2310,10 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2291,10 +2322,10 @@ describe('validateInvalidApisConfig', () => {
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2305,18 +2336,23 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
                 data: ['query'],
                 triggerOnResponse: 'trfghdue',
+                triggerOnRequest: true,
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2327,6 +2363,10 @@ describe('validateInvalidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2336,15 +2376,19 @@ describe('validateInvalidApisConfig', () => {
               },
             ],
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/customAPIs->customQueries->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: patch,
+      customAPIs: {
+        customQueries: patchObj.customQueries as CustomQueryConfig[],
+      },
+      apis: patchObj.apis as ApisConfig,
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -2401,43 +2445,43 @@ describe('validateValidApisConfig', () => {
           {
             name: 'sample_query',
             method: 'POST',
-            path: '/update-user',
+            path: '/test',
             query:
-              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@ WHERE id = $$id:integer$$ AND status = '&&status:string&&';",
+              'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
           },
         ],
       },
     },
     {
-      name: 'valid path and query variables in GET',
+      name: 'valid variables in GET query',
       patch: {
         customQueries: [
           {
             name: 'sample_query',
             method: 'GET',
-            path: '/search',
+            path: '/test',
             query:
-              'SELECT * FROM users WHERE id = $$id:integer$$ AND category = &&cat:string&&;',
+              'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
           },
         ],
       },
     },
     {
-      name: 'valid typed variables in POST query',
+      name: 'valid magic variable with hyphen and underscore',
       patch: {
         customQueries: [
           {
             name: 'sample_query',
-            method: 'POST',
-            path: '/update-user',
+            method: 'GET',
+            path: '/test',
             query:
-              "UPDATE users SET name = '@@name:string@@', age = @@age:integer@@, updated_at = '@@updated_at:datetime@@' WHERE id = $$id:integer$$ AND status = &&status:boolean&&;",
+              'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
           },
         ],
       },
     },
     {
-      name: 'a valid webhook config',
+      name: 'valid webhook with triggerOnRequest',
       patch: {
         customQueries: [
           {
@@ -2445,37 +2489,43 @@ describe('validateValidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users;',
-            webhooks: [
-              {
-                url: 'https://example.com',
-                data: ['query'],
-                triggerOnRequest: false,
-                triggerOnResponse: true,
-              },
-            ],
           },
         ],
-      },
-    },
-    {
-      name: 'a valid webhook config 2',
-      patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test',
-            query: 'SELECT * FROM users;',
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
                 data: ['query'],
                 triggerOnRequest: true,
-                triggerOnResponse: false,
               },
             ],
           },
+        },
+      },
+    },
+    {
+      name: 'valid webhook with triggerOnResponse',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
         ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnResponse: true,
+              },
+            ],
+          },
+        },
       },
     },
     {
@@ -2487,6 +2537,10 @@ describe('validateValidApisConfig', () => {
             method: 'GET',
             path: '/test',
             query: 'SELECT * FROM users;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2496,13 +2550,17 @@ describe('validateValidApisConfig', () => {
               },
             ],
           },
-        ],
+        },
       },
     },
   ])('Scenario: $name -> should return', ({patch}) => {
+    const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: patch,
+      customAPIs: {
+        customQueries: patchObj.customQueries as CustomQueryConfig[],
+      },
+      apis: patchObj.apis as ApisConfig,
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
@@ -2845,94 +2903,56 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid webhook for modelAPis',
       patch: {
-        modelAPIs: {
-          users: {
-            aggregate: 'invalid',
-          },
-        },
+        'modelAPIs->aggregate->users': 'invalid',
       },
-      expected: '/apis/modelAPIs/users/aggregate must be object',
+      expected: '/apis/modelAPIs->aggregate->users must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        modelAPIs: {
-          users: {
-            aggregate: {
-              webhooks: 'invalid',
-            },
-          },
+        'modelAPIs->aggregate->users': {
+          webhooks: 'invalid',
         },
       },
-      expected: '/apis/modelAPIs/users/aggregate/webhooks must be array',
+      expected: '/apis/modelAPIs->aggregate->users/webhooks must be array',
     },
     {
-      name: 'invalid api operation name',
+      name: 'invalid api key format',
       patch: {
-        modelAPIs: {
-          users: {
-            invalid: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
-                  triggerOnResponse: true,
-                },
-              ],
+        invalid_key: {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: true,
+              triggerOnResponse: true,
             },
-          },
+          ],
         },
       },
-      expected: ' must NOT have additional properties',
-    },
-    {
-      name: 'invalid model name',
-      patch: {
-        modelAPIs: {
-          wrong: {
-            aggregate: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
-                  triggerOnResponse: true,
-                },
-              ],
-            },
-          },
-        },
-      },
-      expected: 'apis/apis/modelAPIs/0: model does not exist',
+      expected: 'apis/invalid_key: invalid key format',
     },
     {
       name: 'invalid data resp cannot be used when triggerOnRequest is true',
       patch: {
-        modelAPIs: {
-          users: {
-            aggregate: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: true,
-                  triggerOnResponse: true,
-                },
-              ],
+        'modelAPIs->aggregate->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: true,
+              triggerOnResponse: true,
             },
-          },
+          ],
         },
       },
       expected:
-        'apis/apis/modelAPIs/0/aggregate/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+        'apis/modelAPIs->aggregate->users/webhooks/0: data resp cannot be used when triggerOnRequest is true',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      apis: {
-        modelAPIs: patch.modelAPIs,
-      },
+      apis: patch,
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -2946,88 +2966,82 @@ describe('validateValidModelAPIsConfig', () => {
     {
       name: 'valid modelAPIs',
       patch: {
-        modelAPIs: {
-          users: {
-            aggregate: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+        'modelAPIs->aggregate->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            delete: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->delete->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            edit: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->edit->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            'get-all': {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->getAll->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            index: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->index->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            post: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->insert->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-            search: {
-              webhooks: [
-                {
-                  url: 'https://google.com',
-                  data: ['query', 'body', 'params', 'resp'],
-                  triggerOnRequest: false,
-                  triggerOnResponse: true,
-                },
-              ],
+          ],
+        },
+        'modelAPIs->search->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
             },
-          },
+          ],
         },
       },
     },
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      apis: {
-        modelAPIs: patch.modelAPIs,
-      },
+      apis: patch,
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);

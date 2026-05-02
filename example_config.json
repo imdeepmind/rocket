@@ -174,32 +174,20 @@
                 "name": "get_user_by_id",
                 "method": "POST",
                 "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;",
-                "webhooks": [
-                    {
-                        "url": "https://example.com",
-                        "data": ["query", "body", "params", "resp"],
-                        "triggerOnRequest": false,
-                        "triggerOnResponse": true
-                    }
-                ]
+                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
             }
         ]
     },
     "apis": {
-        "modelAPIs": {
-            "users": {
-                "aggregate": {
-                    "webhooks": [
-                        {
-                            "url": "https://example.com",
-                            "data": ["query", "body", "params", "resp"],
-                            "triggerOnRequest": false,
-                            "triggerOnResponse": true
-                        }
-                    ]
+        "customAPIs->customQueries->get_user_by_id": {
+            "webhooks": [
+                {
+                    "url": "https://example.com",
+                    "data": ["query", "body", "params", "resp"],
+                    "triggerOnRequest": false,
+                    "triggerOnResponse": true
                 }
-            }
+            ]
         }
     }
 }

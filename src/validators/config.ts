@@ -8,6 +8,8 @@ import {
   WebhookConfig,
 } from '@/schema/config';
 
+import {getAPIFromUniqueIdentifier} from '@/utils/config';
+
 import {validateEntityName} from './entity';
 
 const ajv = new Ajv({
@@ -354,111 +356,25 @@ const customQuerySchema = {
       type: 'string',
       minLength: 1,
     },
-    webhooks: {
-      type: 'array',
-      items: webhookSchema,
-    },
-  },
-};
-
-const modelAPISchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    aggregate: {
-      type: 'object',
-      required: ['webhooks'],
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    delete: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    edit: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    'get-all': {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    index: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    post: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    search: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
   },
 };
 
 const apisSchema = {
   type: 'object',
-  additionalProperties: false,
-  properties: {
-    customQueries: {
-      type: 'array',
-      items: customQuerySchema,
-    },
-    modelAPIs: {
+  patternProperties: {
+    '^[A-Za-z0-9-_>]+$': {
       type: 'object',
-      additionalProperties: modelAPISchema,
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+      },
+      additionalProperties: false,
     },
   },
+  additionalProperties: false,
 };
 
 const customAPIsSchema = {
@@ -895,25 +811,6 @@ function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   return errors;
 }
 
-function validateModelNameInModelAPIs(config: AppConfig): string[] {
-  const errors: string[] = [];
-
-  // extra all the model names
-  const modelNames = config.models.map(m => m.name);
-
-  // iterate through all modelAPIs and check the name
-  const modelAPIs = config.apis?.modelAPIs ?? {};
-  Object.keys(modelAPIs).forEach((modelName, i) => {
-    const path = `/apis/modelAPIs/${i}`;
-
-    if (!modelNames.includes(modelName)) {
-      errors.push(`${path}: model does not exist`);
-    }
-  });
-
-  return errors;
-}
-
 function validateCustomAPIs(config: AppConfig): string[] {
   const errors: string[] = [];
 
@@ -1038,16 +935,6 @@ function validateCustomAPIs(config: AppConfig): string[] {
           );
         }
       }
-
-      // validate the webhook
-      if (cq.webhooks) {
-        const webhookErrors = validateWebhookConstraints(cq.webhooks);
-        if (webhookErrors.length > 0) {
-          webhookErrors.forEach(error => {
-            errors.push(`${path}${error}`);
-          });
-        }
-      }
     });
   }
 
@@ -1057,35 +944,39 @@ function validateCustomAPIs(config: AppConfig): string[] {
 function validateApisConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  // validate the modelAPIs
-  if (config.apis?.modelAPIs) {
-    const modelAPIErrors = validateModelNameInModelAPIs(config);
-    if (modelAPIErrors.length > 0) {
-      modelAPIErrors.forEach(error => {
-        errors.push(`apis${error}`);
-      });
+  const apisConfigurations = config.apis ?? {};
+  const keys = Object.keys(apisConfigurations);
+
+  for (const key of keys) {
+    const parts = key.split('->');
+
+    if (parts.length !== 3) {
+      errors.push(`apis/${key}: invalid key format`);
+      continue;
     }
 
-    // validate the webhooks in modelAPIs
-    Object.keys(config.apis.modelAPIs).forEach((modelName, mi) => {
-      const modelConfig = config.apis!.modelAPIs![modelName];
-      Object.entries(modelConfig).forEach(([operation, opConfig]) => {
-        if (
-          opConfig &&
-          (opConfig as unknown as {webhooks?: unknown}).webhooks
-        ) {
-          const webhookErrors = validateWebhookConstraints(
-            (opConfig as unknown as {webhooks?: unknown})
-              .webhooks as WebhookConfig[],
-          );
-          if (webhookErrors.length > 0) {
-            webhookErrors.forEach(error => {
-              errors.push(`apis/apis/modelAPIs/${mi}/${operation}${error}`);
-            });
-          }
+    if (parts[0] === 'customAPIs') {
+      if (parts[1] === 'customQueries') {
+        const customQueryConfig = getAPIFromUniqueIdentifier(config, key);
+
+        if (!customQueryConfig) {
+          errors.push(`apis/${key}: custom query not found`);
+          continue;
         }
-      });
-    });
+      }
+    }
+
+    // validate the webhook
+    const webhooks = apisConfigurations[key]?.webhooks;
+
+    if (webhooks) {
+      const webhookErrors = validateWebhookConstraints(webhooks);
+      if (webhookErrors.length > 0) {
+        webhookErrors.forEach(error => {
+          errors.push(`apis/${key}${error}`);
+        });
+      }
+    }
   }
 
   return errors;

@@ -116,15 +116,13 @@ export async function startServer(
   // register swagger
   await registerSwagger(config.swagger, app);
 
-  // register config-driven model routes
-  if (config.models && config.models.length > 0) {
-    registerRoutes(app, config.models || [], config.apis, config.customAPIs);
-  }
+  // register config-driven routes (models, aggregations, custom queries)
+  registerRoutes(app, config);
 
   // register auth routes (only when up-auth is configured)
   if (config.auth) {
-    registerRegistrationRoute(app, config.models || [], config.auth);
-    registerLoginRoute(app, config.models || [], config.auth);
+    registerRegistrationRoute(app, config);
+    registerLoginRoute(app, config);
   }
 
   // Global error handler

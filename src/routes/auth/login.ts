@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AuthConfig, ModelBody, ModelConfig} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -21,11 +21,12 @@ import {capitalizeFirstLetter} from '@/utils/string';
  */
 export function registerLoginRoute(
   app: FastifyInstance,
-  models: ModelConfig[],
-  auth: AuthConfig,
+  config: AppConfig,
 ): void {
+  const {models, auth} = config;
+
   // Guard: only register when up-auth is enabled
-  if (!auth.enableAuth || auth.authEngine !== 'up-auth') {
+  if (!auth || !auth.enableAuth || auth.authEngine !== 'up-auth') {
     return;
   }
 

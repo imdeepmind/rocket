@@ -9,10 +9,10 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register SEARCH routes for searchable fields.
@@ -28,13 +28,18 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerSearchRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     const searchableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('searchable'),
     );
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->search->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     for (const field of searchableFields) {
       // defining the primary search query parameter
@@ -100,18 +105,12 @@ export function registerSearchRoutes(
         {
           schema,
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,

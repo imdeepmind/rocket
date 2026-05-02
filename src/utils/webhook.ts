@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyRequest} from 'fastify';
 
-import {ModelAPIConfig, WebhookConfig} from '@/schema/config';
+import {WebhookConfig} from '@/schema/config';
 
 interface WebhookPayload {
   body?: unknown;
@@ -10,7 +10,6 @@ interface WebhookPayload {
 }
 
 type WebhookTriggerType = 'request' | 'response';
-type ApiKey = keyof ModelAPIConfig;
 
 async function makeWebhookCall(
   url: string,
@@ -63,32 +62,4 @@ export async function callWebhook(
       await makeWebhookCall(config.url, webhookPayload, logger);
     }
   }
-}
-
-export function extractWebhookFromModelName(
-  modelName: string,
-  modelAPIs?: Record<string, ModelAPIConfig>,
-): WebhookConfig[] | null {
-  if (!modelAPIs || !(modelName in modelAPIs)) return null;
-
-  const modelConfig = modelAPIs[modelName];
-
-  const apiKeys: ApiKey[] = [
-    'aggregate',
-    'delete',
-    'edit',
-    'get-all',
-    'index',
-    'post',
-    'search',
-  ];
-
-  for (const api of apiKeys) {
-    const apiConfig = modelConfig[api];
-    if (apiConfig?.webhooks) {
-      return apiConfig.webhooks;
-    }
-  }
-
-  return null;
 }

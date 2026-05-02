@@ -7,10 +7,10 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelBody, ModelConfig} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/schema/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register EDIT routes for editable fields.
@@ -25,14 +25,21 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerEditRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  // We're iterating over all models provided in the configuration.
+  // For each model, we'll check if there are any fields that support the 'editable' operation.
+  const {models} = config;
+
   for (const model of models) {
     // identifying fields that are marked as editable in the configuration
     const editableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('editable'),
     );
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->edit->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -191,18 +198,12 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PATCH'),
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,
@@ -217,18 +218,12 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PUT'),
           preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,
