@@ -187,6 +187,13 @@
                     "triggerOnRequest": false,
                     "triggerOnResponse": true
                 }
+            ],
+            "ssp": [
+                {
+                    "paramType": "path",
+                    "paramName": "id",
+                    "value": "1"
+                }
             ]
         }
     }

@@ -3252,3 +3252,83 @@ describe('validateValidModelAPIsConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+// check invalid ssp configs
+describe('validateInvalidSspConfig', () => {
+  it.each([
+    {
+      name: 'invalid ssp config param type',
+      patch: {ssp: [{paramType: 'invalid', paramName: 'id', value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+    },
+    {
+      name: 'invalid ssp config param type',
+      patch: {ssp: [{paramType: 132, paramName: 'id', value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+    },
+    {
+      name: 'invalid ssp config param name',
+      patch: {ssp: [{paramType: 'body', paramName: 123, value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramName must be string',
+    },
+    {
+      name: 'invalid ssp config param value',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: null}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/value must be string',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'customAPIs->customQueries->sample_query': {
+          ssp: patch.ssp,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// check valid ssp configs
+describe('validateValidSspConfig', () => {
+  it.each([
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: '1'}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: 1}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: true}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'query', paramName: 'id', value: '1'}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'path', paramName: 'id', value: '1'}]},
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'modelAPIs->getAll->posts': {
+          ssp: patch.ssp,
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});

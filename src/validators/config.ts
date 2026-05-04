@@ -359,6 +359,26 @@ const customQuerySchema = {
   },
 };
 
+const sspSchema = {
+  type: 'object',
+  required: ['paramType', 'paramName', 'value'],
+  additionalProperties: false,
+  properties: {
+    paramType: {
+      type: 'string',
+      enum: ['path', 'query', 'body'],
+    },
+    paramName: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
+    },
+    value: {
+      anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
+    },
+  },
+};
+
 const apisSchema = {
   type: 'object',
   patternProperties: {
@@ -368,6 +388,11 @@ const apisSchema = {
         webhooks: {
           type: 'array',
           items: webhookSchema,
+          minItems: 1,
+        },
+        ssp: {
+          type: 'array',
+          items: sspSchema,
           minItems: 1,
         },
       },

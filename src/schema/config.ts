@@ -173,9 +173,16 @@ export interface ModelAPIConfig {
   };
 }
 
+export interface SspConfig {
+  paramType: 'path' | 'query' | 'body';
+  paramName: string;
+  value: number | string | boolean;
+}
+
 export interface ApisConfig {
   [key: string]: {
     webhooks: WebhookConfig[];
+    ssp: SspConfig[];
   };
 }
 
