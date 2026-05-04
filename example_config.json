@@ -179,7 +179,7 @@
         ]
     },
     "apis": {
-        "customAPIs->customQueries->get_user_by_id": {
+        "aggregate->users->get_aggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
@@ -190,9 +190,9 @@
             ],
             "ssp": [
                 {
-                    "paramType": "path",
-                    "paramName": "id",
-                    "value": "1"
+                    "paramType": "query",
+                    "paramName": "operations",
+                    "value": "min,max"
                 }
             ]
         }

@@ -11,6 +11,7 @@ import {
 
 import {AppConfig} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -39,6 +40,7 @@ export function registerGetAllRoutes(
     // unique api identifier
     const apiIdentifier = `modelAPIs->getAll->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // Add filter params for each field based on its supportedOperations
     for (const field of model.fields) {
@@ -112,6 +114,7 @@ export function registerGetAllRoutes(
       `/${model.name}/`,
       {
         schema,
+        preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
           if (config.auth?.enableAuth) {
             try {

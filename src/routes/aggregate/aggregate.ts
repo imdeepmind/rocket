@@ -4,6 +4,7 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, SupportedAggregationOperation} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -33,6 +34,7 @@ export function registerAggregateRoutes(
     const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
     const webhookConfig =
       config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
 
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
@@ -95,6 +97,7 @@ export function registerAggregateRoutes(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {

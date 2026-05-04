@@ -7,6 +7,7 @@ import {
 
 import {AppConfig} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -37,6 +38,7 @@ export function registerDeleteRoutes(
     // Unique api identifier
     const apiIdentifier = `modelAPIs->delete->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // If we have deletable fields, we register a DELETE route for each.
     for (const field of deletableFields) {
@@ -85,6 +87,7 @@ export function registerDeleteRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {

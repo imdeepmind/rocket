@@ -7,6 +7,7 @@ import {
 
 import {AppConfig, DataType} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {callWebhook} from '@/utils/webhook';
 
 type ParamSource = {
@@ -88,6 +89,7 @@ export function registerCustomQueryRoutes(
     // uniqie api identifier
     const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // body parameters are always in between @@
     // path parameters are always in between $$
@@ -208,6 +210,7 @@ export function registerCustomQueryRoutes(
       method: cq.method,
       url: routePath,
       schema,
+      preValidation: async request => enforceSSP(sspConfig, request),
       preHandler: async (request, reply) => {
         if (config.auth?.enableAuth) {
           try {

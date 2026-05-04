@@ -12,6 +12,7 @@ import {
 
 import {AppConfig} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -45,6 +46,7 @@ export function registerIndexRoutes(
     // unique api identifier
     const apiIdentifier = `modelAPIs->index->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,
@@ -172,6 +174,7 @@ export function registerIndexRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {

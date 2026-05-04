@@ -9,6 +9,7 @@ import {
 
 import {AppConfig, ModelBody} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -40,6 +41,7 @@ export function registerEditRoutes(
     // unique api identifier
     const apiIdentifier = `modelAPIs->edit->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -211,6 +213,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PATCH'),
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {
@@ -246,6 +249,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PUT'),
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {

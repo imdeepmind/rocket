@@ -8,6 +8,7 @@ import {
 
 import {AppConfig, ModelBody} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -37,6 +38,7 @@ export function registerPostRoutes(
     // unique api identifier
     const apiIdentifier = `modelAPIs->insert->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // defining the swagger schema for the POST API
     const schema: Record<string, unknown> = {
@@ -66,6 +68,7 @@ export function registerPostRoutes(
       `/${model.name}/`,
       {
         schema,
+        preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
           if (config.auth?.enableAuth) {
             try {

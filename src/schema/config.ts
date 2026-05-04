@@ -52,6 +52,7 @@ export type JsonSchemaObject = {
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
 export type AuthEngine = 'api-key' | 'up-auth';
+export type SspParamType = 'path' | 'query' | 'body';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -174,7 +175,7 @@ export interface ModelAPIConfig {
 }
 
 export interface SspConfig {
-  paramType: 'path' | 'query' | 'body';
+  paramType: SspParamType;
   paramName: string;
   value: number | string | boolean;
 }

@@ -11,6 +11,7 @@ import {
 
 import {AppConfig} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 import {callWebhook} from '@/utils/webhook';
 
@@ -40,6 +41,7 @@ export function registerSearchRoutes(
     // unique api identifier
     const apiIdentifier = `modelAPIs->search->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     for (const field of searchableFields) {
       // defining the primary search query parameter
@@ -118,6 +120,7 @@ export function registerSearchRoutes(
         `/${model.name}/search/${field.name}`,
         {
           schema,
+          preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
             if (config.auth?.enableAuth) {
               try {
