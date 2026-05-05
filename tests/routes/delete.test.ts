@@ -190,11 +190,17 @@ describe('test delete api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->delete->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         singleDeletableModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -215,7 +221,7 @@ describe('test delete api', () => {
       const fastify = await createTestApp(
         pgConfig,
         singleDeletableModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -236,7 +242,7 @@ describe('test delete api', () => {
       const fastify = await createTestApp(
         pgConfig,
         singleDeletableModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -270,7 +276,7 @@ describe('test delete api', () => {
       const fastify = await createTestApp(
         pgConfig,
         singleDeletableModel,
-        undefined,
+        apisConfig,
         undefined,
         apiKeyAuth,
       );

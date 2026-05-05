@@ -42,6 +42,7 @@ export function registerSearchRoutes(
     const apiIdentifier = `modelAPIs->search->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     for (const field of searchableFields) {
       // defining the primary search query parameter
@@ -122,7 +123,7 @@ export function registerSearchRoutes(
           schema,
           preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
-            if (config.auth?.enableAuth) {
+            if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
               } catch {

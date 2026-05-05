@@ -268,11 +268,17 @@ describe('test aggregate api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'aggregate->sales->get_aggregation': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         aggregateModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -295,7 +301,7 @@ describe('test aggregate api', () => {
       const fastify = await createTestApp(
         pgConfig,
         aggregateModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

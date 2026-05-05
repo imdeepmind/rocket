@@ -386,11 +386,17 @@ describe('test get-all api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->getAll->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         getAllModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -415,7 +421,7 @@ describe('test get-all api', () => {
       const fastify = await createTestApp(
         pgConfig,
         getAllModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

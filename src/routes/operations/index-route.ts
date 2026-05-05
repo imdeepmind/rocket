@@ -47,6 +47,7 @@ export function registerIndexRoutes(
     const apiIdentifier = `modelAPIs->index->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,
@@ -176,7 +177,7 @@ export function registerIndexRoutes(
           schema,
           preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
-            if (config.auth?.enableAuth) {
+            if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
               } catch {

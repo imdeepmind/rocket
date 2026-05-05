@@ -39,6 +39,7 @@ export function registerPostRoutes(
     const apiIdentifier = `modelAPIs->insert->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     // defining the swagger schema for the POST API
     const schema: Record<string, unknown> = {
@@ -70,7 +71,7 @@ export function registerPostRoutes(
         schema,
         preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
-          if (config.auth?.enableAuth) {
+          if (config.auth?.enableAuth && authorization) {
             try {
               await request.jwtVerify();
             } catch {

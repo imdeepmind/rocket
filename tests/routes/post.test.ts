@@ -195,11 +195,17 @@ describe('test post api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->insert->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         mockModels,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -218,7 +224,7 @@ describe('test post api', () => {
       const fastify = await createTestApp(
         pgConfig,
         mockModels,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

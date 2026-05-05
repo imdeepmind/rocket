@@ -471,11 +471,17 @@ describe('test search api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->search->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         searchableModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -500,7 +506,7 @@ describe('test search api', () => {
       const fastify = await createTestApp(
         pgConfig,
         searchableModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

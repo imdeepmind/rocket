@@ -395,11 +395,17 @@ describe('test edit api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->edit->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided (PATCH)', async () => {
       const fastify = await createTestApp(
         pgConfig,
         defaultEditModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -418,7 +424,7 @@ describe('test edit api', () => {
       const fastify = await createTestApp(
         pgConfig,
         defaultEditModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -439,7 +445,7 @@ describe('test edit api', () => {
       const fastify = await createTestApp(
         pgConfig,
         defaultEditModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

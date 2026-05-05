@@ -42,6 +42,7 @@ export function registerEditRoutes(
     const apiIdentifier = `modelAPIs->edit->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -215,7 +216,7 @@ export function registerEditRoutes(
           schema: buildRouteSchema('PATCH'),
           preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
-            if (config.auth?.enableAuth) {
+            if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
               } catch {

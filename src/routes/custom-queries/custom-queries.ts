@@ -90,6 +90,7 @@ export function registerCustomQueryRoutes(
     const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     // body parameters are always in between @@
     // path parameters are always in between $$
@@ -212,7 +213,7 @@ export function registerCustomQueryRoutes(
       schema,
       preValidation: async request => enforceSSP(sspConfig, request),
       preHandler: async (request, reply) => {
-        if (config.auth?.enableAuth) {
+        if (config.auth?.enableAuth && authorization) {
           try {
             await request.jwtVerify();
           } catch {
