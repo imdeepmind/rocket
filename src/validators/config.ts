@@ -395,6 +395,10 @@ const apisSchema = {
           items: sspSchema,
           minItems: 1,
         },
+        authorization: {
+          type: 'boolean',
+          default: false,
+        },
       },
       additionalProperties: false,
     },
@@ -1001,6 +1005,14 @@ function validateApisConstraints(config: AppConfig): string[] {
           errors.push(`apis/${key}${error}`);
         });
       }
+    }
+
+    // validate the authorization, true only when auth is enabled
+    const authorization = apisConfigurations[key]?.authorization;
+    if (authorization && !config.auth?.enableAuth) {
+      errors.push(
+        `apis/${key}/authorization: authorization is only allowed when auth is enabled`,
+      );
     }
   }
 

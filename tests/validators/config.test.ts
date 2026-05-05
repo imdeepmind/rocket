@@ -3332,3 +3332,92 @@ describe('validateValidSspConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+// validate the authorization property
+describe('validateInvalidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'invalid authorization config',
+      patch: {authorization: 'wrong'},
+      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+    },
+    {
+      name: 'invalid authorization config',
+      patch: {authorization: null},
+      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// authorization is enabled when authentication is disabled
+describe('validateInvalidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'authorization is enabled when authentication is disabled',
+      patch: {authorization: true},
+      expected:
+        'apis/modelAPIs->getAll->posts/authorization: authorization is only allowed when auth is enabled',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: {
+        enableAuth: false,
+        authEngine: 'api-key',
+        apiKey: '1234',
+      },
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// check valid authorization configs
+describe('validateValidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'valid authorization config',
+      patch: {authorization: true},
+    },
+    {
+      name: 'valid authorization config',
+      patch: {authorization: false},
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: {
+        enableAuth: true,
+        authEngine: 'api-key',
+        apiKey: '1234',
+      },
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});

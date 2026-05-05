@@ -188,6 +188,7 @@
                     "triggerOnResponse": true
                 }
             ],
+            "authorization": true,
             "ssp": [
                 {
                     "paramType": "query",
