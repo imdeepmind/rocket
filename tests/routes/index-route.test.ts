@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/schema/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -100,6 +100,17 @@ const noIndexFieldModel: ModelConfig[] = [
     ],
   },
 ];
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 describe('test index-route api', () => {
   beforeEach(() => {
@@ -544,6 +555,55 @@ describe('test index-route api', () => {
       expect(response.statusCode).toBe(404);
       expect(pgQueryMock).not.toHaveBeenCalled();
 
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    test('should return 401 when auth is enabled and no token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        uniqueFieldModel,
+        undefined,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 200 when auth is enabled and valid token is provided', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 42, name: 'Alice', email: 'alice@example.com'}],
+        rowCount: 1,
+      });
+
+      const fastify = await createTestApp(
+        pgConfig,
+        uniqueFieldModel,
+        undefined,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/id/42',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data.id).toBe(42);
       await fastify.close();
     });
   });

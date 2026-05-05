@@ -6,10 +6,11 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelBody, ModelConfig} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register POST routes for creating records (table-level).
@@ -21,9 +22,10 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerPostRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     // generating the JSON schema for the request body
     // we ignore the primary key since it's typically auto-generated (like serial or uuid)
@@ -32,6 +34,11 @@ export function registerPostRoutes(
       ignorePrimaryKey: true,
       additionalProperties: false,
     });
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->insert->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // defining the swagger schema for the POST API
     const schema: Record<string, unknown> = {
@@ -43,23 +50,47 @@ export function registerPostRoutes(
       response: getResponseStructureSchema([201], bodySchema, bodySchema),
     };
 
+    const security: Array<{[key: string]: string[]}> = [];
+
+    if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+      security.push({bearerAuth: []});
+    }
+
+    if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+      security.push({apiKeyAuth: []});
+    }
+
+    if (security.length > 0) {
+      schema.security = security;
+    }
+
     app.post(
       `/${model.name}/`,
       {
         schema,
-        preHandler: async request => {
-          await callWebhook(
-            'request',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
-            request,
-            null,
-            app.log,
-          );
+        preValidation: async request => enforceSSP(sspConfig, request),
+        preHandler: async (request, reply) => {
+          if (config.auth?.enableAuth) {
+            try {
+              await request.jwtVerify();
+            } catch {
+              return reply
+                .status(401)
+                .send(
+                  app.buildResponse(
+                    401,
+                    'Invalid or expired authentication token',
+                    null,
+                  ),
+                );
+            }
+          }
+          await callWebhook('request', webhookConfig, request, null, app.log);
         },
         onSend: async (request, _, payload) => {
           await callWebhook(
             'response',
-            extractWebhookFromModelName(model.name, apis?.modelAPIs),
+            webhookConfig,
             request,
             payload,
             app.log,

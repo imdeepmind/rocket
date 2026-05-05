@@ -5,10 +5,11 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register DELETE routes for deletable fields.
@@ -20,11 +21,12 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerDeleteRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
   // We're iterating over all models provided in the configuration.
   // For each model, we'll check if there are any fields that support the 'deletable' operation.
+  const {models} = config;
+
   for (const model of models) {
     // Identifying fields that are marked as deletable in the configuration.
     // If a field has 'deletable' in its supportedOperations array, it means
@@ -32,6 +34,11 @@ export function registerDeleteRoutes(
     const deletableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('deletable'),
     );
+
+    // Unique api identifier
+    const apiIdentifier = `modelAPIs->delete->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // If we have deletable fields, we register a DELETE route for each.
     for (const field of deletableFields) {
@@ -61,23 +68,48 @@ export function registerDeleteRoutes(
         // standard response structure for successful deletion (204 No Content)
         response: getResponseStructureSchema([204], {}),
       };
+
+      const security: Array<{[key: string]: string[]}> = [];
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+        security.push({bearerAuth: []});
+      }
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+        security.push({apiKeyAuth: []});
+      }
+
+      if (security.length > 0) {
+        schema.security = security;
+      }
+
       app.delete(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
-          preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+          preValidation: async request => enforceSSP(sspConfig, request),
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,

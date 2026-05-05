@@ -51,6 +51,8 @@ export type JsonSchemaObject = {
   [key: string]: unknown;
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
+export type AuthEngine = 'api-key' | 'up-auth';
+export type SspParamType = 'path' | 'query' | 'body';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -142,10 +144,10 @@ export interface WebhookConfig {
 }
 
 export interface CustomQueryConfig {
+  name: string;
   method: HTTPMethod;
   path: string;
   query: string;
-  webhooks?: WebhookConfig[];
 }
 
 export interface ModelAPIConfig {
@@ -172,9 +174,33 @@ export interface ModelAPIConfig {
   };
 }
 
+export interface SspConfig {
+  paramType: SspParamType;
+  paramName: string;
+  value: number | string | boolean;
+}
+
 export interface ApisConfig {
+  [key: string]: {
+    webhooks: WebhookConfig[];
+    ssp: SspConfig[];
+  };
+}
+
+export interface CustomAPIConfig {
   customQueries?: CustomQueryConfig[];
-  modelAPIs?: Record<string, ModelAPIConfig>;
+}
+
+export interface AuthConfig {
+  enableAuth: boolean;
+  authEngine: AuthEngine;
+  authModel: {
+    modelName: string;
+    idColumn: string;
+    usernameColumn: string;
+    passwordColumn: string;
+  };
+  apiKey?: string;
 }
 
 export interface AppConfig {
@@ -184,4 +210,6 @@ export interface AppConfig {
   models: ModelConfig[];
   apis?: ApisConfig;
   cache_db?: CacheDbConfig;
+  customAPIs?: CustomAPIConfig;
+  auth?: AuthConfig;
 }

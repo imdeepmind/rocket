@@ -1,4 +1,4 @@
-import Ajv from 'ajv';
+import Ajv, {SchemaValidateFunction} from 'ajv';
 import addFormats from 'ajv-formats';
 
 import {
@@ -7,6 +7,10 @@ import {
   JsonSchemaProperty,
   WebhookConfig,
 } from '@/schema/config';
+
+import {getAPIFromUniqueIdentifier} from '@/utils/config';
+
+import {validateEntityName} from './entity';
 
 const ajv = new Ajv({
   allErrors: true,
@@ -17,6 +21,28 @@ const ajv = new Ajv({
 });
 
 addFormats(ajv);
+
+ajv.addKeyword({
+  keyword: 'isEntityName',
+  type: 'string',
+  schema: false,
+  errors: true,
+  validate: function validate(data: string) {
+    try {
+      validateEntityName(data);
+      return true;
+    } catch (e: unknown) {
+      (validate as SchemaValidateFunction).errors = [
+        {
+          keyword: 'isEntityName',
+          message: (e as Error).message || 'Entity name is invalid',
+          params: {keyword: 'isEntityName'},
+        },
+      ];
+      return false;
+    }
+  } as SchemaValidateFunction,
+});
 
 const applicationSchema = {
   type: 'object',
@@ -163,7 +189,7 @@ const fieldSchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     type: {
       type: 'string',
@@ -194,14 +220,14 @@ const indexSchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     columns: {
       type: 'array',
       minItems: 1,
       items: {
         type: 'string',
-        pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+        isEntityName: true,
       },
       uniqueItems: true,
     },
@@ -220,23 +246,23 @@ const foreignKeySchema = {
     name: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     columns: {
       type: 'array',
       minItems: 1,
-      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
+      items: {type: 'string', isEntityName: true},
       uniqueItems: true,
     },
     referenceTable: {
       type: 'string',
       minLength: 1,
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
     },
     referenceColumns: {
       type: 'array',
       minItems: 1,
-      items: {type: 'string', pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'},
+      items: {type: 'string', isEntityName: true},
       uniqueItems: true,
     },
     onDelete: {
@@ -257,7 +283,7 @@ const modelSchema = {
   properties: {
     name: {
       type: 'string',
-      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$',
+      isEntityName: true,
       minLength: 1,
     },
     fields: {
@@ -310,9 +336,14 @@ const webhookSchema = {
 
 const customQuerySchema = {
   type: 'object',
-  required: ['method', 'path', 'query'],
+  required: ['name', 'method', 'path', 'query'],
   additionalProperties: false,
   properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
+    },
     method: {
       type: 'string',
       enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -325,99 +356,53 @@ const customQuerySchema = {
       type: 'string',
       minLength: 1,
     },
-    webhooks: {
-      type: 'array',
-      items: webhookSchema,
-    },
   },
 };
 
-const modelAPISchema = {
+const sspSchema = {
   type: 'object',
+  required: ['paramType', 'paramName', 'value'],
   additionalProperties: false,
   properties: {
-    aggregate: {
-      type: 'object',
-      required: ['webhooks'],
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
+    paramType: {
+      type: 'string',
+      enum: ['path', 'query', 'body'],
     },
-    delete: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
+    paramName: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
     },
-    edit: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    'get-all': {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    index: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    post: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
-    },
-    search: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        webhooks: {
-          type: 'array',
-          items: webhookSchema,
-          minItems: 1,
-        },
-      },
+    value: {
+      anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
     },
   },
 };
 
 const apisSchema = {
+  type: 'object',
+  patternProperties: {
+    '^[A-Za-z0-9-_>]+$': {
+      type: 'object',
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: webhookSchema,
+          minItems: 1,
+        },
+        ssp: {
+          type: 'array',
+          items: sspSchema,
+          minItems: 1,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+};
+
+const customAPIsSchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -425,9 +410,52 @@ const apisSchema = {
       type: 'array',
       items: customQuerySchema,
     },
-    modelAPIs: {
+  },
+};
+
+const authSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['enableAuth', 'authEngine'],
+  properties: {
+    enableAuth: {
+      type: 'boolean',
+    },
+    authEngine: {
+      type: 'string',
+      enum: ['api-key', 'up-auth'],
+    },
+    authModel: {
       type: 'object',
-      additionalProperties: modelAPISchema,
+      additionalProperties: false,
+      required: ['modelName', 'idColumn', 'usernameColumn', 'passwordColumn'],
+      properties: {
+        modelName: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        idColumn: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        usernameColumn: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        passwordColumn: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+      },
+    },
+    apiKey: {
+      type: 'string',
+      minLength: 1,
+      nullable: true,
     },
   },
 };
@@ -447,6 +475,8 @@ const schema = {
     },
     apis: apisSchema,
     cache_db: cacheDbSchema,
+    customAPIs: customAPIsSchema,
+    auth: authSchema,
   },
 };
 
@@ -806,34 +836,24 @@ function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   return errors;
 }
 
-function validateModelNameInModelAPIs(config: AppConfig): string[] {
+function validateCustomAPIs(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  // extra all the model names
-  const modelNames = config.models.map(m => m.name);
+  const customQueries = config.customAPIs?.customQueries ?? [];
 
-  // iterate through all modelAPIs and check the name
-  const modelAPIs = config.apis?.modelAPIs ?? {};
-  Object.keys(modelAPIs).forEach((modelName, i) => {
-    const path = `/apis/modelAPIs/${i}`;
+  const existingNames = new Set<string>();
 
-    if (!modelNames.includes(modelName)) {
-      errors.push(`${path}: model does not exist`);
-    }
-  });
-
-  return errors;
-}
-
-function validateApisConstraints(config: AppConfig): string[] {
-  const errors: string[] = [];
-  if (!config.apis) return errors;
-
-  if (config.apis.customQueries) {
-    config.apis.customQueries.forEach((cq, i) => {
-      const path = `/apis/customQueries/${i}`;
+  if (customQueries.length > 0) {
+    customQueries.forEach((cq, i) => {
+      const path = `/customAPIs/customQueries/${i}`;
 
       const q = cq.query.trim().toUpperCase();
+
+      // validate the name to make sure it is unique and follow naming convention
+      if (!cq.name || existingNames.has(cq.name)) {
+        errors.push(`${path}/name: name must be unique and non-empty`);
+      }
+      existingNames.add(cq.name);
 
       // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
       const ddlPrefixes = [
@@ -940,48 +960,124 @@ function validateApisConstraints(config: AppConfig): string[] {
           );
         }
       }
-
-      // validate the webhook
-      if (cq.webhooks) {
-        const webhookErrors = validateWebhookConstraints(cq.webhooks);
-        if (webhookErrors.length > 0) {
-          webhookErrors.forEach(error => {
-            errors.push(`${path}${error}`);
-          });
-        }
-      }
     });
   }
 
-  // validate the modelAPIs
-  if (config.apis?.modelAPIs) {
-    const modelAPIErrors = validateModelNameInModelAPIs(config);
-    if (modelAPIErrors.length > 0) {
-      modelAPIErrors.forEach(error => {
-        errors.push(`apis${error}`);
-      });
+  return errors;
+}
+
+function validateApisConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  const apisConfigurations = config.apis ?? {};
+  const keys = Object.keys(apisConfigurations);
+
+  for (const key of keys) {
+    const parts = key.split('->');
+
+    if (parts.length !== 3) {
+      errors.push(`apis/${key}: invalid key format`);
+      continue;
     }
 
-    // validate the webhooks in modelAPIs
-    Object.keys(config.apis.modelAPIs).forEach((modelName, mi) => {
-      const modelConfig = config.apis!.modelAPIs![modelName];
-      Object.entries(modelConfig).forEach(([operation, opConfig]) => {
-        if (
-          opConfig &&
-          (opConfig as unknown as {webhooks?: unknown}).webhooks
-        ) {
-          const webhookErrors = validateWebhookConstraints(
-            (opConfig as unknown as {webhooks?: unknown})
-              .webhooks as WebhookConfig[],
-          );
-          if (webhookErrors.length > 0) {
-            webhookErrors.forEach(error => {
-              errors.push(`apis/apis/modelAPIs/${mi}/${operation}${error}`);
-            });
-          }
+    if (parts[0] === 'customAPIs') {
+      if (parts[1] === 'customQueries') {
+        const customQueryConfig = getAPIFromUniqueIdentifier(config, key);
+
+        if (!customQueryConfig) {
+          errors.push(`apis/${key}: custom query not found`);
+          continue;
         }
-      });
-    });
+      }
+    }
+
+    // validate the webhook
+    const webhooks = apisConfigurations[key]?.webhooks;
+
+    if (webhooks) {
+      const webhookErrors = validateWebhookConstraints(webhooks);
+      if (webhookErrors.length > 0) {
+        webhookErrors.forEach(error => {
+          errors.push(`apis/${key}${error}`);
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+function validateAuthConstraints(config: AppConfig): string[] {
+  const errors: string[] = [];
+
+  // if authModel is api-key, then apiKey is required
+  if (config.auth?.authEngine === 'api-key' && !config.auth?.apiKey) {
+    errors.push('/auth/apiKey: apiKey is required when authEngine is api-key');
+  }
+
+  // if authModel is api-key, then authModel should not be present
+  if (config.auth?.authEngine === 'api-key' && config.auth?.authModel) {
+    errors.push(
+      '/auth/authModel: authModel should not be present when authEngine is api-key',
+    );
+  }
+
+  // if authModel is up-auth, then authModel is required
+  if (config.auth?.authEngine === 'up-auth' && !config.auth?.authModel) {
+    errors.push(
+      '/auth/authModel: authModel is required when authEngine is up-auth',
+    );
+  }
+
+  // if authModel is up-auth, then apiKey should not be present
+  if (config.auth?.authEngine === 'up-auth' && config.auth?.apiKey) {
+    errors.push(
+      '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
+    );
+  }
+
+  // check if authModel.modelName exists in models
+  if (config.auth?.authEngine === 'up-auth' && config.auth?.authModel) {
+    if (
+      config.auth?.authModel.modelName &&
+      !config.models.some(m => m.name === config.auth?.authModel.modelName)
+    ) {
+      errors.push('/auth/authModel/modelName: model does not exist');
+    }
+
+    // check if authModel.idColumn exists in models
+    if (
+      config.auth?.authModel.idColumn &&
+      !config.models.some(m =>
+        m.fields.some(f => f.name === config.auth?.authModel.idColumn),
+      )
+    ) {
+      errors.push('/auth/authModel/idColumn: field does not exist in model');
+    }
+
+    // check if authModel.usernameColumn exists in models
+    if (
+      config.auth?.authModel.usernameColumn &&
+      !config.models.some(m =>
+        m.fields.some(f => f.name === config.auth?.authModel.usernameColumn),
+      )
+    ) {
+      errors.push(
+        '/auth/authModel/usernameColumn: field does not exist in model',
+      );
+    }
+
+    // check if authModel.passwordColumn exists in models
+    if (
+      config.auth?.authModel.passwordColumn &&
+      !config.models.some(m =>
+        m.fields.some(f => f.name === config.auth?.authModel.passwordColumn),
+      )
+    ) {
+      errors.push(
+        '/auth/authModel/passwordColumn: field does not exist in model',
+      );
+    }
   }
 
   return errors;
@@ -1004,7 +1100,9 @@ export function validateConfig(input: AppConfig) {
         ...validateModelValidation(input as AppConfig, ajv),
         ...validateRateLimitConstraints(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
+        ...validateCustomAPIs(input as AppConfig),
         ...validateApisConstraints(input as AppConfig),
+        ...validateAuthConstraints(input as AppConfig),
       ]
     : [];
 

@@ -5,8 +5,9 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ApisConfig, DataType} from '@/schema/config';
+import {AppConfig, DataType} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {callWebhook} from '@/utils/webhook';
 
 type ParamSource = {
@@ -72,16 +73,23 @@ function interpolateQuery(
 
 export function registerCustomQueryRoutes(
   app: FastifyInstance,
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
-  if (!apis || !apis.customQueries) return;
+  const {customAPIs} = config;
 
-  for (const cq of apis.customQueries) {
+  if (!customAPIs || !customAPIs.customQueries) return;
+
+  for (const cq of customAPIs.customQueries) {
     // in magic variables we support 3 types of variables
     // body, path, and query
     const paramsProperties: Record<string, object> = {};
     const queryProperties: Record<string, object> = {};
     const bodyProperties: Record<string, object> = {};
+
+    // uniqie api identifier
+    const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // body parameters are always in between @@
     // path parameters are always in between $$
@@ -184,27 +192,45 @@ export function registerCustomQueryRoutes(
       },
     });
 
+    const security: Array<{[key: string]: string[]}> = [];
+
+    if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+      security.push({bearerAuth: []});
+    }
+
+    if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+      security.push({apiKeyAuth: []});
+    }
+
+    if (security.length > 0) {
+      schema.security = security;
+    }
+
     app.route({
       method: cq.method,
       url: routePath,
       schema,
-      preHandler: async request => {
-        await callWebhook(
-          'request',
-          cq.webhooks ? cq.webhooks : null,
-          request,
-          null,
-          app.log,
-        );
+      preValidation: async request => enforceSSP(sspConfig, request),
+      preHandler: async (request, reply) => {
+        if (config.auth?.enableAuth) {
+          try {
+            await request.jwtVerify();
+          } catch {
+            return reply
+              .status(401)
+              .send(
+                app.buildResponse(
+                  401,
+                  'Invalid or expired authentication token',
+                  null,
+                ),
+              );
+          }
+        }
+        await callWebhook('request', webhookConfig, request, null, app.log);
       },
       onSend: async (request, _, payload) => {
-        await callWebhook(
-          'response',
-          cq.webhooks ? cq.webhooks : null,
-          request,
-          payload,
-          app.log,
-        );
+        await callWebhook('response', webhookConfig, request, payload, app.log);
       },
       handler: async (request: FastifyRequest, reply: FastifyReply) => {
         // extract the body, path, and query parameters from the request

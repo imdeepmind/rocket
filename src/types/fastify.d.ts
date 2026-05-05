@@ -1,3 +1,5 @@
+import {FastifyJWT} from '@fastify/jwt';
+
 import {DatabaseQuery, StructuredResponse} from '@/schema';
 
 import 'fastify';
@@ -14,5 +16,6 @@ declare module 'fastify' {
       raw_data?: R,
     ) => StructuredResponse<T, R>;
     redis?: Redis;
+    jwt: FastifyJWT;
   }
 }

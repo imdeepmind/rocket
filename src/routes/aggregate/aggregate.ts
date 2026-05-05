@@ -2,14 +2,11 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {
-  ApisConfig,
-  ModelConfig,
-  SupportedAggregationOperation,
-} from '@/schema/config';
+import {AppConfig, SupportedAggregationOperation} from '@/schema/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.
@@ -22,9 +19,10 @@ import {callWebhook, extractWebhookFromModelName} from '@/utils/webhook';
  */
 export function registerAggregateRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
-  apis?: ApisConfig,
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     // We only create an aggregation route for fields that have non-empty supportedAggregation
     // if a field is not aggregatable, we skip it
@@ -32,10 +30,26 @@ export function registerAggregateRoutes(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
+    // API unique idenfier
+    const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
+    const webhookConfig =
+      config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
+
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
     for (const field of aggregatableFields) {
       const operations = field.supportedAggregation!;
+
+      const security: Array<{[key: string]: string[]}> = [];
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+        security.push({bearerAuth: []});
+      }
+
+      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+        security.push({apiKeyAuth: []});
+      }
 
       // defining the swagger/ajv validation schema for the route
       const schema: Record<string, unknown> = {
@@ -75,23 +89,37 @@ export function registerAggregateRoutes(
         ),
       };
 
+      if (security.length > 0) {
+        schema.security = security;
+      }
+
       app.get(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
-          preHandler: async request => {
-            await callWebhook(
-              'request',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
-              request,
-              null,
-              app.log,
-            );
+          preValidation: async request => enforceSSP(sspConfig, request),
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
+            await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
             await callWebhook(
               'response',
-              extractWebhookFromModelName(model.name, apis?.modelAPIs),
+              webhookConfig,
               request,
               payload,
               app.log,
