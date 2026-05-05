@@ -234,11 +234,17 @@ describe('test custom-queries api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'customAPIs->customQueries->searchUsers': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         [],
-        undefined,
+        apisConfig,
         customApis,
         upAuthConfig,
       );
@@ -257,7 +263,7 @@ describe('test custom-queries api', () => {
       const fastify = await createTestApp(
         pgConfig,
         [],
-        undefined,
+        apisConfig,
         customApis,
         upAuthConfig,
       );
@@ -292,7 +298,7 @@ describe('test custom-queries api', () => {
       const fastify = await createTestApp(
         pgConfig,
         [],
-        undefined,
+        apisConfig,
         customApis,
         apiKeyAuthConfig,
       );

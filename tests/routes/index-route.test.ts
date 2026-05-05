@@ -560,11 +560,17 @@ describe('test index-route api', () => {
   });
 
   describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->index->users': {
+        authorization: true,
+      },
+    };
+
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
         uniqueFieldModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );
@@ -587,7 +593,7 @@ describe('test index-route api', () => {
       const fastify = await createTestApp(
         pgConfig,
         uniqueFieldModel,
-        undefined,
+        apisConfig,
         undefined,
         upAuthConfig,
       );

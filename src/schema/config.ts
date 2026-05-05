@@ -182,8 +182,8 @@ export interface SspConfig {
 
 export interface ApisConfig {
   [key: string]: {
-    webhooks: WebhookConfig[];
-    ssp: SspConfig[];
+    webhooks?: WebhookConfig[];
+    ssp?: SspConfig[];
     authorization?: boolean;
   };
 }

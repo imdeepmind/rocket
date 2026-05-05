@@ -35,6 +35,8 @@ export function registerAggregateRoutes(
     const webhookConfig =
       config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
+    const authorization =
+      config.apis?.[aggregateAPIIdentifier]?.authorization ?? false;
 
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
@@ -99,7 +101,7 @@ export function registerAggregateRoutes(
           schema,
           preValidation: async request => enforceSSP(sspConfig, request),
           preHandler: async (request, reply) => {
-            if (config.auth?.enableAuth) {
+            if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
               } catch {

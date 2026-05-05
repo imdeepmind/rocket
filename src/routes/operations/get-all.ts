@@ -41,6 +41,7 @@ export function registerGetAllRoutes(
     const apiIdentifier = `modelAPIs->getAll->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     // Add filter params for each field based on its supportedOperations
     for (const field of model.fields) {
@@ -116,7 +117,7 @@ export function registerGetAllRoutes(
         schema,
         preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
-          if (config.auth?.enableAuth) {
+          if (config.auth?.enableAuth && authorization) {
             try {
               await request.jwtVerify();
             } catch {
