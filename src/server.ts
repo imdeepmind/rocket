@@ -15,6 +15,7 @@ import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
 
 import {registerRoutes} from '@/routes';
+import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
@@ -148,6 +149,7 @@ export async function startServer(
   if (config.auth) {
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
+    registerChangePasswordRoute(app, config);
   }
 
   // Global error handler
