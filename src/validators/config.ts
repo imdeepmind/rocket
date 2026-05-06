@@ -6,7 +6,7 @@ import {
   JsonSchemaObject,
   JsonSchemaProperty,
   WebhookConfig,
-} from '@/schema/config';
+} from '@/interfaces/config';
 
 import {getAPIFromUniqueIdentifier} from '@/utils/config';
 

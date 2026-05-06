@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import {InvalidArgumentError} from 'commander';
 
-import {Mode} from '@/schema';
+import {Mode} from '@/interfaces';
 
 // Validate config file path
 export function validateConfigPath(value: string): string {

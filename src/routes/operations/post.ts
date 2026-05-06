@@ -6,7 +6,7 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';

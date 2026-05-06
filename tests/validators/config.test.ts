@@ -6,7 +6,7 @@ import {
   CustomQueryConfig,
   DatabaseConfig,
   ModelConfig,
-} from '@/schema/config';
+} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 

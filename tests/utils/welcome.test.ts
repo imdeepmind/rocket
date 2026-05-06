@@ -8,7 +8,7 @@ import {
   type MockInstance,
 } from 'vitest';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
 

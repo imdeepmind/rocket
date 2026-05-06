@@ -2,7 +2,7 @@ import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
 import Redis from 'ioredis';
 
-import {CacheDbConfig} from '@/schema/config';
+import {CacheDbConfig} from '@/interfaces/config';
 
 export default fp(
   async (fastify: FastifyInstance, opts: CacheDbConfig) => {

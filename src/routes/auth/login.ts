@@ -3,7 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 

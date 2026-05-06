@@ -2,7 +2,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig, SupportedAggregationOperation} from '@/schema/config';
+import {AppConfig, SupportedAggregationOperation} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';

@@ -2,7 +2,7 @@ import {FastifyRequest} from 'fastify';
 import {Logger} from 'pino';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {WebhookConfig} from '@/schema/config';
+import {WebhookConfig} from '@/interfaces/config';
 
 import {callWebhook} from '@/utils/webhook';
 

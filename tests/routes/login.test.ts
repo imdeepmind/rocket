@@ -14,7 +14,7 @@ import {
   AuthConfig,
   DatabaseConfig,
   ModelConfig,
-} from '@/schema/config';
+} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 

@@ -4,7 +4,7 @@ import {
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
-} from '@/schema/config';
+} from '@/interfaces/config';
 
 /**
  * Map config DataType to JSON Schema type definition for Swagger.

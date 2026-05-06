@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 
-import {AuthConfig, CustomAPIConfig} from '@/schema/config';
+import {AuthConfig, CustomAPIConfig} from '@/interfaces/config';
 
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 

@@ -11,8 +11,8 @@ import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
 
-import {Mode} from '@/schema';
-import {AppConfig} from '@/schema/config';
+import {Mode} from '@/interfaces';
+import {AppConfig} from '@/interfaces/config';
 
 vi.mock('fastify', () => {
   const mockApp = {

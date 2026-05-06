@@ -1,4 +1,4 @@
-import {AppConfig, CustomQueryConfig} from '@/schema/config';
+import {AppConfig, CustomQueryConfig} from '@/interfaces/config';
 
 /**
  * Recursively resolves environment variables in the configuration object.

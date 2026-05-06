@@ -19,8 +19,8 @@ import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
-import {Mode} from '@/schema';
-import {AppConfig} from '@/schema/config';
+import {Mode} from '@/interfaces';
+import {AppConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 import {RouteInfo} from '@/utils/welcome';

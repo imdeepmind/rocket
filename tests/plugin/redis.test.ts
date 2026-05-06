@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import redisPlugin from '@/plugin/redis';
 
-import {CacheDbConfig} from '@/schema/config';
+import {CacheDbConfig} from '@/interfaces/config';
 
 // Mock ioredis
 // Mock ioredis

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 export interface RouteInfo {
   method: string;

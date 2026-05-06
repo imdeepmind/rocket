@@ -1,6 +1,6 @@
 import {FastifyRequest} from 'fastify';
 
-import {SspConfig, SspParamType} from '@/schema/config';
+import {SspConfig, SspParamType} from '@/interfaces/config';
 
 /**
  * Apply SSP values to the request based on the ssp config.
