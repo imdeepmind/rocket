@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 import {getAPIFromUniqueIdentifier, resolveEnvVars} from '@/utils/config';
 

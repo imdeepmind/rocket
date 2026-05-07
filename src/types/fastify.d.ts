@@ -1,6 +1,6 @@
 import {FastifyJWT} from '@fastify/jwt';
 
-import {DatabaseQuery, StructuredResponse} from '@/schema';
+import {DatabaseQuery, StructuredResponse} from '@/interfaces';
 
 import 'fastify';
 

@@ -3,7 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -28,37 +28,7 @@ export function registerChangePasswordRoute(
     return;
   }
 
-  const bodySchema = {
-    type: 'object',
-    required: ['existingPassword', 'newPassword'],
-    properties: {
-      existingPassword: {
-        type: 'string',
-        description: 'The current user password',
-      },
-      newPassword: {
-        type: 'string',
-        description: 'The new user password to set',
-      },
-    },
-    additionalProperties: false,
-  };
-
-  const responseSchema = getResponseStructureSchema([200], {
-    type: 'object',
-    properties: {
-      success: {type: 'boolean'},
-    },
-  });
-
-  const schema: Record<string, unknown> = {
-    summary: `Change password for ${capitalizeFirstLetter(modelName)}`,
-    description: `Changes the password for an authenticated user in the "${modelName}" table.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Password'],
-    body: bodySchema,
-    response: responseSchema,
-    security: [{bearerAuth: []}],
-  };
+  const schema: Record<string, unknown> = generateSchema(modelName);
 
   app.post(
     '/auth/change-password',
@@ -136,4 +106,39 @@ export function registerChangePasswordRoute(
       );
     },
   );
+}
+
+function generateSchema(modelName: string) {
+  const bodySchema = {
+    type: 'object',
+    required: ['existingPassword', 'newPassword'],
+    properties: {
+      existingPassword: {
+        type: 'string',
+        description: 'The current user password',
+      },
+      newPassword: {
+        type: 'string',
+        description: 'The new user password to set',
+      },
+    },
+    additionalProperties: false,
+  };
+
+  const responseSchema = getResponseStructureSchema([200], {
+    type: 'object',
+    properties: {
+      success: {type: 'boolean'},
+    },
+  });
+
+  const schema: Record<string, unknown> = {
+    summary: `Change password for ${capitalizeFirstLetter(modelName)}`,
+    description: `Changes the password for an authenticated user in the "${modelName}" table.`,
+    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Password'],
+    body: bodySchema,
+    response: responseSchema,
+    security: [{bearerAuth: []}],
+  };
+  return schema;
 }

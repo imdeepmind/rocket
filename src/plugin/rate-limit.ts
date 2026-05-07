@@ -3,7 +3,7 @@ import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
 import Redis from 'ioredis';
 
-import {RateLimitConfig} from '@/schema/config';
+import {RateLimitConfig} from '@/interfaces/config';
 
 import {parseDuration} from '@/utils/duration';
 

@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyRequest} from 'fastify';
 
-import {WebhookConfig} from '@/schema/config';
+import {WebhookConfig} from '@/interfaces/config';
 
 interface WebhookPayload {
   body?: unknown;

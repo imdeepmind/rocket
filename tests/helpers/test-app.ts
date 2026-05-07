@@ -13,7 +13,7 @@ import {
   CustomAPIConfig,
   DatabaseConfig,
   ModelConfig,
-} from '@/schema/config';
+} from '@/interfaces/config';
 
 export const mockModels: ModelConfig[] = [
   {

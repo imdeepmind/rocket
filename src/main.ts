@@ -6,8 +6,8 @@ import {Command} from 'commander';
 
 import {startServer} from '@/server';
 
-import {CLIOptions} from '@/schema';
-import {AppConfig} from '@/schema/config';
+import {CLIOptions} from '@/interfaces';
+import {AppConfig} from '@/interfaces/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
 import {resolveEnvVars} from '@/utils/config';

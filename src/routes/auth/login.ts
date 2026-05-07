@@ -3,7 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -42,34 +42,11 @@ export function registerLoginRoute(
   }
 
   // Request body schema for login
-  const bodySchema = {
-    type: 'object',
-    required: [usernameColumn, passwordColumn],
-    properties: {
-      [usernameColumn]: {type: 'string', description: 'The user identifier'},
-      [passwordColumn]: {type: 'string', description: 'The user password'},
-    },
-    additionalProperties: false,
-  };
-
-  // Response schema for successful login
-  const dataSchema = {
-    type: 'object',
-    properties: {
-      accessToken: {type: 'string', description: 'JWT access token'},
-    },
-  };
-
-  const responseSchema = getResponseStructureSchema([200], dataSchema);
-
-  // Swagger declaration for this route
-  const schema: Record<string, unknown> = {
-    summary: `Login for ${capitalizeFirstLetter(modelName)}`,
-    description: `Authenticates a user from the "${modelName}" table and returns a JWT access token.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Login'],
-    body: bodySchema,
-    response: responseSchema,
-  };
+  const schema: Record<string, unknown> = generateSchema(
+    usernameColumn,
+    passwordColumn,
+    modelName,
+  );
 
   app.post(
     '/auth/login',
@@ -117,4 +94,40 @@ export function registerLoginRoute(
       );
     },
   );
+}
+
+function generateSchema(
+  usernameColumn: string,
+  passwordColumn: string,
+  modelName: string,
+) {
+  const bodySchema = {
+    type: 'object',
+    required: [usernameColumn, passwordColumn],
+    properties: {
+      [usernameColumn]: {type: 'string', description: 'The user identifier'},
+      [passwordColumn]: {type: 'string', description: 'The user password'},
+    },
+    additionalProperties: false,
+  };
+
+  // Response schema for successful login
+  const dataSchema = {
+    type: 'object',
+    properties: {
+      accessToken: {type: 'string', description: 'JWT access token'},
+    },
+  };
+
+  const responseSchema = getResponseStructureSchema([200], dataSchema);
+
+  // Swagger declaration for this route
+  const schema: Record<string, unknown> = {
+    summary: `Login for ${capitalizeFirstLetter(modelName)}`,
+    description: `Authenticates a user from the "${modelName}" table and returns a JWT access token.`,
+    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Login'],
+    body: bodySchema,
+    response: responseSchema,
+  };
+  return schema;
 }

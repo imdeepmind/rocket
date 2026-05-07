@@ -9,7 +9,7 @@ import {registerIndexRoutes} from '@/routes/operations/index-route';
 import {registerPostRoutes} from '@/routes/operations/post';
 import {registerSearchRoutes} from '@/routes/operations/search';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 /**
  * Register all config-driven model routes on the Fastify instance.

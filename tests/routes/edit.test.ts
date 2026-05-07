@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';

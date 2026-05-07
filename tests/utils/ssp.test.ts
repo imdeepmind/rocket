@@ -1,7 +1,7 @@
 import {FastifyRequest} from 'fastify';
 import {describe, expect, it} from 'vitest';
 
-import {SspConfig} from '@/schema/config';
+import {SspConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 

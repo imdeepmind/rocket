@@ -9,7 +9,7 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig, ModelConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -35,81 +35,13 @@ export function registerGetAllRoutes(
   const {models} = config;
 
   for (const model of models) {
-    const queryProperties: Record<string, object> = {};
-
     // unique api identifier
     const apiIdentifier = `modelAPIs->getAll->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
     const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
-    // Add filter params for each field based on its supportedOperations
-    for (const field of model.fields) {
-      // we are building the query parameter names based on the supported operations
-      // for example if there is a field called "status" with supported operations includes equal
-      // then in the query string, user can pass "status=active" to filter the data
-      Object.assign(queryProperties, buildFilterQueryProperties(field));
-    }
-
-    // if "sortable" is included in the supportedOperations, then we add sort parameters
-    // two query parameters are added: "orderBy" (field name) and "orderDir" ("asc" or "desc")
-    const sortableFields = model.fields
-      .filter(f => f.supportedOperations?.includes('sortable'))
-      .map(f => f.name);
-    Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-    // finally adding pagination parameters: "page" and "limit"
-    // defaults are page 1 and limit 20
-    Object.assign(queryProperties, paginationQueryProperties);
-
-    const schema: Record<string, unknown> = {
-      summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
-      description: `Get all ${model.name} records from the database`,
-      tags: [capitalizeFirstLetter(model.name), 'Read'],
-      // defining the schema for query parameters we built above
-      querystring: {
-        type: 'object',
-        properties: queryProperties,
-        additionalProperties: false,
-      },
-      // generating the JSON schema for the response
-      // it includes the record data array and pagination metadata
-      response: getResponseStructureSchema(
-        [200],
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'array',
-              items: generateJSONValidationSchema(model),
-            },
-            pagination: {
-              type: 'object',
-              properties: {
-                page: {type: 'integer'},
-                limit: {type: 'integer'},
-                total: {type: 'integer'},
-              },
-            },
-          },
-        },
-        generateJSONValidationSchema(model),
-      ),
-    };
-
-    const security: Array<{[key: string]: string[]}> = [];
-
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
-      security.push({bearerAuth: []});
-    }
-
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
-      security.push({apiKeyAuth: []});
-    }
-
-    if (security.length > 0) {
-      schema.security = security;
-    }
+    const schema: Record<string, unknown> = generateSchema(model, config);
 
     app.get(
       `/${model.name}/`,
@@ -213,4 +145,76 @@ export function registerGetAllRoutes(
       },
     );
   }
+}
+function generateSchema(model: ModelConfig, config: AppConfig) {
+  const queryProperties: Record<string, object> = {};
+
+  // Add filter params for each field based on its supportedOperations
+  for (const field of model.fields) {
+    // we are building the query parameter names based on the supported operations
+    // for example if there is a field called "status" with supported operations includes equal
+    // then in the query string, user can pass "status=active" to filter the data
+    Object.assign(queryProperties, buildFilterQueryProperties(field));
+  }
+
+  // if "sortable" is included in the supportedOperations, then we add sort parameters
+  // two query parameters are added: "orderBy" (field name) and "orderDir" ("asc" or "desc")
+  const sortableFields = model.fields
+    .filter(f => f.supportedOperations?.includes('sortable'))
+    .map(f => f.name);
+  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
+
+  // finally adding pagination parameters: "page" and "limit"
+  // defaults are page 1 and limit 20
+  Object.assign(queryProperties, paginationQueryProperties);
+
+  const schema: Record<string, unknown> = {
+    summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
+    description: `Get all ${model.name} records from the database`,
+    tags: [capitalizeFirstLetter(model.name), 'Read'],
+    // defining the schema for query parameters we built above
+    querystring: {
+      type: 'object',
+      properties: queryProperties,
+      additionalProperties: false,
+    },
+    // generating the JSON schema for the response
+    // it includes the record data array and pagination metadata
+    response: getResponseStructureSchema(
+      [200],
+      {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: generateJSONValidationSchema(model),
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: {type: 'integer'},
+              limit: {type: 'integer'},
+              total: {type: 'integer'},
+            },
+          },
+        },
+      },
+      generateJSONValidationSchema(model),
+    ),
+  };
+
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return schema;
 }

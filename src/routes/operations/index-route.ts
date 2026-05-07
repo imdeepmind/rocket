@@ -10,7 +10,7 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/schema/config';
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -53,123 +53,11 @@ export function registerIndexRoutes(
     // for example, if we have a field user_id in the users table, and it is indexed,
     // then we can fetch data using the user_id field like /user/<user_id>
     for (const field of indexFields) {
-      const isUnique = field.primaryKey || field.unique;
-      // converting the data type of the indexable field to json schema supported type
-      const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
-
-      const queryProperties: Record<string, object> = {};
-
-      // if indexable field is not unque, that means this API can return multiple data records
-      // if multiple records are being returned, then we can apply filters, sorting and pagination
-      // on the other hand, if the indexable field is unique, then this API can return only one data record
-      // hence there is no need to have filtering, or sorting, or pagination
-      if (!isUnique) {
-        // Add filter params for each field based on its supportedOperations
-        for (const f of model.fields) {
-          // what is happenign is here is we are building the query parameter names based on the supported operations
-          // and the field name so if there is a field called "age" with sopported operations includes lessThanEqual
-          // then in the query string, user can pass a query string variable like "age_lte=18"
-          // and the value of this variable will be used to filter the data
-          // another thing to note is that these fields are optional, users can pass if they want to trigger the filter
-          // else they can ignore it
-          Object.assign(queryProperties, buildFilterQueryProperties(f));
-        }
-
-        // the story is same for storing, if sortable included in the supportedOperations, then bingo, we can sort
-        // we supprt two querystring fields, one for the name of the field "orderBy" and another is
-        // "orderDir" which can be "asc" or "desc"
-        const sortableFields = model.fields
-          .filter(f => f.supportedOperations?.includes('sortable'))
-          .map(f => f.name);
-        Object.assign(
-          queryProperties,
-          buildSortQueryProperties(sortableFields),
-        );
-
-        // finally pagination, here users can pass "page" and "limit" as query parameters
-        // "page" is the page number and "limit" is the number of records per page
-        // default value of "page" is 1 and default value of "limit" is 20
-        Object.assign(queryProperties, paginationQueryProperties);
-      }
-
-      // now here we are basically generating the JSON schema for the return response
-      // based on the model, we can figureout what data we are going to return
-      // if say model "user" contains two fields, "id" and "name"
-      // then this will generate a schema for the fields "id" and "name"
-      // another thing to keep in mind if the unique case
-      // if unique, then we return an object
-      // else we return an array of objects
-      const responseSchemaProperties: Record<string, object> = {
-        data: isUnique
-          ? {...generateJSONValidationSchema(model), nullable: true}
-          : {type: 'array', items: generateJSONValidationSchema(model)},
-      };
-
-      // injecting the pagination state in the returned response
-      if (!isUnique) {
-        responseSchemaProperties.pagination = {
-          type: 'object',
-          properties: {
-            page: {type: 'integer'},
-            limit: {type: 'integer'},
-            total: {type: 'integer'},
-          },
-        };
-      }
-
-      // here we're configuring the swagger schema for the fastify API
-      // it uses the model details to generate the schema
-      const schema: Record<string, unknown> = {
-        summary: `Get ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
-        description: `Get ${model.name} record(s) from the database by ${field.name}`,
-        tags: [capitalizeFirstLetter(model.name), 'Read'],
-        params: {
-          type: 'object',
-          properties: {
-            // as mentioned earlier, this is the index API, so we will only have one parameter
-            // which is the indexable field
-            [field.name]: {
-              ...fieldSchemaType,
-              description: `The ${field.name} value to look up`,
-            },
-          },
-          required: [field.name],
-        },
-        // here we are generating the schema for the response
-        response: getResponseStructureSchema(
-          [200],
-          {
-            type: 'object',
-            properties: responseSchemaProperties,
-          },
-          generateJSONValidationSchema(model),
-        ),
-      };
-
-      // injecting the query parameters schema
-      // as the query string is optional, we are not making it required
-      // we are conditionally checking if there is any query parameter
-      if (Object.keys(queryProperties).length > 0) {
-        schema.querystring = {
-          type: 'object',
-          properties: queryProperties,
-          additionalProperties: false,
-        };
-      }
-
-      const security: Array<{[key: string]: string[]}> = [];
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
-        security.push({bearerAuth: []});
-      }
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
-        security.push({apiKeyAuth: []});
-      }
-
-      if (security.length > 0) {
-        schema.security = security;
-      }
+      const {
+        schema,
+        isUnique,
+      }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
+        generateSchema(field, model, config);
 
       app.get(
         `/${model.name}/${field.name}/:${field.name}`,
@@ -304,4 +192,126 @@ export function registerIndexRoutes(
       );
     }
   }
+}
+
+function generateSchema(
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  config: AppConfig,
+) {
+  const isUnique = field.primaryKey || field.unique;
+  // converting the data type of the indexable field to json schema supported type
+  const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
+
+  const queryProperties: Record<string, object> = {};
+
+  // if indexable field is not unque, that means this API can return multiple data records
+  // if multiple records are being returned, then we can apply filters, sorting and pagination
+  // on the other hand, if the indexable field is unique, then this API can return only one data record
+  // hence there is no need to have filtering, or sorting, or pagination
+  if (!isUnique) {
+    // Add filter params for each field based on its supportedOperations
+    for (const f of model.fields) {
+      // what is happenign is here is we are building the query parameter names based on the supported operations
+      // and the field name so if there is a field called "age" with sopported operations includes lessThanEqual
+      // then in the query string, user can pass a query string variable like "age_lte=18"
+      // and the value of this variable will be used to filter the data
+      // another thing to note is that these fields are optional, users can pass if they want to trigger the filter
+      // else they can ignore it
+      Object.assign(queryProperties, buildFilterQueryProperties(f));
+    }
+
+    // the story is same for storing, if sortable included in the supportedOperations, then bingo, we can sort
+    // we supprt two querystring fields, one for the name of the field "orderBy" and another is
+    // "orderDir" which can be "asc" or "desc"
+    const sortableFields = model.fields
+      .filter(f => f.supportedOperations?.includes('sortable'))
+      .map(f => f.name);
+    Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
+
+    // finally pagination, here users can pass "page" and "limit" as query parameters
+    // "page" is the page number and "limit" is the number of records per page
+    // default value of "page" is 1 and default value of "limit" is 20
+    Object.assign(queryProperties, paginationQueryProperties);
+  }
+
+  // now here we are basically generating the JSON schema for the return response
+  // based on the model, we can figureout what data we are going to return
+  // if say model "user" contains two fields, "id" and "name"
+  // then this will generate a schema for the fields "id" and "name"
+  // another thing to keep in mind if the unique case
+  // if unique, then we return an object
+  // else we return an array of objects
+  const responseSchemaProperties: Record<string, object> = {
+    data: isUnique
+      ? {...generateJSONValidationSchema(model), nullable: true}
+      : {type: 'array', items: generateJSONValidationSchema(model)},
+  };
+
+  // injecting the pagination state in the returned response
+  if (!isUnique) {
+    responseSchemaProperties.pagination = {
+      type: 'object',
+      properties: {
+        page: {type: 'integer'},
+        limit: {type: 'integer'},
+        total: {type: 'integer'},
+      },
+    };
+  }
+
+  // here we're configuring the swagger schema for the fastify API
+  // it uses the model details to generate the schema
+  const schema: Record<string, unknown> = {
+    summary: `Get ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
+    description: `Get ${model.name} record(s) from the database by ${field.name}`,
+    tags: [capitalizeFirstLetter(model.name), 'Read'],
+    params: {
+      type: 'object',
+      properties: {
+        // as mentioned earlier, this is the index API, so we will only have one parameter
+        // which is the indexable field
+        [field.name]: {
+          ...fieldSchemaType,
+          description: `The ${field.name} value to look up`,
+        },
+      },
+      required: [field.name],
+    },
+    // here we are generating the schema for the response
+    response: getResponseStructureSchema(
+      [200],
+      {
+        type: 'object',
+        properties: responseSchemaProperties,
+      },
+      generateJSONValidationSchema(model),
+    ),
+  };
+
+  // injecting the query parameters schema
+  // as the query string is optional, we are not making it required
+  // we are conditionally checking if there is any query parameter
+  if (Object.keys(queryProperties).length > 0) {
+    schema.querystring = {
+      type: 'object',
+      properties: queryProperties,
+      additionalProperties: false,
+    };
+  }
+
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return {schema, isUnique};
 }

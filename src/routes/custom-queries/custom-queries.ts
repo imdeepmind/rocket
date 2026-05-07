@@ -5,7 +5,7 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, DataType} from '@/schema/config';
+import {AppConfig, DataType} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {callWebhook} from '@/utils/webhook';

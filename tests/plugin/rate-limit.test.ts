@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import rateLimitPlugin, {RateLimitPluginOptions} from '@/plugin/rate-limit';
 
-import {RateLimitConfig} from '@/schema/config';
+import {RateLimitConfig} from '@/interfaces/config';
 
 // // Mock @fastify/rate-limit
 // const mockRegisterCall = vi.fn();
