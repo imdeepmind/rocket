@@ -7,7 +7,7 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/interfaces/config';
+import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -60,40 +60,11 @@ export function registerRegistrationRoute(
 
   // Build a JSON schema for the request body, ignoring the primary key column
   // (the DB generates it) and disallowing additional properties.
-  const bodySchema = generateJSONValidationSchema(authModelConfig, {
-    ignorePrimaryKey: true,
-    additionalProperties: false,
-  });
-
-  // Build a JSON schema for require body, ignoring the password field
-  const authModelConfigWithoutPassowrd = {...authModelConfig};
-  authModelConfigWithoutPassowrd['fields'] = authModelConfigWithoutPassowrd[
-    'fields'
-  ].filter(f => f.name !== passwordColumn);
-  const requiredBodySchema = generateJSONValidationSchema(
-    authModelConfigWithoutPassowrd,
-    {
-      ignorePrimaryKey: true,
-      additionalProperties: false,
-    },
+  const schema: Record<string, unknown> = generateSchema(
+    authModelConfig,
+    passwordColumn,
+    modelName,
   );
-
-  // Build the response schema — we mirror the same 201 shape used by the
-  // generic POST route so clients get a consistent envelope.
-  const responseSchema = getResponseStructureSchema(
-    [201],
-    requiredBodySchema,
-    requiredBodySchema,
-  );
-
-  // Swagger / JSON-Schema declaration for this route.
-  const schema: Record<string, unknown> = {
-    summary: `Register a new ${capitalizeFirstLetter(modelName)} user`,
-    description: `Creates a new user record in the "${modelName}" table. The password is hashed with bcrypt before being persisted.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Register'],
-    body: bodySchema,
-    response: responseSchema,
-  };
 
   app.post(
     '/auth/register',
@@ -150,4 +121,46 @@ export function registerRegistrationRoute(
         );
     },
   );
+}
+
+function generateSchema(
+  authModelConfig: ModelConfig,
+  passwordColumn: string,
+  modelName: string,
+) {
+  const bodySchema = generateJSONValidationSchema(authModelConfig, {
+    ignorePrimaryKey: true,
+    additionalProperties: false,
+  });
+
+  // Build a JSON schema for require body, ignoring the password field
+  const authModelConfigWithoutPassowrd = {...authModelConfig};
+  authModelConfigWithoutPassowrd['fields'] = authModelConfigWithoutPassowrd[
+    'fields'
+  ].filter(f => f.name !== passwordColumn);
+  const requiredBodySchema = generateJSONValidationSchema(
+    authModelConfigWithoutPassowrd,
+    {
+      ignorePrimaryKey: true,
+      additionalProperties: false,
+    },
+  );
+
+  // Build the response schema — we mirror the same 201 shape used by the
+  // generic POST route so clients get a consistent envelope.
+  const responseSchema = getResponseStructureSchema(
+    [201],
+    requiredBodySchema,
+    requiredBodySchema,
+  );
+
+  // Swagger / JSON-Schema declaration for this route.
+  const schema: Record<string, unknown> = {
+    summary: `Register a new ${capitalizeFirstLetter(modelName)} user`,
+    description: `Creates a new user record in the "${modelName}" table. The password is hashed with bcrypt before being persisted.`,
+    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Register'],
+    body: bodySchema,
+    response: responseSchema,
+  };
+  return schema;
 }

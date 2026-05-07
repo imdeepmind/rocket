@@ -6,7 +6,7 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/interfaces/config';
+import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -27,43 +27,16 @@ export function registerPostRoutes(
   const {models} = config;
 
   for (const model of models) {
-    // generating the JSON schema for the request body
-    // we ignore the primary key since it's typically auto-generated (like serial or uuid)
-    // and we set additionalProperties to false for strict validation
-    const bodySchema = generateJSONValidationSchema(model, {
-      ignorePrimaryKey: true,
-      additionalProperties: false,
-    });
-
     // unique api identifier
     const apiIdentifier = `modelAPIs->insert->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
     const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
-    // defining the swagger schema for the POST API
-    const schema: Record<string, unknown> = {
-      summary: `Create a new ${capitalizeFirstLetter(model.name)} record`,
-      description: `Create a new ${capitalizeFirstLetter(model.name)} record in the database`,
-      tags: [capitalizeFirstLetter(model.name), 'Insert'],
-      body: bodySchema,
-      // the response structure for successful creation (201 Created)
-      response: getResponseStructureSchema([201], bodySchema, bodySchema),
-    };
-
-    const security: Array<{[key: string]: string[]}> = [];
-
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
-      security.push({bearerAuth: []});
-    }
-
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
-      security.push({apiKeyAuth: []});
-    }
-
-    if (security.length > 0) {
-      schema.security = security;
-    }
+    // generating the JSON schema for the request body
+    // we ignore the primary key since it's typically auto-generated (like serial or uuid)
+    // and we set additionalProperties to false for strict validation
+    const schema: Record<string, unknown> = generateSchema(model, config);
 
     app.post(
       `/${model.name}/`,
@@ -138,4 +111,35 @@ export function registerPostRoutes(
       },
     );
   }
+}
+function generateSchema(model: ModelConfig, config: AppConfig) {
+  const bodySchema = generateJSONValidationSchema(model, {
+    ignorePrimaryKey: true,
+    additionalProperties: false,
+  });
+
+  // defining the swagger schema for the POST API
+  const schema: Record<string, unknown> = {
+    summary: `Create a new ${capitalizeFirstLetter(model.name)} record`,
+    description: `Create a new ${capitalizeFirstLetter(model.name)} record in the database`,
+    tags: [capitalizeFirstLetter(model.name), 'Insert'],
+    body: bodySchema,
+    // the response structure for successful creation (201 Created)
+    response: getResponseStructureSchema([201], bodySchema, bodySchema),
+  };
+
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return schema;
 }

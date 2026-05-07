@@ -9,7 +9,7 @@ import {
   paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -47,75 +47,11 @@ export function registerSearchRoutes(
     for (const field of searchableFields) {
       // defining the primary search query parameter
       // for example if the field is "name", this will create "name_search" query parameter
-      const queryProperties: Record<string, object> = {
-        [`${field.name}_search`]: {
-          type: 'string',
-          description: `Search pattern to match against ${field.name}`,
-        },
-      };
-
-      // alongside search, we also support general filtering on all fields
-      for (const f of model.fields) {
-        Object.assign(queryProperties, buildFilterQueryProperties(f));
-      }
-
-      // sorting support: "orderBy" and "orderDir"
-      const sortableFields = model.fields
-        .filter(f => f.supportedOperations?.includes('sortable'))
-        .map(f => f.name);
-      Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-      // pagination support: "page" and "limit"
-      Object.assign(queryProperties, paginationQueryProperties);
-
-      const schema: Record<string, unknown> = {
-        summary: `Search ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
-        description: `Search ${model.name} records from the database using a LIKE pattern on ${field.name}`,
-        tags: [capitalizeFirstLetter(model.name), 'Read'],
-        // defining the schema for query parameters
-        querystring: {
-          type: 'object',
-          properties: queryProperties,
-          required: [`${field.name}_search`], // search term is required for this route
-          additionalProperties: false,
-        },
-        // generating the response schema including data array and pagination info
-        response: getResponseStructureSchema(
-          [200],
-          {
-            type: 'object',
-            properties: {
-              data: {
-                type: 'array',
-                items: generateJSONValidationSchema(model),
-              },
-              pagination: {
-                type: 'object',
-                properties: {
-                  page: {type: 'integer'},
-                  limit: {type: 'integer'},
-                  total: {type: 'integer'},
-                },
-              },
-            },
-          },
-          generateJSONValidationSchema(model),
-        ),
-      };
-
-      const security: Array<{[key: string]: string[]}> = [];
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
-        security.push({bearerAuth: []});
-      }
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
-        security.push({apiKeyAuth: []});
-      }
-
-      if (security.length > 0) {
-        schema.security = security;
-      }
+      const schema: Record<string, unknown> = generateSchema(
+        field,
+        model,
+        config,
+      );
 
       app.get(
         `/${model.name}/search/${field.name}`,
@@ -227,4 +163,81 @@ export function registerSearchRoutes(
       );
     }
   }
+}
+
+function generateSchema(
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  config: AppConfig,
+) {
+  const queryProperties: Record<string, object> = {
+    [`${field.name}_search`]: {
+      type: 'string',
+      description: `Search pattern to match against ${field.name}`,
+    },
+  };
+
+  // alongside search, we also support general filtering on all fields
+  for (const f of model.fields) {
+    Object.assign(queryProperties, buildFilterQueryProperties(f));
+  }
+
+  // sorting support: "orderBy" and "orderDir"
+  const sortableFields = model.fields
+    .filter(f => f.supportedOperations?.includes('sortable'))
+    .map(f => f.name);
+  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
+
+  // pagination support: "page" and "limit"
+  Object.assign(queryProperties, paginationQueryProperties);
+
+  const schema: Record<string, unknown> = {
+    summary: `Search ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
+    description: `Search ${model.name} records from the database using a LIKE pattern on ${field.name}`,
+    tags: [capitalizeFirstLetter(model.name), 'Read'],
+    // defining the schema for query parameters
+    querystring: {
+      type: 'object',
+      properties: queryProperties,
+      required: [`${field.name}_search`], // search term is required for this route
+      additionalProperties: false,
+    },
+    // generating the response schema including data array and pagination info
+    response: getResponseStructureSchema(
+      [200],
+      {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: generateJSONValidationSchema(model),
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: {type: 'integer'},
+              limit: {type: 'integer'},
+              total: {type: 'integer'},
+            },
+          },
+        },
+      },
+      generateJSONValidationSchema(model),
+    ),
+  };
+
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return schema;
 }

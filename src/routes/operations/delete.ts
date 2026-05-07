@@ -5,7 +5,7 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -44,45 +44,11 @@ export function registerDeleteRoutes(
     // If we have deletable fields, we register a DELETE route for each.
     for (const field of deletableFields) {
       // we map the data type of the field to a JSON schema type for validation
-      const paramSchema = mapDataTypeToJsonSchema(field.type);
-
-      // now we're configuring the swagger schema for the DELETE API
-      // it uses the model details to generate the schema
-
-      const schema: Record<string, unknown> = {
-        summary: `Delete ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
-        description: `Delete records from ${capitalizeFirstLetter(model.name)} table where ${field.name} matches the provided value`,
-        tags: [capitalizeFirstLetter(model.name), 'Delete'],
-        params: {
-          type: 'object',
-          properties: {
-            // this is the identifier field we're using to locate the record(s) to delete
-            [field.name]: {
-              ...paramSchema,
-              description: `The ${field.name} value identifying the record to delete`,
-            },
-          },
-          required: [field.name],
-          // we set additionalProperties to false for strict validation of the path parameters
-          additionalProperties: false,
-        },
-        // standard response structure for successful deletion (204 No Content)
-        response: getResponseStructureSchema([204], {}),
-      };
-
-      const security: Array<{[key: string]: string[]}> = [];
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
-        security.push({bearerAuth: []});
-      }
-
-      if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
-        security.push({apiKeyAuth: []});
-      }
-
-      if (security.length > 0) {
-        schema.security = security;
-      }
+      const schema: Record<string, unknown> = generateSchema(
+        field,
+        model,
+        config,
+      );
 
       app.delete(
         `/${model.name}/${field.name}/:${field.name}`,
@@ -143,4 +109,50 @@ export function registerDeleteRoutes(
       );
     }
   }
+}
+
+function generateSchema(
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  config: AppConfig,
+) {
+  const paramSchema = mapDataTypeToJsonSchema(field.type);
+
+  // now we're configuring the swagger schema for the DELETE API
+  // it uses the model details to generate the schema
+  const schema: Record<string, unknown> = {
+    summary: `Delete ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
+    description: `Delete records from ${capitalizeFirstLetter(model.name)} table where ${field.name} matches the provided value`,
+    tags: [capitalizeFirstLetter(model.name), 'Delete'],
+    params: {
+      type: 'object',
+      properties: {
+        // this is the identifier field we're using to locate the record(s) to delete
+        [field.name]: {
+          ...paramSchema,
+          description: `The ${field.name} value identifying the record to delete`,
+        },
+      },
+      required: [field.name],
+      // we set additionalProperties to false for strict validation of the path parameters
+      additionalProperties: false,
+    },
+    // standard response structure for successful deletion (204 No Content)
+    response: getResponseStructureSchema([204], {}),
+  };
+
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return schema;
 }
