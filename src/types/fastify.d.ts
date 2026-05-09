@@ -15,6 +15,10 @@ declare module '@fastify/jwt' {
 }
 
 declare module 'fastify' {
+  interface FastifyContextConfig {
+    apiIdentifier?: string;
+  }
+
   interface FastifyInstance {
     db: DatabaseQuery;
     buildResponse: <T = unknown, R = unknown>(

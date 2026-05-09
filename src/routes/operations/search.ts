@@ -65,6 +65,7 @@ export function registerSearchRoutes(
         `/${model.name}/search/${field.name}`,
         {
           schema,
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {

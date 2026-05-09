@@ -66,6 +66,7 @@ export function registerAggregateRoutes(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             // doing validation here because we need the user for SSP
             if (config.auth?.enableAuth && authorization) {

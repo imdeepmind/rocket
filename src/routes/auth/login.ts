@@ -50,7 +50,10 @@ export function registerLoginRoute(
 
   app.post(
     '/auth/login',
-    {schema},
+    {
+      schema,
+      config: {apiIdentifier: `authAPIs->${modelName}->all->login`},
+    },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const {[usernameColumn]: username, [passwordColumn]: password} =
         request.body;

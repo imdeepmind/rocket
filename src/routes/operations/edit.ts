@@ -229,6 +229,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PATCH'),
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {
@@ -267,6 +268,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PUT'),
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {

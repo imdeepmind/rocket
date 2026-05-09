@@ -68,7 +68,10 @@ export function registerRegistrationRoute(
 
   app.post(
     '/auth/register',
-    {schema},
+    {
+      schema,
+      config: {apiIdentifier: `authAPIs->${modelName}->all->registration`},
+    },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const incomingBody = request.body;
 

@@ -106,6 +106,8 @@ export async function startServer(
         ? routeOptions.method.join('/')
         : routeOptions.method,
       url: routeOptions.url,
+      apiIdentifier: (routeOptions.config as {apiIdentifier?: string})
+        ?.apiIdentifier,
     });
   });
 

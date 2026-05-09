@@ -59,6 +59,7 @@ export function registerGetAllRoutes(
       `/${model.name}/`,
       {
         schema,
+        config: {apiIdentifier},
         preValidation: async (request, reply) => {
           if (config.auth?.enableAuth && authorization) {
             try {

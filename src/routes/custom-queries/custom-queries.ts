@@ -231,6 +231,7 @@ export function registerCustomQueryRoutes(
       method: cq.method,
       url: routePath,
       schema,
+      config: {apiIdentifier},
       preValidation: async (request, reply) => {
         if (config.auth?.enableAuth && authorization) {
           try {

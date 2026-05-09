@@ -62,6 +62,7 @@ export function registerDeleteRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {
