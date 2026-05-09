@@ -90,7 +90,8 @@ export function registerCustomQueryRoutes(
     const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     // body parameters are always in between @@
     // path parameters are always in between $$

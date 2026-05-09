@@ -36,12 +36,11 @@ export function registerAggregateRoutes(
     );
 
     // API unique idenfier
-    const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
-    const webhookConfig =
-      config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
+    const apiIdentifier = `aggregate->${model.name}->get_aggregation`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
     const authorization =
-      config.apis?.[aggregateAPIIdentifier]?.authorization ?? false;
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>

@@ -42,7 +42,8 @@ export function registerEditRoutes(
     const apiIdentifier = `modelAPIs->edit->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;

@@ -39,7 +39,8 @@ export function registerGetAllRoutes(
     const apiIdentifier = `modelAPIs->getAll->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     const schema: Record<string, unknown> = generateSchema(model, config);
 
@@ -49,8 +50,10 @@ export function registerGetAllRoutes(
         schema,
         preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
+          console.log('I am here');
           if (config.auth?.enableAuth && authorization) {
             try {
+              console.log('I am running to verify JWT?');
               await request.jwtVerify();
             } catch {
               return reply
@@ -77,6 +80,7 @@ export function registerGetAllRoutes(
         },
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
+        console.log(request.user);
         const queryParams = request.query as Record<string, unknown>;
         const tableName = model.name;
 

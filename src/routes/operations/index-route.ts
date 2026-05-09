@@ -47,7 +47,8 @@ export function registerIndexRoutes(
     const apiIdentifier = `modelAPIs->index->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,

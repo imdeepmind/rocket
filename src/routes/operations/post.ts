@@ -31,7 +31,8 @@ export function registerPostRoutes(
     const apiIdentifier = `modelAPIs->insert->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     // generating the JSON schema for the request body
     // we ignore the primary key since it's typically auto-generated (like serial or uuid)

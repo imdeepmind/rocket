@@ -388,7 +388,6 @@ const apisSchema = {
         },
         authorization: {
           type: 'boolean',
-          default: false,
         },
       },
       additionalProperties: false,

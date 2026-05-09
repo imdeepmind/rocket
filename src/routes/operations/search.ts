@@ -42,7 +42,8 @@ export function registerSearchRoutes(
     const apiIdentifier = `modelAPIs->search->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     for (const field of searchableFields) {
       // defining the primary search query parameter

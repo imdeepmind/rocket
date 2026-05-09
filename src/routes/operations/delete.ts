@@ -39,7 +39,8 @@ export function registerDeleteRoutes(
     const apiIdentifier = `modelAPIs->delete->${model.name}`;
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
 
     // If we have deletable fields, we register a DELETE route for each.
     for (const field of deletableFields) {
