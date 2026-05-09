@@ -11,7 +11,15 @@ export function enforceSSP(ssps: SspConfig[], request: FastifyRequest) {
       const record = val as Record<string, unknown>;
       ssps.forEach(ssp => {
         if (ssp.paramType === type) {
-          record[ssp.paramName] = ssp.value;
+          // if ssp.value is a magic variable then replace it with request.user
+          // aloowed magic variables are [userId] and [userEmail]
+          if (ssp.value === '[userId]') {
+            record[ssp.paramName] = request.user?.id;
+          } else if (ssp.value === '[userEmail]') {
+            record[ssp.paramName] = request.user?.email;
+          } else {
+            record[ssp.paramName] = ssp.value;
+          }
         }
       });
     }

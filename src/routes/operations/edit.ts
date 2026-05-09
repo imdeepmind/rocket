@@ -230,8 +230,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PATCH'),
-          preValidation: async request => enforceSSP(sspConfig, request),
-          preHandler: async (request, reply) => {
+          preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
@@ -247,6 +246,9 @@ export function registerEditRoutes(
                   );
               }
             }
+            enforceSSP(sspConfig, request);
+          },
+          preHandler: async request => {
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
@@ -266,9 +268,8 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PUT'),
-          preValidation: async request => enforceSSP(sspConfig, request),
-          preHandler: async (request, reply) => {
-            if (config.auth?.enableAuth) {
+          preValidation: async (request, reply) => {
+            if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
               } catch {
@@ -283,6 +284,9 @@ export function registerEditRoutes(
                   );
               }
             }
+            enforceSSP(sspConfig, request);
+          },
+          preHandler: async request => {
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {

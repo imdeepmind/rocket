@@ -134,4 +134,49 @@ describe('enforceSSP', () => {
 
     expect(request.query).toEqual({duplicateKey: 'secondValue'});
   });
+
+  it('should replace [userId] magic variable with request.user.id', () => {
+    const request = {
+      query: {},
+      user: {id: 42, email: 'test@example.com'},
+    } as unknown as FastifyRequest;
+
+    const ssps: SspConfig[] = [
+      {paramType: 'query', paramName: 'ownerId', value: '[userId]'},
+    ];
+
+    enforceSSP(ssps, request);
+
+    expect(request.query).toEqual({ownerId: 42});
+  });
+
+  it('should replace [userEmail] magic variable with request.user.email', () => {
+    const request = {
+      body: {},
+      user: {id: 42, email: 'test@example.com'},
+    } as unknown as FastifyRequest;
+
+    const ssps: SspConfig[] = [
+      {paramType: 'body', paramName: 'user_email', value: '[userEmail]'},
+    ];
+
+    enforceSSP(ssps, request);
+
+    expect(request.body).toEqual({user_email: 'test@example.com'});
+  });
+
+  it('should handle missing request.user when magic variables are used', () => {
+    const request = {
+      query: {},
+      // no user object
+    } as unknown as FastifyRequest;
+
+    const ssps: SspConfig[] = [
+      {paramType: 'query', paramName: 'ownerId', value: '[userId]'},
+    ];
+
+    enforceSSP(ssps, request);
+
+    expect(request.query).toEqual({ownerId: undefined});
+  });
 });
