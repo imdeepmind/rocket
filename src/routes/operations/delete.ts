@@ -63,9 +63,7 @@ export function registerDeleteRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema,
-          preValidation: async request => enforceSSP(sspConfig, request),
-          preHandler: async (request, reply) => {
-            // checking the authorization
+          preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
@@ -81,6 +79,9 @@ export function registerDeleteRoutes(
                   );
               }
             }
+            enforceSSP(sspConfig, request);
+          },
+          preHandler: async request => {
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {

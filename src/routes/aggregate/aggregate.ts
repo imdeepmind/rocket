@@ -66,8 +66,8 @@ export function registerAggregateRoutes(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
-          preValidation: async request => enforceSSP(sspConfig, request),
-          preHandler: async (request, reply) => {
+          preValidation: async (request, reply) => {
+            // doing validation here because we need the user for SSP
             if (config.auth?.enableAuth && authorization) {
               try {
                 await request.jwtVerify();
@@ -83,6 +83,9 @@ export function registerAggregateRoutes(
                   );
               }
             }
+            enforceSSP(sspConfig, request);
+          },
+          preHandler: async request => {
             await callWebhook('request', webhookConfig, request, null, app.log);
           },
           onSend: async (request, _, payload) => {
@@ -102,6 +105,8 @@ export function registerAggregateRoutes(
             .split(',')
             .map(s => s.trim())
             .filter(Boolean);
+
+          console.log({requestedOps});
 
           // validation: we must have at least one valid operation
           if (requestedOps.length === 0) {

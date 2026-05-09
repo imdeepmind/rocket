@@ -193,7 +193,7 @@
                 {
                     "paramType": "query",
                     "paramName": "operations",
-                    "value": "min,max"
+                    "value": "[userEmail]"
                 }
             ]
         }

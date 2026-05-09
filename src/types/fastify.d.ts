@@ -1,10 +1,18 @@
-import {FastifyJWT} from '@fastify/jwt';
-
-import {DatabaseQuery, StructuredResponse} from '@/interfaces';
-
+import '@fastify/jwt';
 import 'fastify';
 
 import type Redis from 'ioredis';
+
+import {DatabaseQuery, StructuredResponse} from '@/interfaces';
+
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: {
+      id: string;
+      email: string;
+    };
+  }
+}
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -16,6 +24,6 @@ declare module 'fastify' {
       raw_data?: R,
     ) => StructuredResponse<T, R>;
     redis?: Redis;
-    jwt: FastifyJWT;
+    jwt: import('@fastify/jwt').JWT;
   }
 }

@@ -59,12 +59,9 @@ export function registerGetAllRoutes(
       `/${model.name}/`,
       {
         schema,
-        preValidation: async request => enforceSSP(sspConfig, request),
-        preHandler: async (request, reply) => {
-          console.log('I am here');
+        preValidation: async (request, reply) => {
           if (config.auth?.enableAuth && authorization) {
             try {
-              console.log('I am running to verify JWT?');
               await request.jwtVerify();
             } catch {
               return reply
@@ -78,6 +75,9 @@ export function registerGetAllRoutes(
                 );
             }
           }
+          enforceSSP(sspConfig, request);
+        },
+        preHandler: async request => {
           await callWebhook('request', webhookConfig, request, null, app.log);
         },
         onSend: async (request, _, payload) => {
