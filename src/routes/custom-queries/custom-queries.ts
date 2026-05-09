@@ -87,7 +87,7 @@ export function registerCustomQueryRoutes(
     const bodyProperties: Record<string, object> = {};
 
     // constructing the api identifier
-    const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
+    const apiIdentifier = `customAPIs->customQueries->all->${cq.name}`;
 
     // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;

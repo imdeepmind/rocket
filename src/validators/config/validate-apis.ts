@@ -34,13 +34,13 @@ function validateApisConstraints(config: AppConfig): string[] {
   for (const key of keys) {
     const parts = key.split('->');
 
-    if (parts.length !== 3) {
+    if (parts.length !== 4) {
       errors.push(`apis/${key}: invalid key format`);
       continue;
     }
 
     if (parts[0] === 'customAPIs') {
-      if (parts[1] === 'customQueries') {
+      if (parts[1] === 'all' && parts[2] === 'all') {
         const customQueryConfig = getAPIFromUniqueIdentifier(config, key);
 
         if (!customQueryConfig) {

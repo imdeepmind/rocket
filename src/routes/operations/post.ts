@@ -28,7 +28,7 @@ export function registerPostRoutes(
 
   for (const model of models) {
     // constructing the api identifier
-    const apiIdentifier = `modelAPIs->insert->${model.name}`;
+    const apiIdentifier = `modelAPIs->${model.name}->all->insert`;
 
     // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;

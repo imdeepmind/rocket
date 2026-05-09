@@ -2209,7 +2209,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'invalid',
@@ -2221,7 +2221,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2235,7 +2235,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2247,7 +2247,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must be array',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2261,7 +2261,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2273,7 +2273,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2287,7 +2287,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2299,7 +2299,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2313,7 +2313,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2325,7 +2325,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2339,7 +2339,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2352,7 +2352,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2366,7 +2366,7 @@ describe('validateInvalidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2379,7 +2379,7 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        'apis/customAPIs->customQueries->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/customAPIs->customQueries->all->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
@@ -2492,7 +2492,7 @@ describe('validateValidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2516,7 +2516,7 @@ describe('validateValidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2540,7 +2540,7 @@ describe('validateValidApisConfig', () => {
           },
         ],
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customAPIs->customQueries->all->sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2903,18 +2903,19 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid webhook for modelAPis',
       patch: {
-        'modelAPIs->aggregate->users': 'invalid',
+        'aggregateAPIs->users->id->getAggregation': 'invalid',
       },
-      expected: '/apis/modelAPIs->aggregate->users must be object',
+      expected: '/apis/aggregateAPIs->users->id->getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregateAPIs->users->id->getAggregation': {
           webhooks: 'invalid',
         },
       },
-      expected: '/apis/modelAPIs->aggregate->users/webhooks must be array',
+      expected:
+        '/apis/aggregateAPIs->users->id->getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -2935,7 +2936,7 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid data resp cannot be used when triggerOnRequest is true',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregateAPIs->users->id->getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2947,7 +2948,7 @@ describe('validateInvalidModelAPIsConfig', () => {
         },
       },
       expected:
-        'apis/modelAPIs->aggregate->users/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+        'apis/aggregateAPIs->users->id->getAggregation/webhooks/0: data resp cannot be used when triggerOnRequest is true',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -2966,7 +2967,7 @@ describe('validateValidModelAPIsConfig', () => {
     {
       name: 'valid modelAPIs',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregateAPIs->users->id->getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2976,7 +2977,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->delete->users': {
+        'modelAPIs->users->id->delete': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2986,7 +2987,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->edit->users': {
+        'modelAPIs->users->id->edit': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2996,7 +2997,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->getAll->users': {
+        'modelAPIs->users->all->getAll': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3006,7 +3007,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->index->users': {
+        'modelAPIs->users->id->index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3016,7 +3017,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->insert->users': {
+        'modelAPIs->users->all->insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3026,7 +3027,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs->search->users': {
+        'modelAPIs->users->id->search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3260,31 +3261,31 @@ describe('validateInvalidSspConfig', () => {
       name: 'invalid ssp config param type',
       patch: {ssp: [{paramType: 'invalid', paramName: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramType must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param type',
       patch: {ssp: [{paramType: 132, paramName: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramType must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param name',
       patch: {ssp: [{paramType: 'body', paramName: 123, value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramName must be string',
+        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramName must be string',
     },
     {
       name: 'invalid ssp config param value',
       patch: {ssp: [{paramType: 'body', paramName: 'id', value: null}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/value must be string',
+        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/value must be string',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'customAPIs->customQueries->sample_query': {
+        'customAPIs->customQueries->all->sample_query': {
           ssp: patch.ssp,
         },
       },
@@ -3323,7 +3324,7 @@ describe('validateValidSspConfig', () => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->getAll->posts': {
+        'modelAPIs->posts->all->getAll': {
           ssp: patch.ssp,
         },
       },
@@ -3339,18 +3340,18 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+      expected: 'modelAPIs->posts->all->getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+      expected: 'modelAPIs->posts->all->getAll/authorization must be boolean',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->getAll->posts': {
+        'modelAPIs->posts->all->getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3369,7 +3370,7 @@ describe('validateInvalidAuthorizationConfig', () => {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/modelAPIs->getAll->posts/authorization: authorization is only allowed when auth is enabled',
+        'apis/modelAPIs->posts->all->getAll/authorization: authorization is only allowed when auth is enabled',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -3380,7 +3381,7 @@ describe('validateInvalidAuthorizationConfig', () => {
         apiKey: '1234',
       },
       apis: {
-        'modelAPIs->getAll->posts': {
+        'modelAPIs->posts->all->getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3412,7 +3413,7 @@ describe('validateValidAuthorizationConfig', () => {
         apiKey: '1234',
       },
       apis: {
-        'modelAPIs->getAll->posts': {
+        'modelAPIs->posts->all->getAll': {
           authorization: patch.authorization,
         },
       },

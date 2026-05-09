@@ -43,24 +43,23 @@ export function registerIndexRoutes(
       );
     });
 
-    // constructing the api identifier
-    const apiIdentifier = `modelAPIs->index->${model.name}`;
-
-    // extracting the api configs based on the api identifier
-    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-
-    // calculating the authroization based on auth flag, it can be true
-    // if the api level auth is enabled, or if the app level auth is enabled
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
-      false;
-
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,
     // then we can fetch data using the user_id field like /user/<user_id>
     for (const field of indexFields) {
+      // constructing the api identifier
+      const apiIdentifier = `modelAPIs->${model.name}->${field.name}->index`;
+
+      // extracting the api configs based on the api identifier
+      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+      const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+
+      // calculating the authroization based on auth flag, it can be true
+      // if the api level auth is enabled, or if the app level auth is enabled
+      const authorization =
+        config.apis?.[apiIdentifier]?.authorization ??
+        config.auth?.enableAuth ??
+        false;
       const {
         schema,
         isUnique,

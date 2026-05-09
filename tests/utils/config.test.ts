@@ -71,7 +71,7 @@ describe('Config Utilities', () => {
     it('should return the correct custom query config for a valid identifier', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customAPIs->customQueries->get_users',
+        'customAPIs->customQueries->all->get_users',
       );
       expect(result).toEqual(mockConfig.customAPIs?.customQueries?.[0]);
     });
@@ -79,7 +79,7 @@ describe('Config Utilities', () => {
     it('should return null if the first part is not customAPIs', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'modelAPIs->get-all->users',
+        'modelAPIs->users->all->getAll',
       );
       expect(result).toBeNull();
     });
@@ -87,7 +87,7 @@ describe('Config Utilities', () => {
     it('should return null if the second part is not customQueries', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customAPIs->somethingElse->get_users',
+        'customAPIs->somethingElse->all->get_users',
       );
       expect(result).toBeNull();
     });
@@ -95,7 +95,7 @@ describe('Config Utilities', () => {
     it('should return null if the custom query name is not found', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customAPIs->customQueries->non_existent',
+        'customAPIs->customQueries->all->non_existent',
       );
       expect(result).toBeNull();
     });
@@ -103,7 +103,7 @@ describe('Config Utilities', () => {
     it('should return null if customQueries is missing in config', () => {
       const result = getAPIFromUniqueIdentifier(
         {} as AppConfig,
-        'customAPIs->customQueries->get_users',
+        'customAPIs->customQueries->all->get_users',
       );
       expect(result).toBeNull();
     });

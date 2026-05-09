@@ -36,7 +36,7 @@ export function registerGetAllRoutes(
 
   for (const model of models) {
     // constructing the api identifier
-    const apiIdentifier = `modelAPIs->getAll->${model.name}`;
+    const apiIdentifier = `modelAPIs->${model.name}->all->getAll`;
 
     // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
