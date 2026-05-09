@@ -1,9 +1,20 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 describe('test post api', () => {
   beforeEach(() => {
@@ -179,6 +190,57 @@ describe('test post api', () => {
       expect(response.statusCode).toBe(404);
       expect(pgQueryMock).not.toHaveBeenCalled();
 
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->insert->users': {
+        authorization: true,
+      },
+    };
+
+    test('should return 401 when auth is enabled and no token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        mockModels,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 201 when auth is enabled and valid token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        mockModels,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(201);
       await fastify.close();
     });
   });

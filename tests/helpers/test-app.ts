@@ -1,11 +1,19 @@
 import Fastify, {FastifyInstance} from 'fastify';
 
+import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
-import {registerModelRoutes} from '@/routes';
+import {registerRoutes} from '@/routes';
 
-import {DatabaseConfig, ModelConfig} from '@/schema/config';
+import {
+  ApisConfig,
+  AppConfig,
+  AuthConfig,
+  CustomAPIConfig,
+  DatabaseConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 export const mockModels: ModelConfig[] = [
   {
@@ -35,12 +43,30 @@ export const sqliteConfig: DatabaseConfig = {
 export async function createTestApp(
   dbConfig: DatabaseConfig,
   models: ModelConfig[] = [],
+  apis?: ApisConfig,
+  customAPIs?: CustomAPIConfig,
+  auth?: AuthConfig,
 ): Promise<FastifyInstance> {
   const fastify = Fastify();
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
-  if (models.length > 0) {
-    registerModelRoutes(fastify, models);
+  await fastify.register(authPlugin);
+  const appConfig: AppConfig = {
+    application: {logLevel: 'error'},
+    swagger: {
+      enabled: false,
+      basePath: '/docs',
+      info: {title: 'Test', description: 'Test', version: '1.0.0'},
+    },
+    database: dbConfig,
+    models,
+    apis,
+    customAPIs,
+    auth,
+  };
+
+  if (models.length > 0 || apis || customAPIs) {
+    registerRoutes(fastify, appConfig);
   }
   await fastify.ready();
   return fastify;

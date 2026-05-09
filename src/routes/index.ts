@@ -1,14 +1,15 @@
 import {FastifyInstance} from 'fastify';
 
-import {registerAggregateRoutes} from '@/routes/aggregate';
-import {registerDeleteRoutes} from '@/routes/delete';
-import {registerEditRoutes} from '@/routes/edit';
-import {registerGetAllRoutes} from '@/routes/get-all';
-import {registerIndexRoutes} from '@/routes/index-route';
-import {registerPostRoutes} from '@/routes/post';
-import {registerSearchRoutes} from '@/routes/search';
+import {registerAggregateRoutes} from '@/routes/aggregate/aggregate';
+import {registerCustomQueryRoutes} from '@/routes/custom-queries/custom-queries';
+import {registerDeleteRoutes} from '@/routes/operations/delete';
+import {registerEditRoutes} from '@/routes/operations/edit';
+import {registerGetAllRoutes} from '@/routes/operations/get-all';
+import {registerIndexRoutes} from '@/routes/operations/index-route';
+import {registerPostRoutes} from '@/routes/operations/post';
+import {registerSearchRoutes} from '@/routes/operations/search';
 
-import {ModelConfig} from '@/schema/config';
+import {AppConfig} from '@/interfaces/config';
 
 /**
  * Register all config-driven model routes on the Fastify instance.
@@ -19,19 +20,25 @@ import {ModelConfig} from '@/schema/config';
  *   - SEARCH (searchable fields)
  *   - EDIT (editable fields)
  *   - DELETE (deletable fields)
- *   - AGGREGATE (fields with supportedAggregation)
  *   - POST (table-level, create record)
  *   - GET_ALL (table-level, list all records)
+ *
+ *   - AGGREGATE (fields with supportedAggregation)
+ *
+ *   - CUSTOM_QUERIES (custom queries)
  */
-export function registerModelRoutes(
-  app: FastifyInstance,
-  models: ModelConfig[],
-): void {
-  registerIndexRoutes(app, models);
-  registerSearchRoutes(app, models);
-  registerEditRoutes(app, models);
-  registerDeleteRoutes(app, models);
-  registerAggregateRoutes(app, models);
-  registerPostRoutes(app, models);
-  registerGetAllRoutes(app, models);
+export function registerRoutes(app: FastifyInstance, config: AppConfig): void {
+  // operations
+  registerIndexRoutes(app, config);
+  registerSearchRoutes(app, config);
+  registerEditRoutes(app, config);
+  registerDeleteRoutes(app, config);
+  registerPostRoutes(app, config);
+  registerGetAllRoutes(app, config);
+
+  // aggregations
+  registerAggregateRoutes(app, config);
+
+  // custom queries
+  registerCustomQueryRoutes(app, config);
 }

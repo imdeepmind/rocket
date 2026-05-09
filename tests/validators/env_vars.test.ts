@@ -1,7 +1,7 @@
 import {LogLevel} from 'fastify';
 import {describe, expect, it} from 'vitest';
 
-import {AppConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
+import {AppConfig, DatabaseConfig, ModelConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 import {resolveEnvVars} from '@/utils/config';
@@ -18,7 +18,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): ModelConfig[] => {
   return [
     {
-      name: 'User',
+      name: 'users',
       fields: [
         {
           name: 'id',

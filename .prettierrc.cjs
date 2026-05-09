@@ -12,7 +12,7 @@ module.exports = {
     '',
     '^@/routes(/.*)?$',
     '',
-    '^@/schema(/.*)?$',
+    '^@/interfaces(/.*)?$',
     '^@/types(/.*)?$',
     '',
     '^@/validators(/.*)?$',

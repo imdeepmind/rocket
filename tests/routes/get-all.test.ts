@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -36,6 +36,17 @@ const getAllModel: ModelConfig[] = [
     ],
   },
 ];
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 describe('test get-all api', () => {
   beforeEach(() => {
@@ -370,6 +381,63 @@ describe('test get-all api', () => {
         [20, 0],
       );
 
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->getAll->users': {
+        authorization: true,
+      },
+    };
+
+    test('should return 401 when auth is enabled and no token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        getAllModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 200 when auth is enabled and valid token is provided', async () => {
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 1}]})
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        });
+
+      const fastify = await createTestApp(
+        pgConfig,
+        getAllModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toHaveLength(1);
       await fastify.close();
     });
   });

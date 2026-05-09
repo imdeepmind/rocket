@@ -1,3 +1,5 @@
+import {AppConfig, CustomQueryConfig} from '@/interfaces/config';
+
 /**
  * Recursively resolves environment variables in the configuration object.
  * If a string starts with 'env:', it's replaced with the value of the environment variable.
@@ -30,4 +32,21 @@ export function resolveEnvVars<T>(config: T): T {
   }
 
   return config;
+}
+
+export function getAPIFromUniqueIdentifier(
+  config: AppConfig,
+  identifier: string,
+): CustomQueryConfig | null {
+  const parts = identifier.split('->');
+
+  if (parts[0] === 'customAPIs') {
+    if (parts[1] === 'customQueries') {
+      const customQueries = config?.customAPIs?.customQueries ?? [];
+
+      return customQueries.find(cq => cq.name === parts[2]) ?? null;
+    }
+  }
+
+  return null;
 }

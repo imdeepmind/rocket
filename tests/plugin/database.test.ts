@@ -3,7 +3,7 @@ import {describe, expect, test, vi} from 'vitest';
 
 import databasePlugin from '@/plugin/database';
 
-import {DatabaseConfig} from '@/schema/config';
+import {DatabaseConfig} from '@/interfaces/config';
 
 import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 

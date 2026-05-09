@@ -6,13 +6,16 @@
   "directories": {
     "test": "test"
   },
+  "bin": {
+    "ross": "./build/src/main.js"
+  },
   "scripts": {
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "lint:check": "gts lint",
     "lint:write": "gts fix",
     "clean": "gts clean",
-    "compile": "tsc",
+    "compile": "tsc && tsc-alias",
     "dev": "tsx watch ./src/main.ts",
     "prepare": "husky",
     "pretest": "npm run compile",
@@ -36,22 +39,29 @@
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.7.5",
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.2",
     "gts": "^7.0.0",
     "husky": "^9.1.7",
     "pino-pretty": "^10.0.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vitest": "^4.1.2"
   },
   "dependencies": {
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/redis": "^7.2.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "commander": "^14.0.3",
@@ -59,6 +69,8 @@
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.4",
     "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
   }
 }

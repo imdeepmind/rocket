@@ -1,4 +1,7 @@
+import {HTTPMethod} from './index';
+
 export type DBEngine = 'sqlite' | 'pg';
+export type CacheDbEngine = 'redis';
 export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
 export type LogLevel =
   | 'trace'
@@ -47,6 +50,9 @@ export type JsonSchemaObject = {
   required?: string[];
   [key: string]: unknown;
 };
+export type WebhookData = 'query' | 'body' | 'params' | 'resp';
+export type AuthEngine = 'api-key' | 'up-auth';
+export type SspParamType = 'path' | 'query' | 'body';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -74,6 +80,21 @@ export interface DatabaseConfig {
     urlOrPath: string;
   };
   dbTimeout?: number;
+}
+
+export interface CacheDbConfig {
+  engine: CacheDbEngine;
+  connection: {
+    uri: string;
+  };
+  timeout?: number;
+}
+
+export interface RateLimitConfig {
+  enabled: boolean;
+  max: number;
+  timeWindow: string;
+  useRedis: boolean;
 }
 
 export interface ModelFieldConfig {
@@ -112,6 +133,75 @@ export interface ModelConfig {
 
 export interface ApplicationConfig {
   logLevel: LogLevel;
+  rateLimit?: RateLimitConfig;
+}
+
+export interface WebhookConfig {
+  url: string;
+  data: WebhookData[];
+  triggerOnRequest: boolean;
+  triggerOnResponse: boolean;
+}
+
+export interface CustomQueryConfig {
+  name: string;
+  method: HTTPMethod;
+  path: string;
+  query: string;
+}
+
+export interface ModelAPIConfig {
+  aggregate?: {
+    webhooks?: WebhookConfig[];
+  };
+  delete?: {
+    webhooks?: WebhookConfig[];
+  };
+  edit?: {
+    webhooks?: WebhookConfig[];
+  };
+  ['get-all']?: {
+    webhooks?: WebhookConfig[];
+  };
+  index?: {
+    webhooks?: WebhookConfig[];
+  };
+  post?: {
+    webhooks?: WebhookConfig[];
+  };
+  search?: {
+    webhooks?: WebhookConfig[];
+  };
+}
+
+export interface SspConfig {
+  paramType: SspParamType;
+  paramName: string;
+  value: number | string | boolean;
+}
+
+export interface ApisConfig {
+  [key: string]: {
+    webhooks?: WebhookConfig[];
+    ssp?: SspConfig[];
+    authorization?: boolean;
+  };
+}
+
+export interface CustomAPIConfig {
+  customQueries?: CustomQueryConfig[];
+}
+
+export interface AuthConfig {
+  enableAuth: boolean;
+  authEngine: AuthEngine;
+  authModel: {
+    modelName: string;
+    idColumn: string;
+    usernameColumn: string;
+    passwordColumn: string;
+  };
+  apiKey?: string;
 }
 
 export interface AppConfig {
@@ -119,4 +209,8 @@ export interface AppConfig {
   swagger: SwaggerConfig;
   database: DatabaseConfig;
   models: ModelConfig[];
+  apis?: ApisConfig;
+  cache_db?: CacheDbConfig;
+  customAPIs?: CustomAPIConfig;
+  auth?: AuthConfig;
 }

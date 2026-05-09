@@ -1,9 +1,20 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 const defaultEditModel: ModelConfig[] = [
   {
@@ -379,6 +390,78 @@ describe('test edit api', () => {
 
       expect(response.statusCode).toBe(404);
 
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->edit->users': {
+        authorization: true,
+      },
+    };
+
+    test('should return 401 when auth is enabled and no token is provided (PATCH)', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        defaultEditModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 401 when auth is enabled and no token is provided (PUT)', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        defaultEditModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/users/id/1',
+        payload: {name: 'Bob', email: 'bob@example.com'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 200 when auth is enabled and valid token is provided (PATCH)', async () => {
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+
+      const fastify = await createTestApp(
+        pgConfig,
+        defaultEditModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(200);
       await fastify.close();
     });
   });

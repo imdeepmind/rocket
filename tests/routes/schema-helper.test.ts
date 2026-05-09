@@ -9,7 +9,7 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {DataType, ModelConfig, ModelFieldConfig} from '@/schema/config';
+import {DataType, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 describe('test schema helper', () => {
   // test cases for mapDataTypeToJsonSchema

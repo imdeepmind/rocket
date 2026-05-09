@@ -1,7 +1,7 @@
 module.exports = {
   extends: ['@commitlint/config-conventional'],
   rules: {
-    'type-enum': [2, 'always', ['feat', 'chore', 'ci', 'bug', 'refactor']],
+    'type-enum': [2, 'always', ['feat', 'chore', 'ci', 'bug', 'refactor', 'test']],
     'header-max-length': [2, 'always', 120],
     'subject-case': [0], // Disable to allow JIRA key
     'subject-empty': [2, 'never'],
@@ -15,7 +15,7 @@ module.exports = {
       rules: {
         'header-match-jira': ({ header }) => {
           // type(scope): ROSS-NUMBER: message
-          const regex = /^(feat|chore|ci|bug|refactor)\([a-z-]+\): ROSS-\d+: .+/;
+          const regex = /^(feat|chore|ci|bug|refactor|test)\([a-z-]+\): ROSS-\d+: .+/;
           return [
             regex.test(header),
             'Commit message must follow the convention: type(scope): ROSS-<NUMBER>: message\nTypes: feat, chore, ci, bug',

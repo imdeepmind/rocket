@@ -1,6 +1,12 @@
 import {describe, expect, it} from 'vitest';
 
-import {AppConfig, DatabaseConfig, ModelConfig} from '@/schema/config';
+import {
+  ApisConfig,
+  AppConfig,
+  CustomQueryConfig,
+  DatabaseConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 
@@ -16,7 +22,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): ModelConfig[] => {
   return [
     {
-      name: 'User',
+      name: 'users',
       fields: [
         {
           name: 'id',
@@ -40,7 +46,7 @@ const getDefaultModelConfig = (): ModelConfig[] => {
       ],
     },
     {
-      name: 'Post',
+      name: 'posts',
       fields: [
         {
           name: 'title',
@@ -395,12 +401,14 @@ describe('validateInvalidModelFieldsConfig', () => {
     {
       name: 'invalid name',
       patch: {name: '132234asd'},
-      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected:
+        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid name',
       patch: {name: 'sad asdas'},
-      expected: '/models/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected:
+        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'name as undefined',
@@ -418,13 +426,13 @@ describe('validateInvalidModelFieldsConfig', () => {
       name: 'invalid field.name',
       patch: {name: 'test', fields: [{name: '132234asd'}]},
       expected:
-        '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid field.name',
       patch: {name: 'test', fields: [{name: 'sad asdas'}]},
       expected:
-        '/models/0/fields/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid field.name',
@@ -1179,8 +1187,7 @@ describe('validateInvalidModelIndexesConfig', () => {
       patch: {
         indexes: [{name: 123, columns: ['id']}],
       },
-      expected:
-        '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected: '/models/0/indexes/0/name must be string',
     },
     {
       name: 'index.name starts with number',
@@ -1188,7 +1195,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: '12121asdas', columns: ['id']}],
       },
       expected:
-        '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "12121asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.name contains space',
@@ -1196,7 +1203,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: 'cat dog', columns: ['id']}],
       },
       expected:
-        '/models/0/indexes/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.name is duplicate',
@@ -1222,7 +1229,7 @@ describe('validateInvalidModelIndexesConfig', () => {
         indexes: [{name: 'valid_index', columns: ['']}],
       },
       expected:
-        '/models/0/indexes/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.column is not array',
@@ -1469,8 +1476,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           },
         ],
       },
-      expected:
-        '/models/2/foreignKeys/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected: '/models/2/foreignKeys/0/name must be string',
     },
     {
       name: 'foreignKey.name is empty string',
@@ -1485,7 +1491,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/name must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.name is empty string',
@@ -1494,13 +1500,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['does_not_exist'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "Post"',
+        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "posts"',
     },
     {
       name: 'foreignKey.name is duplicate',
@@ -1509,13 +1515,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1530,7 +1536,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: 'id',
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1544,7 +1550,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: [],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1559,13 +1565,12 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: [123],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
-      expected:
-        '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected: '/models/2/foreignKeys/0/columns/0 must be string',
     },
     {
       name: 'foreignKey.columns contains non-string',
@@ -1574,13 +1579,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['1321asdas'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.columns contains non-string',
@@ -1589,13 +1594,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['cat dog'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/columns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.columns contains duplicate items',
@@ -1604,7 +1609,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id', 'id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1624,8 +1629,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           },
         ],
       },
-      expected:
-        '/models/2/foreignKeys/0/referenceTable must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected: '/models/2/foreignKeys/0/referenceTable must be string',
     },
     {
       name: 'foreignKey.referenceTable is empty string',
@@ -1640,7 +1644,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/referenceTable must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
     },
     {
       name: 'foreignKey.referenceTable is empty string',
@@ -1664,7 +1668,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: 'id',
           },
         ],
@@ -1678,7 +1682,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: [],
           },
         ],
@@ -1693,13 +1697,12 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: [123],
           },
         ],
       },
-      expected:
-        '/models/2/foreignKeys/0/referenceColumns/0 must match pattern "^[a-zA-Z_][a-zA-Z0-9_]*$"',
+      expected: '/models/2/foreignKeys/0/referenceColumns/0 must be string',
     },
     {
       name: 'foreignKey.referenceColumns contains non-existent column',
@@ -1708,13 +1711,13 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['does_not_exist'],
           },
         ],
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "User"',
+        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "users"',
     },
     {
       name: 'foreignKey.referenceColumns contains duplicate items',
@@ -1723,7 +1726,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id', 'id'],
           },
         ],
@@ -1738,7 +1741,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id', 'title'],
           },
         ],
@@ -1753,7 +1756,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id', 'name'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1768,7 +1771,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
             onDelete: 'INVALID',
           },
@@ -1784,7 +1787,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
             onUpdate: 'INVALID',
           },
@@ -1821,7 +1824,7 @@ describe('validateValidModelForeignKeyConfig', () => {
           {
             name: 'fk_id_id',
             columns: ['user_id'],
-            referenceTable: 'User',
+            referenceTable: 'users',
             referenceColumns: ['id'],
           },
         ],
@@ -1912,5 +1915,1509 @@ describe('validateValidApplicationConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toMatchObject({
       application: patch,
     });
+  });
+});
+
+describe('validateInvalidApisConfig', () => {
+  it.each([
+    {
+      name: 'name as invalid',
+      patch: {
+        customQueries: [
+          {name: '123_asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'name as invalid',
+      patch: {
+        customQueries: [
+          {name: 'asd&*asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'name as duplicate',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT 1;',
+          },
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test-different',
+            query: 'SELECT 1;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/1/name: name must be unique and non-empty',
+    },
+    {
+      name: 'method as invalid',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'OPTIONS',
+            path: '/test',
+            query: 'SELECT 1;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/method must be equal to one of the allowed values',
+    },
+    {
+      name: 'path without slash',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: 'test',
+            query: 'SELECT 1;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'path with space and uppercase',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test-api asdas',
+            query: 'SELECT 1;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+    },
+    {
+      name: 'empty query',
+      patch: {
+        customQueries: [
+          {name: 'sample_query', method: 'GET', path: '/test', query: ''},
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'DDL query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'CREATE TABLE x (id INTEGER);',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: DDL queries are not allowed',
+    },
+    {
+      name: 'GET method with DML query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'INSERT INTO x (id) VALUES (1);',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: only DQL queries are allowed for GET method',
+    },
+    {
+      name: 'POST method with invalid SQL starting word',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'RANDOM COMMAND;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: only DQL and DML queries are allowed',
+    },
+    {
+      name: 'GET method with body magic variables (@@)',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+    },
+    {
+      name: 'Invalid body variable name',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@first name:string@@;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+    },
+    {
+      name: 'Invalid path variable name',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+    },
+    {
+      name: 'Invalid query variable name',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query:
+              'SELECT * FROM users WHERE country = &&country space:string&&;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+    },
+    {
+      name: 'Mixed delimiters ($$id&&)',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+    },
+    {
+      name: 'Unclosed delimiter (@@id@)',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@id@;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: unclosed magic variable delimiter "@@"',
+    },
+    {
+      name: 'Multiple datatype declarations',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+    },
+    {
+      name: 'Invalid datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name:varchar@@;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+    },
+    {
+      name: 'Missing datatype in variable',
+      patch: {
+        customQueries: [
+          {
+            name: 'update_users',
+            method: 'POST',
+            path: '/test',
+            query: 'UPDATE users SET name = @@name@@;',
+          },
+        ],
+      },
+      expected:
+        '/customAPIs/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
+    },
+    {
+      name: 'invalid webhook url',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'invalid',
+                data: ['query'],
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
+    },
+    {
+      name: 'data field type is not array',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: 'query',
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must be array',
+    },
+    {
+      name: 'data field is empty array',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: [],
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must NOT have fewer than 1 items',
+    },
+    {
+      name: 'data field contains invalid value',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query', 'invalid'],
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
+    },
+    {
+      name: 'triggerOnRequest is not a boolean',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnRequest: 'asdasd',
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnRequest must be boolean',
+    },
+    {
+      name: 'triggerOnResponse is not a boolean',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnResponse: 'trfghdue',
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnResponse must be boolean',
+    },
+    {
+      name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnRequest: false,
+                triggerOnResponse: false,
+              },
+            ],
+          },
+        },
+      },
+      expected:
+        'apis/customAPIs->customQueries->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+    },
+  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    const patchObj = patch as Record<string, unknown>;
+    const config = {
+      ...validBaseConfig,
+      customAPIs: {
+        customQueries: patchObj.customQueries as CustomQueryConfig[],
+      },
+      apis: patchObj.apis as ApisConfig,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidApisConfig', () => {
+  it.each([
+    {
+      name: 'valid GET query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid POST insert query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query: 'INSERT INTO users (name) VALUES (1);',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid WITH query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid variables in POST query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'POST',
+            path: '/test',
+            query:
+              'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid variables in GET query',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query:
+              'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid magic variable with hyphen and underscore',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query:
+              'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+          },
+        ],
+      },
+    },
+    {
+      name: 'valid webhook with triggerOnRequest',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnRequest: true,
+              },
+            ],
+          },
+        },
+      },
+    },
+    {
+      name: 'valid webhook with triggerOnResponse',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnResponse: true,
+              },
+            ],
+          },
+        },
+      },
+    },
+    {
+      name: 'a valid webhook with both triggerOnRequest and triggerOnResponse',
+      patch: {
+        customQueries: [
+          {
+            name: 'sample_query',
+            method: 'GET',
+            path: '/test',
+            query: 'SELECT * FROM users;',
+          },
+        ],
+        apis: {
+          'customAPIs->customQueries->sample_query': {
+            webhooks: [
+              {
+                url: 'https://example.com',
+                data: ['query'],
+                triggerOnRequest: true,
+                triggerOnResponse: true,
+              },
+            ],
+          },
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const patchObj = patch as Record<string, unknown>;
+    const config = {
+      ...validBaseConfig,
+      customAPIs: {
+        customQueries: patchObj.customQueries as CustomQueryConfig[],
+      },
+      apis: patchObj.apis as ApisConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Rate Limit Config Tests -----
+
+describe('validateRateLimitConfig', () => {
+  it.each([
+    {
+      name: 'enabled as string instead of boolean',
+      patch: {
+        rateLimit: {
+          enabled: 'asdasdas',
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/enabled must be boolean',
+    },
+    {
+      name: 'max as negative integer',
+      patch: {
+        rateLimit: {enabled: true, max: -5, timeWindow: '15m', useRedis: false},
+      },
+      expected: '/application/rateLimit/max must be >= 1',
+    },
+    {
+      name: 'max as zero',
+      patch: {
+        rateLimit: {enabled: true, max: 0, timeWindow: '15m', useRedis: false},
+      },
+      expected: '/application/rateLimit/max must be >= 1',
+    },
+    {
+      name: 'max as string',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 'sadfg',
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/max must be integer',
+    },
+    {
+      name: 'timeWindow with invalid format (no unit)',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: '15', useRedis: false},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'timeWindow with invalid format (wrong unit)',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15x',
+          useRedis: false,
+        },
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'timeWindow with invalid format (no number)',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: 'm', useRedis: false},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'useRedis as string instead of boolean',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: 'asdasdassadas',
+        },
+      },
+      expected: '/application/rateLimit/useRedis must be boolean',
+    },
+    {
+      name: 'missing enabled property',
+      patch: {
+        rateLimit: {
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'enabled'",
+    },
+    {
+      name: 'missing max property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          timeWindow: '15m',
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'max'",
+    },
+    {
+      name: 'missing timeWindow property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          useRedis: false,
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected:
+        "/application/rateLimit must have required property 'timeWindow'",
+    },
+    {
+      name: 'missing useRedis property',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+        } as unknown as typeof validBaseConfig.application,
+      },
+      expected: "/application/rateLimit must have required property 'useRedis'",
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'valid rate limit with seconds',
+      patch: {
+        rateLimit: {enabled: true, max: 50, timeWindow: '30s', useRedis: false},
+      },
+    },
+    {
+      name: 'valid rate limit with minutes',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+    },
+    {
+      name: 'valid rate limit with hours',
+      patch: {
+        rateLimit: {enabled: true, max: 1000, timeWindow: '1h', useRedis: true},
+      },
+    },
+    {
+      name: 'valid rate limit with days',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 10000,
+          timeWindow: '7d',
+          useRedis: true,
+        },
+      },
+    },
+    {
+      name: 'rate limit disabled',
+      patch: {
+        rateLimit: {
+          enabled: false,
+          max: 100,
+          timeWindow: '15m',
+          useRedis: false,
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+      cache_db: {
+        engine: 'redis',
+        connection: {
+          uri: 'redis://localhost:6379',
+        },
+        timeout: 5000,
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Cache DB Config Tests -----
+
+describe('validateCacheDbConfig', () => {
+  it.each([
+    {
+      name: 'engine as invalid value',
+      patch: {engine: 'memcached', connection: {uri: 'redis://localhost:6379'}},
+      expected: '/cache_db/engine must be equal to one of the allowed values',
+    },
+    {
+      name: 'connection uri with invalid format (http)',
+      patch: {engine: 'redis', connection: {uri: 'http://localhost:6379'}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'connection uri without protocol',
+      patch: {engine: 'redis', connection: {uri: 'localhost:6379'}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'connection uri empty string',
+      patch: {engine: 'redis', connection: {uri: ''}},
+      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+    },
+    {
+      name: 'timeout as negative integer',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: -100,
+      },
+      expected: '/cache_db/timeout must be >= 1',
+    },
+    {
+      name: 'timeout as zero',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: 0,
+      },
+      expected: '/cache_db/timeout must be >= 1',
+    },
+    {
+      name: 'missing required engine',
+      patch: {
+        connection: {uri: 'redis://localhost:6379'},
+      } as unknown as typeof validBaseConfig,
+      expected: "/cache_db must have required property 'engine'",
+    },
+    {
+      name: 'missing required connection',
+      patch: {engine: 'redis'} as unknown as typeof validBaseConfig,
+      expected: "/cache_db must have required property 'connection'",
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'valid cache_db with redis localhost',
+      patch: {engine: 'redis', connection: {uri: 'redis://localhost:6379'}},
+    },
+    {
+      name: 'valid cache_db with redis and timeout',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://localhost:6379'},
+        timeout: 5000,
+      },
+    },
+    {
+      name: 'valid cache_db with redis remote host',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://redis.example.com:6379'},
+      },
+    },
+    {
+      name: 'valid cache_db with redis and password',
+      patch: {
+        engine: 'redis',
+        connection: {uri: 'redis://:mypassword@localhost:6379'},
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Optional Cache DB Config Tests -----
+
+describe('validateCacheDbOptional', () => {
+  it('cache_db is completely optional and config should validate', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('config without cache_db and without rateLimit should validate', () => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        logLevel: 'info',
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Optional ModelAPIs Config Tests -----
+describe('validateInvalidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'invalid webhook for modelAPis',
+      patch: {
+        'modelAPIs->aggregate->users': 'invalid',
+      },
+      expected: '/apis/modelAPIs->aggregate->users must be object',
+    },
+    {
+      name: 'invalid webhook conf',
+      patch: {
+        'modelAPIs->aggregate->users': {
+          webhooks: 'invalid',
+        },
+      },
+      expected: '/apis/modelAPIs->aggregate->users/webhooks must be array',
+    },
+    {
+      name: 'invalid api key format',
+      patch: {
+        invalid_key: {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: true,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/invalid_key: invalid key format',
+    },
+    {
+      name: 'invalid data resp cannot be used when triggerOnRequest is true',
+      patch: {
+        'modelAPIs->aggregate->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: true,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+      },
+      expected:
+        'apis/modelAPIs->aggregate->users/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'valid modelAPIs',
+      patch: {
+        'modelAPIs->aggregate->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->delete->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->edit->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->getAll->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->index->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->insert->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+        'modelAPIs->search->users': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'resp'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: patch,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateInvalidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'invalid value for enableAuth',
+      patch: {
+        auth: {
+          enableAuth: 'true',
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+        },
+      },
+      expected: '/auth/enableAuth must be boolean',
+    },
+    {
+      name: 'invalid authEngine',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'invalid',
+          apiKey: 'xxx',
+        },
+      },
+      expected: '/auth/authEngine must be equal to one of the allowed values',
+    },
+    {
+      name: 'providing authModel when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          apiKey: 'xxx',
+        },
+      },
+      expected:
+        '/auth/authModel: authModel should not be present when authEngine is api-key',
+    },
+    {
+      name: 'not providing apiKey when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+        },
+      },
+      expected: '/auth/apiKey: apiKey is required when authEngine is api-key',
+    },
+    {
+      name: 'invalid authModel',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: 'invalid',
+        },
+      },
+      expected: '/auth/authModel must be object',
+    },
+    {
+      name: 'invalid authModel.modelName',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'invalid',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/modelName: model does not exist',
+    },
+    {
+      name: 'invalid authModel.idColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'invalid',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/idColumn: field does not exist in model',
+    },
+    {
+      name: 'invalid authModel.usernameColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'invalid',
+            passwordColumn: 'name',
+          },
+        },
+      },
+      expected: '/auth/authModel/usernameColumn: field does not exist in model',
+    },
+    {
+      name: 'invalid authModel.passwordColumn',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'invalid',
+          },
+        },
+      },
+      expected: '/auth/authModel/passwordColumn: field does not exist in model',
+    },
+    {
+      name: 'providing apiKey when authEngine is up-auth',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'invalid',
+            passwordColumn: 'name',
+          },
+          apiKey: 'xxx',
+        },
+      },
+      expected:
+        '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
+    },
+    {
+      name: 'not providing authModel when authEngine is up-auth',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+        },
+      },
+      expected:
+        '/auth/authModel: authModel is required when authEngine is up-auth',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+describe('validateValidModelAPIsConfig', () => {
+  it.each([
+    {
+      name: 'valid auth config',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+        },
+      },
+    },
+    {
+      name: 'valid auth config',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// check invalid ssp configs
+describe('validateInvalidSspConfig', () => {
+  it.each([
+    {
+      name: 'invalid ssp config param type',
+      patch: {ssp: [{paramType: 'invalid', paramName: 'id', value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+    },
+    {
+      name: 'invalid ssp config param type',
+      patch: {ssp: [{paramType: 132, paramName: 'id', value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+    },
+    {
+      name: 'invalid ssp config param name',
+      patch: {ssp: [{paramType: 'body', paramName: 123, value: '1'}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramName must be string',
+    },
+    {
+      name: 'invalid ssp config param value',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: null}]},
+      expected:
+        '/apis/customAPIs->customQueries->sample_query/ssp/0/value must be string',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'customAPIs->customQueries->sample_query': {
+          ssp: patch.ssp,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// check valid ssp configs
+describe('validateValidSspConfig', () => {
+  it.each([
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: '1'}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: 1}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'body', paramName: 'id', value: true}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'query', paramName: 'id', value: '1'}]},
+    },
+    {
+      name: 'valid ssp config',
+      patch: {ssp: [{paramType: 'path', paramName: 'id', value: '1'}]},
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'modelAPIs->getAll->posts': {
+          ssp: patch.ssp,
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// validate the authorization property
+describe('validateInvalidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'invalid authorization config',
+      patch: {authorization: 'wrong'},
+      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+    },
+    {
+      name: 'invalid authorization config',
+      patch: {authorization: null},
+      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// authorization is enabled when authentication is disabled
+describe('validateInvalidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'authorization is enabled when authentication is disabled',
+      patch: {authorization: true},
+      expected:
+        'apis/modelAPIs->getAll->posts/authorization: authorization is only allowed when auth is enabled',
+    },
+  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: {
+        enableAuth: false,
+        authEngine: 'api-key',
+        apiKey: '1234',
+      },
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+});
+
+// check valid authorization configs
+describe('validateValidAuthorizationConfig', () => {
+  it.each([
+    {
+      name: 'valid authorization config',
+      patch: {authorization: true},
+    },
+    {
+      name: 'valid authorization config',
+      patch: {authorization: false},
+    },
+  ])('Scenario: $name -> should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      auth: {
+        enableAuth: true,
+        authEngine: 'api-key',
+        apiKey: '1234',
+      },
+      apis: {
+        'modelAPIs->getAll->posts': {
+          authorization: patch.authorization,
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });

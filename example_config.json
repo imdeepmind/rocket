@@ -1,6 +1,12 @@
 {
     "application": {
-        "logLevel": "debug"
+        "logLevel": "debug",
+        "rateLimit": {
+            "enabled": true,
+            "max": 1000,
+            "timeWindow": "15m",
+            "useRedis": true
+        }
     },
     "swagger": {
         "enabled": true,
@@ -28,6 +34,24 @@
         },
         "dbTimeout": 10000
     },
+    "cache_db": {
+        "engine": "redis",
+        "connection": {
+            "uri": "redis://localhost:6379"
+        },
+        "timeout": 
+        5000
+    },
+    "auth": {
+        "enableAuth": true,
+        "authEngine": "up-auth",
+        "authModel": {
+            "modelName": "users",
+            "idColumn": "id",
+            "usernameColumn": "email",
+            "passwordColumn": "password"
+        }
+    },
     "models": [
         {
             "name": "users",
@@ -48,6 +72,12 @@
                     "nullable": false,
                     "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
                     "supportedAggregation": ["count"]
+                },
+                {
+                    "name": "password",
+                    "type": "string",
+                    "unique": false,
+                    "nullable": false
                 },
                 {
                     "name": "name",
@@ -137,5 +167,35 @@
                 }
             ]
         }
-    ]
+    ],
+    "customAPIs": {
+        "customQueries": [
+            {
+                "name": "get_user_by_id",
+                "method": "POST",
+                "path": "/test-api-asdas_asdas",
+                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+            }
+        ]
+    },
+    "apis": {
+        "aggregate->users->get_aggregation": {
+            "webhooks": [
+                {
+                    "url": "https://example.com",
+                    "data": ["query", "body", "params", "resp"],
+                    "triggerOnRequest": false,
+                    "triggerOnResponse": true
+                }
+            ],
+            "authorization": true,
+            "ssp": [
+                {
+                    "paramType": "query",
+                    "paramName": "operations",
+                    "value": "min,max"
+                }
+            ]
+        }
+    }
 }

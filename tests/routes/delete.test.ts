@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {ModelConfig} from '@/schema/config';
+import {AuthConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -45,6 +45,17 @@ const noDeletableFieldsModel: ModelConfig[] = [
     ],
   },
 ];
+
+const upAuthConfig: AuthConfig = {
+  enableAuth: true,
+  authEngine: 'up-auth',
+  authModel: {
+    modelName: 'users',
+    idColumn: 'id',
+    usernameColumn: 'email',
+    passwordColumn: 'password',
+  },
+};
 
 describe('test delete api', () => {
   beforeEach(() => {
@@ -174,6 +185,108 @@ describe('test delete api', () => {
       });
 
       expect(response.statusCode).toBe(500);
+      await fastify.close();
+    });
+  });
+
+  describe('authentication', () => {
+    const apisConfig = {
+      'modelAPIs->delete->users': {
+        authorization: true,
+      },
+    };
+
+    test('should return 401 when auth is enabled and no token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe(
+        'Invalid or expired authentication token',
+      );
+      await fastify.close();
+    });
+
+    test('should return 401 when auth is enabled and invalid token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+        headers: {
+          authorization: 'Bearer invalid-token',
+        },
+      });
+
+      expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should return 204 when auth is enabled and valid token is provided', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        upAuthConfig,
+      );
+
+      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(204);
+      await fastify.close();
+    });
+
+    test('should handle api-key auth (security schema check)', async () => {
+      const apiKeyAuth: AuthConfig = {
+        enableAuth: true,
+        authEngine: 'api-key',
+        authModel: {
+          modelName: 'users',
+          idColumn: 'id',
+          usernameColumn: 'email',
+          passwordColumn: 'password',
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        apiKeyAuth,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      expect(response.statusCode).toBe(401);
       await fastify.close();
     });
   });

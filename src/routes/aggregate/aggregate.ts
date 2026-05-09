@@ -2,9 +2,16 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {ModelConfig, SupportedAggregationOperation} from '@/schema/config';
+import {
+  AppConfig,
+  ModelConfig,
+  ModelFieldConfig,
+  SupportedAggregationOperation,
+} from '@/interfaces/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register AGGREGATE routes for fields with supportedAggregation.
@@ -17,8 +24,10 @@ import {capitalizeFirstLetter} from '@/utils/string';
  */
 export function registerAggregateRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
+  config: AppConfig,
 ): void {
+  const {models} = config;
+
   for (const model of models) {
     // We only create an aggregation route for fields that have non-empty supportedAggregation
     // if a field is not aggregatable, we skip it
@@ -26,53 +35,58 @@ export function registerAggregateRoutes(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
+    // API unique idenfier
+    const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
+    const webhookConfig =
+      config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
+    const authorization =
+      config.apis?.[aggregateAPIIdentifier]?.authorization ?? false;
+
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
     for (const field of aggregatableFields) {
       const operations = field.supportedAggregation!;
 
-      // defining the swagger/ajv validation schema for the route
-      const schema: Record<string, unknown> = {
-        summary: `Aggregate ${field.name} on ${capitalizeFirstLetter(model.name)}`,
-        description: `Get aggregation data for ${field.name} in ${model.name}`,
-        tags: [capitalizeFirstLetter(model.name), 'Read'],
-        querystring: {
-          type: 'object',
-          properties: {
-            // users can pass a comma-separated list of operations like ?operations=mean,max,min
-            operations: {
-              type: 'string',
-              description: `Comma-separated list of operations to perform: ${operations.join(', ')}`,
-            },
-          },
-          required: ['operations'],
-          additionalProperties: false,
-        },
-        // generating the response structure based on common aggregation keys
-        response: getResponseStructureSchema(
-          [200],
-          {
-            type: 'object',
-            properties: {
-              mean: {type: 'number', nullable: true},
-              max: {type: 'number', nullable: true},
-              min: {type: 'number', nullable: true},
-              sum: {type: 'number', nullable: true},
-              count: {type: 'number', nullable: true},
-              frequency: {
-                type: 'object',
-                additionalProperties: {type: 'integer'},
-              },
-            },
-          },
-          {type: 'object', additionalProperties: true},
-        ),
-      };
+      const schema: Record<string, unknown> = generateSchema(
+        config,
+        field,
+        model,
+        operations,
+      );
 
       app.get(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
+          preValidation: async request => enforceSSP(sspConfig, request),
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth && authorization) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
+            await callWebhook('request', webhookConfig, request, null, app.log);
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              webhookConfig,
+              request,
+              payload,
+              app.log,
+            );
+          },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
           const query = request.query as Record<string, unknown>;
@@ -168,4 +182,64 @@ export function registerAggregateRoutes(
       );
     }
   }
+}
+
+function generateSchema(
+  config: AppConfig,
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  operations: SupportedAggregationOperation[],
+) {
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    security.push({bearerAuth: []});
+  }
+
+  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    security.push({apiKeyAuth: []});
+  }
+
+  // defining the swagger/ajv validation schema for the route
+  const schema: Record<string, unknown> = {
+    summary: `Aggregate ${field.name} on ${capitalizeFirstLetter(model.name)}`,
+    description: `Get aggregation data for ${field.name} in ${model.name}`,
+    tags: [capitalizeFirstLetter(model.name), 'Read'],
+    querystring: {
+      type: 'object',
+      properties: {
+        // users can pass a comma-separated list of operations like ?operations=mean,max,min
+        operations: {
+          type: 'string',
+          description: `Comma-separated list of operations to perform: ${operations.join(', ')}`,
+        },
+      },
+      required: ['operations'],
+      additionalProperties: false,
+    },
+    // generating the response structure based on common aggregation keys
+    response: getResponseStructureSchema(
+      [200],
+      {
+        type: 'object',
+        properties: {
+          mean: {type: 'number', nullable: true},
+          max: {type: 'number', nullable: true},
+          min: {type: 'number', nullable: true},
+          sum: {type: 'number', nullable: true},
+          count: {type: 'number', nullable: true},
+          frequency: {
+            type: 'object',
+            additionalProperties: {type: 'integer'},
+          },
+        },
+      },
+      {type: 'object', additionalProperties: true},
+    ),
+  };
+
+  if (security.length > 0) {
+    schema.security = security;
+  }
+  return schema;
 }

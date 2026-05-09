@@ -7,9 +7,11 @@ import {
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
 
-import {ModelBody, ModelConfig} from '@/schema/config';
+import {AppConfig, ModelBody} from '@/interfaces/config';
 
+import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
+import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register EDIT routes for editable fields.
@@ -24,13 +26,23 @@ import {capitalizeFirstLetter} from '@/utils/string';
  */
 export function registerEditRoutes(
   app: FastifyInstance,
-  models: ModelConfig[],
+  config: AppConfig,
 ): void {
+  // We're iterating over all models provided in the configuration.
+  // For each model, we'll check if there are any fields that support the 'editable' operation.
+  const {models} = config;
+
   for (const model of models) {
     // identifying fields that are marked as editable in the configuration
     const editableFields = model.fields.filter(f =>
       f.supportedOperations?.includes('editable'),
     );
+
+    // unique api identifier
+    const apiIdentifier = `modelAPIs->edit->${model.name}`;
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -107,6 +119,20 @@ export function registerEditRoutes(
           body: finalBodySchema,
           response: getResponseStructureSchema([200], responseDataSchema),
         };
+
+        const security: Array<{[key: string]: string[]}> = [];
+
+        if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+          security.push({bearerAuth: []});
+        }
+
+        if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+          security.push({apiKeyAuth: []});
+        }
+
+        if (security.length > 0) {
+          schema.security = security;
+        }
 
         if (Object.keys(queryProperties).length > 0) {
           schema.querystring = {
@@ -186,13 +212,73 @@ export function registerEditRoutes(
 
       app.patch(
         `/${model.name}/${field.name}/:${field.name}`,
-        {schema: buildRouteSchema('PATCH')},
+        {
+          schema: buildRouteSchema('PATCH'),
+          preValidation: async request => enforceSSP(sspConfig, request),
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth && authorization) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
+            await callWebhook('request', webhookConfig, request, null, app.log);
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              webhookConfig,
+              request,
+              payload,
+              app.log,
+            );
+          },
+        },
         handleEditRequest,
       );
 
       app.put(
         `/${model.name}/${field.name}/:${field.name}`,
-        {schema: buildRouteSchema('PUT')},
+        {
+          schema: buildRouteSchema('PUT'),
+          preValidation: async request => enforceSSP(sspConfig, request),
+          preHandler: async (request, reply) => {
+            if (config.auth?.enableAuth) {
+              try {
+                await request.jwtVerify();
+              } catch {
+                return reply
+                  .status(401)
+                  .send(
+                    app.buildResponse(
+                      401,
+                      'Invalid or expired authentication token',
+                      null,
+                    ),
+                  );
+              }
+            }
+            await callWebhook('request', webhookConfig, request, null, app.log);
+          },
+          onSend: async (request, _, payload) => {
+            await callWebhook(
+              'response',
+              webhookConfig,
+              request,
+              payload,
+              app.log,
+            );
+          },
+        },
         handleEditRequest,
       );
     }
