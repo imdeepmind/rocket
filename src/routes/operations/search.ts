@@ -38,12 +38,19 @@ export function registerSearchRoutes(
       f.supportedOperations?.includes('searchable'),
     );
 
-    // unique api identifier
+    // constructing the api identifier
     const apiIdentifier = `modelAPIs->search->${model.name}`;
+
+    // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
-      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
 
     for (const field of searchableFields) {
       // defining the primary search query parameter
@@ -52,6 +59,7 @@ export function registerSearchRoutes(
         field,
         model,
         config,
+        authorization,
       );
 
       app.get(
@@ -170,6 +178,7 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   config: AppConfig,
+  authorization: boolean,
 ) {
   const queryProperties: Record<string, object> = {
     [`${field.name}_search`]: {
@@ -229,11 +238,19 @@ function generateSchema(
 
   const security: Array<{[key: string]: string[]}> = [];
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'up-auth' &&
+    authorization
+  ) {
     security.push({bearerAuth: []});
   }
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'api-key' &&
+    authorization
+  ) {
     security.push({apiKeyAuth: []});
   }
 

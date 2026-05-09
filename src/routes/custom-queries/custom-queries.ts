@@ -86,12 +86,18 @@ export function registerCustomQueryRoutes(
     const queryProperties: Record<string, object> = {};
     const bodyProperties: Record<string, object> = {};
 
-    // uniqie api identifier
+    // constructing the api identifier
     const apiIdentifier = `customAPIs->customQueries->${cq.name}`;
+
+    // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
-      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
 
     // body parameters are always in between @@
     // path parameters are always in between $$
@@ -196,18 +202,31 @@ export function registerCustomQueryRoutes(
 
     const security: Array<{[key: string]: string[]}> = [];
 
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+    // adding the security based on the auth flag and auth engine
+    // if the auth flag is enabled and the auth engine is up-auth, then add the bearerAuth
+    if (
+      config.auth?.enableAuth &&
+      config.auth?.authEngine === 'up-auth' &&
+      authorization
+    ) {
       security.push({bearerAuth: []});
     }
 
-    if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+    // if the auth flag is enabled and the auth engine is api-key, then add the apiKeyAuth
+    if (
+      config.auth?.enableAuth &&
+      config.auth?.authEngine === 'api-key' &&
+      authorization
+    ) {
       security.push({apiKeyAuth: []});
     }
 
+    // if there is any security configutaion required then add it to the swagger schema
     if (security.length > 0) {
       schema.security = security;
     }
 
+    // registering the route
     app.route({
       method: cq.method,
       url: routePath,

@@ -43,12 +43,19 @@ export function registerIndexRoutes(
       );
     });
 
-    // unique api identifier
+    // constructing the api identifier
     const apiIdentifier = `modelAPIs->index->${model.name}`;
+
+    // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
-      config.apis?.[apiIdentifier]?.authorization ?? config.auth?.enableAuth;
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
 
     // index apis means for these APIs, we can fetch data using the indexable fields
     // for example, if we have a field user_id in the users table, and it is indexed,
@@ -58,7 +65,7 @@ export function registerIndexRoutes(
         schema,
         isUnique,
       }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
-        generateSchema(field, model, config);
+        generateSchema(field, model, config, authorization);
 
       app.get(
         `/${model.name}/${field.name}/:${field.name}`,
@@ -199,6 +206,7 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   config: AppConfig,
+  authorization: boolean,
 ) {
   const isUnique = field.primaryKey || field.unique;
   // converting the data type of the indexable field to json schema supported type
@@ -303,11 +311,19 @@ function generateSchema(
 
   const security: Array<{[key: string]: string[]}> = [];
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'up-auth' &&
+    authorization
+  ) {
     security.push({bearerAuth: []});
   }
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'api-key' &&
+    authorization
+  ) {
     security.push({apiKeyAuth: []});
   }
 
