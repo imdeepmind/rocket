@@ -24,6 +24,8 @@ export function mapDataTypeToJsonSchema(type: DataType): {
       return {type: 'string'};
     case 'datetime':
       return {type: 'string', format: 'date-time'};
+    case 'decimal':
+      return {type: 'number'};
     default:
       return {type: 'string'};
   }
