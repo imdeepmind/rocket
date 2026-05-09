@@ -41,10 +41,10 @@ export function getAPIFromUniqueIdentifier(
   const parts = identifier.split('->');
 
   if (parts[0] === 'customAPIs') {
-    if (parts[1] === 'customQueries') {
+    if (parts[1] === 'customQueries' && parts[2] === 'all') {
       const customQueries = config?.customAPIs?.customQueries ?? [];
 
-      return customQueries.find(cq => cq.name === parts[2]) ?? null;
+      return customQueries.find(cq => cq.name === parts[3]) ?? null;
     }
   }
 

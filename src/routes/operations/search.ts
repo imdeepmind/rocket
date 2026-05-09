@@ -38,21 +38,20 @@ export function registerSearchRoutes(
       f.supportedOperations?.includes('searchable'),
     );
 
-    // constructing the api identifier
-    const apiIdentifier = `modelAPIs->search->${model.name}`;
-
-    // extracting the api configs based on the api identifier
-    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-
-    // calculating the authroization based on auth flag, it can be true
-    // if the api level auth is enabled, or if the app level auth is enabled
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
-      false;
-
     for (const field of searchableFields) {
+      // constructing the api identifier
+      const apiIdentifier = `modelAPIs->${model.name}->${field.name}->search`;
+
+      // extracting the api configs based on the api identifier
+      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+      const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+
+      // calculating the authroization based on auth flag, it can be true
+      // if the api level auth is enabled, or if the app level auth is enabled
+      const authorization =
+        config.apis?.[apiIdentifier]?.authorization ??
+        config.auth?.enableAuth ??
+        false;
       // defining the primary search query parameter
       // for example if the field is "name", this will create "name_search" query parameter
       const schema: Record<string, unknown> = generateSchema(
@@ -66,6 +65,7 @@ export function registerSearchRoutes(
         `/${model.name}/search/${field.name}`,
         {
           schema,
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {

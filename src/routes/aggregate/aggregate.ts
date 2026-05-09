@@ -35,22 +35,22 @@ export function registerAggregateRoutes(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
-    // construct the api identifier
-    const apiIdentifier = `aggregate->${model.name}->get_aggregation`;
-
-    // extract the api configs based on the api identifier
-    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    // calculating the authroization based on auth flag, it can be true
-    // if the api level auth is enabled, or if the app level auth is enabled
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
-      false;
-
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
     for (const field of aggregatableFields) {
+      // construct the api identifier
+      const apiIdentifier = `aggregateAPIs->${model.name}->${field.name}->getAggregation`;
+
+      // extract the api configs based on the api identifier
+      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+      const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+      // calculating the authroization based on auth flag, it can be true
+      // if the api level auth is enabled, or if the app level auth is enabled
+      const authorization =
+        config.apis?.[apiIdentifier]?.authorization ??
+        config.auth?.enableAuth ??
+        false;
+
       const operations = field.supportedAggregation!;
 
       // generating the schema for the route
@@ -66,6 +66,7 @@ export function registerAggregateRoutes(
         `/${model.name}/aggregation/${field.name}`,
         {
           schema,
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             // doing validation here because we need the user for SSP
             if (config.auth?.enableAuth && authorization) {

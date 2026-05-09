@@ -38,21 +38,20 @@ export function registerEditRoutes(
       f.supportedOperations?.includes('editable'),
     );
 
-    // constructing the api identifier
-    const apiIdentifier = `modelAPIs->edit->${model.name}`;
-
-    // extracting the api configs based on the api identifier
-    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-
-    // calculating the authroization based on auth flag, it can be true
-    // if the api level auth is enabled, or if the app level auth is enabled
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
-      false;
-
     for (const field of editableFields) {
+      // constructing the api identifier
+      const apiIdentifier = `modelAPIs->${model.name}->${field.name}->edit`;
+
+      // extracting the api configs based on the api identifier
+      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+      const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+
+      // calculating the authroization based on auth flag, it can be true
+      // if the api level auth is enabled, or if the app level auth is enabled
+      const authorization =
+        config.apis?.[apiIdentifier]?.authorization ??
+        config.auth?.enableAuth ??
+        false;
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
 
@@ -230,6 +229,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PATCH'),
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {
@@ -268,6 +268,7 @@ export function registerEditRoutes(
         `/${model.name}/${field.name}/:${field.name}`,
         {
           schema: buildRouteSchema('PUT'),
+          config: {apiIdentifier},
           preValidation: async (request, reply) => {
             if (config.auth?.enableAuth && authorization) {
               try {

@@ -34,6 +34,7 @@ export function registerChangePasswordRoute(
     '/auth/change-password',
     {
       schema,
+      config: {apiIdentifier: `authAPIs->${modelName}->all->changePassword`},
       preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
         try {
           await request.jwtVerify();

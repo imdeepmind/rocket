@@ -235,7 +235,7 @@ describe('test custom-queries api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'customAPIs->customQueries->searchUsers': {
+      'customAPIs->all->all->searchUsers': {
         authorization: true,
       },
     };

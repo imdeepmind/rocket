@@ -472,7 +472,7 @@ describe('test search api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs->search->users': {
+      'modelAPIs->users->name->search': {
         authorization: true,
       },
     };

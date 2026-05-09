@@ -179,7 +179,7 @@
         ]
     },
     "apis": {
-        "aggregate->users->get_aggregation": {
+        "aggregateAPIs->users->id->getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",

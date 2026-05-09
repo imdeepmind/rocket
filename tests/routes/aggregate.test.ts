@@ -269,7 +269,7 @@ describe('test aggregate api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'aggregate->sales->get_aggregation': {
+      'aggregateAPIs->sales->amount->getAggregation': {
         authorization: true,
       },
     };

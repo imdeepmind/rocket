@@ -5,6 +5,7 @@ import {AppConfig} from '@/interfaces/config';
 export interface RouteInfo {
   method: string;
   url: string;
+  apiIdentifier?: string;
 }
 
 const ROCKET_ASCII = `
@@ -151,7 +152,8 @@ export function showWelcomeScreen(
   // Filter routes
   const filteredRoutes = routes.filter(route => {
     const isHead = route.method.toUpperCase().split('/').includes('HEAD');
-    const isStatic = route.url.includes('/static');
+    const isStatic =
+      route.url.includes('/static') || route.url.includes('/docs');
     return !isHead && !isStatic;
   });
 
@@ -172,7 +174,17 @@ export function showWelcomeScreen(
       Math.max(0, maxMethodLength - route.method.length),
     );
 
-    console.log('  ' + coloredMethod + padding + chalk.white(`  ${route.url}`));
+    const identifier = route.apiIdentifier
+      ? chalk.gray(`  [${route.apiIdentifier}]`)
+      : '';
+
+    console.log(
+      '  ' +
+        coloredMethod +
+        padding +
+        chalk.white(`  ${route.url}`) +
+        identifier,
+    );
   });
 
   console.log('\n  ' + chalk.gray('─────────────────────────────────────────'));
