@@ -22,6 +22,7 @@ describe('test schema helper', () => {
       dataType: 'datetime',
       expectedSchema: {type: 'string', format: 'date-time'},
     },
+    {dataType: 'decimal', expectedSchema: {type: 'number'}},
     {dataType: 'array', expectedSchema: {type: 'string'}},
     {dataType: 'null', expectedSchema: {type: 'string'}},
   ])('should map $dataType to JSON schema', ({dataType, expectedSchema}) => {

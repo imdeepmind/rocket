@@ -19,6 +19,18 @@ const ALLOWED_OPERATIONS: Record<string, string[]> = {
     'oneOf',
     'indexable',
   ],
+  decimal: [
+    'sortable',
+    'editable',
+    'deletable',
+    'lessThan',
+    'lessThanEqual',
+    'greaterThan',
+    'greaterThanEqual',
+    'equal',
+    'oneOf',
+    'indexable',
+  ],
   string: [
     'searchable',
     'sortable',
@@ -43,6 +55,7 @@ const ALLOWED_OPERATIONS: Record<string, string[]> = {
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   integer: ['mean', 'max', 'min', 'count', 'sum'],
+  decimal: ['mean', 'max', 'min', 'count', 'sum'],
   string: ['count'],
   boolean: ['count', 'frequency'],
   text: [],
@@ -53,6 +66,8 @@ function mapModelTypeToJsonSchema(type: string): string {
   switch (type) {
     case 'integer':
       return 'integer';
+    case 'decimal':
+      return 'number';
     case 'string':
     case 'text':
       return 'string';

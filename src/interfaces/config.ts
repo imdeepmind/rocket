@@ -2,7 +2,13 @@ import {HTTPMethod} from './index';
 
 export type DBEngine = 'sqlite' | 'pg';
 export type CacheDbEngine = 'redis';
-export type DataType = 'integer' | 'string' | 'boolean' | 'text' | 'datetime';
+export type DataType =
+  | 'integer'
+  | 'string'
+  | 'boolean'
+  | 'text'
+  | 'datetime'
+  | 'decimal';
 export type LogLevel =
   | 'trace'
   | 'debug'

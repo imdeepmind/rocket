@@ -88,7 +88,7 @@ describe('test custom-queries api', () => {
             method: 'POST',
             path: '/all-types',
             query:
-              'INSERT INTO test (b, t, d) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@);',
+              'INSERT INTO test (b, t, d, dec) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@, @@dec:decimal@@);',
           },
         ],
       };
@@ -106,6 +106,7 @@ describe('test custom-queries api', () => {
           b: true,
           t: 'some long text',
           d: '2023-01-01T00:00:00Z',
+          dec: 12.34,
         },
       });
 

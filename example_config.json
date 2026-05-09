@@ -147,6 +147,12 @@
                     "name": "created_at",
                     "type": "datetime",
                     "supportedOperations": ["lessThan", "greaterThan", "sortable"]
+                },
+                {
+                    "name": "decimal_number",
+                    "type": "decimal",
+                    "supportedOperations": ["lessThan", "greaterThan", "sortable"],
+                    "supportedAggregation": ["count"]
                 }
             ],
             "indexes": [

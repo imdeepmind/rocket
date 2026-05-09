@@ -42,6 +42,9 @@ function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
           case 'datetime':
             col = `integer('${f.name}', { mode: 'timestamp' })`;
             break;
+          case 'decimal':
+            col = `real('${f.name}')`;
+            break;
           default:
             col = `text('${f.name}')`;
             break; // fallback
@@ -95,6 +98,9 @@ ${columns}
             break;
           case 'datetime':
             col = `timestamp('${f.name}')`;
+            break;
+          case 'decimal':
+            col = `doublePrecision('${f.name}')`;
             break;
           default:
             col = `text('${f.name}')`;

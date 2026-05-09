@@ -560,6 +560,17 @@ describe('validateInvalidModelFieldsConfig', () => {
         '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "integer"',
     },
     {
+      name: 'field.supportedOperations contains invalid value for type=decimal',
+      patch: {
+        name: 'test',
+        fields: [
+          {name: 'test', type: 'decimal', supportedOperations: ['searchable']},
+        ],
+      },
+      expected:
+        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "decimal"',
+    },
+    {
       name: 'field.supportedOperations contains invalid value for type=string',
       patch: {
         name: 'test',
@@ -926,6 +937,17 @@ describe('validateInvalidModelFieldsConfig', () => {
       },
       expected:
         '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "integer"',
+    },
+    {
+      name: 'field.supportedAggregation contains invalid value for type=decimal',
+      patch: {
+        name: 'test',
+        fields: [
+          {name: 'test', type: 'decimal', supportedAggregation: ['frequency']},
+        ],
+      },
+      expected:
+        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "decimal"',
     },
     {
       name: 'field.supportedAggregation contains invalid value for type=string',
