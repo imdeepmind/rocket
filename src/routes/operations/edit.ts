@@ -38,11 +38,19 @@ export function registerEditRoutes(
       f.supportedOperations?.includes('editable'),
     );
 
-    // unique api identifier
+    // constructing the api identifier
     const apiIdentifier = `modelAPIs->edit->${model.name}`;
+
+    // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
+
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
 
     for (const field of editableFields) {
       const isUnique = field.primaryKey || field.unique;
@@ -122,11 +130,19 @@ export function registerEditRoutes(
 
         const security: Array<{[key: string]: string[]}> = [];
 
-        if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+        if (
+          config.auth?.enableAuth &&
+          config.auth?.authEngine === 'up-auth' &&
+          authorization
+        ) {
           security.push({bearerAuth: []});
         }
 
-        if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+        if (
+          config.auth?.enableAuth &&
+          config.auth?.authEngine === 'api-key' &&
+          authorization
+        ) {
           security.push({apiKeyAuth: []});
         }
 

@@ -35,24 +35,31 @@ export function registerAggregateRoutes(
       f => f.supportedAggregation && f.supportedAggregation.length > 0,
     );
 
-    // API unique idenfier
-    const aggregateAPIIdentifier = `aggregate->${model.name}->get_aggregation`;
-    const webhookConfig =
-      config.apis?.[aggregateAPIIdentifier]?.webhooks ?? null;
-    const sspConfig = config.apis?.[aggregateAPIIdentifier]?.ssp ?? [];
+    // construct the api identifier
+    const apiIdentifier = `aggregate->${model.name}->get_aggregation`;
+
+    // extract the api configs based on the api identifier
+    const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
+    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
-      config.apis?.[aggregateAPIIdentifier]?.authorization ?? false;
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
 
     // for each aggregatable field, we create a GET route
     // /<model_name>/aggregation/<field_name>
     for (const field of aggregatableFields) {
       const operations = field.supportedAggregation!;
 
+      // generating the schema for the route
       const schema: Record<string, unknown> = generateSchema(
         config,
         field,
         model,
         operations,
+        authorization,
       );
 
       app.get(
@@ -189,14 +196,23 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   operations: SupportedAggregationOperation[],
+  authorization: boolean,
 ) {
   const security: Array<{[key: string]: string[]}> = [];
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'up-auth' &&
+    authorization
+  ) {
     security.push({bearerAuth: []});
   }
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'api-key' &&
+    authorization
+  ) {
     security.push({apiKeyAuth: []});
   }
 

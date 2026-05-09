@@ -35,13 +35,25 @@ export function registerGetAllRoutes(
   const {models} = config;
 
   for (const model of models) {
-    // unique api identifier
+    // constructing the api identifier
     const apiIdentifier = `modelAPIs->getAll->${model.name}`;
+
+    // extracting the api configs based on the api identifier
     const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
     const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
-    const authorization = config.apis?.[apiIdentifier]?.authorization ?? false;
 
-    const schema: Record<string, unknown> = generateSchema(model, config);
+    // calculating the authroization based on auth flag, it can be true
+    // if the api level auth is enabled, or if the app level auth is enabled
+    const authorization =
+      config.apis?.[apiIdentifier]?.authorization ??
+      config.auth?.enableAuth ??
+      false;
+
+    const schema: Record<string, unknown> = generateSchema(
+      model,
+      config,
+      authorization,
+    );
 
     app.get(
       `/${model.name}/`,
@@ -49,8 +61,10 @@ export function registerGetAllRoutes(
         schema,
         preValidation: async request => enforceSSP(sspConfig, request),
         preHandler: async (request, reply) => {
+          console.log('I am here');
           if (config.auth?.enableAuth && authorization) {
             try {
+              console.log('I am running to verify JWT?');
               await request.jwtVerify();
             } catch {
               return reply
@@ -77,6 +91,7 @@ export function registerGetAllRoutes(
         },
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
+        console.log(request.user);
         const queryParams = request.query as Record<string, unknown>;
         const tableName = model.name;
 
@@ -146,7 +161,11 @@ export function registerGetAllRoutes(
     );
   }
 }
-function generateSchema(model: ModelConfig, config: AppConfig) {
+function generateSchema(
+  model: ModelConfig,
+  config: AppConfig,
+  authorization: boolean,
+) {
   const queryProperties: Record<string, object> = {};
 
   // Add filter params for each field based on its supportedOperations
@@ -205,11 +224,19 @@ function generateSchema(model: ModelConfig, config: AppConfig) {
 
   const security: Array<{[key: string]: string[]}> = [];
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'up-auth') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'up-auth' &&
+    authorization
+  ) {
     security.push({bearerAuth: []});
   }
 
-  if (config.auth?.enableAuth && config.auth?.authEngine === 'api-key') {
+  if (
+    config.auth?.enableAuth &&
+    config.auth?.authEngine === 'api-key' &&
+    authorization
+  ) {
     security.push({apiKeyAuth: []});
   }
 
