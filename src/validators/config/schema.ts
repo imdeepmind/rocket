@@ -452,6 +452,12 @@ const authSchema = {
           isEntityName: true,
           minLength: 1,
         },
+        isVerifiedColumn: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+          nullable: true,
+        },
       },
     },
     otpVerification: {

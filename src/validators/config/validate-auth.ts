@@ -96,6 +96,28 @@ function validateAuthConstraints(config: AppConfig): string[] {
         '/auth/authModel/passwordColumn: field does not exist in model',
       );
     }
+
+    // check if authModel.isVerifiedColumn exists in models
+    if (
+      config.auth?.authModel.isVerifiedColumn &&
+      !config.models.some(m =>
+        m.fields.some(f => f.name === config.auth?.authModel.isVerifiedColumn),
+      )
+    ) {
+      errors.push(
+        '/auth/authModel/isVerifiedColumn: field does not exist in model',
+      );
+    }
+
+    // if otpVerification is true and auth engine is up-auth and isVerified is not present
+    if (
+      config.auth?.otpVerification &&
+      !config.auth?.authModel?.isVerifiedColumn
+    ) {
+      errors.push(
+        '/auth/authModel/isVerifiedColumn: isVerifiedColumn is required when otpVerification is true',
+      );
+    }
   }
 
   return errors;

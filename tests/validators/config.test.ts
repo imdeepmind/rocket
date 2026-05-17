@@ -3347,6 +3347,25 @@ describe('validateInvalidAuthConfig', () => {
       expected:
         '/auth/otpEngine: otpEngine should not be present when authEngine is api-key',
     },
+    {
+      name: 'otpVerification is true but isVerified column is not present',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          otpVerification: true,
+          otpEngine: 'dummy',
+        },
+      },
+      expected:
+        '/auth/authModel/isVerifiedColumn: isVerifiedColumn is required when otpVerification is true',
+    },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3384,6 +3403,7 @@ describe('validateValidAuthConfig', () => {
             idColumn: 'id',
             usernameColumn: 'name',
             passwordColumn: 'name',
+            isVerifiedColumn: 'is_active',
           },
         },
       },

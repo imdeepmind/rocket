@@ -208,6 +208,7 @@ export interface AuthConfig {
     idColumn: string;
     usernameColumn: string;
     passwordColumn: string;
+    isVerifiedColumn?: string;
   };
   otpVerification?: boolean;
   otpEngine?: OtpEngine;
