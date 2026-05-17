@@ -99,6 +99,8 @@ export async function startServer(
     },
   });
 
+  app.appConfig = config;
+
   // Track each registered route
   app.addHook('onRoute', routeOptions => {
     routes.push({
