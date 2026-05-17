@@ -184,7 +184,15 @@ const fieldSchema = {
     },
     type: {
       type: 'string',
-      enum: ['integer', 'string', 'boolean', 'text', 'datetime', 'decimal'],
+      enum: [
+        'integer',
+        'string',
+        'boolean',
+        'text',
+        'datetime',
+        'decimal',
+        'date',
+      ],
     },
     primaryKey: {type: 'boolean', default: false},
     nullable: {type: 'boolean', default: true},

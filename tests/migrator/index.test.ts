@@ -137,7 +137,7 @@ describe('migrateDatabase', () => {
 
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, foreignKey } from 'drizzle-orm/pg-core'",
+      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core'",
     );
     expect(schemaContent).toContain("export const posts = pgTable('posts'");
     expect(schemaContent).toContain("id: serial('id').primaryKey()");

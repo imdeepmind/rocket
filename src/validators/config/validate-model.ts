@@ -51,6 +51,15 @@ const ALLOWED_OPERATIONS: Record<string, string[]> = {
     'equal',
     'oneOf',
   ],
+  date: [
+    'sortable',
+    'lessThan',
+    'lessThanEqual',
+    'greaterThan',
+    'greaterThanEqual',
+    'equal',
+    'oneOf',
+  ],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -60,6 +69,7 @@ const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   boolean: ['count', 'frequency'],
   text: [],
   datetime: ['mean', 'max', 'min', 'count'],
+  date: ['mean', 'max', 'min', 'count'],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -75,6 +85,8 @@ function mapModelTypeToJsonSchema(type: string): string {
       return 'boolean';
     case 'datetime':
       return 'date-time';
+    case 'date':
+      return 'date';
     /* istanbul ignore next */
     default:
       return 'string';
@@ -91,6 +103,10 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
       if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
         prop.type = 'string';
         prop.format = 'date-time';
+      }
+      if (prop && prop.type === 'date') {
+        prop.type = 'string';
+        prop.format = 'date';
       }
     });
   }
@@ -201,7 +217,10 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
             (schemaType === 'datetime' || schemaType === 'date-time') &&
             (expectedType === 'datetime' || expectedType === 'date-time');
 
-          if (!isDateMatch) {
+          const isJustDateMatch =
+            schemaType === 'date' && expectedType === 'date';
+
+          if (!isDateMatch && !isJustDateMatch) {
             errors.push(
               `${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`,
             );

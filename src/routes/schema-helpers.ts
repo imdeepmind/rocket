@@ -24,6 +24,8 @@ export function mapDataTypeToJsonSchema(type: DataType): {
       return {type: 'string'};
     case 'datetime':
       return {type: 'string', format: 'date-time'};
+    case 'date':
+      return {type: 'string', format: 'date'};
     case 'decimal':
       return {type: 'number'};
     default:
@@ -140,6 +142,10 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
       if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
         prop.type = 'string';
         prop.format = 'date-time';
+      }
+      if (prop && prop.type === 'date') {
+        prop.type = 'string';
+        prop.format = 'date';
       }
     });
   }

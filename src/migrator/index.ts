@@ -45,6 +45,9 @@ function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
           case 'decimal':
             col = `real('${f.name}')`;
             break;
+          case 'date':
+            col = `text('${f.name}')`;
+            break;
           default:
             col = `text('${f.name}')`;
             break; // fallback
@@ -102,6 +105,9 @@ ${columns}
           case 'decimal':
             col = `doublePrecision('${f.name}')`;
             break;
+          case 'date':
+            col = `date('${f.name}')`;
+            break;
           default:
             col = `text('${f.name}')`;
             break; // fallback
@@ -132,7 +138,7 @@ ${columns}
     const extras = [indexes, foreignKeys].filter(Boolean).join(',\n');
 
     return `
-import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core';
 
 export const ${config.name} = pgTable('${config.name}', {
 ${columns}
