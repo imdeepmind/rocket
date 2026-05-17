@@ -7,8 +7,6 @@ import {
 
 import {AppConfig, DataType} from '@/interfaces/config';
 
-import {enforceSSP} from '@/utils/ssp';
-
 type ParamSource = {
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
@@ -92,8 +90,6 @@ export function registerCustomQueryRoutes(
     // constructing the api identifier
     const apiIdentifier = `customAPIs->customQueries->all->${cq.name}`;
 
-    // extracting the api configs based on the api identifier
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
     // calculating the authroization based on auth flag, it can be true
     // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
@@ -250,7 +246,7 @@ export function registerCustomQueryRoutes(
               );
           }
         }
-        enforceSSP(sspConfig, request);
+        app.enforceSSP(request);
       },
       preHandler: async request => {
         await app.callWebhook('request', request, null);

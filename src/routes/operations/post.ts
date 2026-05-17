@@ -8,7 +8,6 @@ import {
 
 import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
-import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
@@ -28,9 +27,6 @@ export function registerPostRoutes(
   for (const model of models) {
     // constructing the api identifier
     const apiIdentifier = `modelAPIs->${model.name}->all->insert`;
-
-    // extracting the api configs based on the api identifier
-    const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
     // calculating the authroization based on auth flag, it can be true
     // if the api level auth is enabled, or if the app level auth is enabled
@@ -69,7 +65,7 @@ export function registerPostRoutes(
                 );
             }
           }
-          enforceSSP(sspConfig, request);
+          app.enforceSSP(request);
         },
         preHandler: async request => {
           await app.callWebhook('request', request, null);
