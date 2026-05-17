@@ -60,6 +60,7 @@ export type JsonSchemaObject = {
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
 export type AuthEngine = 'api-key' | 'up-auth';
 export type SspParamType = 'path' | 'query' | 'body';
+export type OtpEngine = 'ses' | 'dummy';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -208,6 +209,8 @@ export interface AuthConfig {
     usernameColumn: string;
     passwordColumn: string;
   };
+  otpVerification?: boolean;
+  otpEngine?: OtpEngine;
   apiKey?: string;
 }
 

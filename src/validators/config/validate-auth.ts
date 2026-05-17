@@ -15,10 +15,35 @@ function validateAuthConstraints(config: AppConfig): string[] {
     );
   }
 
+  // if authModel is api-key, then otpVerification should not be present
+  if (config.auth?.authEngine === 'api-key' && config.auth?.otpVerification) {
+    errors.push(
+      '/auth/otpVerification: otpVerification should not be present when authEngine is api-key',
+    );
+  }
+
+  // if authModel is api-key, then otpEngine should not be present
+  if (config.auth?.authEngine === 'api-key' && config.auth?.otpEngine) {
+    errors.push(
+      '/auth/otpEngine: otpEngine should not be present when authEngine is api-key',
+    );
+  }
+
   // if authModel is up-auth, then authModel is required
   if (config.auth?.authEngine === 'up-auth' && !config.auth?.authModel) {
     errors.push(
       '/auth/authModel: authModel is required when authEngine is up-auth',
+    );
+  }
+
+  // if authEngine is up-auth and otpVerification is true then otpEngine is required
+  if (
+    config.auth?.authEngine === 'up-auth' &&
+    config.auth?.otpVerification &&
+    !config.auth?.otpEngine
+  ) {
+    errors.push(
+      '/auth/otpEngine: otpEngine is required when authEngine is up-auth and otpVerification is true',
     );
   }
 

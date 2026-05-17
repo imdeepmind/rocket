@@ -454,6 +454,14 @@ const authSchema = {
         },
       },
     },
+    otpVerification: {
+      type: 'boolean',
+      default: false,
+    },
+    otpEngine: {
+      type: 'string',
+      enum: ['ses', 'dummy'],
+    },
     apiKey: {
       type: 'string',
       minLength: 1,

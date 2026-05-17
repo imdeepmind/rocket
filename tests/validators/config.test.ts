@@ -3093,7 +3093,7 @@ describe('validateValidModelAPIsConfig', () => {
   });
 });
 
-describe('validateInvalidModelAPIsConfig', () => {
+describe('validateInvalidAuthConfig', () => {
   it.each([
     {
       name: 'invalid value for enableAuth',
@@ -3249,6 +3249,104 @@ describe('validateInvalidModelAPIsConfig', () => {
       expected:
         '/auth/authModel: authModel is required when authEngine is up-auth',
     },
+    {
+      name: 'otpVerification is invalid',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          otpVerification: 'true',
+        },
+      },
+      expected: '/auth/otpVerification must be boolean',
+    },
+    {
+      name: 'otpEngine is invalid',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          otpVerification: true,
+          otpEngine: 'invalid',
+        },
+      },
+      expected: '/auth/otpEngine must be equal to one of the allowed values',
+    },
+    {
+      name: 'otpEngine is invalid',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          otpVerification: true,
+          otpEngine: 123,
+        },
+      },
+      expected: '/auth/otpEngine must be string',
+    },
+    {
+      name: 'otpVerification is present when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'up-auth',
+          authModel: {
+            modelName: 'users',
+            idColumn: 'id',
+            usernameColumn: 'name',
+            passwordColumn: 'name',
+          },
+          otpVerification: true,
+        },
+      },
+      expected:
+        '/auth/otpEngine: otpEngine is required when authEngine is up-auth and otpVerification is true',
+    },
+    {
+      name: 'otpVerification is present when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+          otpVerification: true,
+          otpEngine: 'dummy',
+        },
+      },
+      expected:
+        '/auth/otpVerification: otpVerification should not be present when authEngine is api-key',
+    },
+    {
+      name: 'otpEngine is present when authEngine is api-key',
+      patch: {
+        auth: {
+          enableAuth: true,
+          authEngine: 'api-key',
+          apiKey: 'xxx',
+          otpEngine: 'dummy',
+        },
+      },
+      expected:
+        '/auth/otpEngine: otpEngine should not be present when authEngine is api-key',
+    },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3261,7 +3359,7 @@ describe('validateInvalidModelAPIsConfig', () => {
   });
 });
 
-describe('validateValidModelAPIsConfig', () => {
+describe('validateValidAuthConfig', () => {
   it.each([
     {
       name: 'valid auth config',
@@ -3279,6 +3377,8 @@ describe('validateValidModelAPIsConfig', () => {
         auth: {
           enableAuth: true,
           authEngine: 'up-auth',
+          otpVerification: true,
+          otpEngine: 'dummy',
           authModel: {
             modelName: 'users',
             idColumn: 'id',

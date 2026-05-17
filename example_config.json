@@ -50,7 +50,9 @@
             "idColumn": "id",
             "usernameColumn": "email",
             "passwordColumn": "password"
-        }
+        },
+        "otpVerification": true,
+        "otpEngine": "ses"
     },
     "models": [
         {
