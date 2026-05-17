@@ -9,7 +9,6 @@ import {
 
 import {AppConfig, ModelBody} from '@/interfaces/config';
 
-import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
@@ -40,9 +39,6 @@ export function registerEditRoutes(
     for (const field of editableFields) {
       // constructing the api identifier
       const apiIdentifier = `modelAPIs->${model.name}->${field.name}->edit`;
-
-      // extracting the api configs based on the api identifier
-      const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
       // calculating the authroization based on auth flag, it can be true
       // if the api level auth is enabled, or if the app level auth is enabled
@@ -244,7 +240,7 @@ export function registerEditRoutes(
                   );
               }
             }
-            enforceSSP(sspConfig, request);
+            app.enforceSSP(request);
           },
           preHandler: async request => {
             await app.callWebhook('request', request, null);
@@ -277,7 +273,7 @@ export function registerEditRoutes(
                   );
               }
             }
-            enforceSSP(sspConfig, request);
+            app.enforceSSP(request);
           },
           preHandler: async request => {
             await app.callWebhook('request', request, null);

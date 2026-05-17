@@ -3,6 +3,7 @@ import Fastify, {FastifyInstance} from 'fastify';
 import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
+import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
@@ -67,6 +68,7 @@ export async function createTestApp(
 
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(responsePlugin);
+  await fastify.register(sspPlugin);
   await fastify.register(webhookPlugin);
   await fastify.register(authPlugin);
 

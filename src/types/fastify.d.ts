@@ -35,5 +35,6 @@ declare module 'fastify' {
       request: import('fastify').FastifyRequest,
       payload: unknown,
     ) => Promise<void>;
+    enforceSSP: (request: import('fastify').FastifyRequest) => void;
   }
 }

@@ -13,6 +13,7 @@ import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
+import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
@@ -135,6 +136,7 @@ export async function startServer(
   }
 
   await app.register(responsePlugin);
+  await app.register(sspPlugin);
   await app.register(webhookPlugin);
   if (config.auth) {
     await app.register(authPlugin);
