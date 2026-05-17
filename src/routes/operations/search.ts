@@ -13,7 +13,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register SEARCH routes for searchable fields.
@@ -43,7 +42,6 @@ export function registerSearchRoutes(
       const apiIdentifier = `modelAPIs->${model.name}->${field.name}->search`;
 
       // extracting the api configs based on the api identifier
-      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
       const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
       // calculating the authroization based on auth flag, it can be true
@@ -52,6 +50,7 @@ export function registerSearchRoutes(
         config.apis?.[apiIdentifier]?.authorization ??
         config.auth?.enableAuth ??
         false;
+
       // defining the primary search query parameter
       // for example if the field is "name", this will create "name_search" query parameter
       const schema: Record<string, unknown> = generateSchema(
@@ -85,16 +84,10 @@ export function registerSearchRoutes(
             enforceSSP(sspConfig, request);
           },
           preHandler: async request => {
-            await callWebhook('request', webhookConfig, request, null, app.log);
+            await app.callWebhook('request', request, null);
           },
           onSend: async (request, _, payload) => {
-            await callWebhook(
-              'response',
-              webhookConfig,
-              request,
-              payload,
-              app.log,
-            );
+            await app.callWebhook('response', request, payload);
           },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
