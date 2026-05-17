@@ -30,5 +30,10 @@ declare module 'fastify' {
     redis?: Redis;
     jwt: import('@fastify/jwt').JWT;
     appConfig: AppConfig;
+    callWebhook: (
+      trigger: 'request' | 'response',
+      request: import('fastify').FastifyRequest,
+      payload: unknown,
+    ) => Promise<void>;
   }
 }

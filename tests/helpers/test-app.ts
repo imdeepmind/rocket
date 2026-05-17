@@ -3,6 +3,7 @@ import Fastify, {FastifyInstance} from 'fastify';
 import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
+import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
 
@@ -47,10 +48,6 @@ export async function createTestApp(
   customAPIs?: CustomAPIConfig,
   auth?: AuthConfig,
 ): Promise<FastifyInstance> {
-  const fastify = Fastify();
-  await fastify.register(databasePlugin, dbConfig);
-  await fastify.register(responsePlugin);
-  await fastify.register(authPlugin);
   const appConfig: AppConfig = {
     application: {logLevel: 'error'},
     swagger: {
@@ -64,6 +61,14 @@ export async function createTestApp(
     customAPIs,
     auth,
   };
+
+  const fastify = Fastify();
+  fastify.appConfig = appConfig;
+
+  await fastify.register(databasePlugin, dbConfig);
+  await fastify.register(responsePlugin);
+  await fastify.register(webhookPlugin);
+  await fastify.register(authPlugin);
 
   if (models.length > 0 || apis || customAPIs) {
     registerRoutes(fastify, appConfig);

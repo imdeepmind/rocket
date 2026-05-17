@@ -14,7 +14,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {enforceSSP} from '@/utils/ssp';
 import {capitalizeFirstLetter} from '@/utils/string';
-import {callWebhook} from '@/utils/webhook';
 
 /**
  * Register INDEX routes for indexed fields.
@@ -51,7 +50,6 @@ export function registerIndexRoutes(
       const apiIdentifier = `modelAPIs->${model.name}->${field.name}->index`;
 
       // extracting the api configs based on the api identifier
-      const webhookConfig = config.apis?.[apiIdentifier]?.webhooks ?? null;
       const sspConfig = config.apis?.[apiIdentifier]?.ssp ?? [];
 
       // calculating the authroization based on auth flag, it can be true
@@ -90,16 +88,10 @@ export function registerIndexRoutes(
             enforceSSP(sspConfig, request);
           },
           preHandler: async request => {
-            await callWebhook('request', webhookConfig, request, null, app.log);
+            await app.callWebhook('request', request, null);
           },
           onSend: async (request, _, payload) => {
-            await callWebhook(
-              'response',
-              webhookConfig,
-              request,
-              payload,
-              app.log,
-            );
+            await app.callWebhook('response', request, payload);
           },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
