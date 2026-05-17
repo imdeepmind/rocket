@@ -8,7 +8,8 @@ export type DataType =
   | 'boolean'
   | 'text'
   | 'datetime'
-  | 'decimal';
+  | 'decimal'
+  | 'date';
 export type LogLevel =
   | 'trace'
   | 'debug'
