@@ -29,5 +29,6 @@ declare module 'fastify' {
     ) => StructuredResponse<T, R>;
     redis?: Redis;
     jwt: import('@fastify/jwt').JWT;
+    appConfig: AppConfig;
   }
 }
