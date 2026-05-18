@@ -10,7 +10,7 @@ import Fastify, {
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
-import emailPlugin from '@/plugin/communicate';
+import communicatePlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
@@ -122,9 +122,9 @@ export async function startServer(
   // config-driven cache (Redis or NodeCache)
   await app.register(cachePlugin);
 
-  // config-driven email
-  if (config.email) {
-    await app.register(emailPlugin);
+  // config-driven communicate
+  if (config.communicate) {
+    await app.register(communicatePlugin);
   }
 
   // config-driven rate limit

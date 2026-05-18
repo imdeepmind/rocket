@@ -14,7 +14,7 @@ const sendDummyEmail = async (
 export default fp(async (fastify: FastifyInstance) => {
   const communicate = {
     sendEmail: async (email: string, htmlBody: string, body: string) => {
-      if (fastify.appConfig.email.emailEngine === 'dummy') {
+      if (fastify.appConfig.communicate?.email?.emailEngine === 'dummy') {
         await sendDummyEmail(email, htmlBody, body);
       }
     },

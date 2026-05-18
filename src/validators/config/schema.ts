@@ -474,6 +474,14 @@ const emailSchema = {
   },
 };
 
+const communicateSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    email: emailSchema,
+  },
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'swagger', 'database', 'models'],
@@ -491,7 +499,7 @@ const schema = {
     cache_db: cacheDbSchema,
     customAPIs: customAPIsSchema,
     auth: authSchema,
-    email: emailSchema,
+    communicate: communicateSchema,
   },
 };
 

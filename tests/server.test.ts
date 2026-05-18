@@ -7,7 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
-import emailPlugin from '@/plugin/communicate';
+import communicatePlugin from '@/plugin/communicate';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -544,30 +544,32 @@ describe('Server', () => {
     });
   });
 
-  describe('Email Configuration', () => {
-    it('should register email plugin when email is configured', async () => {
-      const configWithEmail: AppConfig = {
+  describe('Communicate Configuration', () => {
+    it('should register communicate plugin when communicate is configured', async () => {
+      const configWithCommunicate: AppConfig = {
         ...mockConfig,
-        email: {
-          emailEngine: 'dummy',
+        communicate: {
+          email: {
+            emailEngine: 'dummy',
+          },
         },
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithEmail, 3000, 'dev');
+      await startServer(configWithCommunicate, 3000, 'dev');
 
-      expect(registerMock).toHaveBeenCalledWith(emailPlugin);
+      expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
     });
 
-    it('should not register email plugin when email is not configured', async () => {
+    it('should not register communicate plugin when communicate is not configured', async () => {
       const registerMock = mockApp.register;
       await startServer(mockConfig, 3000, 'dev');
 
-      // Assert that none of the registered calls are the emailPlugin
-      const emailPluginCall = registerMock.mock.calls.find(
-        (call: unknown[]) => call[0] === emailPlugin,
+      // Assert that none of the registered calls are the communicatePlugin
+      const communicatePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === communicatePlugin,
       );
-      expect(emailPluginCall).toBeUndefined();
+      expect(communicatePluginCall).toBeUndefined();
     });
   });
 });

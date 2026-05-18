@@ -216,6 +216,10 @@ export interface EmailConfig {
   emailEngine: EmailEngine;
 }
 
+export interface CommunicateConfig {
+  email?: EmailConfig;
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   swagger: SwaggerConfig;
@@ -225,5 +229,5 @@ export interface AppConfig {
   cache_db?: CacheDbConfig;
   customAPIs?: CustomAPIConfig;
   auth?: AuthConfig;
-  email?: EmailConfig;
+  communicate?: CommunicateConfig;
 }

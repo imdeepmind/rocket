@@ -1,11 +1,11 @@
 import Fastify, {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import emailPlugin from '@/plugin/communicate';
+import communicatePlugin from '@/plugin/communicate';
 
 import {AppConfig} from '@/interfaces/config';
 
-describe('email plugin', () => {
+describe('communicate plugin', () => {
   let app: FastifyInstance;
 
   beforeEach(() => {
@@ -21,12 +21,14 @@ describe('email plugin', () => {
   it('decorates fastify with communicate', async () => {
     app = Fastify();
     app.appConfig = {
-      email: {
-        emailEngine: 'dummy',
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
       },
     } as unknown as AppConfig;
 
-    await app.register(emailPlugin);
+    await app.register(communicatePlugin);
     await app.ready();
 
     expect(app.hasDecorator('communicate')).toBe(true);
@@ -37,12 +39,14 @@ describe('email plugin', () => {
   it('sends a dummy email when emailEngine is dummy', async () => {
     app = Fastify();
     app.appConfig = {
-      email: {
-        emailEngine: 'dummy',
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
       },
     } as unknown as AppConfig;
 
-    await app.register(emailPlugin);
+    await app.register(communicatePlugin);
     await app.ready();
 
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -63,12 +67,14 @@ describe('email plugin', () => {
   it('does not send an email if emailEngine is not dummy', async () => {
     app = Fastify();
     app.appConfig = {
-      email: {
-        emailEngine: 'other' as unknown as 'dummy',
+      communicate: {
+        email: {
+          emailEngine: 'other' as unknown as 'dummy',
+        },
       },
     } as unknown as AppConfig;
 
-    await app.register(emailPlugin);
+    await app.register(communicatePlugin);
     await app.ready();
 
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

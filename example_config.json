@@ -52,8 +52,10 @@
             "passwordColumn": "password"
         }
     },
-    "email": {
-        "emailEngine": "dummy"
+    "communicate": {
+        "email": {
+            "emailEngine": "dummy"
+        }
     },
     "models": [
         {

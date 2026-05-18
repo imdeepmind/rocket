@@ -3467,13 +3467,15 @@ describe('validateValidAuthorizationConfig', () => {
   });
 });
 
-// check email configs validation
-describe('validateEmailConfig', () => {
-  it('should pass when email config is valid', () => {
+// check communicate configs validation
+describe('validateCommunicateConfig', () => {
+  it('should pass when communicate config is valid', () => {
     const config = {
       ...validBaseConfig,
-      email: {
-        emailEngine: 'dummy',
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
       },
     };
 
@@ -3483,7 +3485,9 @@ describe('validateEmailConfig', () => {
   it('should throw when email config is missing required emailEngine', () => {
     const config = {
       ...validBaseConfig,
-      email: {},
+      communicate: {
+        email: {},
+      },
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -3494,8 +3498,10 @@ describe('validateEmailConfig', () => {
   it('should throw when email config has invalid emailEngine enum value', () => {
     const config = {
       ...validBaseConfig,
-      email: {
-        emailEngine: 'invalid-engine',
+      communicate: {
+        email: {
+          emailEngine: 'invalid-engine',
+        },
       },
     };
 
@@ -3507,8 +3513,26 @@ describe('validateEmailConfig', () => {
   it('should throw when email config has extra properties', () => {
     const config = {
       ...validBaseConfig,
-      email: {
-        emailEngine: 'dummy',
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+          extraProperty: true,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+
+  it('should throw when communicate config itself has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
         extraProperty: true,
       },
     };
