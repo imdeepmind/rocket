@@ -1,10 +1,10 @@
-import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig} from '@/interfaces/config';
 
+import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerChangePasswordRoute(
@@ -83,7 +83,7 @@ export function registerChangePasswordRoute(
       const currentHashedPassword = user[passwordColumn] as string;
 
       // Verify existing password
-      const isMatch = await bcrypt.compare(
+      const isMatch = await compare(
         String(existingPassword),
         currentHashedPassword,
       );
@@ -94,7 +94,7 @@ export function registerChangePasswordRoute(
       }
 
       // Hash the new password
-      const newHashedPassword = await bcrypt.hash(String(newPassword), 10);
+      const newHashedPassword = await hash(String(newPassword));
 
       // Update the password
       const updateQuery = `UPDATE "${modelName}" SET "${passwordColumn}" = $1 WHERE "${idColumn}" = $2;`;
