@@ -3466,3 +3466,55 @@ describe('validateValidAuthorizationConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
+
+// check email configs validation
+describe('validateEmailConfig', () => {
+  it('should pass when email config is valid', () => {
+    const config = {
+      ...validBaseConfig,
+      email: {
+        emailEngine: 'dummy',
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when email config is missing required emailEngine', () => {
+    const config = {
+      ...validBaseConfig,
+      email: {},
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'emailEngine'",
+    );
+  });
+
+  it('should throw when email config has invalid emailEngine enum value', () => {
+    const config = {
+      ...validBaseConfig,
+      email: {
+        emailEngine: 'invalid-engine',
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must be equal to one of the allowed values',
+    );
+  });
+
+  it('should throw when email config has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      email: {
+        emailEngine: 'dummy',
+        extraProperty: true,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+});

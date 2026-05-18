@@ -7,6 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import emailPlugin from '@/plugin/email';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -540,6 +541,33 @@ describe('Server', () => {
       expect(
         swaggerRegistration![1].openapi.components.securitySchemes,
       ).toHaveProperty('apiKeyAuth');
+    });
+  });
+
+  describe('Email Configuration', () => {
+    it('should register email plugin when email is configured', async () => {
+      const configWithEmail: AppConfig = {
+        ...mockConfig,
+        email: {
+          emailEngine: 'dummy',
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithEmail, 3000, 'dev');
+
+      expect(registerMock).toHaveBeenCalledWith(emailPlugin);
+    });
+
+    it('should not register email plugin when email is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Assert that none of the registered calls are the emailPlugin
+      const emailPluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === emailPlugin,
+      );
+      expect(emailPluginCall).toBeUndefined();
     });
   });
 });

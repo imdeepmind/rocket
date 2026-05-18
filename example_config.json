@@ -52,6 +52,9 @@
             "passwordColumn": "password"
         }
     },
+    "email": {
+        "emailEngine": "dummy"
+    },
     "models": [
         {
             "name": "users",

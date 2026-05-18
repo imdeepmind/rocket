@@ -11,6 +11,7 @@ import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
 import dbPlugin from '@/plugin/database';
+import emailPlugin from '@/plugin/email';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
@@ -120,6 +121,11 @@ export async function startServer(
 
   // config-driven cache (Redis or NodeCache)
   await app.register(cachePlugin);
+
+  // config-driven email
+  if (config.email) {
+    await app.register(emailPlugin);
+  }
 
   // config-driven rate limit
   if (config.application.rateLimit) {
