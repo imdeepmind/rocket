@@ -34,5 +34,12 @@ declare module 'fastify' {
       payload: unknown,
     ) => Promise<void>;
     enforceSSP: (request: import('fastify').FastifyRequest) => void;
+    communicate: {
+      sendEmail: (
+        email: string,
+        htmlBody: string,
+        body: string,
+      ) => Promise<void>;
+    };
   }
 }

@@ -7,6 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import communicatePlugin from '@/plugin/communicate';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -540,6 +541,35 @@ describe('Server', () => {
       expect(
         swaggerRegistration![1].openapi.components.securitySchemes,
       ).toHaveProperty('apiKeyAuth');
+    });
+  });
+
+  describe('Communicate Configuration', () => {
+    it('should register communicate plugin when communicate is configured', async () => {
+      const configWithCommunicate: AppConfig = {
+        ...mockConfig,
+        communicate: {
+          email: {
+            emailEngine: 'dummy',
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCommunicate, 3000, 'dev');
+
+      expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
+    });
+
+    it('should not register communicate plugin when communicate is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Assert that none of the registered calls are the communicatePlugin
+      const communicatePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === communicatePlugin,
+      );
+      expect(communicatePluginCall).toBeUndefined();
     });
   });
 });
