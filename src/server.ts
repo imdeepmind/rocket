@@ -10,8 +10,8 @@ import Fastify, {
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
+import emailPlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
-import emailPlugin from '@/plugin/email';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';

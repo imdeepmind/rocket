@@ -1,7 +1,7 @@
 import Fastify, {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import emailPlugin from '@/plugin/email';
+import emailPlugin from '@/plugin/communicate';
 
 import {AppConfig} from '@/interfaces/config';
 

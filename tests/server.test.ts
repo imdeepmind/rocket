@@ -7,7 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
-import emailPlugin from '@/plugin/email';
+import emailPlugin from '@/plugin/communicate';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
