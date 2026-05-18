@@ -9,9 +9,9 @@ import Fastify, {
 
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
+import cachePlugin from '@/plugin/cache';
 import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
-import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
@@ -118,20 +118,13 @@ export async function startServer(
   // config-driven DB
   await app.register(dbPlugin, config.database);
 
-  // config-driven Redis cache (if configured)
-  if (config.cache_db) {
-    await app.register(redisPlugin, config.cache_db);
-  }
+  // config-driven cache (Redis or NodeCache)
+  await app.register(cachePlugin);
 
   // config-driven rate limit
   if (config.application.rateLimit) {
-    const redis =
-      config.cache_db && config.application.rateLimit.useRedis
-        ? app.redis
-        : undefined;
     await app.register(rateLimitPlugin, {
       rateLimit: config.application.rateLimit,
-      redis,
     });
   }
 

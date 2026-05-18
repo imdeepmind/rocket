@@ -1,8 +1,6 @@
 import '@fastify/jwt';
 import 'fastify';
 
-import type Redis from 'ioredis';
-
 import {DatabaseQuery, StructuredResponse} from '@/interfaces';
 
 declare module '@fastify/jwt' {
@@ -27,7 +25,7 @@ declare module 'fastify' {
       data: T,
       raw_data?: R,
     ) => StructuredResponse<T, R>;
-    redis?: Redis;
+    cache: import('@/plugin/cache').ICache;
     jwt: import('@fastify/jwt').JWT;
     appConfig: AppConfig;
     callWebhook: (

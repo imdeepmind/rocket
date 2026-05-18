@@ -1,7 +1,6 @@
 import rateLimit, {FastifyRateLimitOptions} from '@fastify/rate-limit';
 import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
-import Redis from 'ioredis';
 
 import {RateLimitConfig} from '@/interfaces/config';
 
@@ -9,12 +8,11 @@ import {parseDuration} from '@/utils/duration';
 
 export interface RateLimitPluginOptions {
   rateLimit: RateLimitConfig;
-  redis?: Redis;
 }
 
 export default fp(
   async (fastify: FastifyInstance, opts: RateLimitPluginOptions) => {
-    const {rateLimit: config, redis} = opts;
+    const {rateLimit: config} = opts;
 
     // If rate limiting is disabled, skip registration
     if (!config.enabled) {
@@ -26,12 +24,44 @@ export default fp(
       // Parse the time window from duration string to milliseconds
       const windowMs = parseDuration(config.timeWindow);
 
-      // Prepare rate limit options
+      class CustomCacheStore {
+        constructor(private options: unknown) {}
+
+        incr(
+          key: string,
+          cb: (
+            err: Error | null,
+            result?: {current: number; ttl: number},
+          ) => void,
+        ) {
+          fastify.cache
+            .get<{current: number; expiresAt: number}>(key)
+            .then(val => {
+              const now = Date.now();
+              if (!val || val.expiresAt < now) {
+                val = {current: 1, expiresAt: now + windowMs};
+              } else {
+                val.current += 1;
+              }
+              fastify.cache
+                .set(key, val, Math.ceil((val.expiresAt - now) / 1000))
+                .then(() => {
+                  cb(null, {current: val.current, ttl: val.expiresAt - now});
+                })
+                .catch(err => cb(err));
+            })
+            .catch(err => cb(err));
+        }
+
+        child() {
+          return this;
+        }
+      }
+
       const rateLimitOpts: FastifyRateLimitOptions = {
         max: config.max,
         timeWindow: windowMs,
-        cache: config.useRedis && redis ? 1000 : 10000,
-        redis: config.useRedis && redis ? redis : undefined,
+        store: CustomCacheStore,
       };
 
       // Register the rate-limit plugin
