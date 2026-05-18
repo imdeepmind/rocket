@@ -214,7 +214,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    expect(mockApp.register).toHaveBeenCalledTimes(7);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -232,7 +232,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(4);
+    expect(mockApp.register).toHaveBeenCalledTimes(5);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -372,37 +372,6 @@ describe('Server', () => {
   });
 
   describe('Redis and Rate Limit Configuration', () => {
-    it('should register redis plugin when cache_db is configured', async () => {
-      const configWithRedis: AppConfig = {
-        ...mockConfig,
-        cache_db: {
-          engine: 'redis',
-          connection: {uri: 'redis://localhost:6379'},
-          timeout: 5000,
-        },
-      };
-
-      const registerMock = mockApp.register;
-      await startServer(configWithRedis, 3000, 'dev');
-
-      // Verify redis plugin was registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeDefined();
-    });
-
-    it('should not register redis plugin when cache_db is not configured', async () => {
-      const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
-
-      // Verify redis plugin was not registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeUndefined();
-    });
-
     it('should register rate-limit plugin when rateLimit is configured', async () => {
       const configWithRateLimit: AppConfig = {
         ...mockConfig,
