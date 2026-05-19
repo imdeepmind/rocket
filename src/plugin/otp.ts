@@ -2,6 +2,7 @@ import crypto from 'crypto';
 
 import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
+import {ulid} from 'ulid';
 
 import {IOtpService, OtpData} from '@/interfaces/otp';
 
@@ -11,8 +12,8 @@ import {OTP_LENGTH, OTP_TTL_SECONDS} from '@/constants';
 /**
  * Get the cache key for an OTP
  */
-function getOtpCacheKey(email: string): string {
-  return `otp:${email}`;
+function getOtpCacheKey(ulid: string, email: string): string {
+  return `otp:${ulid}:${email}`;
 }
 
 /**
@@ -32,18 +33,20 @@ export default fp(
       /**
        * Generate OTP, hash it, store in cache, and send via email
        */
-      async sendOTPForVerification(email: string): Promise<void> {
+      async sendOTPForVerification(email: string): Promise<string> {
         try {
           const otp = generateOtp();
           const hashedOtp = await hash(otp);
+          const otpUlid = ulid();
 
           const otpData: OtpData = {
             hashedOtp,
             email,
             createdAt: Date.now(),
+            ulid: otpUlid,
           };
 
-          const cacheKey = getOtpCacheKey(email);
+          const cacheKey = getOtpCacheKey(otpUlid, email);
           await fastify.cache.set(cacheKey, otpData, OTP_TTL_SECONDS);
 
           // Send email with OTP
@@ -58,6 +61,7 @@ export default fp(
           await fastify.communicate.sendEmail(email, htmlBody, body);
 
           fastify.log.info(`OTP sent to email: ${email}`);
+          return otpUlid;
         } catch (err) {
           fastify.log.error(`Failed to send OTP for email ${email}: ${err}`);
           throw err;
@@ -67,9 +71,9 @@ export default fp(
       /**
        * Verify OTP and remove from cache on success
        */
-      async verify(email: string, otp: string): Promise<boolean> {
+      async verify(email: string, otp: string, ulid: string): Promise<boolean> {
         try {
-          const cacheKey = getOtpCacheKey(email);
+          const cacheKey = getOtpCacheKey(ulid, email);
           const otpData = await fastify.cache.get<OtpData>(cacheKey);
 
           if (!otpData) {
