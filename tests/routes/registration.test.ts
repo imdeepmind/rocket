@@ -2,7 +2,10 @@ import bcrypt from 'bcrypt';
 import Fastify, {FastifyInstance} from 'fastify';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 
+import cachePlugin from '@/plugin/cache';
+import communicatePlugin from '@/plugin/communicate';
 import databasePlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
 import {registerRegistrationRoute} from '@/routes/auth/registration';
@@ -69,6 +72,7 @@ async function createAuthApp(
 ): Promise<FastifyInstance> {
   const app = Fastify();
   await app.register(databasePlugin, dbConfig);
+  await app.register(cachePlugin);
   await app.register(responsePlugin);
 
   const config: AppConfig = {
@@ -81,8 +85,16 @@ async function createAuthApp(
     database: dbConfig,
     models,
     auth,
+    communicate: {
+      email: {
+        emailEngine: 'dummy',
+      },
+    },
   };
 
+  app.appConfig = config;
+  await app.register(communicatePlugin);
+  await app.register(otpPlugin);
   registerRegistrationRoute(app, config);
   await app.ready();
   return app;
@@ -195,9 +207,10 @@ describe('POST /auth/register', () => {
         payload: {email: 'bob@example.com', password: 'mySecret'},
       });
 
-      // bcrypt.hash must have been called with the raw password
-      expect(hashSpy).toHaveBeenCalledOnce();
-      expect(hashSpy).toHaveBeenCalledWith('mySecret', 10);
+      // bcrypt.hash should be called twice: once for password, once for OTP
+      expect(hashSpy).toHaveBeenCalledTimes(2);
+      // First call should be for the password
+      expect(hashSpy).toHaveBeenNthCalledWith(1, 'mySecret', 10);
 
       hashSpy.mockRestore();
       await app.close();

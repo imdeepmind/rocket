@@ -2,7 +2,9 @@ import Fastify, {FastifyInstance} from 'fastify';
 
 import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
+import communicatePlugin from '@/plugin/communicate';
 import databasePlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
@@ -62,6 +64,11 @@ export async function createTestApp(
     apis,
     customAPIs,
     auth,
+    communicate: {
+      email: {
+        emailEngine: 'dummy',
+      },
+    },
   };
 
   const fastify = Fastify();
@@ -69,10 +76,12 @@ export async function createTestApp(
 
   await fastify.register(databasePlugin, dbConfig);
   await fastify.register(cachePlugin);
+  await fastify.register(communicatePlugin);
   await fastify.register(responsePlugin);
   await fastify.register(sspPlugin);
   await fastify.register(webhookPlugin);
   await fastify.register(authPlugin);
+  await fastify.register(otpPlugin);
 
   if (models.length > 0 || apis || customAPIs) {
     registerRoutes(fastify, appConfig);

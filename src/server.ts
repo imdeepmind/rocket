@@ -12,6 +12,7 @@ import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
@@ -126,6 +127,9 @@ export async function startServer(
   if (config.communicate) {
     await app.register(communicatePlugin);
   }
+
+  // OTP plugin (requires cache and communicate)
+  await app.register(otpPlugin);
 
   // config-driven rate limit
   if (config.application.rateLimit) {

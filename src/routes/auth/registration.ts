@@ -103,6 +103,11 @@ export function registerRegistrationRoute(
         }
       }
 
+      // generate and send otp
+      const otpUlid = await app.otp.sendOTPForVerification(String(body.email));
+
+      responseData['otp_id'] = otpUlid;
+
       return reply
         .status(201)
         .send(
@@ -132,6 +137,13 @@ function generateSchema(
   authModelConfigWithoutPassowrd['fields'] = authModelConfigWithoutPassowrd[
     'fields'
   ].filter(f => f.name !== passwordColumn);
+
+  // otp_id field in the schema
+  authModelConfigWithoutPassowrd['fields'].push({
+    name: 'otp_id',
+    type: 'string',
+  });
+
   const requiredBodySchema = generateJSONValidationSchema(
     authModelConfigWithoutPassowrd,
     {

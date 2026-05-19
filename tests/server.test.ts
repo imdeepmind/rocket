@@ -215,7 +215,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(7);
+    expect(mockApp.register).toHaveBeenCalledTimes(8);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -233,7 +233,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(5);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
   });
 
   it('should not register routes if models are missing/empty', async () => {

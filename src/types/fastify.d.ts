@@ -2,6 +2,7 @@ import '@fastify/jwt';
 import 'fastify';
 
 import {DatabaseQuery, StructuredResponse} from '@/interfaces';
+import {IOtpService} from '@/interfaces/otp';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -41,5 +42,6 @@ declare module 'fastify' {
         body: string,
       ) => Promise<void>;
     };
+    otp: IOtpService;
   }
 }
