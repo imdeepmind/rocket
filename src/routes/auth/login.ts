@@ -1,10 +1,10 @@
-import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, ModelBody} from '@/interfaces/config';
 
+import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 /**
@@ -72,7 +72,7 @@ export function registerLoginRoute(
       const hashedPassword = user[passwordColumn] as string;
 
       // Compare passwords
-      const isMatch = await bcrypt.compare(String(password), hashedPassword);
+      const isMatch = await compare(String(password), hashedPassword);
 
       if (!isMatch) {
         return reply
