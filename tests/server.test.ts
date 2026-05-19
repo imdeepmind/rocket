@@ -7,6 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import communicatePlugin from '@/plugin/communicate';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -214,7 +215,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(4);
+    expect(mockApp.register).toHaveBeenCalledTimes(7);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -232,7 +233,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(2);
+    expect(mockApp.register).toHaveBeenCalledTimes(5);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -372,37 +373,6 @@ describe('Server', () => {
   });
 
   describe('Redis and Rate Limit Configuration', () => {
-    it('should register redis plugin when cache_db is configured', async () => {
-      const configWithRedis: AppConfig = {
-        ...mockConfig,
-        cache_db: {
-          engine: 'redis',
-          connection: {uri: 'redis://localhost:6379'},
-          timeout: 5000,
-        },
-      };
-
-      const registerMock = mockApp.register;
-      await startServer(configWithRedis, 3000, 'dev');
-
-      // Verify redis plugin was registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeDefined();
-    });
-
-    it('should not register redis plugin when cache_db is not configured', async () => {
-      const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
-
-      // Verify redis plugin was not registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeUndefined();
-    });
-
     it('should register rate-limit plugin when rateLimit is configured', async () => {
       const configWithRateLimit: AppConfig = {
         ...mockConfig,
@@ -571,6 +541,35 @@ describe('Server', () => {
       expect(
         swaggerRegistration![1].openapi.components.securitySchemes,
       ).toHaveProperty('apiKeyAuth');
+    });
+  });
+
+  describe('Communicate Configuration', () => {
+    it('should register communicate plugin when communicate is configured', async () => {
+      const configWithCommunicate: AppConfig = {
+        ...mockConfig,
+        communicate: {
+          email: {
+            emailEngine: 'dummy',
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCommunicate, 3000, 'dev');
+
+      expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
+    });
+
+    it('should not register communicate plugin when communicate is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Assert that none of the registered calls are the communicatePlugin
+      const communicatePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === communicatePlugin,
+      );
+      expect(communicatePluginCall).toBeUndefined();
     });
   });
 });

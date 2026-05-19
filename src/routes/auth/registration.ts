@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
@@ -9,13 +8,8 @@ import {
 
 import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
+import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
-
-/**
- * The number of bcrypt salt rounds used when hashing passwords.
- * 10 is a widely accepted default that balances security and performance.
- */
-const BCRYPT_SALT_ROUNDS = 10;
 
 /**
  * Register the POST /auth/register route.
@@ -87,10 +81,7 @@ export function registerRegistrationRoute(
       // rejected the request.
       if (body[passwordColumn] !== undefined && body[passwordColumn] !== null) {
         const rawPassword = String(body[passwordColumn]);
-        body[passwordColumn] = await bcrypt.hash(
-          rawPassword,
-          BCRYPT_SALT_ROUNDS,
-        );
+        body[passwordColumn] = await hash(rawPassword);
       }
 
       // Build the INSERT statement dynamically from the sanitised body keys.

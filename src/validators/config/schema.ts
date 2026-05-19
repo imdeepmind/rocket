@@ -464,15 +464,31 @@ const authSchema = {
       type: 'boolean',
       default: false,
     },
-    otpEngine: {
-      type: 'string',
-      enum: ['ses', 'dummy'],
-    },
     apiKey: {
       type: 'string',
       minLength: 1,
       nullable: true,
     },
+  },
+};
+
+const emailSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['emailEngine'],
+  properties: {
+    emailEngine: {
+      type: 'string',
+      enum: ['dummy'],
+    },
+  },
+};
+
+const communicateSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    email: emailSchema,
   },
 };
 
@@ -493,6 +509,7 @@ const schema = {
     cache_db: cacheDbSchema,
     customAPIs: customAPIsSchema,
     auth: authSchema,
+    communicate: communicateSchema,
   },
 };
 

@@ -15,7 +15,8 @@
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "src/constants.ts"
   ],
   "tsc-alias": {
     "resolveFullPaths": true

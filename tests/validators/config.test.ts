@@ -3267,60 +3267,6 @@ describe('validateInvalidAuthConfig', () => {
       expected: '/auth/otpVerification must be boolean',
     },
     {
-      name: 'otpEngine is invalid',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
-          },
-          otpVerification: true,
-          otpEngine: 'invalid',
-        },
-      },
-      expected: '/auth/otpEngine must be equal to one of the allowed values',
-    },
-    {
-      name: 'otpEngine is invalid',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
-          },
-          otpVerification: true,
-          otpEngine: 123,
-        },
-      },
-      expected: '/auth/otpEngine must be string',
-    },
-    {
-      name: 'otpVerification is present when authEngine is api-key',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
-          },
-          otpVerification: true,
-        },
-      },
-      expected:
-        '/auth/otpEngine: otpEngine is required when authEngine is up-auth and otpVerification is true',
-    },
-    {
       name: 'otpVerification is present when authEngine is api-key',
       patch: {
         auth: {
@@ -3328,24 +3274,10 @@ describe('validateInvalidAuthConfig', () => {
           authEngine: 'api-key',
           apiKey: 'xxx',
           otpVerification: true,
-          otpEngine: 'dummy',
         },
       },
       expected:
         '/auth/otpVerification: otpVerification should not be present when authEngine is api-key',
-    },
-    {
-      name: 'otpEngine is present when authEngine is api-key',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-          apiKey: 'xxx',
-          otpEngine: 'dummy',
-        },
-      },
-      expected:
-        '/auth/otpEngine: otpEngine should not be present when authEngine is api-key',
     },
     {
       name: 'otpVerification is true but isVerified column is not present',
@@ -3360,7 +3292,6 @@ describe('validateInvalidAuthConfig', () => {
             passwordColumn: 'name',
           },
           otpVerification: true,
-          otpEngine: 'dummy',
         },
       },
       expected:
@@ -3397,7 +3328,6 @@ describe('validateValidAuthConfig', () => {
           enableAuth: true,
           authEngine: 'up-auth',
           otpVerification: true,
-          otpEngine: 'dummy',
           authModel: {
             modelName: 'users',
             idColumn: 'id',
@@ -3584,5 +3514,81 @@ describe('validateValidAuthorizationConfig', () => {
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// check communicate configs validation
+describe('validateCommunicateConfig', () => {
+  it('should pass when communicate config is valid', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when email config is missing required emailEngine', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {},
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'emailEngine'",
+    );
+  });
+
+  it('should throw when email config has invalid emailEngine enum value', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {
+          emailEngine: 'invalid-engine',
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must be equal to one of the allowed values',
+    );
+  });
+
+  it('should throw when email config has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+          extraProperty: true,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+
+  it('should throw when communicate config itself has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      communicate: {
+        email: {
+          emailEngine: 'dummy',
+        },
+        extraProperty: true,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
   });
 });

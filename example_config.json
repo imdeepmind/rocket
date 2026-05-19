@@ -52,8 +52,12 @@
             "passwordColumn": "password",
             "isVerifiedColumn": "is_active"
         },
-        "otpVerification": true,
-        "otpEngine": "ses"
+        "otpVerification": true
+    },
+    "communicate": {
+        "email": {
+            "emailEngine": "dummy"
+        }
     },
     "models": [
         {

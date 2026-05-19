@@ -60,7 +60,7 @@ export type JsonSchemaObject = {
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
 export type AuthEngine = 'api-key' | 'up-auth';
 export type SspParamType = 'path' | 'query' | 'body';
-export type OtpEngine = 'ses' | 'dummy';
+export type EmailEngine = 'dummy';
 
 export interface SwaggerConfig {
   enabled: boolean;
@@ -211,8 +211,15 @@ export interface AuthConfig {
     isVerifiedColumn?: string;
   };
   otpVerification?: boolean;
-  otpEngine?: OtpEngine;
   apiKey?: string;
+}
+
+export interface EmailConfig {
+  emailEngine: EmailEngine;
+}
+
+export interface CommunicateConfig {
+  email?: EmailConfig;
 }
 
 export interface AppConfig {
@@ -224,4 +231,5 @@ export interface AppConfig {
   cache_db?: CacheDbConfig;
   customAPIs?: CustomAPIConfig;
   auth?: AuthConfig;
+  communicate?: CommunicateConfig;
 }

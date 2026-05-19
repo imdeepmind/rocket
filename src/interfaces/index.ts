@@ -23,3 +23,12 @@ export interface StructuredResponse<T = unknown, R = unknown> {
   data: T;
   raw_data?: R;
 }
+
+export interface WebhookPayload {
+  body?: unknown;
+  query?: unknown;
+  params?: unknown;
+  resp?: unknown;
+}
+
+export type WebhookTriggerType = 'request' | 'response';
