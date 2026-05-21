@@ -21,6 +21,7 @@ import webhookPlugin from '@/plugin/webhook';
 import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {registerPasswordResetRoute} from '@/routes/auth/password-reset';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 import {registerResendOtpRoute} from '@/routes/auth/resend-otp';
 import {registerVerifyOtpRoute} from '@/routes/auth/verify-otp';
@@ -164,6 +165,7 @@ export async function startServer(
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
     registerResendOtpRoute(app, config);
+    registerPasswordResetRoute(app, config);
     registerVerifyOtpRoute(app, config);
   }
 
