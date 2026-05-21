@@ -22,6 +22,8 @@ import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
+import {registerResendOtpRoute} from '@/routes/auth/resend-otp';
+import {registerVerifyOtpRoute} from '@/routes/auth/verify-otp';
 
 import {Mode} from '@/interfaces';
 import {AppConfig} from '@/interfaces/config';
@@ -161,6 +163,8 @@ export async function startServer(
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
+    registerResendOtpRoute(app, config);
+    registerVerifyOtpRoute(app, config);
   }
 
   // Global error handler
