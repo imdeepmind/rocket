@@ -57,7 +57,7 @@ export function registerGetAllRoutes(
         preValidation: async (request, reply) => {
           if (config.auth?.enableAuth && authorization) {
             try {
-              await request.jwtVerify();
+              await request.authenticate();
             } catch {
               return reply
                 .status(401)

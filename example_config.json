@@ -39,7 +39,7 @@
         "connection": {
             "uri": "redis://localhost:6379"
         },
-        "timeout": 
+        "timeout":
         5000
     },
     "auth": {
@@ -50,7 +50,8 @@
             "idColumn": "id",
             "usernameColumn": "email",
             "passwordColumn": "password"
-        }
+        },
+        "jwtSecret": "your-super-secret-key"
     },
     "communicate": {
         "email": {

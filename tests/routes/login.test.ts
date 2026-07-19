@@ -137,7 +137,7 @@ describe('POST /auth/login', () => {
       expect(body.data.accessToken).toBeDefined();
 
       // Verify JWT payload
-      const secret = 'your-super-secret-key';
+      const secret = 'this-will-never-be-used';
       const decoded = jwt.verify(body.data.accessToken, secret) as Record<
         string,
         unknown

@@ -66,7 +66,7 @@ export function registerAggregateRoutes(
             // doing validation here because we need the user for SSP
             if (config.auth?.enableAuth && authorization) {
               try {
-                await request.jwtVerify();
+                await request.authenticate();
               } catch {
                 return reply
                   .status(401)
