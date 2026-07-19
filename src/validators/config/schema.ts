@@ -459,6 +459,11 @@ const authSchema = {
       minLength: 1,
       nullable: true,
     },
+    jwtSecret: {
+      type: 'string',
+      minLength: 1,
+      nullable: true,
+    },
   },
 };
 

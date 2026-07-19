@@ -3285,6 +3285,7 @@ describe('validateValidModelAPIsConfig', () => {
             usernameColumn: 'name',
             passwordColumn: 'name',
           },
+          jwtSecret: 'my-secret-key',
         },
       },
     },

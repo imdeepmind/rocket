@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import jwt from 'jsonwebtoken';
 import {describe, expect, it} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
@@ -26,6 +27,45 @@ describe('Auth Plugin — up-auth engine', () => {
     const decoded = app.jwt.verify(token) as typeof payload;
     expect(decoded.id).toBe(payload.id);
     expect(decoded.email).toBe(payload.email);
+  });
+
+  it('should use jwtSecret from config when provided', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'error'},
+      swagger: {
+        enabled: false,
+        basePath: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
+      database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
+      models: [],
+      auth: {
+        enableAuth: true,
+        authEngine: 'up-auth',
+        authModel: {
+          modelName: 'users',
+          idColumn: 'id',
+          usernameColumn: 'email',
+          passwordColumn: 'password',
+        },
+        jwtSecret: 'custom-secret-key',
+      },
+    };
+    await app.register(authPlugin);
+    await app.ready();
+
+    const payload = {id: 1, email: 'test@example.com'};
+    const token = app.jwt.sign(payload);
+    expect(token).toBeDefined();
+
+    // Verify with the custom secret — should succeed
+    const decoded = app.jwt.verify(token) as typeof payload;
+    expect(decoded.id).toBe(payload.id);
+    expect(decoded.email).toBe(payload.email);
+
+    // Verify with the default secret — should fail
+    expect(() => jwt.verify(token, 'your-super-secret-key')).toThrow();
   });
 
   it('should expose authenticate() that verifies JWT', async () => {

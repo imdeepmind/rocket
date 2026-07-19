@@ -8,7 +8,7 @@ export default fp(
 
     if (!authConfig || authConfig.authEngine === 'up-auth') {
       await fastify.register(fastifyJwt, {
-        secret: 'your-super-secret-key',
+        secret: authConfig?.jwtSecret || 'this-will-never-be-used',
       });
 
       fastify.decorateRequest(

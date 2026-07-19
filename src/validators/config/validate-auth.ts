@@ -22,6 +22,20 @@ function validateAuthConstraints(config: AppConfig): string[] {
     );
   }
 
+  // if authModel is up-auth, then jwtSecret is required
+  if (config.auth?.authEngine === 'up-auth' && !config.auth?.jwtSecret) {
+    errors.push(
+      '/auth/jwtSecret: jwtSecret is required when authEngine is up-auth',
+    );
+  }
+
+  // if authModel is api-key, then jwtSecret should not be present
+  if (config.auth?.authEngine === 'api-key' && config.auth?.jwtSecret) {
+    errors.push(
+      '/auth/jwtSecret: jwtSecret should not be present when authEngine is api-key',
+    );
+  }
+
   // if authModel is up-auth, then apiKey should not be present
   if (config.auth?.authEngine === 'up-auth' && config.auth?.apiKey) {
     errors.push(

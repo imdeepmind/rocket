@@ -210,6 +210,7 @@ export interface AuthConfig {
     passwordColumn: string;
   };
   apiKey?: string;
+  jwtSecret?: string;
 }
 
 export interface EmailConfig {
