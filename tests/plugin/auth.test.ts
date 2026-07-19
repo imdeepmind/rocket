@@ -33,10 +33,12 @@ describe('Auth Plugin — up-auth engine', () => {
     const app = Fastify();
     app.appConfig = {
       application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -113,10 +115,12 @@ describe('Auth Plugin — api-key engine', () => {
     const app = Fastify();
     app.appConfig = {
       application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -154,10 +158,12 @@ describe('Auth Plugin — api-key engine', () => {
     const app = Fastify();
     app.appConfig = {
       application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -199,10 +205,12 @@ describe('Auth Plugin — api-key engine', () => {
     const app = Fastify();
     app.appConfig = {
       application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],

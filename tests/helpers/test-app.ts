@@ -52,10 +52,12 @@ export async function createTestApp(
 ): Promise<FastifyInstance> {
   const appConfig: AppConfig = {
     application: {name: 'Test App', logLevel: 'error'},
-    swagger: {
-      enabled: false,
-      basePath: '/docs',
-      info: {title: 'Test', description: 'Test', version: '1.0.0'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
     },
     database: dbConfig,
     models,

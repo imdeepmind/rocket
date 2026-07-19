@@ -104,8 +104,8 @@ export function showWelcomeScreen(
   console.log('  ' + chalk.dim('🚀 Lift off your development with ease'));
   console.log('\n');
 
-  const swaggerUrl = config.swagger.enabled
-    ? `http://0.0.0.0:${port}${config.swagger.basePath}`
+  const swaggerUrl = config.docs.openapi.enabled
+    ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
     : chalk.gray('Disabled');
 
   const cacheDbStatus = config.cache_db

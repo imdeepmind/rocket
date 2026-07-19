@@ -34,7 +34,8 @@ export interface StartServerResult {
 }
 
 async function registerSwagger(app: FastifyInstance, config: AppConfig) {
-  const {swagger: swaggerConfig, auth} = config;
+  const {docs: docsConfig, auth} = config;
+  const swaggerConfig = docsConfig.openapi;
   const components: Record<string, unknown> = {};
 
   if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
@@ -68,7 +69,7 @@ async function registerSwagger(app: FastifyInstance, config: AppConfig) {
 
     // Swagger UI
     await app.register(swaggerUI, {
-      routePrefix: swaggerConfig.basePath, // UI available at /docs
+      routePrefix: swaggerConfig.path, // UI available at /docs
       uiConfig: {
         docExpansion: 'list',
         deepLinking: false,

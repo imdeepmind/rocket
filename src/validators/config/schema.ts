@@ -61,41 +61,47 @@ const applicationSchema = {
   },
 };
 
-const swaggerSchema = {
+const docsSchema = {
   type: 'object',
-  required: ['enabled', 'basePath', 'info'],
   additionalProperties: false,
   properties: {
-    enabled: {type: 'boolean'},
-    basePath: {
-      type: 'string',
-      pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
-    },
-    info: {
+    openapi: {
       type: 'object',
-      required: ['title'],
+      required: ['enabled', 'path', 'info'],
       additionalProperties: false,
       properties: {
-        title: {type: 'string', minLength: 5},
-        description: {type: 'string', minLength: 25},
-        version: {type: 'string'},
-        termsOfService: {type: 'string', format: 'uri'},
-        contact: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            name: {type: 'string', minLength: 5},
-            url: {type: 'string', format: 'uri'},
-            email: {type: 'string', format: 'email'},
-          },
+        enabled: {type: 'boolean'},
+        path: {
+          type: 'string',
+          pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
         },
-        license: {
+        info: {
           type: 'object',
-          required: ['name'],
+          required: ['title'],
           additionalProperties: false,
           properties: {
-            name: {type: 'string', minLength: 1},
-            url: {type: 'string', format: 'uri'},
+            title: {type: 'string', minLength: 5},
+            description: {type: 'string', minLength: 25},
+            version: {type: 'string'},
+            termsOfService: {type: 'string', format: 'uri'},
+            contact: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 5},
+                url: {type: 'string', format: 'uri'},
+                email: {type: 'string', format: 'email'},
+              },
+            },
+            license: {
+              type: 'object',
+              required: ['name'],
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 1},
+                url: {type: 'string', format: 'uri'},
+              },
+            },
           },
         },
       },
@@ -489,11 +495,11 @@ const communicateSchema = {
 
 const schema = {
   type: 'object',
-  required: ['application', 'swagger', 'database', 'models'],
+  required: ['application', 'docs', 'database', 'models'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,
-    swagger: swaggerSchema,
+    docs: docsSchema,
     database: databaseSchema,
     models: {
       type: 'array',

@@ -82,136 +82,147 @@ const validBaseConfig: AppConfig = {
     name: 'Test App',
     logLevel: 'info',
   },
-  swagger: {
-    enabled: true,
-    basePath: '/api',
-    info: {
-      title: 'Test API',
-      description: 'Test API description for testing',
-      version: '1.0.0',
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/api',
+      info: {
+        title: 'Test API',
+        description: 'Test API description for testing',
+        version: '1.0.0',
+      },
     },
   },
   database: getDefaultDatabaseConfig(),
   models: getDefaultModelConfig(),
 };
 
-describe('validateInvalidSwaggerConfig', () => {
+describe('validateInvalidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as invalid',
       patch: {enabled: 'wrong'},
-      expected: '/swagger/enabled must be boolean',
+      expected: '/docs/openapi/enabled must be boolean',
     },
     {
       name: 'enabled as undefined',
       patch: {enabled: undefined},
-      expected: "/swagger must have required property 'enabled'",
+      expected: "/docs/openapi must have required property 'enabled'",
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'wrong'},
+      name: 'invalid path',
+      patch: {path: 'wrong'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'api/docs'},
+      name: 'invalid path missing leading slash',
+      patch: {path: 'api/docs'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'swagger title undefined',
+      name: 'openapi title undefined',
       patch: {info: {title: undefined}},
-      expected: "/swagger/info must have required property 'title'",
+      expected: "/docs/openapi/info must have required property 'title'",
     },
     {
-      name: 'swagger title too small',
+      name: 'openapi title too small',
       patch: {info: {title: '1234'}},
-      expected: '/swagger/info/title must NOT have fewer than 5 characters',
-    },
-    {
-      name: 'swagger description too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, description: '1234'},
-      },
       expected:
-        '/swagger/info/description must NOT have fewer than 25 characters',
+        '/docs/openapi/info/title must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi description too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          description: '1234',
+        },
+      },
+      expected:
+        '/docs/openapi/info/description must NOT have fewer than 25 characters',
+    },
+    {
+      name: 'openapi termsOfService not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
           termsOfService: '1234',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi termsOfService not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           termsOfService: '/api/base',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger contact name too small',
+      name: 'openapi contact name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {name: '1234'},
         },
       },
       expected:
-        '/swagger/info/contact/name must NOT have fewer than 5 characters',
+        '/docs/openapi/info/contact/name must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger contact url is not valid url',
+      name: 'openapi contact url is not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {name: '1234', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/contact/url must match format "uri"',
+      expected: '/docs/openapi/info/contact/url must match format "uri"',
     },
     {
-      name: 'swagger contact email is not valid email',
+      name: 'openapi contact email is not valid email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {name: '1234', email: '1234'},
         },
       },
-      expected: '/swagger/info/contact/email must match format "email"',
+      expected: '/docs/openapi/info/contact/email must match format "email"',
     },
     {
-      name: 'swagger contact license name too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, license: {name: ''}},
-      },
-      expected:
-        '/swagger/info/license/name must NOT have fewer than 1 characters',
-    },
-    {
-      name: 'swagger contact license uri is not valid url',
+      name: 'openapi license name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          license: {name: ''},
+        },
+      },
+      expected:
+        '/docs/openapi/info/license/name must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi license uri is not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
           license: {name: 'MIT', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/license/url must match format "uri"',
+      expected: '/docs/openapi/info/license/url must match format "uri"',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 
@@ -221,7 +232,7 @@ describe('validateInvalidSwaggerConfig', () => {
   });
 });
 
-describe('validateValidSwaggerConfig', () => {
+describe('validateValidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as true',
@@ -232,54 +243,54 @@ describe('validateValidSwaggerConfig', () => {
       patch: {enabled: false},
     },
     {
-      name: 'valid base path',
-      patch: {basePath: '/api/docs'},
+      name: 'valid path',
+      patch: {path: '/api/docs'},
     },
     {
-      name: 'swagger title',
+      name: 'openapi title',
       patch: {info: {title: 'Valid docs title'}},
     },
     {
-      name: 'swagger description',
+      name: 'openapi description',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           description: 'This is 25 chars long valid api description',
         },
       },
     },
     {
-      name: 'swagger termsOfService',
+      name: 'openapi termsOfService',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           termsOfService: 'https://imdeepmind.com/terms',
         },
       },
     },
     {
-      name: 'swagger contact name',
+      name: 'openapi contact name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {name: 'Abhishek Chatterjee'},
         },
       },
     },
     {
-      name: 'swagger contact url',
+      name: 'openapi contact url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {name: 'Abhishek Chatterjee', url: 'https://imdeepmind.com'},
         },
       },
     },
     {
-      name: 'swagger contact email',
+      name: 'openapi contact email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           contact: {
             name: 'Abhishek Chatterjee',
             email: 'abhishek@imdeepmind.com',
@@ -288,19 +299,19 @@ describe('validateValidSwaggerConfig', () => {
       },
     },
     {
-      name: 'swagger contact license name',
+      name: 'openapi license name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           license: {name: 'MIT'},
         },
       },
     },
     {
-      name: 'swagger contact license uri',
+      name: 'openapi license uri',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
           license: {name: 'MIT', url: 'https://opensource.org/licenses/MIT'},
         },
       },
@@ -308,9 +319,11 @@ describe('validateValidSwaggerConfig', () => {
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 

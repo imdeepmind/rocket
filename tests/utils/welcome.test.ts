@@ -28,13 +28,15 @@ describe('welcome utility', () => {
       name: 'Test App',
       logLevel: 'info',
     },
-    swagger: {
-      enabled: true,
-      basePath: '/docs',
-      info: {
-        title: 'Rocket API',
-        description: 'Test API',
-        version: '1.0.0',
+    docs: {
+      openapi: {
+        enabled: true,
+        path: '/docs',
+        info: {
+          title: 'Rocket API',
+          description: 'Test API',
+          version: '1.0.0',
+        },
       },
     },
     database: {
@@ -92,7 +94,9 @@ describe('welcome utility', () => {
   test('showWelcomeScreen handles disabled swagger', () => {
     const disabledSwaggerConfig: AppConfig = {
       ...mockConfig,
-      swagger: {...mockConfig.swagger, enabled: false},
+      docs: {
+        openapi: {...mockConfig.docs.openapi, enabled: false},
+      },
     };
 
     showWelcomeScreen(disabledSwaggerConfig, 3000, mockRoutes);

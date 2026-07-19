@@ -71,10 +71,12 @@ const mockConfig: AppConfig = {
     engine: 'sqlite',
     connection: {urlOrPath: ':memory:'},
   },
-  swagger: {
-    enabled: true,
-    basePath: '/docs',
-    info: {title: 'Test', description: 'Test API', version: '1.0'},
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/docs',
+      info: {title: 'Test', description: 'Test API', version: '1.0'},
+    },
   },
   models: [
     {
@@ -230,7 +232,9 @@ describe('Server', () => {
   it('should not register swagger if disabled', async () => {
     const disabledSwaggerConfig = {
       ...mockConfig,
-      swagger: {...mockConfig.swagger, enabled: false},
+      docs: {
+        openapi: {...mockConfig.docs.openapi, enabled: false},
+      },
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 

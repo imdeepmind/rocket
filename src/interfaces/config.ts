@@ -62,22 +62,24 @@ export type AuthEngine = 'api-key' | 'up-auth';
 export type SspParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
 
-export interface SwaggerConfig {
-  enabled: boolean;
-  basePath: string;
-  info: {
-    title: string;
-    description: string;
-    version: string;
-    termsOfService?: string;
-    contact?: {
-      name?: string;
-      url?: string;
-      email?: string;
-    };
-    license?: {
-      name: string;
-      url?: string;
+export interface DocsConfig {
+  openapi: {
+    enabled: boolean;
+    path: string;
+    info: {
+      title: string;
+      description: string;
+      version: string;
+      termsOfService?: string;
+      contact?: {
+        name?: string;
+        url?: string;
+        email?: string;
+      };
+      license?: {
+        name: string;
+        url?: string;
+      };
     };
   };
 }
@@ -223,7 +225,7 @@ export interface CommunicateConfig {
 
 export interface AppConfig {
   application: ApplicationConfig;
-  swagger: SwaggerConfig;
+  docs: DocsConfig;
   database: DatabaseConfig;
   models: ModelConfig[];
   apis?: ApisConfig;
