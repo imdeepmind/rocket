@@ -38,8 +38,9 @@ ajv.addKeyword({
 const applicationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['logLevel'],
+  required: ['logLevel', 'name'],
   properties: {
+    name: {type: 'string', minLength: 5},
     logLevel: {
       type: 'string',
       enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
@@ -47,7 +48,7 @@ const applicationSchema = {
     rateLimit: {
       type: 'object',
       additionalProperties: false,
-      required: ['enabled', 'max', 'timeWindow', 'useRedis'],
+      required: ['enabled', 'max', 'timeWindow'],
       properties: {
         enabled: {type: 'boolean'},
         max: {type: 'integer', minimum: 1},
@@ -55,7 +56,6 @@ const applicationSchema = {
           type: 'string',
           pattern: '^\\d+[smhd]$',
         },
-        useRedis: {type: 'boolean'},
       },
     },
   },

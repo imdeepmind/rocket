@@ -44,7 +44,6 @@ describe('rate-limit plugin', () => {
       enabled: true,
       max: 100,
       timeWindow: '15m',
-      useRedis: false,
     };
 
     mockCache = {
@@ -64,7 +63,6 @@ describe('rate-limit plugin', () => {
         enabled: false,
         max: 100,
         timeWindow: '15m',
-        useRedis: false,
       },
     };
 
@@ -97,7 +95,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 100,
         timeWindow: '15m',
-        useRedis: false,
       },
     };
 
@@ -117,7 +114,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 50,
         timeWindow: '30s',
-        useRedis: false,
       },
     };
 
@@ -137,7 +133,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 1000,
         timeWindow: '1h',
-        useRedis: false,
       },
     };
 
@@ -157,7 +152,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 10000,
         timeWindow: '7d',
-        useRedis: false,
       },
     };
 
@@ -177,7 +171,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 250,
         timeWindow: '1h',
-        useRedis: false,
       },
     };
 
@@ -196,7 +189,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 100,
         timeWindow: 'invalid',
-        useRedis: false,
       },
     };
 
@@ -217,7 +209,6 @@ describe('rate-limit plugin', () => {
         enabled: true,
         max: 100,
         timeWindow: '15m',
-        useRedis: false,
       },
     };
 
@@ -239,7 +230,6 @@ describe('rate-limit plugin', () => {
         enabled: false,
         max: 100,
         timeWindow: '15m',
-        useRedis: false,
       },
     };
 
@@ -281,7 +271,6 @@ describe('rate-limit plugin', () => {
           enabled: true,
           max: 2,
           timeWindow: '1m',
-          useRedis: false,
         },
       };
 
@@ -327,7 +316,6 @@ describe('rate-limit plugin', () => {
           enabled: true,
           max: 2,
           timeWindow: '1m',
-          useRedis: false,
         },
       };
 
@@ -361,7 +349,6 @@ describe('rate-limit plugin', () => {
           enabled: true,
           max: 2,
           timeWindow: '1m',
-          useRedis: false,
         },
       };
 
@@ -405,7 +392,6 @@ describe('rate-limit plugin', () => {
           enabled: true,
           max: 2,
           timeWindow: '1m',
-          useRedis: false,
         },
       };
 
@@ -444,7 +430,6 @@ describe('rate-limit plugin', () => {
           enabled: true,
           max: 2,
           timeWindow: '1m',
-          useRedis: false,
         },
       };
 

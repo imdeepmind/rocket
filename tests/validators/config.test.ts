@@ -79,6 +79,7 @@ const getDefaultModelConfig = (): ModelConfig[] => {
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
   swagger: {
@@ -1943,13 +1944,13 @@ describe('validateInvalidApplicationConfig', () => {
 
 describe('validateValidApplicationConfig', () => {
   it.each([
-    {name: 'logLevel trace', patch: {logLevel: 'trace'}},
-    {name: 'logLevel debug', patch: {logLevel: 'debug'}},
-    {name: 'logLevel info', patch: {logLevel: 'info'}},
-    {name: 'logLevel warn', patch: {logLevel: 'warn'}},
-    {name: 'logLevel error', patch: {logLevel: 'error'}},
-    {name: 'logLevel fatal', patch: {logLevel: 'fatal'}},
-    {name: 'logLevel silent', patch: {logLevel: 'silent'}},
+    {name: 'logLevel trace', patch: {name: 'Test App', logLevel: 'trace'}},
+    {name: 'logLevel debug', patch: {name: 'Test App', logLevel: 'debug'}},
+    {name: 'logLevel info', patch: {name: 'Test App', logLevel: 'info'}},
+    {name: 'logLevel warn', patch: {name: 'Test App', logLevel: 'warn'}},
+    {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
+    {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
+    {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
   ])('Scenario: $name -> should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -2622,7 +2623,6 @@ describe('validateRateLimitConfig', () => {
           enabled: 'asdasdas',
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/enabled must be boolean',
@@ -2630,14 +2630,14 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'max as negative integer',
       patch: {
-        rateLimit: {enabled: true, max: -5, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: -5, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
     {
       name: 'max as zero',
       patch: {
-        rateLimit: {enabled: true, max: 0, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: 0, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
@@ -2648,7 +2648,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 'sadfg',
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/max must be integer',
@@ -2656,7 +2655,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no unit)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: '15', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: '15'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
     },
@@ -2667,7 +2666,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15x',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
@@ -2675,21 +2673,9 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no number)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: 'm', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: 'm'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
-    },
-    {
-      name: 'useRedis as string instead of boolean',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-          useRedis: 'asdasdassadas',
-        },
-      },
-      expected: '/application/rateLimit/useRedis must be boolean',
     },
     {
       name: 'missing enabled property',
@@ -2697,7 +2683,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'enabled'",
@@ -2708,7 +2693,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'max'",
@@ -2719,22 +2703,10 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           max: 100,
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected:
         "/application/rateLimit must have required property 'timeWindow'",
-    },
-    {
-      name: 'missing useRedis property',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-        } as unknown as typeof validBaseConfig.application,
-      },
-      expected: "/application/rateLimit must have required property 'useRedis'",
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -2754,7 +2726,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'valid rate limit with seconds',
       patch: {
-        rateLimit: {enabled: true, max: 50, timeWindow: '30s', useRedis: false},
+        rateLimit: {enabled: true, max: 50, timeWindow: '30s'},
       },
     },
     {
@@ -2764,14 +2736,13 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
     {
       name: 'valid rate limit with hours',
       patch: {
-        rateLimit: {enabled: true, max: 1000, timeWindow: '1h', useRedis: true},
+        rateLimit: {enabled: true, max: 1000, timeWindow: '1h'},
       },
     },
     {
@@ -2781,7 +2752,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 10000,
           timeWindow: '7d',
-          useRedis: true,
         },
       },
     },
@@ -2792,7 +2762,6 @@ describe('validateRateLimitConfig', () => {
           enabled: false,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
@@ -2933,6 +2902,7 @@ describe('validateCacheDbOptional', () => {
     const config = {
       ...validBaseConfig,
       application: {
+        name: 'Test App',
         logLevel: 'info',
       },
     };

@@ -64,6 +64,7 @@ vi.mock('@/utils/welcome', () => ({
 
 const mockConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
   database: {
@@ -149,7 +150,7 @@ describe('Server', () => {
     const fastifyMock = vi.mocked(Fastify);
     const customConfig: AppConfig = {
       ...mockConfig,
-      application: {logLevel: 'warn'},
+      application: {name: 'Test App', logLevel: 'warn'},
     };
 
     await startServer(customConfig, 3000, 'prod');
@@ -377,12 +378,12 @@ describe('Server', () => {
       const configWithRateLimit: AppConfig = {
         ...mockConfig,
         application: {
+          name: 'Test App',
           logLevel: 'info',
           rateLimit: {
             enabled: true,
             max: 100,
             timeWindow: '15m',
-            useRedis: false,
           },
         },
       };
@@ -408,47 +409,16 @@ describe('Server', () => {
       expect(rateLimitRegistration).toBeUndefined();
     });
 
-    it('should pass redis client to rate-limit when both cache_db and rateLimit with useRedis are configured', async () => {
-      const configWithBoth: AppConfig = {
-        ...mockConfig,
-        cache_db: {
-          engine: 'redis',
-          connection: {uri: 'redis://localhost:6379'},
-          timeout: 5000,
-        },
-        application: {
-          logLevel: 'info',
-          rateLimit: {
-            enabled: true,
-            max: 100,
-            timeWindow: '15m',
-            useRedis: true,
-          },
-        },
-      };
-
-      const registerMock = mockApp.register;
-      await startServer(configWithBoth, 3000, 'dev');
-
-      // Verify rate-limit registration includes redis option
-      const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) =>
-          (call[1] as {rateLimit?: {useRedis?: boolean}})?.rateLimit
-            ?.useRedis === true,
-      );
-      expect(rateLimitRegistration).toBeDefined();
-    });
-
     it('should disable rate-limit when enabled is false', async () => {
       const configWithDisabledRateLimit: AppConfig = {
         ...mockConfig,
         application: {
+          name: 'Test App',
           logLevel: 'info',
           rateLimit: {
             enabled: false,
             max: 100,
             timeWindow: '15m',
-            useRedis: false,
           },
         },
       };

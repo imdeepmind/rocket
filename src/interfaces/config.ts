@@ -102,7 +102,6 @@ export interface RateLimitConfig {
   enabled: boolean;
   max: number;
   timeWindow: string;
-  useRedis: boolean;
 }
 
 export interface ModelFieldConfig {
@@ -140,6 +139,7 @@ export interface ModelConfig {
 }
 
 export interface ApplicationConfig {
+  name: string;
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
 }

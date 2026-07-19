@@ -66,7 +66,7 @@ async function createAuthApp(
   await app.register(authPlugin);
 
   const config: AppConfig = {
-    application: {logLevel: 'error'},
+    application: {name: 'Test App', logLevel: 'error'},
     swagger: {
       enabled: false,
       basePath: '/docs',

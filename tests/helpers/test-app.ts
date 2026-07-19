@@ -51,7 +51,7 @@ export async function createTestApp(
   auth?: AuthConfig,
 ): Promise<FastifyInstance> {
   const appConfig: AppConfig = {
-    application: {logLevel: 'error'},
+    application: {name: 'Test App', logLevel: 'error'},
     swagger: {
       enabled: false,
       basePath: '/docs',

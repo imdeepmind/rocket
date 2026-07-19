@@ -25,6 +25,7 @@ describe('welcome utility', () => {
 
   const mockConfig: AppConfig = {
     application: {
+      name: 'Test App',
       logLevel: 'info',
     },
     swagger: {
@@ -139,12 +140,12 @@ describe('welcome utility', () => {
         connection: {uri: 'redis://localhost'},
       },
       application: {
+        name: 'Test App',
         logLevel: 'info',
         rateLimit: {
           enabled: true,
           max: 100,
           timeWindow: '15m',
-          useRedis: true,
         },
       },
     };
@@ -162,12 +163,12 @@ describe('welcome utility', () => {
     const disabledRateLimitConfig: AppConfig = {
       ...mockConfig,
       application: {
+        name: 'Test App',
         logLevel: 'info',
         rateLimit: {
           enabled: false,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     };

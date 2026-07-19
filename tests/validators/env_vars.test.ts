@@ -34,6 +34,7 @@ const getDefaultModelConfig = (): ModelConfig[] => {
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
   swagger: {
