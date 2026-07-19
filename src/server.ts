@@ -51,7 +51,7 @@ async function registerSwagger(app: FastifyInstance, config: AppConfig) {
     components['securitySchemes'] = {
       apiKeyAuth: {
         type: 'apiKey',
-        name: 'api_key',
+        name: 'x-api-key',
         in: 'header',
       },
     };

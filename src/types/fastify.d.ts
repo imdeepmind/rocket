@@ -17,6 +17,10 @@ declare module 'fastify' {
     apiIdentifier?: string;
   }
 
+  interface FastifyRequest {
+    authenticate: () => Promise<void>;
+  }
+
   interface FastifyInstance {
     db: DatabaseQuery;
     buildResponse: <T = unknown, R = unknown>(

@@ -295,6 +295,7 @@ describe('test custom-queries api', () => {
           usernameColumn: 'email',
           passwordColumn: 'password',
         },
+        apiKey: 'test-key-123',
       };
 
       const fastify = await createTestApp(
@@ -305,18 +306,11 @@ describe('test custom-queries api', () => {
         apiKeyAuthConfig,
       );
 
-      // We can't easily check the security schema directly from the registered route in a test,
-      // but we can check if the route was registered and if it requires authentication.
-      // Since our current implementation only does JWT verify in preHandler,
-      // api-key auth doesn't have a preHandler check yet (it only adds to swagger).
-      // However, hitting the branch in registerCustomQueryRoutes is enough for coverage.
-      const token = fastify.jwt.sign({id: 1, email: 'test@example.com'});
-
       const response = await fastify.inject({
         method: 'GET',
         url: '/custom-queries/search-users',
         headers: {
-          authorization: `Bearer ${token}`,
+          'x-api-key': 'test-key-123',
         },
         query: {status: 'active', minAge: '18'},
       });
