@@ -218,7 +218,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(7);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -463,58 +463,6 @@ describe('Server', () => {
       expect(registerMock).toHaveBeenCalledWith(
         expect.any(Function), // authPlugin
       );
-    });
-
-    it('should include bearerAuth in swagger components when up-auth is enabled', async () => {
-      const configWithUpAuth: AppConfig = {
-        ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
-          },
-        },
-      };
-
-      await startServer(configWithUpAuth, 3000, 'dev');
-
-      const swaggerRegistration = mockApp.register.mock.calls.find(
-        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
-      );
-      expect(swaggerRegistration).toBeDefined();
-      expect(
-        swaggerRegistration![1].openapi.components.securitySchemes,
-      ).toHaveProperty('bearerAuth');
-    });
-
-    it('should include apiKeyAuth in swagger components when api-key is enabled', async () => {
-      const configWithApiKey: AppConfig = {
-        ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
-          },
-        },
-      };
-
-      await startServer(configWithApiKey, 3000, 'dev');
-
-      const swaggerRegistration = mockApp.register.mock.calls.find(
-        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
-      );
-      expect(swaggerRegistration).toBeDefined();
-      expect(
-        swaggerRegistration![1].openapi.components.securitySchemes,
-      ).toHaveProperty('apiKeyAuth');
     });
   });
 

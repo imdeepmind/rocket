@@ -1,5 +1,3 @@
-import swagger from '@fastify/swagger';
-import swaggerUI from '@fastify/swagger-ui';
 import Fastify, {
   FastifyError,
   FastifyInstance,
@@ -15,6 +13,7 @@ import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
+import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
@@ -31,51 +30,6 @@ import {RouteInfo} from '@/utils/welcome';
 export interface StartServerResult {
   app: FastifyInstance;
   routes: RouteInfo[];
-}
-
-async function registerSwagger(app: FastifyInstance, config: AppConfig) {
-  const {docs: docsConfig, auth} = config;
-  const swaggerConfig = docsConfig.openapi;
-  const components: Record<string, unknown> = {};
-
-  if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
-    components['securitySchemes'] = {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-    };
-  }
-
-  if (auth?.enableAuth && auth.authEngine === 'api-key') {
-    components['securitySchemes'] = {
-      apiKeyAuth: {
-        type: 'apiKey',
-        name: 'x-api-key',
-        in: 'header',
-      },
-    };
-  }
-
-  if (swaggerConfig.enabled) {
-    // Swagger (OpenAPI spec)
-    await app.register(swagger, {
-      openapi: {
-        info: swaggerConfig.info,
-        components,
-      },
-    });
-
-    // Swagger UI
-    await app.register(swaggerUI, {
-      routePrefix: swaggerConfig.path, // UI available at /docs
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: false,
-      },
-    });
-  }
 }
 
 export async function startServer(
@@ -148,7 +102,9 @@ export async function startServer(
   }
 
   // register swagger
-  await registerSwagger(app, config);
+  if (config.docs.openapi.enabled) {
+    await app.register(swaggerPlugin);
+  }
 
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);
