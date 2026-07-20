@@ -77,7 +77,7 @@ describe('welcome utility', () => {
     const calls = consoleSpy.mock.calls.map((call: unknown[]) => call[0]);
     const output = calls.join('\n');
 
-    expect(output).toContain('ROCKET API FRAMEWORK');
+    expect(output).toContain('Test App');
     expect(output).toContain('http://0.0.0.0:3000');
     expect(output).toContain('http://0.0.0.0:3000/docs');
     expect(output).toContain('SQLITE');

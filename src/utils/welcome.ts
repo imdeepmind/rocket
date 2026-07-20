@@ -100,7 +100,7 @@ export function showWelcomeScreen(
   console.log(coloredRocket);
 
   console.log('\n');
-  console.log('  ' + chalk.bold.bgWhite.black(' ROCKET API FRAMEWORK '));
+  console.log('  ' + chalk.bold.bgWhite.black(` ${config.application.name} `));
   console.log('  ' + chalk.dim('🚀 Lift off your development with ease'));
   console.log('\n');
 
