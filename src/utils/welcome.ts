@@ -150,11 +150,13 @@ export function showWelcomeScreen(
   // Log routes
   console.log('\n  ' + chalk.cyan('Routes:'));
   // Filter routes
+  const swaggerPath = config.docs.openapi.enabled
+    ? config.docs.openapi.path
+    : null;
   const filteredRoutes = routes.filter(route => {
     const isHead = route.method.toUpperCase().split('/').includes('HEAD');
-    const isStatic =
-      route.url.includes('/static') || route.url.includes('/docs');
-    return !isHead && !isStatic;
+    const isSwagger = swaggerPath !== null && route.url.startsWith(swaggerPath);
+    return !isHead && !isSwagger;
   });
 
   const sortedRoutes = [...filteredRoutes].sort((a, b) =>

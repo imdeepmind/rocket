@@ -86,9 +86,9 @@ describe('welcome utility', () => {
     expect(output).toContain('/users');
     expect(output).toContain('/mixed');
 
-    // Check filtering
-    expect(output).not.toContain('/static/style.css');
+    // Check filtering — swagger paths and HEAD routes are filtered
     expect(output).not.toContain('HEAD');
+    expect(output).toContain('/static/style.css');
   });
 
   test('showWelcomeScreen handles disabled swagger', () => {
