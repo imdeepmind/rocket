@@ -36,15 +36,14 @@
                 "url": "./database.db"
             },
             "timeout": 10000
-        }
-    },
-    "cache_db": {
-        "engine": "redis",
-        "connection": {
-            "uri": "redis://localhost:6379"
         },
-        "timeout":
-        5000
+        "cache": {
+            "engine": "redis",
+            "connection": {
+                "url": "redis://localhost:6379"
+            },
+            "timeout": 5000
+        }
     },
     "auth": {
         "enableAuth": true,

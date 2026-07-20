@@ -161,15 +161,6 @@ const primaryDatabaseSchema = {
   additionalProperties: false,
 };
 
-const infrastructureSchema = {
-  type: 'object',
-  required: ['primaryDatabase'],
-  additionalProperties: false,
-  properties: {
-    primaryDatabase: primaryDatabaseSchema,
-  },
-};
-
 const cacheDbSchema = {
   type: 'object',
   required: ['engine', 'connection'],
@@ -178,13 +169,23 @@ const cacheDbSchema = {
     engine: {type: 'string', enum: ['redis']},
     connection: {
       type: 'object',
-      required: ['uri'],
+      required: ['url'],
       additionalProperties: false,
       properties: {
-        uri: {type: 'string', pattern: '^redis:\\/\\/'},
+        url: {type: 'string', pattern: '^redis:\\/\\/'},
       },
     },
     timeout: {type: 'integer', default: 10000, minimum: 1},
+  },
+};
+
+const infrastructureSchema = {
+  type: 'object',
+  required: ['primaryDatabase'],
+  additionalProperties: false,
+  properties: {
+    primaryDatabase: primaryDatabaseSchema,
+    cache: cacheDbSchema,
   },
 };
 
@@ -517,7 +518,6 @@ const schema = {
       items: modelSchema,
     },
     apis: apisSchema,
-    cache_db: cacheDbSchema,
     customAPIs: customAPIsSchema,
     auth: authSchema,
     communicate: communicateSchema,

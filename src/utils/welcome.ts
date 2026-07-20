@@ -108,8 +108,8 @@ export function showWelcomeScreen(
     ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
     : chalk.gray('Disabled');
 
-  const cacheDbStatus = config.cache_db
-    ? chalk.magenta(config.cache_db.engine.toUpperCase())
+  const cacheDbStatus = config.infrastructure.cache
+    ? chalk.magenta(config.infrastructure.cache.engine.toUpperCase())
     : chalk.gray('Disabled');
 
   const rateLimit = config.application.rateLimit;

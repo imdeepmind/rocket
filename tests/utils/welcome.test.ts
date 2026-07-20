@@ -140,12 +140,15 @@ describe('welcome utility', () => {
     expect(output).toContain('/unknown');
   });
 
-  test('showWelcomeScreen handles cache_db and rateLimit', () => {
+  test('showWelcomeScreen handles cache and rateLimit', () => {
     const fullConfig: AppConfig = {
       ...mockConfig,
-      cache_db: {
-        engine: 'redis',
-        connection: {uri: 'redis://localhost'},
+      infrastructure: {
+        ...mockConfig.infrastructure,
+        cache: {
+          engine: 'redis',
+          connection: {url: 'redis://localhost'},
+        },
       },
       application: {
         name: 'Test App',

@@ -95,7 +95,7 @@ export interface DatabaseConfig {
 export interface CacheDbConfig {
   engine: CacheDbEngine;
   connection: {
-    uri: string;
+    url: string;
   };
   timeout?: number;
 }
@@ -225,6 +225,7 @@ export interface CommunicateConfig {
 
 export interface InfrastructureConfig {
   primaryDatabase: DatabaseConfig;
+  cache?: CacheDbConfig;
 }
 
 export interface AppConfig {
@@ -233,7 +234,6 @@ export interface AppConfig {
   infrastructure: InfrastructureConfig;
   models: ModelConfig[];
   apis?: ApisConfig;
-  cache_db?: CacheDbConfig;
   customAPIs?: CustomAPIConfig;
   auth?: AuthConfig;
   communicate?: CommunicateConfig;
