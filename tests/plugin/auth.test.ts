@@ -32,7 +32,7 @@ describe('Auth Plugin — up-auth engine', () => {
   it('should use jwtSecret from config when provided', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
+      application: {name: 'test', logLevel: 'error'},
       docs: {
         openapi: {
           enabled: false,
@@ -114,7 +114,7 @@ describe('Auth Plugin — api-key engine', () => {
   it('should expose authenticate() that accepts valid x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
+      application: {name: 'test', logLevel: 'error'},
       docs: {
         openapi: {
           enabled: false,
@@ -157,7 +157,7 @@ describe('Auth Plugin — api-key engine', () => {
   it('should reject wrong x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
+      application: {name: 'test', logLevel: 'error'},
       docs: {
         openapi: {
           enabled: false,
@@ -204,7 +204,7 @@ describe('Auth Plugin — api-key engine', () => {
   it('should reject missing x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
+      application: {name: 'test', logLevel: 'error'},
       docs: {
         openapi: {
           enabled: false,

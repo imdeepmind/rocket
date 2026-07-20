@@ -8,6 +8,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
 import communicatePlugin from '@/plugin/communicate';
+import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -395,9 +396,8 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(configWithRateLimit, 3000, 'dev');
 
-      // Verify rate-limit plugin was registered
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
       expect(rateLimitRegistration).toBeDefined();
     });
@@ -406,9 +406,8 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(mockConfig, 3000, 'dev');
 
-      // Verify rate-limit plugin was not registered
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
       expect(rateLimitRegistration).toBeUndefined();
     });
@@ -430,13 +429,10 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(configWithDisabledRateLimit, 3000, 'dev');
 
-      // Verify rate-limit plugin was still registered but with enabled: false
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) =>
-          (call[1] as {rateLimit?: {enabled?: boolean}})?.rateLimit?.enabled ===
-          false,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
-      expect(rateLimitRegistration).toBeDefined();
+      expect(rateLimitRegistration).toBeUndefined();
     });
   });
 

@@ -83,10 +83,8 @@ export async function startServer(
   }
 
   // config-driven rate limit
-  if (config.application.rateLimit) {
-    await app.register(rateLimitPlugin, {
-      rateLimit: config.application.rateLimit,
-    });
+  if (config.application.rateLimit?.enabled) {
+    await app.register(rateLimitPlugin);
   }
 
   await app.register(responsePlugin);
@@ -95,15 +93,14 @@ export async function startServer(
   if (config.auth) {
     await app.register(authPlugin);
   }
+  // register swagger
+  if (config.docs.openapi.enabled) {
+    await app.register(swaggerPlugin);
+  }
 
   // migrate the db based on config
   if (migrate) {
     await migrateDatabase(config);
-  }
-
-  // register swagger
-  if (config.docs.openapi.enabled) {
-    await app.register(swaggerPlugin);
   }
 
   // register config-driven routes (models, aggregations, custom queries)

@@ -4,7 +4,7 @@ import {describe, expect, it} from 'vitest';
 import swaggerPlugin from '@/plugin/swagger';
 
 const baseConfig = {
-  application: {logLevel: 'error'},
+  application: {name: 'test', logLevel: 'error'},
   docs: {
     openapi: {
       enabled: true,
