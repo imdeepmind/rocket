@@ -79,138 +79,163 @@ const getDefaultModelConfig = (): ModelConfig[] => {
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
-  swagger: {
-    enabled: true,
-    basePath: '/api',
-    info: {
-      title: 'Test API',
-      description: 'Test API description for testing',
-      version: '1.0.0',
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/api',
+      info: {
+        title: 'Test API',
+        description: 'Test API description for testing',
+        version: '1.0.0',
+      },
     },
   },
   database: getDefaultDatabaseConfig(),
   models: getDefaultModelConfig(),
 };
 
-describe('validateInvalidSwaggerConfig', () => {
+describe('validateInvalidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as invalid',
       patch: {enabled: 'wrong'},
-      expected: '/swagger/enabled must be boolean',
+      expected: '/docs/openapi/enabled must be boolean',
     },
     {
       name: 'enabled as undefined',
       patch: {enabled: undefined},
-      expected: "/swagger must have required property 'enabled'",
+      expected: "/docs/openapi must have required property 'enabled'",
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'wrong'},
+      name: 'invalid path',
+      patch: {path: 'wrong'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'api/docs'},
+      name: 'invalid path missing leading slash',
+      patch: {path: 'api/docs'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'swagger title undefined',
-      patch: {info: {title: undefined}},
-      expected: "/swagger/info must have required property 'title'",
+      name: 'openapi title undefined',
+      patch: {info: {title: undefined, version: '1.0.0'}},
+      expected: "/docs/openapi/info must have required property 'title'",
     },
     {
-      name: 'swagger title too small',
-      patch: {info: {title: '1234'}},
-      expected: '/swagger/info/title must NOT have fewer than 5 characters',
-    },
-    {
-      name: 'swagger description too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, description: '1234'},
-      },
+      name: 'openapi title too small',
+      patch: {info: {title: '1234', version: '1.0.0'}},
       expected:
-        '/swagger/info/description must NOT have fewer than 25 characters',
+        '/docs/openapi/info/title must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi description too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
+          description: '',
+        },
+      },
+      expected:
+        '/docs/openapi/info/description must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi version missing',
+      patch: {info: {title: validBaseConfig.docs.openapi.info.title}},
+      expected: "/docs/openapi/info must have required property 'version'",
+    },
+    {
+      name: 'openapi termsOfService not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '1234',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi termsOfService not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '/api/base',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger contact name too small',
+      name: 'openapi contact name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234'},
         },
       },
       expected:
-        '/swagger/info/contact/name must NOT have fewer than 5 characters',
+        '/docs/openapi/info/contact/name must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger contact url is not valid url',
+      name: 'openapi contact url is not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/contact/url must match format "uri"',
+      expected: '/docs/openapi/info/contact/url must match format "uri"',
     },
     {
-      name: 'swagger contact email is not valid email',
+      name: 'openapi contact email is not valid email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', email: '1234'},
         },
       },
-      expected: '/swagger/info/contact/email must match format "email"',
+      expected: '/docs/openapi/info/contact/email must match format "email"',
     },
     {
-      name: 'swagger contact license name too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, license: {name: ''}},
-      },
-      expected:
-        '/swagger/info/license/name must NOT have fewer than 1 characters',
-    },
-    {
-      name: 'swagger contact license uri is not valid url',
+      name: 'openapi license name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
+          license: {name: ''},
+        },
+      },
+      expected:
+        '/docs/openapi/info/license/name must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi license uri is not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/license/url must match format "uri"',
+      expected: '/docs/openapi/info/license/url must match format "uri"',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 
@@ -218,9 +243,19 @@ describe('validateInvalidSwaggerConfig', () => {
       expected,
     );
   });
+
+  it('should throw when openapi property is missing from docs', () => {
+    const config = {
+      ...validBaseConfig,
+      docs: {} as typeof validBaseConfig.docs,
+    };
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "/docs must have required property 'openapi'",
+    );
+  });
 });
 
-describe('validateValidSwaggerConfig', () => {
+describe('validateValidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as true',
@@ -231,54 +266,59 @@ describe('validateValidSwaggerConfig', () => {
       patch: {enabled: false},
     },
     {
-      name: 'valid base path',
-      patch: {basePath: '/api/docs'},
+      name: 'valid path',
+      patch: {path: '/api/docs'},
     },
     {
-      name: 'swagger title',
-      patch: {info: {title: 'Valid docs title'}},
+      name: 'openapi title',
+      patch: {info: {title: 'Valid docs title', version: '1.0.0'}},
     },
     {
-      name: 'swagger description',
+      name: 'openapi description',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           description: 'This is 25 chars long valid api description',
         },
       },
     },
     {
-      name: 'swagger termsOfService',
+      name: 'openapi termsOfService',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: 'https://imdeepmind.com/terms',
         },
       },
     },
     {
-      name: 'swagger contact name',
+      name: 'openapi contact name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee'},
         },
       },
     },
     {
-      name: 'swagger contact url',
+      name: 'openapi contact url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee', url: 'https://imdeepmind.com'},
         },
       },
     },
     {
-      name: 'swagger contact email',
+      name: 'openapi contact email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {
             name: 'Abhishek Chatterjee',
             email: 'abhishek@imdeepmind.com',
@@ -287,19 +327,21 @@ describe('validateValidSwaggerConfig', () => {
       },
     },
     {
-      name: 'swagger contact license name',
+      name: 'openapi license name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT'},
         },
       },
     },
     {
-      name: 'swagger contact license uri',
+      name: 'openapi license uri',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: 'https://opensource.org/licenses/MIT'},
         },
       },
@@ -307,9 +349,11 @@ describe('validateValidSwaggerConfig', () => {
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 
@@ -1943,13 +1987,13 @@ describe('validateInvalidApplicationConfig', () => {
 
 describe('validateValidApplicationConfig', () => {
   it.each([
-    {name: 'logLevel trace', patch: {logLevel: 'trace'}},
-    {name: 'logLevel debug', patch: {logLevel: 'debug'}},
-    {name: 'logLevel info', patch: {logLevel: 'info'}},
-    {name: 'logLevel warn', patch: {logLevel: 'warn'}},
-    {name: 'logLevel error', patch: {logLevel: 'error'}},
-    {name: 'logLevel fatal', patch: {logLevel: 'fatal'}},
-    {name: 'logLevel silent', patch: {logLevel: 'silent'}},
+    {name: 'logLevel trace', patch: {name: 'Test App', logLevel: 'trace'}},
+    {name: 'logLevel debug', patch: {name: 'Test App', logLevel: 'debug'}},
+    {name: 'logLevel info', patch: {name: 'Test App', logLevel: 'info'}},
+    {name: 'logLevel warn', patch: {name: 'Test App', logLevel: 'warn'}},
+    {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
+    {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
+    {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
   ])('Scenario: $name -> should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -2622,7 +2666,6 @@ describe('validateRateLimitConfig', () => {
           enabled: 'asdasdas',
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/enabled must be boolean',
@@ -2630,14 +2673,14 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'max as negative integer',
       patch: {
-        rateLimit: {enabled: true, max: -5, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: -5, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
     {
       name: 'max as zero',
       patch: {
-        rateLimit: {enabled: true, max: 0, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: 0, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
@@ -2648,7 +2691,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 'sadfg',
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/max must be integer',
@@ -2656,7 +2698,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no unit)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: '15', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: '15'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
     },
@@ -2667,7 +2709,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15x',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
@@ -2675,21 +2716,9 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no number)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: 'm', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: 'm'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
-    },
-    {
-      name: 'useRedis as string instead of boolean',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-          useRedis: 'asdasdassadas',
-        },
-      },
-      expected: '/application/rateLimit/useRedis must be boolean',
     },
     {
       name: 'missing enabled property',
@@ -2697,7 +2726,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'enabled'",
@@ -2708,7 +2736,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'max'",
@@ -2719,22 +2746,10 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           max: 100,
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected:
         "/application/rateLimit must have required property 'timeWindow'",
-    },
-    {
-      name: 'missing useRedis property',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-        } as unknown as typeof validBaseConfig.application,
-      },
-      expected: "/application/rateLimit must have required property 'useRedis'",
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -2754,7 +2769,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'valid rate limit with seconds',
       patch: {
-        rateLimit: {enabled: true, max: 50, timeWindow: '30s', useRedis: false},
+        rateLimit: {enabled: true, max: 50, timeWindow: '30s'},
       },
     },
     {
@@ -2764,14 +2779,13 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
     {
       name: 'valid rate limit with hours',
       patch: {
-        rateLimit: {enabled: true, max: 1000, timeWindow: '1h', useRedis: true},
+        rateLimit: {enabled: true, max: 1000, timeWindow: '1h'},
       },
     },
     {
@@ -2781,7 +2795,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 10000,
           timeWindow: '7d',
-          useRedis: true,
         },
       },
     },
@@ -2792,7 +2805,6 @@ describe('validateRateLimitConfig', () => {
           enabled: false,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
@@ -2933,6 +2945,7 @@ describe('validateCacheDbOptional', () => {
     const config = {
       ...validBaseConfig,
       application: {
+        name: 'Test App',
         logLevel: 'info',
       },
     };

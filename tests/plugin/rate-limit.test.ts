@@ -3,9 +3,9 @@ import NodeCache from 'node-cache';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {ICache} from '@/plugin/cache';
-import rateLimitPlugin, {RateLimitPluginOptions} from '@/plugin/rate-limit';
+import rateLimitPlugin from '@/plugin/rate-limit';
 
-import {RateLimitConfig} from '@/interfaces/config';
+import {AppConfig} from '@/interfaces/config';
 
 const {mockParseDuration} = vi.hoisted(() => {
   return {
@@ -34,18 +34,37 @@ vi.mock('@/utils/duration', () => ({
   parseDuration: mockParseDuration,
 }));
 
+function createMockAppConfig(overrides?: {
+  max?: number;
+  timeWindow?: string;
+}): AppConfig {
+  return {
+    application: {
+      name: 'test-app',
+      logLevel: 'info',
+      rateLimit: {
+        enabled: true,
+        max: overrides?.max ?? 100,
+        timeWindow: overrides?.timeWindow ?? '15m',
+      },
+    },
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: '', description: '', version: ''},
+      },
+    },
+    database: {engine: 'sqlite', connection: {urlOrPath: ':memory:'}},
+    models: [],
+  };
+}
+
 describe('rate-limit plugin', () => {
-  let rateLimitConfig: RateLimitConfig;
   let mockCache: ICache;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    rateLimitConfig = {
-      enabled: true,
-      max: 100,
-      timeWindow: '15m',
-      useRedis: false,
-    };
 
     mockCache = {
       get: vi.fn().mockResolvedValue(null),
@@ -57,32 +76,12 @@ describe('rate-limit plugin', () => {
     };
   });
 
-  it('skips registration if rate limiting is disabled', async () => {
-    const fastify = Fastify();
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: false,
-        max: 100,
-        timeWindow: '15m',
-        useRedis: false,
-      },
-    };
-
-    await fastify.register(rateLimitPlugin, config);
-    await fastify.ready();
-
-    expect(mockParseDuration).not.toHaveBeenCalled();
-    await fastify.close();
-  });
-
-  it('registers rate-limit plugin when enabled', async () => {
+  it('registers rate-limit plugin and parses config', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: rateLimitConfig,
-    };
+    fastify.decorate('appConfig', createMockAppConfig());
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('15m');
@@ -92,16 +91,9 @@ describe('rate-limit plugin', () => {
   it('parses time window duration correctly (minutes)', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 100,
-        timeWindow: '15m',
-        useRedis: false,
-      },
-    };
+    fastify.decorate('appConfig', createMockAppConfig({timeWindow: '15m'}));
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('15m');
@@ -112,16 +104,9 @@ describe('rate-limit plugin', () => {
   it('parses time window duration correctly (seconds)', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 50,
-        timeWindow: '30s',
-        useRedis: false,
-      },
-    };
+    fastify.decorate('appConfig', createMockAppConfig({timeWindow: '30s'}));
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('30s');
@@ -132,16 +117,9 @@ describe('rate-limit plugin', () => {
   it('parses time window duration correctly (hours)', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 1000,
-        timeWindow: '1h',
-        useRedis: false,
-      },
-    };
+    fastify.decorate('appConfig', createMockAppConfig({timeWindow: '1h'}));
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('1h');
@@ -152,16 +130,9 @@ describe('rate-limit plugin', () => {
   it('parses time window duration correctly (days)', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 10000,
-        timeWindow: '7d',
-        useRedis: false,
-      },
-    };
+    fastify.decorate('appConfig', createMockAppConfig({timeWindow: '7d'}));
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('7d');
@@ -172,16 +143,12 @@ describe('rate-limit plugin', () => {
   it('sets correct max threshold', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 250,
-        timeWindow: '1h',
-        useRedis: false,
-      },
-    };
+    fastify.decorate(
+      'appConfig',
+      createMockAppConfig({max: 250, timeWindow: '1h'}),
+    );
 
-    await fastify.register(rateLimitPlugin, config);
+    await fastify.register(rateLimitPlugin);
     await fastify.ready();
 
     expect(mockParseDuration).toHaveBeenCalledWith('1h');
@@ -191,65 +158,13 @@ describe('rate-limit plugin', () => {
   it('throws error on invalid time window format', async () => {
     const fastify = Fastify();
     fastify.decorate('cache', mockCache);
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 100,
-        timeWindow: 'invalid',
-        useRedis: false,
-      },
-    };
+    fastify.decorate('appConfig', createMockAppConfig({timeWindow: 'invalid'}));
 
     mockParseDuration.mockImplementationOnce(() => {
       throw new Error('Invalid duration: invalid');
     });
 
-    await expect(fastify.register(rateLimitPlugin, config)).rejects.toThrow();
-    await fastify.close();
-  });
-
-  it('logs rate limit configuration', async () => {
-    const fastify = Fastify();
-    fastify.decorate('cache', mockCache);
-    const logInfoSpy = vi.spyOn(fastify.log, 'info');
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: true,
-        max: 100,
-        timeWindow: '15m',
-        useRedis: false,
-      },
-    };
-
-    await fastify.register(rateLimitPlugin, config);
-    await fastify.ready();
-
-    const loggedMessage = logInfoSpy.mock.calls.find((call: unknown[]) =>
-      (call[0] as string)?.includes?.('Rate limiting configured'),
-    );
-    expect(loggedMessage).toBeDefined();
-    await fastify.close();
-  });
-
-  it('logs when rate limiting is disabled', async () => {
-    const fastify = Fastify();
-    const logInfoSpy = vi.spyOn(fastify.log, 'info');
-    const config: RateLimitPluginOptions = {
-      rateLimit: {
-        enabled: false,
-        max: 100,
-        timeWindow: '15m',
-        useRedis: false,
-      },
-    };
-
-    await fastify.register(rateLimitPlugin, config);
-    await fastify.ready();
-
-    const loggedMessage = logInfoSpy.mock.calls.find((call: unknown[]) =>
-      (call[0] as string)?.includes?.('Rate limiting is disabled'),
-    );
-    expect(loggedMessage).toBeDefined();
+    await expect(fastify.register(rateLimitPlugin)).rejects.toThrow();
     await fastify.close();
   });
 
@@ -275,17 +190,12 @@ describe('rate-limit plugin', () => {
       };
 
       fastify.decorate('cache', mockCacheStore);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 2, timeWindow: '1m'}),
+      );
 
-      const config: RateLimitPluginOptions = {
-        rateLimit: {
-          enabled: true,
-          max: 2,
-          timeWindow: '1m',
-          useRedis: false,
-        },
-      };
-
-      await fastify.register(rateLimitPlugin, config);
+      await fastify.register(rateLimitPlugin);
 
       fastify.get('/', async () => 'ok');
 
@@ -321,17 +231,12 @@ describe('rate-limit plugin', () => {
       };
 
       fastify.decorate('cache', mockCacheStore);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 2, timeWindow: '1m'}),
+      );
 
-      const config: RateLimitPluginOptions = {
-        rateLimit: {
-          enabled: true,
-          max: 2,
-          timeWindow: '1m',
-          useRedis: false,
-        },
-      };
-
-      await fastify.register(rateLimitPlugin, config);
+      await fastify.register(rateLimitPlugin);
       fastify.get('/', async () => 'ok');
       await fastify.ready();
 
@@ -355,17 +260,12 @@ describe('rate-limit plugin', () => {
       };
 
       fastify.decorate('cache', mockCacheStore);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 2, timeWindow: '1m'}),
+      );
 
-      const config: RateLimitPluginOptions = {
-        rateLimit: {
-          enabled: true,
-          max: 2,
-          timeWindow: '1m',
-          useRedis: false,
-        },
-      };
-
-      await fastify.register(rateLimitPlugin, config);
+      await fastify.register(rateLimitPlugin);
       fastify.get('/', async () => 'ok');
       await fastify.ready();
 
@@ -399,17 +299,12 @@ describe('rate-limit plugin', () => {
       };
 
       fastify.decorate('cache', mockCacheStore);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 2, timeWindow: '1m'}),
+      );
 
-      const config: RateLimitPluginOptions = {
-        rateLimit: {
-          enabled: true,
-          max: 2,
-          timeWindow: '1m',
-          useRedis: false,
-        },
-      };
-
-      await fastify.register(rateLimitPlugin, config);
+      await fastify.register(rateLimitPlugin);
 
       fastify.get('/', async () => 'ok');
 
@@ -439,16 +334,12 @@ describe('rate-limit plugin', () => {
         return originalRegister.apply(this, args);
       } as unknown as typeof fastify.register;
 
-      const config: RateLimitPluginOptions = {
-        rateLimit: {
-          enabled: true,
-          max: 2,
-          timeWindow: '1m',
-          useRedis: false,
-        },
-      };
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 2, timeWindow: '1m'}),
+      );
 
-      await fastify.register(rateLimitPlugin, config);
+      await fastify.register(rateLimitPlugin);
       await fastify.ready();
 
       const StoreClassConstructor = StoreClass as new (

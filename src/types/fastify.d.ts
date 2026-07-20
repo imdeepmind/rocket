@@ -2,6 +2,7 @@ import '@fastify/jwt';
 import 'fastify';
 
 import {DatabaseQuery, StructuredResponse} from '@/interfaces';
+import {AppConfig} from '@/interfaces/config';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {

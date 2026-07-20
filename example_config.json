@@ -1,29 +1,31 @@
 {
     "application": {
+        "name": "Rocket OSS",
         "logLevel": "debug",
         "rateLimit": {
             "enabled": true,
             "max": 1000,
-            "timeWindow": "15m",
-            "useRedis": true
+            "timeWindow": "15m"
         }
     },
-    "swagger": {
-        "enabled": true,
-        "basePath": "/api/docs",
-        "info": {
-            "title": "Rocket OSS",
-            "description": "This is the sample description",
-            "version": "v1.5.0",
-            "termsOfService": "https://example.com/terms",
-            "contact": {
-                "name": "John Doe",
-                "url": "https://example.com",
-                "email": "email@email.com"
-            },
-            "license": {
-                "name": "MIT",
-                "url": "https://opensource.org/licenses/MIT"
+    "docs": {
+        "openapi": {
+            "enabled": true,
+            "path": "/api/docs",
+            "info": {
+                "title": "Rocket OSS",
+                "description": "This is the sample description",
+                "version": "v1.5.0",
+                "termsOfService": "https://example.com/terms",
+                "contact": {
+                    "name": "John Doe",
+                    "url": "https://example.com",
+                    "email": "email@email.com"
+                },
+                "license": {
+                    "name": "MIT",
+                    "url": "https://opensource.org/licenses/MIT"
+                }
             }
         }
     },

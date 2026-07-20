@@ -53,6 +53,7 @@ program
   .action(async (options: CLIOptions) => {
     const {config, port, mode, verbose, migrate} = options;
 
+    // Fastify log cannot be used here as Fastify instance does not exist
     console.log(chalk.blue('Starting server with:'));
     console.log(chalk.blue(`Config: ${config}`));
     console.log(chalk.blue(`Port: ${port}`));
@@ -60,6 +61,7 @@ program
     console.log(chalk.blue(`Verbose: ${verbose}`));
     console.log(chalk.blue(`Migrate: ${migrate}`));
 
+    // load the config, also resolve the env vars
     const loadedConfig = loadConfig(config);
 
     // Set NODE_ENV based on mode

@@ -38,8 +38,9 @@ ajv.addKeyword({
 const applicationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['logLevel'],
+  required: ['logLevel', 'name'],
   properties: {
+    name: {type: 'string', minLength: 1},
     logLevel: {
       type: 'string',
       enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
@@ -47,7 +48,7 @@ const applicationSchema = {
     rateLimit: {
       type: 'object',
       additionalProperties: false,
-      required: ['enabled', 'max', 'timeWindow', 'useRedis'],
+      required: ['enabled', 'max', 'timeWindow'],
       properties: {
         enabled: {type: 'boolean'},
         max: {type: 'integer', minimum: 1},
@@ -55,47 +56,53 @@ const applicationSchema = {
           type: 'string',
           pattern: '^\\d+[smhd]$',
         },
-        useRedis: {type: 'boolean'},
       },
     },
   },
 };
 
-const swaggerSchema = {
+const docsSchema = {
   type: 'object',
-  required: ['enabled', 'basePath', 'info'],
   additionalProperties: false,
+  required: ['openapi'],
   properties: {
-    enabled: {type: 'boolean'},
-    basePath: {
-      type: 'string',
-      pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
-    },
-    info: {
+    openapi: {
       type: 'object',
-      required: ['title'],
+      required: ['enabled', 'path', 'info'],
       additionalProperties: false,
       properties: {
-        title: {type: 'string', minLength: 5},
-        description: {type: 'string', minLength: 25},
-        version: {type: 'string'},
-        termsOfService: {type: 'string', format: 'uri'},
-        contact: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            name: {type: 'string', minLength: 5},
-            url: {type: 'string', format: 'uri'},
-            email: {type: 'string', format: 'email'},
-          },
+        enabled: {type: 'boolean'},
+        path: {
+          type: 'string',
+          pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
         },
-        license: {
+        info: {
           type: 'object',
-          required: ['name'],
+          required: ['title', 'version'],
           additionalProperties: false,
           properties: {
-            name: {type: 'string', minLength: 1},
-            url: {type: 'string', format: 'uri'},
+            title: {type: 'string', minLength: 5},
+            description: {type: 'string', minLength: 1},
+            version: {type: 'string'},
+            termsOfService: {type: 'string', format: 'uri'},
+            contact: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 5},
+                url: {type: 'string', format: 'uri'},
+                email: {type: 'string', format: 'email'},
+              },
+            },
+            license: {
+              type: 'object',
+              required: ['name'],
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 1},
+                url: {type: 'string', format: 'uri'},
+              },
+            },
           },
         },
       },
@@ -489,11 +496,11 @@ const communicateSchema = {
 
 const schema = {
   type: 'object',
-  required: ['application', 'swagger', 'database', 'models'],
+  required: ['application', 'docs', 'database', 'models'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,
-    swagger: swaggerSchema,
+    docs: docsSchema,
     database: databaseSchema,
     models: {
       type: 'array',

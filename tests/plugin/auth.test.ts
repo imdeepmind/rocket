@@ -32,11 +32,13 @@ describe('Auth Plugin — up-auth engine', () => {
   it('should use jwtSecret from config when provided', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -112,11 +114,13 @@ describe('Auth Plugin — api-key engine', () => {
   it('should expose authenticate() that accepts valid x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -153,11 +157,13 @@ describe('Auth Plugin — api-key engine', () => {
   it('should reject wrong x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],
@@ -198,11 +204,13 @@ describe('Auth Plugin — api-key engine', () => {
   it('should reject missing x-api-key', async () => {
     const app = Fastify();
     app.appConfig = {
-      application: {logLevel: 'error'},
-      swagger: {
-        enabled: false,
-        basePath: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
       database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
       models: [],

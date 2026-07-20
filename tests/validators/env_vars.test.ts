@@ -34,15 +34,18 @@ const getDefaultModelConfig = (): ModelConfig[] => {
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
-  swagger: {
-    enabled: true,
-    basePath: '/api',
-    info: {
-      title: 'Test API',
-      description: 'Test API description for testing',
-      version: '1.0.0',
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/api',
+      info: {
+        title: 'Test API',
+        description: 'Test API description for testing',
+        version: '1.0.0',
+      },
     },
   },
   database: getDefaultDatabaseConfig(),

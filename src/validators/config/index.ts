@@ -8,7 +8,6 @@ import validateCustomAPIs from './validate-custom-apis';
 import validateForeignKeys from './validate-fk';
 import validateIndexes from './validate-index';
 import validateModelValidation from './validate-model';
-import validateRateLimitConstraints from './validate-rate-limit';
 
 export function validateConfig(input: AppConfig) {
   const valid = validateSchema(input);
@@ -22,7 +21,6 @@ export function validateConfig(input: AppConfig) {
         ...validateModelValidation(input as AppConfig, ajv),
         ...validateIndexes(input as AppConfig),
         ...validateForeignKeys(input as AppConfig),
-        ...validateRateLimitConstraints(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
         ...validateCustomAPIs(input as AppConfig),
         ...validateApisConstraints(input as AppConfig),

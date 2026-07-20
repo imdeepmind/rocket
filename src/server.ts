@@ -1,5 +1,3 @@
-import swagger from '@fastify/swagger';
-import swaggerUI from '@fastify/swagger-ui';
 import Fastify, {
   FastifyError,
   FastifyInstance,
@@ -15,6 +13,7 @@ import dbPlugin from '@/plugin/database';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
+import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
@@ -31,50 +30,6 @@ import {RouteInfo} from '@/utils/welcome';
 export interface StartServerResult {
   app: FastifyInstance;
   routes: RouteInfo[];
-}
-
-async function registerSwagger(app: FastifyInstance, config: AppConfig) {
-  const {swagger: swaggerConfig, auth} = config;
-  const components: Record<string, unknown> = {};
-
-  if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
-    components['securitySchemes'] = {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-    };
-  }
-
-  if (auth?.enableAuth && auth.authEngine === 'api-key') {
-    components['securitySchemes'] = {
-      apiKeyAuth: {
-        type: 'apiKey',
-        name: 'x-api-key',
-        in: 'header',
-      },
-    };
-  }
-
-  if (swaggerConfig.enabled) {
-    // Swagger (OpenAPI spec)
-    await app.register(swagger, {
-      openapi: {
-        info: swaggerConfig.info,
-        components,
-      },
-    });
-
-    // Swagger UI
-    await app.register(swaggerUI, {
-      routePrefix: swaggerConfig.basePath, // UI available at /docs
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: false,
-      },
-    });
-  }
 }
 
 export async function startServer(
@@ -128,10 +83,8 @@ export async function startServer(
   }
 
   // config-driven rate limit
-  if (config.application.rateLimit) {
-    await app.register(rateLimitPlugin, {
-      rateLimit: config.application.rateLimit,
-    });
+  if (config.application.rateLimit?.enabled) {
+    await app.register(rateLimitPlugin);
   }
 
   await app.register(responsePlugin);
@@ -140,14 +93,15 @@ export async function startServer(
   if (config.auth) {
     await app.register(authPlugin);
   }
+  // register swagger
+  if (config.docs.openapi.enabled) {
+    await app.register(swaggerPlugin);
+  }
 
   // migrate the db based on config
   if (migrate) {
     await migrateDatabase(config);
   }
-
-  // register swagger
-  await registerSwagger(app, config);
 
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);

@@ -100,12 +100,12 @@ export function showWelcomeScreen(
   console.log(coloredRocket);
 
   console.log('\n');
-  console.log('  ' + chalk.bold.bgWhite.black(' ROCKET API FRAMEWORK '));
+  console.log('  ' + chalk.bold.bgWhite.black(` ${config.application.name} `));
   console.log('  ' + chalk.dim('🚀 Lift off your development with ease'));
   console.log('\n');
 
-  const swaggerUrl = config.swagger.enabled
-    ? `http://0.0.0.0:${port}${config.swagger.basePath}`
+  const swaggerUrl = config.docs.openapi.enabled
+    ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
     : chalk.gray('Disabled');
 
   const cacheDbStatus = config.cache_db
@@ -150,11 +150,13 @@ export function showWelcomeScreen(
   // Log routes
   console.log('\n  ' + chalk.cyan('Routes:'));
   // Filter routes
+  const swaggerPath = config.docs.openapi.enabled
+    ? config.docs.openapi.path
+    : null;
   const filteredRoutes = routes.filter(route => {
     const isHead = route.method.toUpperCase().split('/').includes('HEAD');
-    const isStatic =
-      route.url.includes('/static') || route.url.includes('/docs');
-    return !isHead && !isStatic;
+    const isSwagger = swaggerPath !== null && route.url.startsWith(swaggerPath);
+    return !isHead && !isSwagger;
   });
 
   const sortedRoutes = [...filteredRoutes].sort((a, b) =>

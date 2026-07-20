@@ -25,15 +25,18 @@ describe('welcome utility', () => {
 
   const mockConfig: AppConfig = {
     application: {
+      name: 'Test App',
       logLevel: 'info',
     },
-    swagger: {
-      enabled: true,
-      basePath: '/docs',
-      info: {
-        title: 'Rocket API',
-        description: 'Test API',
-        version: '1.0.0',
+    docs: {
+      openapi: {
+        enabled: true,
+        path: '/docs',
+        info: {
+          title: 'Rocket API',
+          description: 'Test API',
+          version: '1.0.0',
+        },
       },
     },
     database: {
@@ -74,7 +77,7 @@ describe('welcome utility', () => {
     const calls = consoleSpy.mock.calls.map((call: unknown[]) => call[0]);
     const output = calls.join('\n');
 
-    expect(output).toContain('ROCKET API FRAMEWORK');
+    expect(output).toContain('Test App');
     expect(output).toContain('http://0.0.0.0:3000');
     expect(output).toContain('http://0.0.0.0:3000/docs');
     expect(output).toContain('SQLITE');
@@ -83,15 +86,17 @@ describe('welcome utility', () => {
     expect(output).toContain('/users');
     expect(output).toContain('/mixed');
 
-    // Check filtering
-    expect(output).not.toContain('/static/style.css');
+    // Check filtering — swagger paths and HEAD routes are filtered
     expect(output).not.toContain('HEAD');
+    expect(output).toContain('/static/style.css');
   });
 
   test('showWelcomeScreen handles disabled swagger', () => {
     const disabledSwaggerConfig: AppConfig = {
       ...mockConfig,
-      swagger: {...mockConfig.swagger, enabled: false},
+      docs: {
+        openapi: {...mockConfig.docs.openapi, enabled: false},
+      },
     };
 
     showWelcomeScreen(disabledSwaggerConfig, 3000, mockRoutes);
@@ -139,12 +144,12 @@ describe('welcome utility', () => {
         connection: {uri: 'redis://localhost'},
       },
       application: {
+        name: 'Test App',
         logLevel: 'info',
         rateLimit: {
           enabled: true,
           max: 100,
           timeWindow: '15m',
-          useRedis: true,
         },
       },
     };
@@ -162,12 +167,12 @@ describe('welcome utility', () => {
     const disabledRateLimitConfig: AppConfig = {
       ...mockConfig,
       application: {
+        name: 'Test App',
         logLevel: 'info',
         rateLimit: {
           enabled: false,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     };
