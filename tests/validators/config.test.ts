@@ -123,12 +123,12 @@ describe('validateInvalidDocsConfig', () => {
     },
     {
       name: 'openapi title undefined',
-      patch: {info: {title: undefined}},
+      patch: {info: {title: undefined, version: '1.0.0'}},
       expected: "/docs/openapi/info must have required property 'title'",
     },
     {
       name: 'openapi title too small',
-      patch: {info: {title: '1234'}},
+      patch: {info: {title: '1234', version: '1.0.0'}},
       expected:
         '/docs/openapi/info/title must NOT have fewer than 5 characters',
     },
@@ -137,17 +137,24 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
-          description: '1234',
+          version: '1.0.0',
+          description: '',
         },
       },
       expected:
-        '/docs/openapi/info/description must NOT have fewer than 25 characters',
+        '/docs/openapi/info/description must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi version missing',
+      patch: {info: {title: validBaseConfig.docs.openapi.info.title}},
+      expected: "/docs/openapi/info must have required property 'version'",
     },
     {
       name: 'openapi termsOfService not valid url',
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '1234',
         },
       },
@@ -158,6 +165,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '/api/base',
         },
       },
@@ -168,6 +176,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234'},
         },
       },
@@ -179,6 +188,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', url: '/api/base'},
         },
       },
@@ -189,6 +199,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', email: '1234'},
         },
       },
@@ -199,6 +210,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: ''},
         },
       },
@@ -210,6 +222,7 @@ describe('validateInvalidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: '/api/base'},
         },
       },
@@ -230,6 +243,16 @@ describe('validateInvalidDocsConfig', () => {
       expected,
     );
   });
+
+  it('should throw when openapi property is missing from docs', () => {
+    const config = {
+      ...validBaseConfig,
+      docs: {} as typeof validBaseConfig.docs,
+    };
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "/docs must have required property 'openapi'",
+    );
+  });
 });
 
 describe('validateValidDocsConfig', () => {
@@ -248,13 +271,14 @@ describe('validateValidDocsConfig', () => {
     },
     {
       name: 'openapi title',
-      patch: {info: {title: 'Valid docs title'}},
+      patch: {info: {title: 'Valid docs title', version: '1.0.0'}},
     },
     {
       name: 'openapi description',
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           description: 'This is 25 chars long valid api description',
         },
       },
@@ -264,6 +288,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: 'https://imdeepmind.com/terms',
         },
       },
@@ -273,6 +298,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee'},
         },
       },
@@ -282,6 +308,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee', url: 'https://imdeepmind.com'},
         },
       },
@@ -291,6 +318,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {
             name: 'Abhishek Chatterjee',
             email: 'abhishek@imdeepmind.com',
@@ -303,6 +331,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT'},
         },
       },
@@ -312,6 +341,7 @@ describe('validateValidDocsConfig', () => {
       patch: {
         info: {
           title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: 'https://opensource.org/licenses/MIT'},
         },
       },

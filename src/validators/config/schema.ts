@@ -40,7 +40,7 @@ const applicationSchema = {
   additionalProperties: false,
   required: ['logLevel', 'name'],
   properties: {
-    name: {type: 'string', minLength: 5},
+    name: {type: 'string', minLength: 1},
     logLevel: {
       type: 'string',
       enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
@@ -64,6 +64,7 @@ const applicationSchema = {
 const docsSchema = {
   type: 'object',
   additionalProperties: false,
+  required: ['openapi'],
   properties: {
     openapi: {
       type: 'object',
@@ -77,11 +78,11 @@ const docsSchema = {
         },
         info: {
           type: 'object',
-          required: ['title'],
+          required: ['title', 'version'],
           additionalProperties: false,
           properties: {
             title: {type: 'string', minLength: 5},
-            description: {type: 'string', minLength: 25},
+            description: {type: 'string', minLength: 1},
             version: {type: 'string'},
             termsOfService: {type: 'string', format: 'uri'},
             contact: {

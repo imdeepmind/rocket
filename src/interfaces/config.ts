@@ -68,7 +68,7 @@ export interface DocsConfig {
     path: string;
     info: {
       title: string;
-      description: string;
+      description?: string;
       version: string;
       termsOfService?: string;
       contact?: {
