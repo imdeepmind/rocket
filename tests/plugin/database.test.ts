@@ -17,22 +17,38 @@ import {
 } from '../helpers/db-mocks';
 
 describe('database plugin', () => {
-  test('throws error for unsupported engine', async () => {
+  function buildApp(dbConfig: DatabaseConfig) {
     const fastify = Fastify();
-    const invalidConfig = {
-      engine: 'mysql',
-      connection: {urlOrPath: 'mysql://localhost'},
-    } as unknown as DatabaseConfig;
+    fastify.appConfig = {
+      application: {name: 'Test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {primaryDatabase: dbConfig},
+      models: [],
+    };
+    return fastify;
+  }
 
-    await expect(
-      fastify.register(databasePlugin, invalidConfig),
-    ).rejects.toThrow('Unsupported database engine: mysql');
+  test('throws error for unsupported engine', async () => {
+    const fastify = buildApp({
+      engine: 'mysql' as DatabaseConfig['engine'],
+      connection: {url: 'mysql://localhost'},
+    });
+
+    await expect(fastify.register(databasePlugin)).rejects.toThrow(
+      'Unsupported database engine: mysql',
+    );
   });
 
-  describe('pg engine', () => {
+  describe('postgres engine', () => {
     test('decorates fastify with db', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       expect(fastify.hasDecorator('db')).toBe(true);
@@ -40,8 +56,8 @@ describe('database plugin', () => {
     });
 
     test('query method returns structured response', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const mockRows = [{id: 1, name: 'Test'}];
@@ -57,8 +73,8 @@ describe('database plugin', () => {
     });
 
     test('query method returns changes for non-SELECT', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 5});
@@ -79,8 +95,8 @@ describe('database plugin', () => {
     });
 
     test('query handles missing rowCount in PG', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: null});
@@ -93,8 +109,8 @@ describe('database plugin', () => {
     });
 
     test('close method calls pool.end', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       await fastify.db.close();
@@ -103,8 +119,8 @@ describe('database plugin', () => {
     });
 
     test('onClose hook calls db.close', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const closeSpy = vi.spyOn(fastify.db, 'close');
@@ -113,12 +129,8 @@ describe('database plugin', () => {
     });
 
     test('query timeout is passed to postgres pool', async () => {
-      const fastify = Fastify();
-      const customConfig = {
-        ...pgConfig,
-        dbTimeout: 5000,
-      };
-      await fastify.register(databasePlugin, customConfig);
+      const fastify = buildApp({...pgConfig, timeout: 5000});
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const {Pool} = await import('pg');
@@ -132,8 +144,8 @@ describe('database plugin', () => {
     });
 
     test('query method blocks DDL queries', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, pgConfig);
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const ddlQueries = [
@@ -158,8 +170,8 @@ describe('database plugin', () => {
 
   describe('sqlite engine', () => {
     test('decorates fastify with db', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       expect(fastify.hasDecorator('db')).toBe(true);
@@ -167,8 +179,8 @@ describe('database plugin', () => {
     });
 
     test('query method calls prepare and all for SELECT', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const mockRows = [{id: 2, title: 'SQLite'}];
@@ -185,8 +197,8 @@ describe('database plugin', () => {
     });
 
     test('query method normalizes parameters (boolean, undefined, Date)', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const now = new Date();
@@ -207,8 +219,8 @@ describe('database plugin', () => {
     });
 
     test('query handles missing changes in SQLite', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       sqliteRunMock.mockReturnValueOnce({changes: undefined});
@@ -219,8 +231,8 @@ describe('database plugin', () => {
     });
 
     test('query method calls prepare and run for INSERT/UPDATE', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       sqliteRunMock.mockReturnValueOnce({changes: 1});
@@ -241,8 +253,8 @@ describe('database plugin', () => {
     });
 
     test('close method calls sqlite.close', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       await fastify.db.close();
@@ -251,17 +263,13 @@ describe('database plugin', () => {
     });
 
     test('query timeout is passed to sqlite constructor', async () => {
-      const fastify = Fastify();
-      const customConfig = {
-        ...sqliteConfig,
-        dbTimeout: 3000,
-      };
-      await fastify.register(databasePlugin, customConfig);
+      const fastify = buildApp({...sqliteConfig, timeout: 3000});
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const Database = (await import('better-sqlite3')).default;
       expect(Database).toHaveBeenCalledWith(
-        sqliteConfig.connection.urlOrPath,
+        sqliteConfig.connection.url,
         expect.objectContaining({
           timeout: 3000,
         }),
@@ -270,8 +278,8 @@ describe('database plugin', () => {
     });
 
     test('query method blocks DDL queries', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const ddlQueries = [
@@ -294,8 +302,8 @@ describe('database plugin', () => {
     });
 
     test('query method handles errors in SQLite', async () => {
-      const fastify = Fastify();
-      await fastify.register(databasePlugin, sqliteConfig);
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
       await fastify.ready();
 
       const mockError = new Error('Database Error');

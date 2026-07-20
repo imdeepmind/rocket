@@ -4,7 +4,6 @@ import fp from 'fastify-plugin';
 import {Pool} from 'pg';
 
 import {DatabaseQuery} from '@/interfaces';
-import {DatabaseConfig} from '@/interfaces/config';
 
 function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');
@@ -42,18 +41,19 @@ function isDdlQuery(sql: string): boolean {
   return ddlPattern.test(cleanSql);
 }
 
-export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
-  let db: DatabaseQuery;
-  const timeout = opts.dbTimeout ?? 10000;
+export default fp(async (fastify: FastifyInstance) => {
+  const dbConfig = fastify.appConfig.infrastructure.primaryDatabase;
+  let dbInstance: DatabaseQuery;
+  const timeout = dbConfig.timeout ?? 10000;
 
-  if (opts.engine === 'pg') {
+  if (dbConfig.engine === 'postgres') {
     const pool = new Pool({
-      connectionString: opts.connection.urlOrPath,
+      connectionString: dbConfig.connection.url,
       statement_timeout: timeout,
-      query_timeout: timeout, // client-side timeout to cancel the query
+      query_timeout: timeout,
     });
 
-    db = {
+    dbInstance = {
       query: async <Q>(sql: string, params?: unknown[]) => {
         if (isDdlQuery(sql)) {
           throw new Error(
@@ -80,11 +80,10 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       },
       close: async () => pool.end(),
     };
-  } else if (opts.engine === 'sqlite') {
-    // SQLite busy timeout (how long to wait for table locks)
-    const sqlite = new Database(opts.connection.urlOrPath, {timeout});
+  } else if (dbConfig.engine === 'sqlite') {
+    const sqlite = new Database(dbConfig.connection.url, {timeout});
 
-    db = {
+    dbInstance = {
       query: async <Q>(sql: string, params?: unknown[]) => {
         if (isDdlQuery(sql)) {
           throw new Error(
@@ -96,8 +95,6 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
         const stmt = sqlite.prepare(normalizedSql);
         const queryParams = (params ?? []).map(normalizeSqliteValue);
 
-        // SQLite with better-sqlite3 is synchronous and blocks the loop.
-        // We wrap it in a promise-based structure for API consistency with PG.
         return new Promise<{changes: number; rows: Q[]}>((resolve, reject) => {
           try {
             if (isSelectQuery(normalizedSql)) {
@@ -117,16 +114,14 @@ export default fp(async (fastify: FastifyInstance, opts: DatabaseConfig) => {
       },
     };
   } else {
-    throw new Error(`Unsupported database engine: ${opts.engine}`);
+    throw new Error(`Unsupported database engine: ${dbConfig.engine}`);
   }
 
-  // attach to fastify
-  fastify.decorate('db', db);
+  fastify.decorate('db', dbInstance);
 
-  // cleanup on shutdown
   fastify.addHook('onClose', async () => {
     fastify.log.info('Closing database connection...');
-    await db.close();
+    await dbInstance.close();
     fastify.log.info('Database connection closed.');
   });
 });

@@ -40,7 +40,9 @@ describe('Auth Plugin — up-auth engine', () => {
           info: {title: 'Test', description: 'Test', version: '1.0.0'},
         },
       },
-      database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
       models: [],
       auth: {
         enableAuth: true,
@@ -122,7 +124,9 @@ describe('Auth Plugin — api-key engine', () => {
           info: {title: 'Test', description: 'Test', version: '1.0.0'},
         },
       },
-      database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
       models: [],
       auth: {
         enableAuth: true,
@@ -165,7 +169,9 @@ describe('Auth Plugin — api-key engine', () => {
           info: {title: 'Test', description: 'Test', version: '1.0.0'},
         },
       },
-      database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
       models: [],
       auth: {
         enableAuth: true,
@@ -212,7 +218,9 @@ describe('Auth Plugin — api-key engine', () => {
           info: {title: 'Test', description: 'Test', version: '1.0.0'},
         },
       },
-      database: {engine: 'pg', connection: {urlOrPath: ':memory:'}},
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
       models: [],
       auth: {
         enableAuth: true,

@@ -68,9 +68,11 @@ const mockConfig: AppConfig = {
     name: 'Test App',
     logLevel: 'info',
   },
-  database: {
-    engine: 'sqlite',
-    connection: {urlOrPath: ':memory:'},
+  infrastructure: {
+    primaryDatabase: {
+      engine: 'sqlite',
+      connection: {url: ':memory:'},
+    },
   },
   docs: {
     openapi: {

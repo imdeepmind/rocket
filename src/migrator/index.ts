@@ -181,7 +181,7 @@ async function generateMigrationSQL(
       `
       import { defineConfig } from 'drizzle-kit';
       export default defineConfig({
-        dialect: '${engine === 'pg' ? 'postgresql' : 'sqlite'}',
+        dialect: '${engine === 'postgres' ? 'postgresql' : 'sqlite'}',
         schema: '${schemaPath}',
         out: '${migrationsPath}',
         dbCredentials: { url: '${dbUrl}' },
@@ -209,13 +209,13 @@ async function generateMigrationSQL(
 }
 
 const migrateDatabase = async (config: AppConfig) => {
-  const engine = config.database.engine;
+  const engine = config.infrastructure.primaryDatabase.engine;
   const models = config.models;
 
   await generateMigrationSQL(
     models,
     engine,
-    config.database.connection.urlOrPath,
+    config.infrastructure.primaryDatabase.connection.url,
   );
 };
 

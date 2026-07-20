@@ -72,7 +72,7 @@ export async function startServer(
   });
 
   // config-driven DB
-  await app.register(dbPlugin, config.database);
+  await app.register(dbPlugin);
 
   // config-driven cache (Redis or NodeCache)
   await app.register(cachePlugin);

@@ -29,12 +29,14 @@
             }
         }
     },
-    "database": {
-        "engine": "pg",
-        "connection": {
-            "urlOrPath": "env:DB"
-        },
-        "dbTimeout": 10000
+    "infrastructure": {
+        "primaryDatabase": {
+            "engine": "sqlite",
+            "connection": {
+                "url": "./database.db"
+            },
+            "timeout": 10000
+        }
     },
     "cache_db": {
         "engine": "redis",

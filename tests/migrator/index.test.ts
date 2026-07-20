@@ -34,13 +34,15 @@ describe('migrateDatabase', () => {
     vi.restoreAllMocks();
   });
 
-  const getBaseConfig = (engine: 'sqlite' | 'pg') =>
+  const getBaseConfig = (engine: 'sqlite' | 'postgres') =>
     ({
       name: 'test-app',
-      database: {
-        engine,
-        connection: {
-          urlOrPath: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+      infrastructure: {
+        primaryDatabase: {
+          engine,
+          connection: {
+            url: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+          },
         },
       },
       models: [],
@@ -109,7 +111,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate schema file for pg full coverage', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'posts',
@@ -161,7 +163,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate empty schemas gracefully', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'empty',
@@ -301,7 +303,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign keys for pg with onDelete and onUpdate', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -339,7 +341,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign key with only onDelete action', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'categories',
@@ -409,7 +411,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate multiple foreign keys on a single table', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -498,7 +500,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign keys without indexes', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -536,7 +538,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate schema without foreign keys when none are defined', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'simple',

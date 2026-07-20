@@ -44,9 +44,9 @@ const upAuthConfig: AuthConfig = {
 };
 
 const pgConfig: DatabaseConfig = {
-  engine: 'pg',
+  engine: 'postgres',
   connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 };
 
@@ -60,10 +60,6 @@ async function createAuthApp(
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  await app.register(databasePlugin, dbConfig);
-  await app.register(responsePlugin);
-  await app.register(authPlugin);
-
   const config: AppConfig = {
     application: {name: 'Test App', logLevel: 'error'},
     docs: {
@@ -73,10 +69,14 @@ async function createAuthApp(
         info: {title: 'Test', description: 'Test', version: '1.0.0'},
       },
     },
-    database: dbConfig,
+    infrastructure: {primaryDatabase: dbConfig},
     models,
     auth,
   };
+  app.appConfig = config;
+  await app.register(databasePlugin);
+  await app.register(responsePlugin);
+  await app.register(authPlugin);
 
   registerChangePasswordRoute(app, config);
   await app.ready();

@@ -14,7 +14,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
     engine: 'sqlite',
     connection: {
-      urlOrPath: './test.db',
+      url: './test.db',
     },
   };
 };
@@ -93,7 +93,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  database: getDefaultDatabaseConfig(),
+  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
   models: getDefaultModelConfig(),
 };
 
@@ -365,43 +365,47 @@ describe('validateInvalidDatabaseConfig', () => {
   it.each([
     {
       name: 'engine as invalid',
-      patch: {engine: 'wrong', connection: {urlOrPath: './database.db'}},
-      expected: '/database/engine must be equal to constant',
+      patch: {engine: 'wrong', connection: {url: './database.db'}},
+      expected:
+        '/infrastructure/primaryDatabase/engine must be equal to constant',
     },
     {
       name: 'engine as undefined',
-      patch: {engine: undefined, connection: {urlOrPath: './database.db'}},
-      expected: "/database must have required property 'engine'",
-    },
-    {
-      name: 'connection.urlOrPath as empty string',
-      patch: {engine: 'pg', connection: {urlOrPath: ''}},
+      patch: {engine: undefined, connection: {url: './database.db'}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        "/infrastructure/primaryDatabase must have required property 'engine'",
     },
     {
-      name: 'connection.urlOrPath wrong pg connection string',
-      patch: {engine: 'pg', connection: {urlOrPath: './database.db'}},
+      name: 'connection.url as empty string',
+      patch: {engine: 'postgres', connection: {url: ''}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
-      name: 'connection.urlOrPath wrong sqlite connection string',
+      name: 'connection.url wrong pg connection string',
+      patch: {engine: 'postgres', connection: {url: './database.db'}},
+      expected:
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+    },
+    {
+      name: 'connection.url wrong sqlite connection string',
       patch: {
         engine: 'sqlite',
         connection: {
-          urlOrPath: '.postgres://devuser:devpassword@db:5432/rocketdb',
+          url: '.postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
       expected:
-        '/database/connection/urlOrPath must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          ...patch,
+        },
       },
     };
 
@@ -414,24 +418,26 @@ describe('validateInvalidDatabaseConfig', () => {
 describe('validateValidDatabaseConfig', () => {
   it.each([
     {
-      name: 'engine as pg',
+      name: 'engine as postgres',
       patch: {
-        engine: 'pg',
+        engine: 'postgres',
         connection: {
-          urlOrPath: 'postgres://devuser:devpassword@db:5432/rocketdb',
+          url: 'postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
     },
     {
       name: 'engine as sqlite',
-      patch: {engine: 'sqlite', connection: {urlOrPath: './database.db'}},
+      patch: {engine: 'sqlite', connection: {url: './database.db'}},
     },
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          ...patch,
+        },
       },
     };
 
