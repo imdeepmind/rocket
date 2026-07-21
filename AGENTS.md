@@ -11,6 +11,7 @@ Config-driven REST API framework. TypeScript, Fastify 5, PostgreSQL/SQLite, Vite
 | `npm run compile` | `tsc && tsc-alias` — type-check + build. Required before running compiled output. |
 | `npm run coverage` | Full test suite with coverage (thresholds: lines 95%, funcs 100%, branches 90%, stmts 95%). |
 | `npm run lint:check` | ESLint via gts (Google TypeScript Style). |
+| `npm run lint:write` | Fix linting issues. |
 | `npm run dev` | `tsx watch ./src/main.ts` — hot-reload dev server. Pass flags like `-- -c config.json`. |
 | `npm run generate:sql` | `drizzle-kit push` — push schema to DB (only for migrations). |
 
