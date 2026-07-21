@@ -184,7 +184,7 @@ async function generateMigrationSQL(
         dialect: '${engine === 'postgres' ? 'postgresql' : 'sqlite'}',
         schema: '${schemaPath}',
         out: '${migrationsPath}',
-        dbCredentials: { url: '${dbUrl}' },
+        dbCredentials: { url: ${JSON.stringify(dbUrl)} },
       });
     `,
     );
@@ -194,7 +194,7 @@ async function generateMigrationSQL(
       stdio: 'inherit',
     });
   } catch (error: unknown) {
-    console.log('Migrationed failed to run: ', error);
+    console.log('Migration failed to run: ', error);
     throw error;
   } finally {
     // cleanup

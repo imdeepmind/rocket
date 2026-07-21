@@ -102,7 +102,7 @@ describe('migrateDatabase', () => {
     // Call 2: drizzle.config.ts
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'sqlite'");
-    expect(drizzleConfigContent).toContain("url: 'test.db'");
+    expect(drizzleConfigContent).toContain('url: "test.db"');
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
@@ -154,7 +154,7 @@ describe('migrateDatabase', () => {
 
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'postgresql'");
-    expect(drizzleConfigContent).toContain("url: 'postgres://db'");
+    expect(drizzleConfigContent).toContain('url: "postgres://db"');
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
@@ -237,7 +237,7 @@ describe('migrateDatabase', () => {
       force: true,
     });
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      'Migrationed failed to run: ',
+      'Migration failed to run: ',
       error,
     );
 
@@ -535,6 +535,46 @@ describe('migrateDatabase', () => {
     );
     expect(schemaContent).toContain(".onDelete('no action')");
     expect(schemaContent).toContain(".onUpdate('set default')");
+  });
+
+  it('should escape single quotes in dbUrl in drizzle config', async () => {
+    const config = getBaseConfig('postgres');
+    config.infrastructure.primaryDatabase.connection.url =
+      "postgres://user:p'ass'word@localhost/db";
+    config.models = [
+      {
+        name: 'test',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    expect(drizzleConfigContent).toContain(
+      'url: "postgres://user:p\'ass\'word@localhost/db"',
+    );
+  });
+
+  it('should escape double quotes in dbUrl in drizzle config', async () => {
+    const config = getBaseConfig('sqlite');
+    config.infrastructure.primaryDatabase.connection.url =
+      'sqlite://path/to/"my db".db';
+    config.models = [
+      {
+        name: 'test',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    expect(drizzleConfigContent).toContain(
+      'url: "sqlite://path/to/\\"my db\\".db"',
+    );
   });
 
   it('should generate schema without foreign keys when none are defined', async () => {
