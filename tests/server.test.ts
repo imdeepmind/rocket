@@ -7,6 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
@@ -490,6 +491,39 @@ describe('Server', () => {
         (call: unknown[]) => call[0] === communicatePlugin,
       );
       expect(communicatePluginCall).toBeUndefined();
+    });
+  });
+
+  describe('Cache Configuration', () => {
+    it('should register cache plugin when cache is configured', async () => {
+      const configWithCache: AppConfig = {
+        ...mockConfig,
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCache, 3000, 'dev');
+
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
+      );
+      expect(cachePluginCall).toBeDefined();
+    });
+
+    it('should not register cache plugin when cache is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
+      );
+      expect(cachePluginCall).toBeUndefined();
     });
   });
 });
