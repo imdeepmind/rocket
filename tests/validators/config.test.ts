@@ -14,7 +14,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
     engine: 'sqlite',
     connection: {
-      urlOrPath: './test.db',
+      url: './test.db',
     },
   };
 };
@@ -93,7 +93,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  database: getDefaultDatabaseConfig(),
+  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
   models: getDefaultModelConfig(),
 };
 
@@ -365,43 +365,47 @@ describe('validateInvalidDatabaseConfig', () => {
   it.each([
     {
       name: 'engine as invalid',
-      patch: {engine: 'wrong', connection: {urlOrPath: './database.db'}},
-      expected: '/database/engine must be equal to constant',
+      patch: {engine: 'wrong', connection: {url: './database.db'}},
+      expected:
+        '/infrastructure/primaryDatabase/engine must be equal to constant',
     },
     {
       name: 'engine as undefined',
-      patch: {engine: undefined, connection: {urlOrPath: './database.db'}},
-      expected: "/database must have required property 'engine'",
-    },
-    {
-      name: 'connection.urlOrPath as empty string',
-      patch: {engine: 'pg', connection: {urlOrPath: ''}},
+      patch: {engine: undefined, connection: {url: './database.db'}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        "/infrastructure/primaryDatabase must have required property 'engine'",
     },
     {
-      name: 'connection.urlOrPath wrong pg connection string',
-      patch: {engine: 'pg', connection: {urlOrPath: './database.db'}},
+      name: 'connection.url as empty string',
+      patch: {engine: 'postgres', connection: {url: ''}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
-      name: 'connection.urlOrPath wrong sqlite connection string',
+      name: 'connection.url wrong pg connection string',
+      patch: {engine: 'postgres', connection: {url: './database.db'}},
+      expected:
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+    },
+    {
+      name: 'connection.url wrong sqlite connection string',
       patch: {
         engine: 'sqlite',
         connection: {
-          urlOrPath: '.postgres://devuser:devpassword@db:5432/rocketdb',
+          url: '.postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
       expected:
-        '/database/connection/urlOrPath must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+        '/infrastructure/primaryDatabase/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          ...patch,
+        },
       },
     };
 
@@ -414,24 +418,26 @@ describe('validateInvalidDatabaseConfig', () => {
 describe('validateValidDatabaseConfig', () => {
   it.each([
     {
-      name: 'engine as pg',
+      name: 'engine as postgres',
       patch: {
-        engine: 'pg',
+        engine: 'postgres',
         connection: {
-          urlOrPath: 'postgres://devuser:devpassword@db:5432/rocketdb',
+          url: 'postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
     },
     {
       name: 'engine as sqlite',
-      patch: {engine: 'sqlite', connection: {urlOrPath: './database.db'}},
+      patch: {engine: 'sqlite', connection: {url: './database.db'}},
     },
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          ...patch,
+        },
       },
     };
 
@@ -2815,12 +2821,15 @@ describe('validateRateLimitConfig', () => {
         ...validBaseConfig.application,
         ...patch,
       },
-      cache_db: {
-        engine: 'redis',
-        connection: {
-          uri: 'redis://localhost:6379',
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: {
+          engine: 'redis',
+          connection: {
+            url: 'redis://localhost:6379',
+          },
+          timeout: 5000,
         },
-        timeout: 5000,
       },
     };
 
@@ -2834,58 +2843,66 @@ describe('validateCacheDbConfig', () => {
   it.each([
     {
       name: 'engine as invalid value',
-      patch: {engine: 'memcached', connection: {uri: 'redis://localhost:6379'}},
-      expected: '/cache_db/engine must be equal to one of the allowed values',
+      patch: {engine: 'memcached', connection: {url: 'redis://localhost:6379'}},
+      expected:
+        '/infrastructure/cache/engine must be equal to one of the allowed values',
     },
     {
-      name: 'connection uri with invalid format (http)',
-      patch: {engine: 'redis', connection: {uri: 'http://localhost:6379'}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url with invalid format (http)',
+      patch: {engine: 'redis', connection: {url: 'http://localhost:6379'}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
-      name: 'connection uri without protocol',
-      patch: {engine: 'redis', connection: {uri: 'localhost:6379'}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url without protocol',
+      patch: {engine: 'redis', connection: {url: 'localhost:6379'}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
-      name: 'connection uri empty string',
-      patch: {engine: 'redis', connection: {uri: ''}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url empty string',
+      patch: {engine: 'redis', connection: {url: ''}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
       name: 'timeout as negative integer',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: -100,
       },
-      expected: '/cache_db/timeout must be >= 1',
+      expected: '/infrastructure/cache/timeout must be >= 1',
     },
     {
       name: 'timeout as zero',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: 0,
       },
-      expected: '/cache_db/timeout must be >= 1',
+      expected: '/infrastructure/cache/timeout must be >= 1',
     },
     {
       name: 'missing required engine',
       patch: {
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
       } as unknown as typeof validBaseConfig,
-      expected: "/cache_db must have required property 'engine'",
+      expected: "/infrastructure/cache must have required property 'engine'",
     },
     {
       name: 'missing required connection',
       patch: {engine: 'redis'} as unknown as typeof validBaseConfig,
-      expected: "/cache_db must have required property 'connection'",
+      expected:
+        "/infrastructure/cache must have required property 'connection'",
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: patch as unknown as typeof validBaseConfig.infrastructure.cache,
+      },
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -2895,45 +2912,48 @@ describe('validateCacheDbConfig', () => {
 
   it.each([
     {
-      name: 'valid cache_db with redis localhost',
-      patch: {engine: 'redis', connection: {uri: 'redis://localhost:6379'}},
+      name: 'valid cache with redis localhost',
+      patch: {engine: 'redis', connection: {url: 'redis://localhost:6379'}},
     },
     {
-      name: 'valid cache_db with redis and timeout',
+      name: 'valid cache with redis and timeout',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: 5000,
       },
     },
     {
-      name: 'valid cache_db with redis remote host',
+      name: 'valid cache with redis remote host',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://redis.example.com:6379'},
+        connection: {url: 'redis://redis.example.com:6379'},
       },
     },
     {
-      name: 'valid cache_db with redis and password',
+      name: 'valid cache with redis and password',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://:mypassword@localhost:6379'},
+        connection: {url: 'redis://:mypassword@localhost:6379'},
       },
     },
   ])('Scenario: $name -> should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: patch as unknown as typeof validBaseConfig.infrastructure.cache,
+      },
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
 
-// ----- Optional Cache DB Config Tests -----
+// ----- Optional Cache Config Tests -----
 
-describe('validateCacheDbOptional', () => {
-  it('cache_db is completely optional and config should validate', () => {
+describe('validateCacheOptional', () => {
+  it('cache is completely optional and config should validate', () => {
     const config = {
       ...validBaseConfig,
     };
@@ -2941,7 +2961,7 @@ describe('validateCacheDbOptional', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 
-  it('config without cache_db and without rateLimit should validate', () => {
+  it('config without cache and without rateLimit should validate', () => {
     const config = {
       ...validBaseConfig,
       application: {

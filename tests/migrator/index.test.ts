@@ -34,13 +34,15 @@ describe('migrateDatabase', () => {
     vi.restoreAllMocks();
   });
 
-  const getBaseConfig = (engine: 'sqlite' | 'pg') =>
+  const getBaseConfig = (engine: 'sqlite' | 'postgres') =>
     ({
       name: 'test-app',
-      database: {
-        engine,
-        connection: {
-          urlOrPath: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+      infrastructure: {
+        primaryDatabase: {
+          engine,
+          connection: {
+            url: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+          },
         },
       },
       models: [],
@@ -58,6 +60,8 @@ describe('migrateDatabase', () => {
           {name: 'username', type: 'string', unique: true, nullable: false},
           {name: 'bio', type: 'text', default: 'hello'},
           {name: 'createdAt', type: 'datetime'},
+          {name: 'price', type: 'decimal'},
+          {name: 'birthDate', type: 'date'},
           // @ts-expect-error testing fallback condition
           {name: 'unknown', type: 'unknown_type'},
         ],
@@ -91,6 +95,8 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain(
       "createdAt: integer('createdAt', { mode: 'timestamp' })",
     );
+    expect(schemaContent).toContain("price: real('price')");
+    expect(schemaContent).toContain("birthDate: text('birthDate')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain(
       "uniqueIndex('username_idx').on(t.username)",
@@ -100,16 +106,21 @@ describe('migrateDatabase', () => {
     // Call 2: drizzle.config.ts
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'sqlite'");
-    expect(drizzleConfigContent).toContain("url: 'test.db'");
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      {stdio: 'inherit'},
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'test.db'}),
+      }),
     );
   });
 
   it('should generate schema file for pg full coverage', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'posts',
@@ -120,6 +131,8 @@ describe('migrateDatabase', () => {
           {name: 'body', type: 'text', default: 'content'},
           {name: 'published', type: 'boolean'},
           {name: 'updatedAt', type: 'datetime'},
+          {name: 'price', type: 'decimal'},
+          {name: 'birthDate', type: 'date'},
           // @ts-expect-error testing fallback condition
           {name: 'unknown', type: 'unknown_type'},
         ],
@@ -146,22 +159,29 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain('body: text(\'body\').default("content")');
     expect(schemaContent).toContain("published: boolean('published')");
     expect(schemaContent).toContain("updatedAt: timestamp('updatedAt')");
+    expect(schemaContent).toContain("price: doublePrecision('price')");
+    expect(schemaContent).toContain("birthDate: date('birthDate')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain("uniqueIndex('title_idx').on(t.title)");
     expect(schemaContent).toContain("index('body_idx').on(t.body)");
 
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'postgresql'");
-    expect(drizzleConfigContent).toContain("url: 'postgres://db'");
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      {stdio: 'inherit'},
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'postgres://db'}),
+      }),
     );
   });
 
   it('should generate empty schemas gracefully', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'empty',
@@ -235,7 +255,7 @@ describe('migrateDatabase', () => {
       force: true,
     });
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      'Migrationed failed to run: ',
+      'Migration failed to run: ',
       error,
     );
 
@@ -301,7 +321,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign keys for pg with onDelete and onUpdate', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -339,7 +359,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign key with only onDelete action', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'categories',
@@ -409,7 +429,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate multiple foreign keys on a single table', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -498,7 +518,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should generate foreign keys without indexes', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'users',
@@ -535,8 +555,70 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain(".onUpdate('set default')");
   });
 
+  it('should not write dbUrl with special chars to drizzle config (env var only)', async () => {
+    const urlWithQuotes = "postgres://user:p'ass'word@localhost/db";
+    const config = getBaseConfig('postgres');
+    config.infrastructure.primaryDatabase.connection.url = urlWithQuotes;
+    config.models = [
+      {
+        name: 'test',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    // URL must NOT appear in the config file
+    expect(drizzleConfigContent).not.toContain(urlWithQuotes);
+    // Config uses env var instead
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
+    // URL is passed securely via env
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: urlWithQuotes}),
+      }),
+    );
+  });
+
+  it('should not write dbUrl with double quotes to drizzle config (env var only)', async () => {
+    const urlWithDoubleQuotes = 'sqlite://path/to/"my db".db';
+    const config = getBaseConfig('sqlite');
+    config.infrastructure.primaryDatabase.connection.url = urlWithDoubleQuotes;
+    config.models = [
+      {
+        name: 'test',
+        fields: [{name: 'id', type: 'integer', primaryKey: true}],
+      },
+    ];
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    // URL must NOT appear in the config file
+    expect(drizzleConfigContent).not.toContain(urlWithDoubleQuotes);
+    // Config uses env var instead
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
+    // URL is passed securely via env
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          DRIZZLE_DATABASE_URL: urlWithDoubleQuotes,
+        }),
+      }),
+    );
+  });
+
   it('should generate schema without foreign keys when none are defined', async () => {
-    const config = getBaseConfig('pg');
+    const config = getBaseConfig('postgres');
     config.models = [
       {
         name: 'simple',

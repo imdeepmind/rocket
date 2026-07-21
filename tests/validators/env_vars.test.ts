@@ -10,7 +10,7 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
     engine: 'sqlite',
     connection: {
-      urlOrPath: './test.db',
+      url: './test.db',
     },
   };
 };
@@ -48,7 +48,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  database: getDefaultDatabaseConfig(),
+  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
   models: getDefaultModelConfig(),
 };
 
@@ -63,10 +63,12 @@ describe('Config Environment Variable Resolution', () => {
         ...validBaseConfig.application,
         logLevel: 'env:LOG_LEVEL' as unknown as LogLevel,
       },
-      database: {
-        ...validBaseConfig.database,
-        connection: {
-          urlOrPath: 'env:DB_PATH',
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          connection: {
+            url: 'env:DB_PATH',
+          },
         },
       },
     };
@@ -79,7 +81,9 @@ describe('Config Environment Variable Resolution', () => {
     const validated = validateConfig(resolved);
 
     expect(validated.application.logLevel).toBe('debug');
-    expect(validated.database.connection.urlOrPath).toBe('./env-resolved.db');
+    expect(validated.infrastructure.primaryDatabase.connection.url).toBe(
+      './env-resolved.db',
+    );
   });
 
   it('should leave env:VAR if environment variable is not set', () => {
@@ -87,10 +91,12 @@ describe('Config Environment Variable Resolution', () => {
 
     const config: AppConfig = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        connection: {
-          urlOrPath: 'env:NON_EXISTENT_VAR',
+      infrastructure: {
+        primaryDatabase: {
+          ...validBaseConfig.infrastructure.primaryDatabase,
+          connection: {
+            url: 'env:NON_EXISTENT_VAR',
+          },
         },
       },
     };

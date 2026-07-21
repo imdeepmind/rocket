@@ -30,16 +30,16 @@ export const mockModels: ModelConfig[] = [
 ];
 
 export const pgConfig: DatabaseConfig = {
-  engine: 'pg',
+  engine: 'postgres',
   connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 };
 
 export const sqliteConfig: DatabaseConfig = {
   engine: 'sqlite',
   connection: {
-    urlOrPath: ':memory:',
+    url: ':memory:',
   },
 };
 
@@ -59,7 +59,7 @@ export async function createTestApp(
         info: {title: 'Test', description: 'Test', version: '1.0.0'},
       },
     },
-    database: dbConfig,
+    infrastructure: {primaryDatabase: dbConfig},
     models,
     apis,
     customAPIs,
@@ -69,7 +69,7 @@ export async function createTestApp(
   const fastify = Fastify();
   fastify.appConfig = appConfig;
 
-  await fastify.register(databasePlugin, dbConfig);
+  await fastify.register(databasePlugin);
   await fastify.register(cachePlugin);
   await fastify.register(responsePlugin);
   await fastify.register(sspPlugin);

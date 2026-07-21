@@ -7,6 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
@@ -68,9 +69,11 @@ const mockConfig: AppConfig = {
     name: 'Test App',
     logLevel: 'info',
   },
-  database: {
-    engine: 'sqlite',
-    connection: {urlOrPath: ':memory:'},
+  infrastructure: {
+    primaryDatabase: {
+      engine: 'sqlite',
+      connection: {url: ':memory:'},
+    },
   },
   docs: {
     openapi: {
@@ -219,7 +222,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    expect(mockApp.register).toHaveBeenCalledTimes(5);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -239,7 +242,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(5);
+    expect(mockApp.register).toHaveBeenCalledTimes(4);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -488,6 +491,39 @@ describe('Server', () => {
         (call: unknown[]) => call[0] === communicatePlugin,
       );
       expect(communicatePluginCall).toBeUndefined();
+    });
+  });
+
+  describe('Cache Configuration', () => {
+    it('should register cache plugin when cache is configured', async () => {
+      const configWithCache: AppConfig = {
+        ...mockConfig,
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCache, 3000, 'dev');
+
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
+      );
+      expect(cachePluginCall).toBeDefined();
+    });
+
+    it('should not register cache plugin when cache is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
+      );
+      expect(cachePluginCall).toBeUndefined();
     });
   });
 });

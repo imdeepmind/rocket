@@ -1,6 +1,6 @@
 import {HTTPMethod} from './index';
 
-export type DBEngine = 'sqlite' | 'pg';
+export type DBEngine = 'sqlite' | 'postgres';
 export type CacheDbEngine = 'redis';
 export type DataType =
   | 'integer'
@@ -87,15 +87,15 @@ export interface DocsConfig {
 export interface DatabaseConfig {
   engine: DBEngine;
   connection: {
-    urlOrPath: string;
+    url: string;
   };
-  dbTimeout?: number;
+  timeout?: number;
 }
 
 export interface CacheDbConfig {
   engine: CacheDbEngine;
   connection: {
-    uri: string;
+    url: string;
   };
   timeout?: number;
 }
@@ -223,13 +223,17 @@ export interface CommunicateConfig {
   email?: EmailConfig;
 }
 
+export interface InfrastructureConfig {
+  primaryDatabase: DatabaseConfig;
+  cache?: CacheDbConfig;
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   docs: DocsConfig;
-  database: DatabaseConfig;
+  infrastructure: InfrastructureConfig;
   models: ModelConfig[];
   apis?: ApisConfig;
-  cache_db?: CacheDbConfig;
   customAPIs?: CustomAPIConfig;
   auth?: AuthConfig;
   communicate?: CommunicateConfig;

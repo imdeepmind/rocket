@@ -37,7 +37,7 @@ describe('cache plugin', () => {
   });
 
   describe('NodeCache', () => {
-    it('uses node-cache when no cache_db is provided', async () => {
+    it('uses node-cache when no cache config is provided', async () => {
       app = Fastify();
       app.appConfig = {} as unknown as AppConfig;
       await app.register(cachePlugin);
@@ -78,17 +78,19 @@ describe('cache plugin', () => {
       const mockConfig: CacheDbConfig = {
         engine: 'redis',
         connection: {
-          uri: 'redis://localhost:6379',
+          url: 'redis://localhost:6379',
         },
       };
-      app.appConfig = {cache_db: mockConfig} as unknown as AppConfig;
+      app.appConfig = {
+        infrastructure: {cache: mockConfig},
+      } as unknown as AppConfig;
 
       // Need to setup vi.mocked so we can control the instance methods properly,
       // but since we mocked the constructor we can intercept via vi.mocked
       (Redis as unknown as Mock).mockClear();
     });
 
-    it('uses redis when cache_db engine is redis', async () => {
+    it('uses redis when infrastructure.cache engine is redis', async () => {
       const mockPing = vi.fn().mockResolvedValue('PONG');
       (Redis as unknown as Mock).mockImplementation(
         class {

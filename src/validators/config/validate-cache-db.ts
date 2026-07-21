@@ -3,7 +3,7 @@ import {AppConfig} from '@/interfaces/config';
 function validateCacheDbConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  if (!config.cache_db) return errors;
+  if (!config.infrastructure.cache) return errors;
 
   return errors;
 }

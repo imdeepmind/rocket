@@ -39,10 +39,12 @@ describe('welcome utility', () => {
         },
       },
     },
-    database: {
-      engine: 'sqlite',
-      connection: {
-        urlOrPath: ':memory:',
+    infrastructure: {
+      primaryDatabase: {
+        engine: 'sqlite',
+        connection: {
+          url: ':memory:',
+        },
       },
     },
     models: [
@@ -110,9 +112,11 @@ describe('welcome utility', () => {
   test('showWelcomeScreen handles different database engines', () => {
     const pgConfig: AppConfig = {
       ...mockConfig,
-      database: {
-        engine: 'pg',
-        connection: {urlOrPath: 'postgresql://localhost'},
+      infrastructure: {
+        primaryDatabase: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://localhost'},
+        },
       },
     };
 
@@ -121,7 +125,7 @@ describe('welcome utility', () => {
     const calls = consoleSpy.mock.calls.map((call: unknown[]) => call[0]);
     const output = calls.join('\n');
 
-    expect(output).toContain('PG');
+    expect(output).toContain('POSTGRES');
   });
 
   test('showWelcomeScreen handles unknown methods gracefully', () => {
@@ -136,12 +140,15 @@ describe('welcome utility', () => {
     expect(output).toContain('/unknown');
   });
 
-  test('showWelcomeScreen handles cache_db and rateLimit', () => {
+  test('showWelcomeScreen handles cache and rateLimit', () => {
     const fullConfig: AppConfig = {
       ...mockConfig,
-      cache_db: {
-        engine: 'redis',
-        connection: {uri: 'redis://localhost'},
+      infrastructure: {
+        ...mockConfig.infrastructure,
+        cache: {
+          engine: 'redis',
+          connection: {url: 'redis://localhost'},
+        },
       },
       application: {
         name: 'Test App',

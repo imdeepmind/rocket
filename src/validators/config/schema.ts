@@ -110,20 +110,20 @@ const docsSchema = {
   },
 };
 
-const databaseSchema = {
+const primaryDatabaseSchema = {
   type: 'object',
   required: ['engine', 'connection'],
   properties: {
-    engine: {type: 'string', enum: ['sqlite', 'pg']},
+    engine: {type: 'string', enum: ['sqlite', 'postgres']},
     connection: {
       type: 'object',
-      required: ['urlOrPath'],
+      required: ['url'],
       additionalProperties: false,
       properties: {
-        urlOrPath: {type: 'string'},
+        url: {type: 'string'},
       },
     },
-    dbTimeout: {type: 'integer', default: 10000, minimum: 1},
+    timeout: {type: 'integer', default: 10000, minimum: 1},
   },
   oneOf: [
     {
@@ -133,7 +133,7 @@ const databaseSchema = {
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: {
+            url: {
               type: 'string',
               pattern:
                 '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
@@ -145,11 +145,11 @@ const databaseSchema = {
     {
       type: 'object',
       properties: {
-        engine: {const: 'pg'},
+        engine: {const: 'postgres'},
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: {
+            url: {
               type: 'string',
               pattern: '^postgres(ql)?:\\/\\/',
             },
@@ -169,13 +169,23 @@ const cacheDbSchema = {
     engine: {type: 'string', enum: ['redis']},
     connection: {
       type: 'object',
-      required: ['uri'],
+      required: ['url'],
       additionalProperties: false,
       properties: {
-        uri: {type: 'string', pattern: '^redis:\\/\\/'},
+        url: {type: 'string', pattern: '^redis:\\/\\/'},
       },
     },
     timeout: {type: 'integer', default: 10000, minimum: 1},
+  },
+};
+
+const infrastructureSchema = {
+  type: 'object',
+  required: ['primaryDatabase'],
+  additionalProperties: false,
+  properties: {
+    primaryDatabase: primaryDatabaseSchema,
+    cache: cacheDbSchema,
   },
 };
 
@@ -496,19 +506,18 @@ const communicateSchema = {
 
 const schema = {
   type: 'object',
-  required: ['application', 'docs', 'database', 'models'],
+  required: ['application', 'docs', 'infrastructure', 'models'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,
     docs: docsSchema,
-    database: databaseSchema,
+    infrastructure: infrastructureSchema,
     models: {
       type: 'array',
       minItems: 1,
       items: modelSchema,
     },
     apis: apisSchema,
-    cache_db: cacheDbSchema,
     customAPIs: customAPIsSchema,
     auth: authSchema,
     communicate: communicateSchema,

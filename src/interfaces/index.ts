@@ -9,13 +9,7 @@ export interface CLIOptions {
   migrate: boolean;
 }
 
-export interface DatabaseQuery {
-  query<Q>(
-    sql: string,
-    params?: unknown[],
-  ): Promise<{changes: number; rows: Q[]}>;
-  close: () => Promise<void>;
-}
+export {DatabaseQuery} from './database';
 
 export interface StructuredResponse<T = unknown, R = unknown> {
   code: number;

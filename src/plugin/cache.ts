@@ -15,16 +15,16 @@ export interface ICache {
 export default fp(
   async (fastify: FastifyInstance) => {
     let cacheWrapper: ICache;
-    const cacheConfig = fastify.appConfig?.cache_db;
+    const cacheConfig = fastify.appConfig?.infrastructure?.cache;
 
     if (
       cacheConfig &&
       cacheConfig.engine === 'redis' &&
       cacheConfig.connection &&
-      cacheConfig.connection.uri
+      cacheConfig.connection.url
     ) {
       // Use Redis
-      const redis = new Redis(cacheConfig.connection.uri, {
+      const redis = new Redis(cacheConfig.connection.url, {
         connectTimeout: cacheConfig.timeout ?? 5000,
         retryStrategy: times => Math.min(times * 50, 2000),
         maxRetriesPerRequest: 3,
@@ -45,7 +45,7 @@ export default fp(
       try {
         await redis.ping();
         fastify.log.info(
-          `Redis connection successful to ${cacheConfig.connection.uri}`,
+          `Redis connection successful to ${cacheConfig.connection.url}`,
         );
       } catch (err) {
         fastify.log.error(`Failed to connect to Redis: ${err}`);
