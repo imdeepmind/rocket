@@ -102,11 +102,16 @@ describe('migrateDatabase', () => {
     // Call 2: drizzle.config.ts
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'sqlite'");
-    expect(drizzleConfigContent).toContain('url: "test.db"');
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      {stdio: 'inherit'},
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'test.db'}),
+      }),
     );
   });
 
@@ -154,11 +159,16 @@ describe('migrateDatabase', () => {
 
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
     expect(drizzleConfigContent).toContain("dialect: 'postgresql'");
-    expect(drizzleConfigContent).toContain('url: "postgres://db"');
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
-      {stdio: 'inherit'},
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'postgres://db'}),
+      }),
     );
   });
 
@@ -537,10 +547,10 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain(".onUpdate('set default')");
   });
 
-  it('should escape single quotes in dbUrl in drizzle config', async () => {
+  it('should not write dbUrl with special chars to drizzle config (env var only)', async () => {
+    const urlWithQuotes = "postgres://user:p'ass'word@localhost/db";
     const config = getBaseConfig('postgres');
-    config.infrastructure.primaryDatabase.connection.url =
-      "postgres://user:p'ass'word@localhost/db";
+    config.infrastructure.primaryDatabase.connection.url = urlWithQuotes;
     config.models = [
       {
         name: 'test',
@@ -552,15 +562,25 @@ describe('migrateDatabase', () => {
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    // URL must NOT appear in the config file
+    expect(drizzleConfigContent).not.toContain(urlWithQuotes);
+    // Config uses env var instead
     expect(drizzleConfigContent).toContain(
-      'url: "postgres://user:p\'ass\'word@localhost/db"',
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
+    // URL is passed securely via env
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: urlWithQuotes}),
+      }),
     );
   });
 
-  it('should escape double quotes in dbUrl in drizzle config', async () => {
+  it('should not write dbUrl with double quotes to drizzle config (env var only)', async () => {
+    const urlWithDoubleQuotes = 'sqlite://path/to/"my db".db';
     const config = getBaseConfig('sqlite');
-    config.infrastructure.primaryDatabase.connection.url =
-      'sqlite://path/to/"my db".db';
+    config.infrastructure.primaryDatabase.connection.url = urlWithDoubleQuotes;
     config.models = [
       {
         name: 'test',
@@ -572,8 +592,20 @@ describe('migrateDatabase', () => {
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    // URL must NOT appear in the config file
+    expect(drizzleConfigContent).not.toContain(urlWithDoubleQuotes);
+    // Config uses env var instead
     expect(drizzleConfigContent).toContain(
-      'url: "sqlite://path/to/\\"my db\\".db"',
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
+    // URL is passed securely via env
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          DRIZZLE_DATABASE_URL: urlWithDoubleQuotes,
+        }),
+      }),
     );
   });
 

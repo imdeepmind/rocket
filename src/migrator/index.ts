@@ -184,7 +184,7 @@ async function generateMigrationSQL(
         dialect: '${engine === 'postgres' ? 'postgresql' : 'sqlite'}',
         schema: '${schemaPath}',
         out: '${migrationsPath}',
-        dbCredentials: { url: ${JSON.stringify(dbUrl)} },
+        dbCredentials: { url: process.env.DRIZZLE_DATABASE_URL! },
       });
     `,
     );
@@ -192,6 +192,7 @@ async function generateMigrationSQL(
     // Step 3: spawn drizzle-kit generate
     execSync(`npm run generate:sql -- --config=${configPath} --verbose`, {
       stdio: 'inherit',
+      env: {...process.env, DRIZZLE_DATABASE_URL: dbUrl},
     });
   } catch (error: unknown) {
     console.log('Migration failed to run: ', error);
