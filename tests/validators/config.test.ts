@@ -3156,6 +3156,18 @@ describe('validateInvalidAuthConfig', () => {
         '/authentication/provider/type must be equal to one of the allowed values',
     },
     {
+      name: 'missing provider config',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
+          },
+        },
+      },
+      expected: "/authentication/provider must have required property 'config'",
+    },
+    {
       name: 'providing userModel when provider type is api-key',
       patch: {
         authentication: {

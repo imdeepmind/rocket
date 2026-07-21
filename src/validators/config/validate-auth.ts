@@ -28,6 +28,11 @@ function validateAuthConstraints(config: AppConfig): string[] {
   const providerType = authentication.provider?.type;
   const providerConfig = authentication.provider?.config;
 
+  if (!providerConfig) {
+    errors.push('/authentication/provider/config: provider config is required');
+    return errors;
+  }
+
   if (providerType === 'api-key') {
     const apiConfig = providerConfig as ApiKeyProviderConfig;
 
