@@ -40,7 +40,7 @@ export function registerGetAllRoutes(
     // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
+      config.authentication?.enabled ??
       false;
 
     const schema: Record<string, unknown> = generateSchema(
@@ -55,7 +55,7 @@ export function registerGetAllRoutes(
         schema,
         config: {apiIdentifier},
         preValidation: async (request, reply) => {
-          if (config.auth?.enableAuth && authorization) {
+          if (config.authentication?.enabled && authorization) {
             try {
               await request.authenticate();
             } catch {
@@ -214,16 +214,16 @@ function generateSchema(
   const security: Array<{[key: string]: string[]}> = [];
 
   if (
-    config.auth?.enableAuth &&
-    config.auth?.authEngine === 'up-auth' &&
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'up-auth' &&
     authorization
   ) {
     security.push({bearerAuth: []});
   }
 
   if (
-    config.auth?.enableAuth &&
-    config.auth?.authEngine === 'api-key' &&
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'api-key' &&
     authorization
   ) {
     security.push({apiKeyAuth: []});

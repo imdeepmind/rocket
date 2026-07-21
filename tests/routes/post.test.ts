@@ -1,18 +1,22 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/interfaces/config';
+import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 

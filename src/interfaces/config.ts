@@ -58,7 +58,7 @@ export type JsonSchemaObject = {
   [key: string]: unknown;
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'resp';
-export type AuthEngine = 'api-key' | 'up-auth';
+export type AuthProviderType = 'api-key' | 'up-auth';
 export type SspParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
 
@@ -202,17 +202,37 @@ export interface CustomAPIConfig {
   customQueries?: CustomQueryConfig[];
 }
 
-export interface AuthConfig {
-  enableAuth: boolean;
-  authEngine: AuthEngine;
-  authModel: {
-    modelName: string;
-    idColumn: string;
-    usernameColumn: string;
-    passwordColumn: string;
-  };
-  apiKey?: string;
+export interface UserModelConfig {
+  model: string;
+  idField: string;
+  usernameField: string;
+  passwordField: string;
+}
+
+export interface UpAuthProviderConfig {
+  userModel: UserModelConfig;
   jwtSecret?: string;
+}
+
+export interface ApiKeyProviderConfig {
+  key: string;
+}
+
+export interface UpAuthProvider {
+  type: 'up-auth';
+  config: UpAuthProviderConfig;
+}
+
+export interface ApiKeyProvider {
+  type: 'api-key';
+  config: ApiKeyProviderConfig;
+}
+
+export type AuthProvider = UpAuthProvider | ApiKeyProvider;
+
+export interface AuthenticationConfig {
+  enabled: boolean;
+  provider: AuthProvider;
 }
 
 export interface EmailConfig {
@@ -235,6 +255,6 @@ export interface AppConfig {
   models: ModelConfig[];
   apis?: ApisConfig;
   customAPIs?: CustomAPIConfig;
-  auth?: AuthConfig;
+  authentication?: AuthenticationConfig;
   communicate?: CommunicateConfig;
 }

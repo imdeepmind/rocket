@@ -11,7 +11,7 @@ import {registerLoginRoute} from '@/routes/auth/login';
 
 import {
   AppConfig,
-  AuthConfig,
+  AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
@@ -33,14 +33,18 @@ const authModels: ModelConfig[] = [
   },
 ];
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
@@ -56,7 +60,7 @@ const pgConfig: DatabaseConfig = {
 // ---------------------------------------------------------------------------
 
 async function createAuthApp(
-  auth: AuthConfig,
+  authentication: AuthenticationConfig,
   models: ModelConfig[] = authModels,
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
@@ -72,7 +76,7 @@ async function createAuthApp(
     },
     infrastructure: {primaryDatabase: dbConfig},
     models,
-    auth,
+    authentication,
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -95,9 +99,12 @@ describe('POST /auth/login', () => {
   });
 
   describe('guard conditions', () => {
-    test('should NOT register the route when enableAuth is false', async () => {
-      const auth: AuthConfig = {...upAuthConfig, enableAuth: false};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when enabled is false', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        enabled: false,
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',

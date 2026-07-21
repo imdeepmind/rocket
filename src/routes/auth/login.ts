@@ -7,59 +7,45 @@ import {AppConfig, ModelBody} from '@/interfaces/config';
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register the POST /auth/login route.
- *
- * This route is ONLY registered when:
- *   - auth.enableAuth === true
- *   - auth.authEngine === 'up-auth'
- *
- * @param app     - The Fastify application instance.
- * @param models  - All model configs from the top-level config.
- * @param auth    - The auth block from the app config.
- */
 export function registerLoginRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, auth} = config;
+  const {models, authentication} = config;
 
-  // Guard: only register when up-auth is enabled
-  if (!auth || !auth.enableAuth || auth.authEngine !== 'up-auth') {
+  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
     return;
   }
 
-  const {modelName, usernameColumn, passwordColumn} = auth.authModel;
+  const {model, usernameField, passwordField} =
+    authentication.provider.config.userModel;
 
-  // Find the model config that matches the authModel.modelName
-  const authModelConfig = models.find(m => m.name === modelName);
+  const authModelConfig = models.find(m => m.name === model);
 
   if (!authModelConfig) {
     app.log.warn(
-      `[auth/login] Could not find model config for "${modelName}". Skipping route registration.`,
+      `[auth/login] Could not find model config for "${model}". Skipping route registration.`,
     );
     return;
   }
 
-  // Request body schema for login
   const schema: Record<string, unknown> = generateSchema(
-    usernameColumn,
-    passwordColumn,
-    modelName,
+    usernameField,
+    passwordField,
+    model,
   );
 
   app.post(
     '/auth/login',
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${modelName}->all->login`},
+      config: {apiIdentifier: `authAPIs->${model}->all->login`},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
-      const {[usernameColumn]: username, [passwordColumn]: password} =
+      const {[usernameField]: username, [passwordField]: password} =
         request.body;
 
-      // Find user by username
-      const query = `SELECT * FROM "${modelName}" WHERE "${usernameColumn}" = $1 LIMIT 1;`;
+      const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [username]);
 
       if (res.rows.length === 0) {
@@ -69,9 +55,8 @@ export function registerLoginRoute(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
-      const hashedPassword = user[passwordColumn] as string;
+      const hashedPassword = user[passwordField] as string;
 
-      // Compare passwords
       const isMatch = await compare(String(password), hashedPassword);
 
       if (!isMatch) {
@@ -80,10 +65,11 @@ export function registerLoginRoute(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
-      // We include the user ID and username in the payload
+      const upConfig = authentication.provider
+        .config as import('@/interfaces/config').UpAuthProviderConfig;
       const payload = {
-        id: user[auth.authModel.idColumn],
-        [usernameColumn]: user[usernameColumn],
+        id: user[upConfig.userModel.idField],
+        [usernameField]: user[usernameField],
       };
 
       const token = app.jwt.sign(payload, {
@@ -100,21 +86,20 @@ export function registerLoginRoute(
 }
 
 function generateSchema(
-  usernameColumn: string,
-  passwordColumn: string,
-  modelName: string,
+  usernameField: string,
+  passwordField: string,
+  model: string,
 ) {
   const bodySchema = {
     type: 'object',
-    required: [usernameColumn, passwordColumn],
+    required: [usernameField, passwordField],
     properties: {
-      [usernameColumn]: {type: 'string', description: 'The user identifier'},
-      [passwordColumn]: {type: 'string', description: 'The user password'},
+      [usernameField]: {type: 'string', description: 'The user identifier'},
+      [passwordField]: {type: 'string', description: 'The user password'},
     },
     additionalProperties: false,
   };
 
-  // Response schema for successful login
   const dataSchema = {
     type: 'object',
     properties: {
@@ -124,11 +109,10 @@ function generateSchema(
 
   const responseSchema = getResponseStructureSchema([200], dataSchema);
 
-  // Swagger declaration for this route
   const schema: Record<string, unknown> = {
-    summary: `Login for ${capitalizeFirstLetter(modelName)}`,
-    description: `Authenticates a user from the "${modelName}" table and returns a JWT access token.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Login'],
+    summary: `Login for ${capitalizeFirstLetter(model)}`,
+    description: `Authenticates a user from the "${model}" table and returns a JWT access token.`,
+    tags: [capitalizeFirstLetter(model), 'Auth', 'Login'],
     body: bodySchema,
     response: responseSchema,
   };

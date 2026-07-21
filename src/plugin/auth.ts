@@ -2,13 +2,17 @@ import fastifyJwt from '@fastify/jwt';
 import {FastifyInstance, FastifyRequest} from 'fastify';
 import fp from 'fastify-plugin';
 
+import {UpAuthProviderConfig} from '@/interfaces/config';
+
 export default fp(
   async (fastify: FastifyInstance) => {
-    const authConfig = fastify.appConfig?.auth;
+    const authentication = fastify.appConfig?.authentication;
 
-    if (!authConfig || authConfig.authEngine === 'up-auth') {
+    if (!authentication || authentication.provider.type === 'up-auth') {
+      const upConfig = authentication?.provider
+        .config as UpAuthProviderConfig | null;
       await fastify.register(fastifyJwt, {
-        secret: authConfig?.jwtSecret || 'this-will-never-be-used',
+        secret: upConfig?.jwtSecret || 'this-will-never-be-used',
       });
 
       fastify.decorateRequest(
@@ -19,8 +23,8 @@ export default fp(
           ).jwtVerify();
         },
       );
-    } else if (authConfig.authEngine === 'api-key') {
-      const apiKey = authConfig.apiKey;
+    } else if (authentication.provider.type === 'api-key') {
+      const apiKey = (authentication.provider.config as {key: string}).key;
 
       fastify.decorateRequest(
         'authenticate',

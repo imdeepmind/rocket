@@ -44,7 +44,7 @@ export function registerEditRoutes(
       // if the api level auth is enabled, or if the app level auth is enabled
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??
-        config.auth?.enableAuth ??
+        config.authentication?.enabled ??
         false;
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
@@ -124,16 +124,16 @@ export function registerEditRoutes(
         const security: Array<{[key: string]: string[]}> = [];
 
         if (
-          config.auth?.enableAuth &&
-          config.auth?.authEngine === 'up-auth' &&
+          config.authentication?.enabled &&
+          config.authentication?.provider.type === 'up-auth' &&
           authorization
         ) {
           security.push({bearerAuth: []});
         }
 
         if (
-          config.auth?.enableAuth &&
-          config.auth?.authEngine === 'api-key' &&
+          config.authentication?.enabled &&
+          config.authentication?.provider.type === 'api-key' &&
           authorization
         ) {
           security.push({apiKeyAuth: []});
@@ -225,7 +225,7 @@ export function registerEditRoutes(
           schema: buildRouteSchema('PATCH'),
           config: {apiIdentifier},
           preValidation: async (request, reply) => {
-            if (config.auth?.enableAuth && authorization) {
+            if (config.authentication?.enabled && authorization) {
               try {
                 await request.authenticate();
               } catch {
@@ -258,7 +258,7 @@ export function registerEditRoutes(
           schema: buildRouteSchema('PUT'),
           config: {apiIdentifier},
           preValidation: async (request, reply) => {
-            if (config.auth?.enableAuth && authorization) {
+            if (config.authentication?.enabled && authorization) {
               try {
                 await request.authenticate();
               } catch {

@@ -44,16 +44,20 @@ describe('Auth Plugin — up-auth engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'up-auth',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            jwtSecret: 'custom-secret-key',
+          },
         },
-        jwtSecret: 'custom-secret-key',
       },
     };
     await app.register(authPlugin);
@@ -128,16 +132,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 
@@ -173,16 +175,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 
@@ -222,16 +222,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 

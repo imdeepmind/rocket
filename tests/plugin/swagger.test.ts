@@ -55,14 +55,18 @@ describe('Swagger Plugin', () => {
   it('should include bearerAuth security scheme when up-auth is enabled', async () => {
     const app = Fastify();
     app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
-    app.appConfig.auth = {
-      enableAuth: true,
-      authEngine: 'up-auth',
-      authModel: {
-        modelName: 'users',
-        idColumn: 'id',
-        usernameColumn: 'email',
-        passwordColumn: 'password',
+    app.appConfig.authentication = {
+      enabled: true,
+      provider: {
+        type: 'up-auth',
+        config: {
+          userModel: {
+            model: 'users',
+            idField: 'id',
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
       },
     };
     await app.register(swaggerPlugin);
@@ -84,16 +88,14 @@ describe('Swagger Plugin', () => {
   it('should include apiKeyAuth security scheme when api-key is enabled', async () => {
     const app = Fastify();
     app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
-    app.appConfig.auth = {
-      enableAuth: true,
-      authEngine: 'api-key',
-      authModel: {
-        modelName: 'users',
-        idColumn: 'id',
-        usernameColumn: 'email',
-        passwordColumn: 'password',
+    app.appConfig.authentication = {
+      enabled: true,
+      provider: {
+        type: 'api-key',
+        config: {
+          key: 'test-key',
+        },
       },
-      apiKey: 'test-key',
     };
     await app.register(swaggerPlugin);
     await app.ready();

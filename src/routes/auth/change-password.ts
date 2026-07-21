@@ -11,30 +11,30 @@ export function registerChangePasswordRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, auth} = config;
+  const {models, authentication} = config;
 
-  // Guard: only register when up-auth is enabled
-  if (!auth || !auth.enableAuth || auth.authEngine !== 'up-auth') {
+  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
     return;
   }
 
-  const {modelName, idColumn, passwordColumn} = auth.authModel;
+  const {model, idField, passwordField} =
+    authentication.provider.config.userModel;
 
-  const authModelConfig = models.find(m => m.name === modelName);
+  const authModelConfig = models.find(m => m.name === model);
   if (!authModelConfig) {
     app.log.warn(
-      `[auth/change-password] Could not find model config for "${modelName}". Skipping route registration.`,
+      `[auth/change-password] Could not find model config for "${model}". Skipping route registration.`,
     );
     return;
   }
 
-  const schema: Record<string, unknown> = generateSchema(modelName);
+  const schema: Record<string, unknown> = generateSchema(model);
 
   app.post(
     '/auth/change-password',
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${modelName}->all->changePassword`},
+      config: {apiIdentifier: `authAPIs->${model}->all->changePassword`},
       preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
         try {
           await request.authenticate();
@@ -57,7 +57,6 @@ export function registerChangePasswordRoute(
         string
       >;
 
-      // Extract user info from JWT payload
       const userPayload = request.user as Record<string, unknown>;
       const userId = userPayload.id;
 
@@ -69,8 +68,7 @@ export function registerChangePasswordRoute(
           );
       }
 
-      // Find user by ID
-      const query = `SELECT * FROM "${modelName}" WHERE "${idColumn}" = $1 LIMIT 1;`;
+      const query = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [userId]);
 
       if (res.rows.length === 0) {
@@ -80,9 +78,8 @@ export function registerChangePasswordRoute(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
-      const currentHashedPassword = user[passwordColumn] as string;
+      const currentHashedPassword = user[passwordField] as string;
 
-      // Verify existing password
       const isMatch = await compare(
         String(existingPassword),
         currentHashedPassword,
@@ -93,11 +90,9 @@ export function registerChangePasswordRoute(
           .send(app.buildResponse(401, 'Invalid existing password', null));
       }
 
-      // Hash the new password
       const newHashedPassword = await hash(String(newPassword));
 
-      // Update the password
-      const updateQuery = `UPDATE "${modelName}" SET "${passwordColumn}" = $1 WHERE "${idColumn}" = $2;`;
+      const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${idField}" = $2;`;
       await app.db.query(updateQuery, [newHashedPassword, userId]);
 
       return reply.status(200).send(
@@ -109,7 +104,7 @@ export function registerChangePasswordRoute(
   );
 }
 
-function generateSchema(modelName: string) {
+function generateSchema(model: string) {
   const bodySchema = {
     type: 'object',
     required: ['existingPassword', 'newPassword'],
@@ -134,9 +129,9 @@ function generateSchema(modelName: string) {
   });
 
   const schema: Record<string, unknown> = {
-    summary: `Change password for ${capitalizeFirstLetter(modelName)}`,
-    description: `Changes the password for an authenticated user in the "${modelName}" table.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Password'],
+    summary: `Change password for ${capitalizeFirstLetter(model)}`,
+    description: `Changes the password for an authenticated user in the "${model}" table.`,
+    tags: [capitalizeFirstLetter(model), 'Auth', 'Password'],
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

@@ -9,7 +9,7 @@ import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {
   AppConfig,
-  AuthConfig,
+  AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
@@ -39,15 +39,18 @@ const authModels: ModelConfig[] = [
   },
 ];
 
-/** auth config that enables up-auth pointing at the "users" model. */
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
@@ -63,7 +66,7 @@ const pgConfig: DatabaseConfig = {
 // ---------------------------------------------------------------------------
 
 async function createAuthApp(
-  auth: AuthConfig,
+  authentication: AuthenticationConfig,
   models: ModelConfig[] = authModels,
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
@@ -79,7 +82,7 @@ async function createAuthApp(
     },
     infrastructure: {primaryDatabase: dbConfig},
     models,
-    auth,
+    authentication,
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -106,9 +109,12 @@ describe('POST /auth/register', () => {
   // -------------------------------------------------------------------------
 
   describe('guard conditions', () => {
-    test('should NOT register the route when enableAuth is false', async () => {
-      const auth: AuthConfig = {...upAuthConfig, enableAuth: false};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when enabled is false', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        enabled: false,
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',
@@ -122,9 +128,12 @@ describe('POST /auth/register', () => {
       await app.close();
     });
 
-    test('should NOT register the route when authEngine is not "up-auth"', async () => {
-      const auth: AuthConfig = {...upAuthConfig, authEngine: 'api-key'};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when provider type is not "up-auth"', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        provider: {type: 'api-key', config: {key: 'xxx'}},
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',
@@ -137,7 +146,7 @@ describe('POST /auth/register', () => {
       await app.close();
     });
 
-    test('should NOT register the route and log a warning when modelName is not found in models', async () => {
+    test('should NOT register the route and log a warning when model is not found in models', async () => {
       // Pass an empty models array so the "users" model cannot be found
       const app = await createAuthApp(upAuthConfig, []);
 
@@ -446,14 +455,18 @@ describe('POST /auth/register', () => {
       },
     ];
 
-    const customAuth: AuthConfig = {
-      enableAuth: true,
-      authEngine: 'up-auth',
-      authModel: {
-        modelName: 'accounts',
-        idColumn: 'account_id',
-        usernameColumn: 'username',
-        passwordColumn: 'secret',
+    const customAuth: AuthenticationConfig = {
+      enabled: true,
+      provider: {
+        type: 'up-auth',
+        config: {
+          userModel: {
+            model: 'accounts',
+            idField: 'account_id',
+            usernameField: 'username',
+            passwordField: 'secret',
+          },
+        },
       },
     };
 

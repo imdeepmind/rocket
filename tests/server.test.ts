@@ -443,14 +443,18 @@ describe('Server', () => {
     it('should register auth plugin when auth is configured', async () => {
       const configWithAuth: AppConfig = {
         ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
           },
         },
       };

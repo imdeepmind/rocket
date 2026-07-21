@@ -92,7 +92,7 @@ export async function startServer(
   await app.register(responsePlugin);
   await app.register(sspPlugin);
   await app.register(webhookPlugin);
-  if (config.auth) {
+  if (config.authentication) {
     await app.register(authPlugin);
   }
   // register swagger
@@ -109,7 +109,7 @@ export async function startServer(
   registerRoutes(app, config);
 
   // register auth routes (only when up-auth is configured)
-  if (config.auth) {
+  if (config.authentication) {
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);

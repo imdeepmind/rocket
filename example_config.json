@@ -45,16 +45,20 @@
             "timeout": 5000
         }
     },
-    "auth": {
-        "enableAuth": true,
-        "authEngine": "up-auth",
-        "authModel": {
-            "modelName": "users",
-            "idColumn": "id",
-            "usernameColumn": "email",
-            "passwordColumn": "password"
-        },
-        "jwtSecret": "your-super-secret-key"
+    "authentication": {
+        "enabled": true,
+        "provider": {
+            "type": "up-auth",
+            "config": {
+                "userModel": {
+                    "model": "users",
+                    "idField": "id",
+                    "usernameField": "email",
+                    "passwordField": "password"
+                },
+                "jwtSecret": "your-super-secret-key"
+            }
+        }
     },
     "communicate": {
         "email": {

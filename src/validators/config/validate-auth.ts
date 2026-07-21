@@ -1,89 +1,118 @@
-import {AppConfig} from '@/interfaces/config';
+import {
+  ApiKeyProviderConfig,
+  AppConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
+
+function isUpAuthConfig(
+  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
+): config is UpAuthProviderConfig {
+  return config !== undefined && 'userModel' in config;
+}
+
+function isApiKeyConfig(
+  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
+): config is ApiKeyProviderConfig {
+  return config !== undefined && 'key' in config;
+}
 
 function validateAuthConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  // if authModel is api-key, then apiKey is required
-  if (config.auth?.authEngine === 'api-key' && !config.auth?.apiKey) {
-    errors.push('/auth/apiKey: apiKey is required when authEngine is api-key');
+  const authentication = config.authentication;
+
+  if (!authentication) {
+    return errors;
   }
 
-  // if authModel is api-key, then authModel should not be present
-  if (config.auth?.authEngine === 'api-key' && config.auth?.authModel) {
-    errors.push(
-      '/auth/authModel: authModel should not be present when authEngine is api-key',
-    );
-  }
+  const providerType = authentication.provider?.type;
+  const providerConfig = authentication.provider?.config;
 
-  // if authModel is up-auth, then authModel is required
-  if (config.auth?.authEngine === 'up-auth' && !config.auth?.authModel) {
-    errors.push(
-      '/auth/authModel: authModel is required when authEngine is up-auth',
-    );
-  }
+  if (providerType === 'api-key') {
+    const apiConfig = providerConfig as ApiKeyProviderConfig;
 
-  // if authModel is up-auth, then jwtSecret is required
-  if (config.auth?.authEngine === 'up-auth' && !config.auth?.jwtSecret) {
-    errors.push(
-      '/auth/jwtSecret: jwtSecret is required when authEngine is up-auth',
-    );
-  }
-
-  // if authModel is api-key, then jwtSecret should not be present
-  if (config.auth?.authEngine === 'api-key' && config.auth?.jwtSecret) {
-    errors.push(
-      '/auth/jwtSecret: jwtSecret should not be present when authEngine is api-key',
-    );
-  }
-
-  // if authModel is up-auth, then apiKey should not be present
-  if (config.auth?.authEngine === 'up-auth' && config.auth?.apiKey) {
-    errors.push(
-      '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
-    );
-  }
-
-  // check if authModel.modelName exists in models
-  if (config.auth?.authEngine === 'up-auth' && config.auth?.authModel) {
-    if (
-      config.auth?.authModel.modelName &&
-      !config.models.some(m => m.name === config.auth?.authModel.modelName)
-    ) {
-      errors.push('/auth/authModel/modelName: model does not exist');
-    }
-
-    // check if authModel.idColumn exists in models
-    if (
-      config.auth?.authModel.idColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.idColumn),
-      )
-    ) {
-      errors.push('/auth/authModel/idColumn: field does not exist in model');
-    }
-
-    // check if authModel.usernameColumn exists in models
-    if (
-      config.auth?.authModel.usernameColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.usernameColumn),
-      )
-    ) {
+    if (!apiConfig.key) {
       errors.push(
-        '/auth/authModel/usernameColumn: field does not exist in model',
+        '/authentication/provider/config/key: key is required when provider type is api-key',
       );
     }
 
-    // check if authModel.passwordColumn exists in models
-    if (
-      config.auth?.authModel.passwordColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.passwordColumn),
-      )
-    ) {
+    if (isUpAuthConfig(providerConfig)) {
       errors.push(
-        '/auth/authModel/passwordColumn: field does not exist in model',
+        '/authentication/provider/config/userModel: userModel should not be present when provider type is api-key',
       );
+    }
+
+    if ((providerConfig as UpAuthProviderConfig)?.jwtSecret) {
+      errors.push(
+        '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
+      );
+    }
+  }
+
+  if (providerType === 'up-auth') {
+    const upConfig = providerConfig as UpAuthProviderConfig;
+
+    if (!upConfig.userModel) {
+      errors.push(
+        '/authentication/provider/config/userModel: userModel is required when provider type is up-auth',
+      );
+    }
+
+    if (!upConfig.jwtSecret) {
+      errors.push(
+        '/authentication/provider/config/jwtSecret: jwtSecret is required when provider type is up-auth',
+      );
+    }
+
+    if (isApiKeyConfig(providerConfig)) {
+      errors.push(
+        '/authentication/provider/config/key: key should not be present when provider type is up-auth',
+      );
+    }
+
+    if (upConfig.userModel) {
+      if (
+        upConfig.userModel.model &&
+        !config.models.some(m => m.name === upConfig.userModel.model)
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/model: model does not exist',
+        );
+      }
+
+      if (
+        upConfig.userModel.idField &&
+        !config.models.some(m =>
+          m.fields.some(f => f.name === upConfig.userModel.idField),
+        )
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/idField: field does not exist in model',
+        );
+      }
+
+      if (
+        upConfig.userModel.usernameField &&
+        !config.models.some(m =>
+          m.fields.some(f => f.name === upConfig.userModel.usernameField),
+        )
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+        );
+      }
+
+      if (
+        upConfig.userModel.passwordField &&
+        !config.models.some(m =>
+          m.fields.some(f => f.name === upConfig.userModel.passwordField),
+        )
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/passwordField: field does not exist in model',
+        );
+      }
     }
   }
 

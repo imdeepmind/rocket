@@ -5,11 +5,14 @@ import fp from 'fastify-plugin';
 
 export default fp(
   async (fastify: FastifyInstance) => {
-    const {docs: docsConfig, auth} = fastify.appConfig;
+    const {docs: docsConfig, authentication} = fastify.appConfig;
     const swaggerConfig = docsConfig.openapi;
     const components: Record<string, unknown> = {};
 
-    if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
+    if (
+      authentication?.enabled &&
+      authentication?.provider.type === 'up-auth'
+    ) {
       components['securitySchemes'] = {
         bearerAuth: {
           type: 'http',
@@ -19,7 +22,7 @@ export default fp(
       };
     }
 
-    if (auth?.enableAuth && auth.authEngine === 'api-key') {
+    if (authentication?.enabled && authentication.provider.type === 'api-key') {
       components['securitySchemes'] = {
         apiKeyAuth: {
           type: 'apiKey',

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 
-import {AuthConfig, CustomAPIConfig} from '@/interfaces/config';
+import {AuthenticationConfig, CustomAPIConfig} from '@/interfaces/config';
 
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
@@ -24,14 +24,18 @@ describe('test custom-queries api', () => {
     ],
   };
 
-  const upAuthConfig: AuthConfig = {
-    enableAuth: true,
-    authEngine: 'up-auth',
-    authModel: {
-      modelName: 'users',
-      idColumn: 'id',
-      usernameColumn: 'email',
-      passwordColumn: 'password',
+  const upAuthConfig: AuthenticationConfig = {
+    enabled: true,
+    provider: {
+      type: 'up-auth',
+      config: {
+        userModel: {
+          model: 'users',
+          idField: 'id',
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
     },
   };
 
@@ -286,16 +290,12 @@ describe('test custom-queries api', () => {
     });
 
     test('should register security schema when api-key auth is enabled', async () => {
-      const apiKeyAuthConfig: AuthConfig = {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      const apiKeyAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {key: 'test-key-123'},
         },
-        apiKey: 'test-key-123',
       };
 
       const fastify = await createTestApp(
