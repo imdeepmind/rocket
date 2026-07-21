@@ -11,7 +11,18 @@ export function resolveEnvVars<T>(config: T): T {
   if (typeof config === 'string') {
     if (config.startsWith('env:')) {
       const envVarName = config.substring(4);
-      return (process.env[envVarName] || config) as unknown as T;
+      if (envVarName === '' || envVarName.trim() === '') {
+        throw new Error(
+          `Config error: "${config}" has an empty environment variable name`,
+        );
+      }
+      const value = process.env[envVarName];
+      if (value === undefined) {
+        throw new Error(
+          `Config error: environment variable "${envVarName}" (referenced as "${config}") is not set`,
+        );
+      }
+      return value as unknown as T;
     }
     return config;
   }

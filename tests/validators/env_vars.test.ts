@@ -86,7 +86,7 @@ describe('Config Environment Variable Resolution', () => {
     );
   });
 
-  it('should leave env:VAR if environment variable is not set', () => {
+  it('should throw if environment variable is not set', () => {
     delete process.env.NON_EXISTENT_VAR;
 
     const config: AppConfig = {
@@ -101,9 +101,8 @@ describe('Config Environment Variable Resolution', () => {
       },
     };
 
-    const resolved = resolveEnvVars(config);
-    // This should probably fail validation if the value is required and invalid
-    // But for resolution, it stays as is.
-    expect(() => validateConfig(resolved)).toThrow();
+    expect(() => resolveEnvVars(config)).toThrow(
+      'environment variable "NON_EXISTENT_VAR"',
+    );
   });
 });
