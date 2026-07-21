@@ -72,46 +72,47 @@ function validateAuthConstraints(config: AppConfig): string[] {
     }
 
     if (upConfig.userModel) {
-      if (
-        upConfig.userModel.model &&
-        !config.models.some(m => m.name === upConfig.userModel.model)
-      ) {
+      const targetModel = upConfig.userModel.model
+        ? config.models.find(m => m.name === upConfig.userModel.model)
+        : undefined;
+
+      if (upConfig.userModel.model && !targetModel) {
         errors.push(
           '/authentication/provider/config/userModel/model: model does not exist',
         );
       }
 
-      if (
-        upConfig.userModel.idField &&
-        !config.models.some(m =>
-          m.fields.some(f => f.name === upConfig.userModel.idField),
-        )
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/idField: field does not exist in model',
-        );
-      }
+      if (targetModel) {
+        if (
+          upConfig.userModel.idField &&
+          !targetModel.fields.some(f => f.name === upConfig.userModel.idField)
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/idField: field does not exist in model',
+          );
+        }
 
-      if (
-        upConfig.userModel.usernameField &&
-        !config.models.some(m =>
-          m.fields.some(f => f.name === upConfig.userModel.usernameField),
-        )
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/usernameField: field does not exist in model',
-        );
-      }
+        if (
+          upConfig.userModel.usernameField &&
+          !targetModel.fields.some(
+            f => f.name === upConfig.userModel.usernameField,
+          )
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+          );
+        }
 
-      if (
-        upConfig.userModel.passwordField &&
-        !config.models.some(m =>
-          m.fields.some(f => f.name === upConfig.userModel.passwordField),
-        )
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/passwordField: field does not exist in model',
-        );
+        if (
+          upConfig.userModel.passwordField &&
+          !targetModel.fields.some(
+            f => f.name === upConfig.userModel.passwordField,
+          )
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/passwordField: field does not exist in model',
+          );
+        }
       }
     }
   }

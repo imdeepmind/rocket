@@ -3294,6 +3294,50 @@ describe('validateInvalidAuthConfig', () => {
         '/authentication/provider/config/userModel/passwordField: field does not exist in model',
     },
     {
+      name: 'idField exists in a different model, not the specified model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'user_id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'xxx',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/idField: field does not exist in model',
+    },
+    {
+      name: 'usernameField exists in a different model, not the specified model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'posts',
+                idField: 'user_id',
+                usernameField: 'name',
+                passwordField: 'body',
+              },
+              jwtSecret: 'xxx',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+    },
+    {
       name: 'providing key when provider type is up-auth',
       patch: {
         authentication: {
