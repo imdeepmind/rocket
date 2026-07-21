@@ -75,7 +75,9 @@ export async function startServer(
   await app.register(dbPlugin);
 
   // config-driven cache (Redis or NodeCache)
-  await app.register(cachePlugin);
+  if (config.infrastructure.cache) {
+    await app.register(cachePlugin);
+  }
 
   // config-driven communicate
   if (config.communicate) {
