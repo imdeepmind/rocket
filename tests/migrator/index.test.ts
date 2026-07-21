@@ -60,6 +60,8 @@ describe('migrateDatabase', () => {
           {name: 'username', type: 'string', unique: true, nullable: false},
           {name: 'bio', type: 'text', default: 'hello'},
           {name: 'createdAt', type: 'datetime'},
+          {name: 'price', type: 'decimal'},
+          {name: 'birthDate', type: 'date'},
           // @ts-expect-error testing fallback condition
           {name: 'unknown', type: 'unknown_type'},
         ],
@@ -93,6 +95,8 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain(
       "createdAt: integer('createdAt', { mode: 'timestamp' })",
     );
+    expect(schemaContent).toContain("price: real('price')");
+    expect(schemaContent).toContain("birthDate: text('birthDate')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain(
       "uniqueIndex('username_idx').on(t.username)",
@@ -127,6 +131,8 @@ describe('migrateDatabase', () => {
           {name: 'body', type: 'text', default: 'content'},
           {name: 'published', type: 'boolean'},
           {name: 'updatedAt', type: 'datetime'},
+          {name: 'price', type: 'decimal'},
+          {name: 'birthDate', type: 'date'},
           // @ts-expect-error testing fallback condition
           {name: 'unknown', type: 'unknown_type'},
         ],
@@ -153,6 +159,8 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain('body: text(\'body\').default("content")');
     expect(schemaContent).toContain("published: boolean('published')");
     expect(schemaContent).toContain("updatedAt: timestamp('updatedAt')");
+    expect(schemaContent).toContain("price: doublePrecision('price')");
+    expect(schemaContent).toContain("birthDate: date('birthDate')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain("uniqueIndex('title_idx').on(t.title)");
     expect(schemaContent).toContain("index('body_idx').on(t.body)");
