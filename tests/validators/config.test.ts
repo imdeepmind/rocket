@@ -9,6 +9,7 @@ import {
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
+import validateAuthConstraints from '@/validators/config/validate-auth';
 
 const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
@@ -3511,7 +3512,7 @@ describe('validateInvalidAuthConfig', () => {
                 model: 'users',
                 idField: 'id',
                 usernameField: 'name',
-                passwordField: null,
+                passwordField: 789,
               },
               jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
@@ -3599,6 +3600,143 @@ describe('validateValidAuthConfig', () => {
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateAuthConstraints directly (bypass AJV)', () => {
+  it('should catch missing providerConfig', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: undefined as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config: provider config is required',
+    );
+  });
+
+  it('should catch non-string idField', () => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          name: 'users',
+          fields: [
+            {name: 'id', type: 'integer', primaryKey: true},
+            {name: 'name', type: 'string'},
+          ],
+        },
+      ],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 123,
+              usernameField: 'name',
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/idField: must be a string',
+    );
+  });
+
+  it('should catch non-string usernameField', () => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          name: 'users',
+          fields: [
+            {name: 'id', type: 'integer', primaryKey: true},
+            {name: 'name', type: 'string'},
+          ],
+        },
+      ],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 456,
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/usernameField: must be a string',
+    );
+  });
+
+  it('should catch non-string passwordField', () => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          name: 'users',
+          fields: [
+            {name: 'id', type: 'integer', primaryKey: true},
+            {name: 'name', type: 'string'},
+          ],
+        },
+      ],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 789,
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/passwordField: must be a string',
+    );
   });
 });
 

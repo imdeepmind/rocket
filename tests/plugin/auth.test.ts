@@ -4,6 +4,8 @@ import {describe, expect, it} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
 
+import {AuthenticationConfig} from '@/interfaces/config';
+
 describe('Auth Plugin — up-auth engine', () => {
   it('should register @fastify/jwt and expose jwt decorator', async () => {
     const app = Fastify();
@@ -251,5 +253,37 @@ describe('Auth Plugin — api-key engine', () => {
     });
     expect(res.statusCode).toBe(401);
     expect(res.json()).toEqual({ok: false});
+  });
+});
+
+describe('Auth Plugin — unknown provider type', () => {
+  it('should fall through without error when provider type is unknown', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
+      models: [],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'oauth',
+          config: {},
+        },
+      } as unknown as AuthenticationConfig,
+    };
+    await app.register(authPlugin);
+    await app.ready();
+
+    // JWT should not be registered since it's not up-auth
+    expect(app.jwt).toBeUndefined();
   });
 });
