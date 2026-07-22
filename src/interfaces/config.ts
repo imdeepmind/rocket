@@ -212,6 +212,7 @@ export interface UserModelConfig {
 export interface UpAuthProviderConfig {
   userModel: UserModelConfig;
   jwtSecret?: string;
+  tokenExpiration?: string;
 }
 
 export interface ApiKeyProviderConfig {

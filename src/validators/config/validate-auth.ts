@@ -87,9 +87,36 @@ function validateAuthConstraints(config: AppConfig): string[] {
         );
       }
 
+      if (
+        upConfig.userModel.idField &&
+        typeof upConfig.userModel.idField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/idField: must be a string',
+        );
+      }
+
+      if (
+        upConfig.userModel.usernameField &&
+        typeof upConfig.userModel.usernameField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/usernameField: must be a string',
+        );
+      }
+
+      if (
+        upConfig.userModel.passwordField &&
+        typeof upConfig.userModel.passwordField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/passwordField: must be a string',
+        );
+      }
+
       if (targetModel) {
         if (
-          upConfig.userModel.idField &&
+          typeof upConfig.userModel.idField === 'string' &&
           !targetModel.fields.some(f => f.name === upConfig.userModel.idField)
         ) {
           errors.push(
@@ -98,7 +125,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
         }
 
         if (
-          upConfig.userModel.usernameField &&
+          typeof upConfig.userModel.usernameField === 'string' &&
           !targetModel.fields.some(
             f => f.name === upConfig.userModel.usernameField,
           )
@@ -109,7 +136,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
         }
 
         if (
-          upConfig.userModel.passwordField &&
+          typeof upConfig.userModel.passwordField === 'string' &&
           !targetModel.fields.some(
             f => f.name === upConfig.userModel.passwordField,
           )

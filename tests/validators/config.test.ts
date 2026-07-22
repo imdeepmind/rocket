@@ -3231,7 +3231,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'name',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3253,7 +3253,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'name',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3275,7 +3275,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'invalid',
                 passwordField: 'name',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3297,7 +3297,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'invalid',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3319,7 +3319,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'name',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3341,7 +3341,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'body',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
           },
         },
@@ -3363,7 +3363,7 @@ describe('validateInvalidAuthConfig', () => {
                 usernameField: 'invalid',
                 passwordField: 'name',
               },
-              jwtSecret: 'xxx',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
               key: 'xxx',
             },
           },
@@ -3402,13 +3402,124 @@ describe('validateInvalidAuthConfig', () => {
             type: 'api-key',
             config: {
               key: 'xxx',
-              jwtSecret: 'should-not-be-here',
+              jwtSecret: 'this-key-should-not-be-here-in-api-key-config',
             },
           },
         },
       },
       expected:
         '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
+    },
+    {
+      name: 'jwtSecret too short',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'too-short',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/jwtSecret must NOT have fewer than 32 characters',
+    },
+    {
+      name: 'invalid tokenExpiration pattern',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              tokenExpiration: '2x',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/tokenExpiration must match pattern',
+    },
+    {
+      name: 'non-string idField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 123,
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/idField must be string',
+    },
+    {
+      name: 'non-string usernameField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: false,
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/usernameField must be string',
+    },
+    {
+      name: 'non-string passwordField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: null,
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/passwordField must be string',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -3452,7 +3563,28 @@ describe('validateValidAuthConfig', () => {
                 usernameField: 'name',
                 passwordField: 'name',
               },
-              jwtSecret: 'my-secret-key',
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid up-auth auth config with tokenExpiration',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              tokenExpiration: '2h',
             },
           },
         },

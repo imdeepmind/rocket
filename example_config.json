@@ -56,7 +56,7 @@
                     "usernameField": "email",
                     "passwordField": "password"
                 },
-                "jwtSecret": "your-super-secret-key"
+                "jwtSecret": "your-super-secret-key-must-be-long-enough"
             }
         }
     },

@@ -73,7 +73,7 @@ export function registerLoginRoute(
       };
 
       const token = app.jwt.sign(payload, {
-        expiresIn: '1d',
+        expiresIn: upConfig.tokenExpiration || '1d',
       });
 
       return reply.status(200).send(

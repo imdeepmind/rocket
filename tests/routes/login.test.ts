@@ -157,6 +157,94 @@ describe('POST /auth/login', () => {
       expect(compareSpy).toHaveBeenCalledWith('p@ssw0rd', 'hashed_password');
       await app.close();
     });
+
+    test('should use custom tokenExpiration when configured', async () => {
+      const authWithExpiration: AuthenticationConfig = {
+        ...upAuthConfig,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            tokenExpiration: '2h',
+          },
+        },
+      };
+      const app = await createAuthApp(authWithExpiration);
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.data.accessToken).toBeDefined();
+
+      const secret = 'this-will-never-be-used';
+      const decoded = jwt.verify(body.data.accessToken, secret) as Record<
+        string,
+        unknown
+      >;
+      expect(decoded.id).toBe(1);
+      expect(decoded.email).toBe('alice@example.com');
+
+      // Verify expiration is ~2 hours from iat (within a small tolerance)
+      const iat = decoded.iat as number;
+      const exp = decoded.exp as number;
+      const diffSeconds = exp - iat;
+      // 2 hours = 7200 seconds, allow 1 second tolerance
+      expect(diffSeconds).toBe(7200);
+
+      await app.close();
+    });
+
+    test('should use default 1d expiration when tokenExpiration not set', async () => {
+      const app = await createAuthApp(upAuthConfig);
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.data.accessToken).toBeDefined();
+
+      const secret = 'this-will-never-be-used';
+      const decoded = jwt.verify(body.data.accessToken, secret) as Record<
+        string,
+        unknown
+      >;
+      // 1 day = 86400 seconds, allow 1 second tolerance
+      const iat = decoded.iat as number;
+      const exp = decoded.exp as number;
+      expect(exp - iat).toBe(86400);
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {

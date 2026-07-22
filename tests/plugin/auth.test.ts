@@ -55,7 +55,7 @@ describe('Auth Plugin — up-auth engine', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
-            jwtSecret: 'custom-secret-key',
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
           },
         },
       },

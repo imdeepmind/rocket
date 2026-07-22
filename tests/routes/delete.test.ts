@@ -290,5 +290,39 @@ describe('test delete api', () => {
       expect(response.statusCode).toBe(401);
       await fastify.close();
     });
+
+    test('should skip auth check when authentication.enabled is false', async () => {
+      const disabledAuth: AuthenticationConfig = {
+        enabled: false,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        disabledAuth,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      // Should succeed because authentication is disabled, auth check is skipped
+      expect(response.statusCode).toBe(204);
+      await fastify.close();
+    });
   });
 });

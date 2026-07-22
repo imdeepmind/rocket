@@ -484,7 +484,11 @@ const authenticationSchema = {
             userModel: userModelSchema,
             jwtSecret: {
               type: 'string',
-              minLength: 1,
+              minLength: 32,
+            },
+            tokenExpiration: {
+              type: 'string',
+              pattern: '^\\d+[smhd]$',
             },
             key: {
               type: 'string',
