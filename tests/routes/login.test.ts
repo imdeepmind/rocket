@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import bcrypt from 'bcrypt';
 import Fastify, {FastifyInstance} from 'fastify';
 import jwt from 'jsonwebtoken';
@@ -5,6 +7,7 @@ import {beforeEach, describe, expect, test, vi} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
 import {registerLoginRoute} from '@/routes/auth/login';
@@ -56,7 +59,7 @@ const pgConfig: DatabaseConfig = {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: create a bare Fastify instance with the login route wired up
+// Helpers: create a bare Fastify instance with the login route wired up
 // ---------------------------------------------------------------------------
 
 async function createAuthApp(
@@ -82,6 +85,56 @@ async function createAuthApp(
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
+
+  registerLoginRoute(app, config);
+  await app.ready();
+  return app;
+}
+
+async function createAuthAppWithMfa(
+  authentication: AuthenticationConfig,
+  models: ModelConfig[] = authModels,
+  dbConfig: DatabaseConfig = pgConfig,
+): Promise<FastifyInstance> {
+  const app = Fastify();
+  const config: AppConfig = {
+    application: {name: 'Test App', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
+    },
+    infrastructure: {primaryDatabase: dbConfig},
+    models,
+    authentication,
+  };
+  app.appConfig = config;
+
+  const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
+  (app as any).cache = {
+    get: vi.fn(async (key: string) => {
+      const item = cacheStorage.get(key);
+      if (!item) return null;
+      return item.value;
+    }),
+    set: vi.fn(async (key: string, value: unknown, ttlSeconds?: number) => {
+      const expiry = ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined;
+      cacheStorage.set(key, {value, expiry});
+    }),
+    delete: vi.fn(async (key: string) => {
+      cacheStorage.delete(key);
+    }),
+  };
+  (app as any).communicate = {
+    sendEmail: vi.fn(async () => {}),
+  };
+
+  await app.register(databasePlugin);
+  await app.register(responsePlugin);
+  await app.register(authPlugin);
+  await app.register(otpPlugin);
 
   registerLoginRoute(app, config);
   await app.ready();
@@ -242,6 +295,91 @@ describe('POST /auth/login', () => {
       const iat = decoded.iat as number;
       const exp = decoded.exp as number;
       expect(exp - iat).toBe(86400);
+
+      await app.close();
+    });
+  });
+
+  describe('MFA login flow', () => {
+    test('should return requiresMfa and ulid when mfaRequired is true', async () => {
+      const mfaAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            mfaRequired: true,
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(mfaAuthConfig);
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+        ],
+        rowCount: 1,
+      });
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('Login successful. OTP sent to your email.');
+      expect(body.data.requiresMfa).toBe(true);
+      expect(typeof body.data.ulid).toBe('string');
+      expect(body.data.ulid.length).toBeGreaterThan(0);
+      expect(body.data.accessToken).toBeUndefined();
+
+      await app.close();
+    });
+
+    test('should return 401 when MFA required and password is wrong', async () => {
+      const mfaAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            mfaRequired: true,
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(mfaAuthConfig);
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+        ],
+        rowCount: 1,
+      });
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {email: 'alice@example.com', password: 'wrong'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('Invalid username or password');
 
       await app.close();
     });

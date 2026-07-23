@@ -6,7 +6,12 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
+import {
+  AppConfig,
+  ModelBody,
+  ModelConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
 
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -32,10 +37,14 @@ export function registerRegistrationRoute(
     return;
   }
 
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
+  const requiresOtp = !!upConfig.userModel.isVerifiedField;
+
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     passwordField,
     model,
+    requiresOtp,
   );
 
   app.post(
@@ -64,6 +73,23 @@ export function registerRegistrationRoute(
 
       const res = await app.db.query(query, values);
 
+      if (requiresOtp) {
+        const usernameField = upConfig.userModel.usernameField;
+        const userEmail = String(incomingBody[usernameField]);
+        const ulid = await app.otp.sendOTPForVerification(userEmail);
+
+        return reply
+          .status(201)
+          .send(
+            app.buildResponse(
+              201,
+              'Registration successful. OTP sent to your email.',
+              {requiresMfa: true, ulid},
+              res,
+            ),
+          );
+      }
+
       const responseData: ModelBody = {};
       for (const [k, v] of Object.entries(body)) {
         if (k !== passwordField) {
@@ -89,28 +115,30 @@ function generateSchema(
   authModelConfig: ModelConfig,
   passwordField: string,
   model: string,
+  requiresOtp: boolean = false,
 ) {
   const bodySchema = generateJSONValidationSchema(authModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
   });
 
-  const authModelConfigWithoutPassword = {...authModelConfig};
-  authModelConfigWithoutPassword['fields'] = authModelConfigWithoutPassword[
-    'fields'
-  ].filter(f => f.name !== passwordField);
-  const requiredBodySchema = generateJSONValidationSchema(
-    authModelConfigWithoutPassword,
-    {
-      ignorePrimaryKey: true,
-      additionalProperties: false,
-    },
-  );
+  const responseData = requiresOtp
+    ? {
+        type: 'object',
+        properties: {requiresMfa: {type: 'boolean'}, ulid: {type: 'string'}},
+      }
+    : generateJSONValidationSchema(
+        {
+          ...authModelConfig,
+          fields: authModelConfig.fields.filter(f => f.name !== passwordField),
+        },
+        {ignorePrimaryKey: true, additionalProperties: false},
+      );
 
   const responseSchema = getResponseStructureSchema(
     [201],
-    requiredBodySchema,
-    requiredBodySchema,
+    responseData,
+    responseData,
   );
 
   const schema: Record<string, unknown> = {

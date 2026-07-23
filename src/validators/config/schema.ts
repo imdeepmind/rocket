@@ -457,6 +457,11 @@ const userModelSchema = {
       isEntityName: true,
       minLength: 1,
     },
+    isVerifiedField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
   },
 };
 
@@ -489,6 +494,9 @@ const authenticationSchema = {
             tokenExpiration: {
               type: 'string',
               pattern: '^\\d+[smhd]$',
+            },
+            mfaRequired: {
+              type: 'boolean',
             },
             key: {
               type: 'string',

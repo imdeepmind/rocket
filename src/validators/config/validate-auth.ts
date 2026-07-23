@@ -70,6 +70,19 @@ function validateAuthConstraints(config: AppConfig): string[] {
       );
     }
 
+    if (upConfig.mfaRequired) {
+      if (!config.infrastructure?.cache) {
+        errors.push(
+          '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
+        );
+      }
+      if (!config.communicate) {
+        errors.push(
+          '/authentication/provider/config/mfaRequired: communicate must be configured when mfaRequired is true',
+        );
+      }
+    }
+
     if (isApiKeyConfig(providerConfig)) {
       errors.push(
         '/authentication/provider/config/key: key should not be present when provider type is up-auth',
@@ -114,6 +127,15 @@ function validateAuthConstraints(config: AppConfig): string[] {
         );
       }
 
+      if (
+        upConfig.userModel.isVerifiedField &&
+        typeof upConfig.userModel.isVerifiedField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/isVerifiedField: must be a string',
+        );
+      }
+
       if (targetModel) {
         if (
           typeof upConfig.userModel.idField === 'string' &&
@@ -143,6 +165,31 @@ function validateAuthConstraints(config: AppConfig): string[] {
         ) {
           errors.push(
             '/authentication/provider/config/userModel/passwordField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.isVerifiedField === 'string' &&
+          !targetModel.fields.some(
+            f => f.name === upConfig.userModel.isVerifiedField,
+          )
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.isVerifiedField === 'string' &&
+          targetModel.fields.some(
+            f => f.name === upConfig.userModel.isVerifiedField,
+          ) &&
+          targetModel.fields.find(
+            f => f.name === upConfig.userModel.isVerifiedField,
+          )?.type !== 'boolean'
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
           );
         }
       }

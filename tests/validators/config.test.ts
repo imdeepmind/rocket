@@ -3522,6 +3522,143 @@ describe('validateInvalidAuthConfig', () => {
       expected:
         '/authentication/provider/config/userModel/passwordField must be string',
     },
+    {
+      name: 'mfaRequired not boolean',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: 'yes',
+            },
+          },
+        },
+      },
+      expected: '/authentication/provider/config/mfaRequired must be boolean',
+    },
+    {
+      name: 'mfaRequired true but no cache configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
+    },
+    {
+      name: 'mfaRequired true but no communicate configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/mfaRequired: communicate must be configured when mfaRequired is true',
+    },
+    {
+      name: 'non-string isVerifiedField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 123,
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField must be string',
+    },
+    {
+      name: 'isVerifiedField field does not exist in model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'nonexistent',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
+    },
+    {
+      name: 'isVerifiedField field is not boolean type',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'posts',
+                idField: 'user_id',
+                usernameField: 'title',
+                passwordField: 'body',
+                isVerifiedField: 'title',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
+    },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3591,9 +3728,84 @@ describe('validateValidAuthConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+    {
+      name: 'valid up-auth auth config with mfaRequired false',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: false,
+            },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid up-auth auth config with mfaRequired true',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      extra: {
+        cache: {
+          engine: 'redis' as const,
+          connection: {url: 'redis://localhost:6379'},
+        },
+        communicate: {email: {emailEngine: 'dummy' as const}},
+      },
+    },
+    {
+      name: 'valid up-auth auth config with isVerifiedField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+    },
+  ])('Scenario: $name -> should return', ({patch, extra}) => {
+    const base = {...validBaseConfig};
+    if (extra) {
+      base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      base.communicate = extra.communicate;
+    }
     const config = {
-      ...validBaseConfig,
+      ...base,
       authentication: patch.authentication as unknown as NonNullable<
         typeof validBaseConfig.authentication
       >,

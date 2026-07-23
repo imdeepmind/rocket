@@ -10,6 +10,7 @@ import authPlugin from '@/plugin/auth';
 import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
@@ -19,6 +20,10 @@ import webhookPlugin from '@/plugin/webhook';
 import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {
+  registerLoginOtpVerifyRoute,
+  registerRegistrationOtpVerifyRoute,
+} from '@/routes/auth/otp-verify';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/interfaces';
@@ -95,6 +100,14 @@ export async function startServer(
   if (config.authentication) {
     await app.register(authPlugin);
   }
+  // config-driven OTP (required for MFA)
+  if (
+    config.authentication?.provider.type === 'up-auth' &&
+    (config.authentication.provider.config as {mfaRequired?: boolean})
+      ?.mfaRequired
+  ) {
+    await app.register(otpPlugin);
+  }
   // register swagger
   if (config.docs.openapi.enabled) {
     await app.register(swaggerPlugin);
@@ -113,6 +126,8 @@ export async function startServer(
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
+    registerLoginOtpVerifyRoute(app, config);
+    registerRegistrationOtpVerifyRoute(app, config);
   }
 
   // Global error handler

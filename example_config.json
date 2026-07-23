@@ -54,9 +54,11 @@
                     "model": "users",
                     "idField": "id",
                     "usernameField": "email",
-                    "passwordField": "password"
+                    "passwordField": "password",
+                    "isVerifiedField": "is_active"
                 },
-                "jwtSecret": "your-super-secret-key-must-be-long-enough"
+                "jwtSecret": "your-super-secret-key-must-be-long-enough",
+                "mfaRequired": true
             }
         }
     },

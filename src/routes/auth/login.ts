@@ -2,7 +2,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/interfaces/config';
+import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -29,10 +29,13 @@ export function registerLoginRoute(
     return;
   }
 
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
+
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     passwordField,
     model,
+    upConfig.mfaRequired ?? false,
   );
 
   app.post(
@@ -65,8 +68,18 @@ export function registerLoginRoute(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
-      const upConfig = authentication.provider
-        .config as import('@/interfaces/config').UpAuthProviderConfig;
+      if (upConfig.mfaRequired) {
+        const userEmail = String(user[usernameField]);
+        const ulid = await app.otp.sendOTPForVerification(userEmail);
+
+        return reply.status(200).send(
+          app.buildResponse(200, 'Login successful. OTP sent to your email.', {
+            requiresMfa: true,
+            ulid,
+          }),
+        );
+      }
+
       const payload = {
         id: user[upConfig.userModel.idField],
         [usernameField]: user[usernameField],
@@ -89,6 +102,7 @@ function generateSchema(
   usernameField: string,
   passwordField: string,
   model: string,
+  mfaRequired: boolean,
 ) {
   const bodySchema = {
     type: 'object',
@@ -100,11 +114,19 @@ function generateSchema(
     additionalProperties: false,
   };
 
-  const dataSchema = {
+  const dataSchema: Record<string, unknown> = {
     type: 'object',
-    properties: {
-      accessToken: {type: 'string', description: 'JWT access token'},
-    },
+    properties: mfaRequired
+      ? {
+          requiresMfa: {
+            type: 'boolean',
+            description: 'Indicates MFA is required',
+          },
+          ulid: {type: 'string', description: 'OTP verification ULID'},
+        }
+      : {
+          accessToken: {type: 'string', description: 'JWT access token'},
+        },
   };
 
   const responseSchema = getResponseStructureSchema([200], dataSchema);

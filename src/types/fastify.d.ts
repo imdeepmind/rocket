@@ -46,5 +46,6 @@ declare module 'fastify' {
         body: string,
       ) => Promise<void>;
     };
+    otp: import('@/interfaces/otp').IOtpService;
   }
 }

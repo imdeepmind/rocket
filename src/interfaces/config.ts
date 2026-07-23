@@ -207,12 +207,14 @@ export interface UserModelConfig {
   idField: string;
   usernameField: string;
   passwordField: string;
+  isVerifiedField?: string;
 }
 
 export interface UpAuthProviderConfig {
   userModel: UserModelConfig;
   jwtSecret?: string;
   tokenExpiration?: string;
+  mfaRequired?: boolean;
 }
 
 export interface ApiKeyProviderConfig {
