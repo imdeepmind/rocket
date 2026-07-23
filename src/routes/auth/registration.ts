@@ -39,12 +39,14 @@ export function registerRegistrationRoute(
 
   const upConfig = authentication.provider.config as UpAuthProviderConfig;
   const requiresOtp = !!upConfig.userModel.isVerifiedField;
+  const isVerifiedField = upConfig.userModel.isVerifiedField;
 
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     passwordField,
     model,
     requiresOtp,
+    isVerifiedField,
   );
 
   app.post(
@@ -63,6 +65,10 @@ export function registerRegistrationRoute(
       if (body[passwordField] !== undefined && body[passwordField] !== null) {
         const rawPassword = String(body[passwordField]);
         body[passwordField] = await hash(rawPassword);
+      }
+
+      if (isVerifiedField) {
+        body[isVerifiedField] = false;
       }
 
       const keys = Object.keys(body);
@@ -116,8 +122,18 @@ function generateSchema(
   passwordField: string,
   model: string,
   requiresOtp: boolean = false,
+  isVerifiedField?: string,
 ) {
-  const bodySchema = generateJSONValidationSchema(authModelConfig, {
+  const bodyModelConfig =
+    requiresOtp && isVerifiedField
+      ? {
+          ...authModelConfig,
+          fields: authModelConfig.fields.filter(
+            f => f.name !== isVerifiedField,
+          ),
+        }
+      : authModelConfig;
+  const bodySchema = generateJSONValidationSchema(bodyModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
   });

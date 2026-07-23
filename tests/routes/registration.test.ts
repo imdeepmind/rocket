@@ -604,5 +604,53 @@ describe('POST /auth/register', () => {
 
       await app.close();
     });
+
+    test('should strip isVerifiedField from body and force to false in INSERT query', async () => {
+      const otpAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+              isVerifiedField: 'is_active',
+            },
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(otpAuthConfig);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'bob@example.com',
+          password: 'secret',
+          name: 'Bob',
+          is_active: true,
+        },
+      });
+
+      // is_active is silently stripped/overridden; registration proceeds
+      expect(response.statusCode).toBe(201);
+
+      // Verify the INSERT query includes is_active = false
+      const insertCall = pgQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return typeof query === 'string' && (query as string).includes('INSERT');
+      });
+      expect(insertCall).toBeDefined();
+      const [insertQuery, insertValues] = insertCall as [string, unknown[]];
+      expect(insertQuery).toContain('"is_active"');
+      const isActiveIdx = insertValues.findIndex(v => v === false);
+      expect(isActiveIdx).toBeGreaterThanOrEqual(0);
+      expect(insertValues[isActiveIdx]).toBe(false);
+
+      await app.close();
+    });
+
   });
 });
