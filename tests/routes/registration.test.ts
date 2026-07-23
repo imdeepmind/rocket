@@ -640,7 +640,9 @@ describe('POST /auth/register', () => {
       // Verify the INSERT query includes is_active = false
       const insertCall = pgQueryMock.mock.calls.find(call => {
         const [query] = call;
-        return typeof query === 'string' && (query as string).includes('INSERT');
+        return (
+          typeof query === 'string' && (query as string).includes('INSERT')
+        );
       });
       expect(insertCall).toBeDefined();
       const [insertQuery, insertValues] = insertCall as [string, unknown[]];
@@ -651,6 +653,5 @@ describe('POST /auth/register', () => {
 
       await app.close();
     });
-
   });
 });
