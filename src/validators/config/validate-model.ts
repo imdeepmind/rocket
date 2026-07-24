@@ -71,7 +71,7 @@ function mapModelTypeToJsonSchema(type: string): string {
 
 function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
   const normalized = JSON.parse(JSON.stringify(schema));
-  if (normalized.properties && typeof normalized.properties === 'object') {
+  if (normalized.properties) {
     Object.keys(normalized.properties).forEach(key => {
       const prop = (
         normalized.properties as Record<string, JsonSchemaProperty>
@@ -120,7 +120,7 @@ function validateFieldConstraints(config: AppConfig): string[] {
 
       // Validate operations against allowed list for this type
       if (operations) {
-        const allowed = ALLOWED_OPERATIONS[type] ?? [];
+        const allowed = ALLOWED_OPERATIONS[type]!;
         operations.forEach(op => {
           if (!allowed.includes(op)) {
             errors.push(
@@ -132,7 +132,7 @@ function validateFieldConstraints(config: AppConfig): string[] {
 
       // Validate aggregations against allowed list for this type
       if (aggregations) {
-        const allowed = ALLOWED_AGGREGATIONS[type] ?? [];
+        const allowed = ALLOWED_AGGREGATIONS[type]!;
         aggregations.forEach(agg => {
           if (!allowed.includes(agg)) {
             errors.push(
@@ -162,8 +162,9 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
     const normalizedSchema = normalizeSchemaForAjv(schema);
     const isValidSchema = ajv.validateSchema(normalizedSchema);
     if (!isValidSchema) {
-      const schemaErrors =
-        ajv.errors?.map(e => `${path}: ${e.instancePath} ${e.message}`) ?? [];
+      const schemaErrors = ajv.errors!.map(
+        e => `${path}: ${e.instancePath} ${e.message}`,
+      );
       errors.push(...schemaErrors);
     }
 
@@ -172,7 +173,7 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
     );
 
     // properties validation
-    if (schema.properties && typeof schema.properties === 'object') {
+    if (schema.properties) {
       Object.entries(schema.properties).forEach(([key, value]) => {
         const propPath = `${path}/properties/${key}`;
 
@@ -196,10 +197,7 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
             (schemaType === 'datetime' || schemaType === 'date-time') &&
             (expectedType === 'datetime' || expectedType === 'date-time');
 
-          const isJustDateMatch =
-            schemaType === 'date' && expectedType === 'date';
-
-          if (!isDateMatch && !isJustDateMatch) {
+          if (!isDateMatch) {
             errors.push(
               `${propPath}: type mismatch (model=${modelType}, schema=${schemaType})`,
             );

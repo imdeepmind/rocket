@@ -909,7 +909,7 @@ describe('validateValidModelFieldsConfig', () => {
       ...validBaseConfig,
       data: {
         models: {
-          test: patch as ModelConfig,
+          test: patch as unknown as ModelConfig,
         },
       },
     };
@@ -1015,7 +1015,7 @@ describe('validateValidModelIndexesConfig', () => {
       ...validBaseConfig,
       data: {
         models: {
-          test: patch as ModelConfig,
+          test: patch as unknown as ModelConfig,
         },
       },
     };
@@ -1101,6 +1101,22 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/id: type mismatch (model=integer, schema=string)',
     },
+    {
+      name: 'date field with mismatched schema type',
+      patch: {
+        table: 'test',
+        fields: {eventDate: {type: 'date'}},
+        validation: {
+          type: 'object',
+          required: ['eventDate'],
+          properties: {
+            eventDate: {type: 'string'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
+    },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1171,12 +1187,81 @@ describe('validateValidModelValidationConfig', () => {
         fields: {id: {type: 'integer'}},
       },
     },
+    {
+      name: 'valid model with decimal and date fields',
+      patch: {
+        table: 'test',
+        fields: {
+          id: {type: 'integer'},
+          price: {type: 'decimal'},
+          eventDate: {type: 'date'},
+        },
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {type: 'integer'},
+            price: {type: 'number'},
+            eventDate: {type: 'date'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model without validation required',
+      patch: {
+        table: 'test',
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: {type: 'integer'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with validation but no properties',
+      patch: {
+        table: 'test',
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+        },
+      },
+    },
+    {
+      name: 'valid model with boolean schema property',
+      patch: {
+        table: 'test',
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: true,
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with schema property without type',
+      patch: {
+        table: 'test',
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: {minimum: 1},
+          },
+        },
+      },
+    },
   ])('Scenario: $name -> should return the same config', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
         models: {
-          test: patch as ModelConfig,
+          test: patch as unknown as ModelConfig,
         },
       },
     };

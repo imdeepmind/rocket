@@ -634,4 +634,96 @@ describe('migrateDatabase', () => {
 
     expect(schemaContent).not.toContain('foreignKey(');
   });
+
+  it('should generate schema with autoIncrement and timestamps for sqlite', async () => {
+    const config = getBaseConfig('sqlite');
+    config.data.models = {
+      records: {
+        table: 'records',
+        timestamps: true,
+        fields: {
+          id: {type: 'integer', primaryKey: true, autoIncrement: true},
+          label: {type: 'string', nullable: false},
+        },
+      },
+    };
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain('.primaryKey({ autoIncrement: true })');
+    expect(schemaContent).toContain(".default(sql`(datetime('now'))`)");
+  });
+
+  it('should generate schema with autoIncrement and timestamps for postgres', async () => {
+    const config = getBaseConfig('postgres');
+    config.data.models = {
+      records: {
+        table: 'records',
+        timestamps: true,
+        fields: {
+          id: {type: 'integer', primaryKey: true, autoIncrement: true},
+          label: {type: 'string', nullable: false},
+        },
+      },
+    };
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain('.primaryKey()');
+    expect(schemaContent).toContain('.default(sql`now()`)');
+  });
+
+  it('should not overwrite created_at when timestamps is true and field already exists', async () => {
+    const config = getBaseConfig('sqlite');
+    config.data.models = {
+      records: {
+        table: 'records',
+        timestamps: true,
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          created_at: {type: 'datetime'}, // already defined by user
+        },
+      },
+    };
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    // created_at from user definition is preserved (branch: already exists, skip)
+    expect(schemaContent).toContain("created_at: integer('created_at'");
+    // updated_at is injected by timestamps
+    expect(schemaContent).toContain("updated_at: integer('updated_at'");
+  });
+
+  it('should not overwrite updated_at when timestamps is true and field already exists', async () => {
+    const config = getBaseConfig('sqlite');
+    config.data.models = {
+      records: {
+        table: 'records',
+        timestamps: true,
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          updated_at: {type: 'datetime'}, // already defined by user
+        },
+      },
+    };
+
+    await migrateDatabase(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    // created_at is injected by timestamps
+    expect(schemaContent).toContain("created_at: integer('created_at'");
+    // updated_at from user definition is preserved
+    expect(schemaContent).toContain("updated_at: integer('updated_at'");
+  });
 });

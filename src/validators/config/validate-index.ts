@@ -6,19 +6,10 @@ function validateIndexes(config: AppConfig): string[] {
   Object.entries(config.data.models).forEach(([modelName, model]) => {
     if (!model.indexes) return;
 
-    const indexNames = new Set<string>();
-
     Object.entries(model.indexes).forEach(([indexName, index]) => {
       const indexPath = `/data/models/${modelName}/indexes/${indexName}`;
 
-      // 1. unique index name
-      if (indexNames.has(indexName)) {
-        errors.push(`${indexPath}: duplicate index name "${indexName}"`);
-      } else {
-        indexNames.add(indexName);
-      }
-
-      // 2. fields must exist
+      // fields must exist
       index.fields.forEach(col => {
         if (!(col in model.fields)) {
           errors.push(
