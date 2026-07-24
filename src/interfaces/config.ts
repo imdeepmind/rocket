@@ -239,10 +239,10 @@ export interface AuthenticationConfig {
 }
 
 export interface EmailConfig {
-  emailEngine: EmailEngine;
+  provider: EmailEngine;
 }
 
-export interface CommunicateConfig {
+export interface IntegrationsConfig {
   email?: EmailConfig;
 }
 
@@ -259,5 +259,5 @@ export interface AppConfig {
   apis?: ApisConfig;
   customAPIs?: CustomAPIConfig;
   authentication?: AuthenticationConfig;
-  communicate?: CommunicateConfig;
+  integrations?: IntegrationsConfig;
 }

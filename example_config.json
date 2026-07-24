@@ -62,9 +62,9 @@
             }
         }
     },
-    "communicate": {
+    "integrations": {
         "email": {
-            "emailEngine": "dummy"
+            "provider": "dummy"
         }
     },
     "models": [

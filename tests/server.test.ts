@@ -479,9 +479,9 @@ describe('Server', () => {
             connection: {url: 'redis://localhost:6379'},
           },
         },
-        communicate: {
+        integrations: {
           email: {
-            emailEngine: 'dummy',
+            provider: 'dummy',
           },
         },
         authentication: {
@@ -509,24 +509,24 @@ describe('Server', () => {
     });
   });
 
-  describe('Communicate Configuration', () => {
-    it('should register communicate plugin when communicate is configured', async () => {
-      const configWithCommunicate: AppConfig = {
+  describe('Integrations Configuration', () => {
+    it('should register communicate plugin when integrations.email is configured', async () => {
+      const configWithIntegrations: AppConfig = {
         ...mockConfig,
-        communicate: {
+        integrations: {
           email: {
-            emailEngine: 'dummy',
+            provider: 'dummy',
           },
         },
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithCommunicate, 3000, 'dev');
+      await startServer(configWithIntegrations, 3000, 'dev');
 
       expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
     });
 
-    it('should not register communicate plugin when communicate is not configured', async () => {
+    it('should not register communicate plugin when integrations.email is not configured', async () => {
       const registerMock = mockApp.register;
       await startServer(mockConfig, 3000, 'dev');
 

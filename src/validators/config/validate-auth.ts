@@ -76,11 +76,17 @@ function validateAuthConstraints(config: AppConfig): string[] {
           '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
         );
       }
-      if (!config.communicate) {
+      if (!config.integrations?.email) {
         errors.push(
-          '/authentication/provider/config/mfaRequired: communicate must be configured when mfaRequired is true',
+          '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
         );
       }
+    }
+
+    if (upConfig.userModel?.isVerifiedField && !config.integrations?.email) {
+      errors.push(
+        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
+      );
     }
 
     if (isApiKeyConfig(providerConfig)) {
