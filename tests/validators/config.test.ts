@@ -3950,6 +3950,45 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       '/authentication/provider/config/userModel/passwordField: must be a string',
     );
   });
+
+  it('should catch non-string isVerifiedField', () => {
+    const config = {
+      ...validBaseConfig,
+      models: [
+        {
+          name: 'users',
+          fields: [
+            {name: 'id', type: 'integer', primaryKey: true},
+            {name: 'name', type: 'string'},
+          ],
+        },
+      ],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 'name',
+              isVerifiedField: 123,
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/isVerifiedField: must be a string',
+    );
+  });
 });
 
 // check invalid ssp configs

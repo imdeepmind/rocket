@@ -9,6 +9,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import migrateDatabase from '@/migrator/index';
 import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
+import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
@@ -466,6 +467,45 @@ describe('Server', () => {
       expect(registerMock).toHaveBeenCalledWith(
         expect.any(Function), // authPlugin
       );
+    });
+
+    it('should register otp plugin when auth is up-auth with mfaRequired', async () => {
+      const configWithMfa: AppConfig = {
+        ...mockConfig,
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+        communicate: {
+          email: {
+            emailEngine: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithMfa, 3000, 'dev');
+
+      expect(registerMock).toHaveBeenCalledWith(otpPlugin);
     });
   });
 
