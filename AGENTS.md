@@ -6,16 +6,14 @@ Config-driven REST API framework. TypeScript, Fastify 5, PostgreSQL/SQLite, Vite
 
 | Command | Action |
 |---|---|
-| `npm test` | Runs `pretest` (compile) → vitest → `posttest` (lint check). **Avoid for quick iteration.** |
-| `npx vitest run` | Tests only, no hooks. Add `tests/path.test.ts` for a single file, `-t "name"` for a pattern. |
-| `npm run compile` | `tsc && tsc-alias` — type-check + build. Required before running compiled output. |
-| `npm run coverage` | Full test suite with coverage (thresholds: lines 95%, funcs 100%, branches 90%, stmts 95%). |
-| `npm run lint:check` | ESLint via gts (Google TypeScript Style). |
-| `npm run lint:write` | Fix linting issues. |
-| `npm run dev` | `tsx watch ./src/main.ts` — hot-reload dev server. Pass flags like `-- -c config.json`. |
-| `npm run generate:sql` | `drizzle-kit push` — push schema to DB (only for migrations). |
+| `./dev.sh dev` | Run dev server with `--config example_config.json` |
+| `./dev.sh coverage` | Full test suite with coverage |
+| `./dev.sh test` | Run tests |
+| `./dev.sh check` | Compile + coverage + lint:write |
+| `./dev.sh db` | Start redis and db Docker containers |
+| `./dev.sh csserve` | Serve coverage report via HTTP |
 
-**Husky pre-commit** runs `lint:check → compile → coverage` — slow. Use `git commit --no-verify` to skip.
+Run `./dev.sh check` after every change before committing.
 
 ## Testing
 
