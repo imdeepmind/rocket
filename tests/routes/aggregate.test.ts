@@ -5,25 +5,23 @@ import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-const aggregateModel: ModelConfig[] = [
-  {
-    name: 'sales',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {
-        name: 'amount',
+const aggregateModel: Record<string, ModelConfig> = {
+  sales: {
+    table: 'sales',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      amount: {
         type: 'integer',
-        supportedAggregation: ['mean', 'max', 'min', 'sum', 'count'],
+        aggregations: ['avg', 'max', 'min', 'sum', 'count'],
       },
-      {
-        name: 'category',
+      category: {
         type: 'string',
-        supportedAggregation: ['frequency'],
+        aggregations: ['frequency'],
       },
-      {name: 'date', type: 'string'}, // No aggregation
-    ],
+      date: {type: 'string'}, // No aggregation
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -48,7 +46,7 @@ describe('test aggregate api', () => {
   describe('happy path', () => {
     test('should return 200 with all numeric aggregations', async () => {
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{mean: 50, max: 100, min: 10, sum: 500, count: 10}],
+        rows: [{avg: 50, max: 100, min: 10, sum: 500, count: 10}],
         rowCount: 1,
       });
 
@@ -56,12 +54,12 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=mean,max,min,sum,count',
+        url: '/sales/aggregation/amount?operations=avg,max,min,sum,count',
       });
 
       expect(response.statusCode).toBe(200);
       const data = response.json().data;
-      expect(data.mean).toBe(50);
+      expect(data.avg).toBe(50);
       expect(data.max).toBe(100);
       expect(data.min).toBe(10);
       expect(data.sum).toBe(500);
@@ -133,22 +131,21 @@ describe('test aggregate api', () => {
       // It will do two queries: one for numeric, one for frequency, if both are supported.
       // Wait, 'amount' does not support frequency in our config. Let's make a combined field locally.
 
-      const combinedModel: ModelConfig[] = [
-        {
-          name: 'stats',
-          fields: [
-            {
-              name: 'score',
+      const combinedModel: Record<string, ModelConfig> = {
+        stats: {
+          table: 'stats',
+          fields: {
+            score: {
               type: 'integer',
-              supportedAggregation: ['mean', 'frequency'],
+              aggregations: ['avg', 'frequency'],
             },
-          ],
+          },
         },
-      ];
+      };
 
       // First call: numeric aggregation
       pgQueryMock.mockResolvedValueOnce({
-        rows: [{mean: 85}],
+        rows: [{avg: 85}],
         rowCount: 1,
       });
       // Second call: frequency aggregation
@@ -164,12 +161,12 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/stats/aggregation/score?operations=mean,frequency',
+        url: '/stats/aggregation/score?operations=avg,frequency',
       });
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data).toEqual({
-        mean: 85,
+        avg: 85,
         frequency: {'80': 2, '90': 1},
       });
 

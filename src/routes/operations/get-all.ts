@@ -20,7 +20,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
  *   GET /{model}/
  *
  * Query params:
- *   - Filter params for ALL fields based on their supportedOperations
+ *   - Filter params for ALL fields based on their operations
  *   - orderBy / orderDir for sortable fields
  *   - page / limit for pagination
  */
@@ -28,16 +28,11 @@ export function registerGetAllRoutes(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  // We're iterating over all models provided in the configuration.
-  // For each model, we'll check if there are any fields that support the 'gettable' operation.
-  const {models} = config;
+  const {models} = config.data;
 
-  for (const model of models) {
-    // constructing the api identifier
-    const apiIdentifier = `modelAPIs->${model.name}->all->getAll`;
+  for (const [modelName, model] of Object.entries(models)) {
+    const apiIdentifier = `modelAPIs->${modelName}->all->getAll`;
 
-    // calculating the authroization based on auth flag, it can be true
-    // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??
       config.authentication?.enabled ??
@@ -45,12 +40,13 @@ export function registerGetAllRoutes(
 
     const schema: Record<string, unknown> = generateSchema(
       model,
+      modelName,
       config,
       authorization,
     );
 
     app.get(
-      `/${model.name}/`,
+      `/${modelName}/`,
       {
         schema,
         config: {apiIdentifier},
@@ -82,16 +78,14 @@ export function registerGetAllRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         console.log(request.user);
         const queryParams = request.query as Record<string, unknown>;
-        const tableName = model.name;
+        const tableName = modelName;
 
-        // building the base SELECT query to fetch all columns
         let query = `SELECT * FROM "${tableName}"`;
         const values: unknown[] = [];
         let paramIndex = 1;
 
         const whereClauses: string[] = [];
 
-        // building the WHERE clause based on the filters passed in the query string
         const {
           whereClauses: filterClauses,
           values: filterValues,
@@ -102,7 +96,6 @@ export function registerGetAllRoutes(
         values.push(...filterValues);
         paramIndex = nextParamIndex;
 
-        // if any filters are present, append them to the query
         if (whereClauses.length > 0) {
           query += ` WHERE ${whereClauses.join(' AND ')}`;
         }
@@ -114,12 +107,10 @@ export function registerGetAllRoutes(
         );
         const total = Number(countRes.rows[0]?.total || 0);
 
-        // if orderBy is provided, append the ORDER BY clause
         if (queryParams.orderBy) {
           query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
         }
 
-        // calculating page, limit and offset for pagination
         const page = Math.max(Number(queryParams.page) || 1, 1);
         const limit = Math.min(
           Math.max(Number(queryParams.limit) || 20, 10),
@@ -127,21 +118,18 @@ export function registerGetAllRoutes(
         );
         const offset = (page - 1) * limit;
 
-        // appending LIMIT and OFFSET to the query using parameterized values for security
         query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
         values.push(limit, offset);
 
-        // executing the final query on the database
         const res = await app.db.query(query, values);
 
-        // returning the standardized response using app.buildResponse
         return reply.status(200).send(
           app.buildResponse(
             200,
             `Successfully retrieved records from the ${tableName} table`,
             {
-              data: res.rows || [], // returning the rows (or an empty array if none found)
-              pagination: {page, limit, total}, // including the pagination metadata
+              data: res.rows || [],
+              pagination: {page, limit, total},
             },
             res,
           ),
@@ -152,42 +140,32 @@ export function registerGetAllRoutes(
 }
 function generateSchema(
   model: ModelConfig,
+  modelName: string,
   config: AppConfig,
   authorization: boolean,
 ) {
   const queryProperties: Record<string, object> = {};
 
-  // Add filter params for each field based on its supportedOperations
-  for (const field of model.fields) {
-    // we are building the query parameter names based on the supported operations
-    // for example if there is a field called "status" with supported operations includes equal
-    // then in the query string, user can pass "status=active" to filter the data
-    Object.assign(queryProperties, buildFilterQueryProperties(field));
+  for (const [fName, f] of Object.entries(model.fields)) {
+    Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
   }
 
-  // if "sortable" is included in the supportedOperations, then we add sort parameters
-  // two query parameters are added: "orderBy" (field name) and "orderDir" ("asc" or "desc")
-  const sortableFields = model.fields
-    .filter(f => f.supportedOperations?.includes('sortable'))
-    .map(f => f.name);
+  const sortableFields = Object.entries(model.fields)
+    .filter(([, f]) => f.operations?.includes('sort'))
+    .map(([fName]) => fName);
   Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 
-  // finally adding pagination parameters: "page" and "limit"
-  // defaults are page 1 and limit 20
   Object.assign(queryProperties, paginationQueryProperties);
 
   const schema: Record<string, unknown> = {
-    summary: `Get all ${capitalizeFirstLetter(model.name)} records`,
-    description: `Get all ${model.name} records from the database`,
-    tags: [capitalizeFirstLetter(model.name), 'Read'],
-    // defining the schema for query parameters we built above
+    summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
+    description: `Get all ${modelName} records from the database`,
+    tags: [capitalizeFirstLetter(modelName), 'Read'],
     querystring: {
       type: 'object',
       properties: queryProperties,
       additionalProperties: false,
     },
-    // generating the JSON schema for the response
-    // it includes the record data array and pagination metadata
     response: getResponseStructureSchema(
       [200],
       {

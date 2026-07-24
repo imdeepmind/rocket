@@ -11,7 +11,8 @@ export function registerLoginRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, authentication} = config;
+  const {authentication} = config;
+  const {models} = config.data;
 
   if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
     return;
@@ -20,7 +21,7 @@ export function registerLoginRoute(
   const {model, usernameField, passwordField} =
     authentication.provider.config.userModel;
 
-  const authModelConfig = models.find(m => m.name === model);
+  const authModelConfig = models[model];
 
   if (!authModelConfig) {
     app.log.warn(

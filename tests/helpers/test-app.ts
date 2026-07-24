@@ -18,34 +18,30 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-export const mockModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'name', type: 'string'},
-      {name: 'email', type: 'string'},
-    ],
+export const mockModels: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {type: 'integer', primaryKey: true, autoIncrement: true},
+      name: {type: 'string'},
+      email: {type: 'string'},
+    },
   },
-];
+};
 
 export const pgConfig: DatabaseConfig = {
   engine: 'postgres',
-  connection: {
-    url: 'postgresql://postgres:postgres@localhost:5432/postgres',
-  },
+  connection: {url: 'postgresql://postgres:postgres@localhost:5432/postgres'},
 };
 
 export const sqliteConfig: DatabaseConfig = {
   engine: 'sqlite',
-  connection: {
-    url: ':memory:',
-  },
+  connection: {url: ':memory:'},
 };
 
 export async function createTestApp(
   dbConfig: DatabaseConfig,
-  models: ModelConfig[] = [],
+  models: Record<string, ModelConfig> = {},
   apis?: ApisConfig,
   customAPIs?: CustomAPIConfig,
   authentication?: AuthenticationConfig,
@@ -60,7 +56,7 @@ export async function createTestApp(
       },
     },
     infrastructure: {primaryDatabase: dbConfig},
-    models,
+    data: {models},
     apis,
     customAPIs,
     authentication,
@@ -76,7 +72,7 @@ export async function createTestApp(
   await fastify.register(webhookPlugin);
   await fastify.register(authPlugin);
 
-  if (models.length > 0 || apis || customAPIs) {
+  if (Object.keys(models).length > 0 || apis || customAPIs) {
     registerRoutes(fastify, appConfig);
   }
   await fastify.ready();

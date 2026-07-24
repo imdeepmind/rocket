@@ -20,51 +20,42 @@ const upAuthConfig: AuthenticationConfig = {
   },
 };
 
-const defaultEditModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const defaultEditModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['editable'],
+        operations: ['edit'],
       },
-      {name: 'name', type: 'string'},
-      {name: 'email', type: 'string'},
-    ],
+      name: {type: 'string'},
+      email: {type: 'string'},
+    },
   },
-];
+};
 
-const nonUniqueEditModel: ModelConfig[] = [
-  {
-    name: 'tasks',
-    fields: [
-      {
-        name: 'id',
+const nonUniqueEditModel: Record<string, ModelConfig> = {
+  tasks: {
+    table: 'tasks',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'lessThan',
-          'lessThanEqual',
-          'greaterThan',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        operations: ['lt', 'lte', 'gt', 'gte', 'in'],
       },
-      {
-        name: 'status',
+      status: {
         type: 'string',
-        supportedOperations: ['editable', 'equal', 'lessThan'], // Non-unique identifier
+        operations: ['edit', 'eq', 'lt'], // Non-unique identifier
       },
-      {name: 'title', type: 'string', supportedOperations: ['equal']},
-    ],
+      title: {type: 'string', operations: ['eq']},
+    },
   },
-];
+};
 
-const validatedEditModel: ModelConfig[] = [
-  {
-    name: 'posts',
+const validatedEditModel: Record<string, ModelConfig> = {
+  posts: {
+    table: 'posts',
     validation: {
       type: 'object',
       properties: {
@@ -73,18 +64,17 @@ const validatedEditModel: ModelConfig[] = [
       },
       required: ['title', 'content'],
     },
-    fields: [
-      {
-        name: 'id',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['editable'],
+        operations: ['edit'],
       },
-      {name: 'title', type: 'string'},
-      {name: 'content', type: 'string'},
-    ],
+      title: {type: 'string'},
+      content: {type: 'string'},
+    },
   },
-];
+};
 
 describe('test edit api', () => {
   beforeEach(() => {

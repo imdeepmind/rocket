@@ -58,7 +58,7 @@ function createMockAppConfig(overrides?: {
     infrastructure: {
       primaryDatabase: {engine: 'sqlite', connection: {url: ':memory:'}},
     },
-    models: [],
+    data: {models: {}},
   };
 }
 

@@ -55,7 +55,7 @@
                     "idField": "id",
                     "usernameField": "email",
                     "passwordField": "password",
-                    "isVerifiedField": "is_active"
+                    "isVerifiedField": "isActive"
                 },
                 "jwtSecret": "your-super-secret-key-must-be-long-enough",
                 "mfaRequired": true
@@ -67,128 +67,119 @@
             "provider": "dummy"
         }
     },
-    "models": [
-        {
-            "name": "users",
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
-                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
+    "data": {
+        "models": {
+            "users": {
+                "table": "users",
+                "timestamps": true,
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "operations": ["edit", "delete", "gte"],
+                        "aggregations": ["count", "avg", "max", "min", "sum"]
+                    },
+                    "email": {
+                        "type": "string",
+                        "unique": true,
+                        "nullable": false,
+                        "operations": ["search", "eq", "sort", "index"],
+                        "aggregations": ["count"]
+                    },
+                    "password": {
+                        "type": "string",
+                        "unique": false,
+                        "nullable": false
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true,
+                        "operations": ["search", "sort", "index"]
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "default": true,
+                        "operations": ["eq"]
+                    }
                 },
-                {
-                    "name": "email",
-                    "type": "string",
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
-                    "supportedAggregation": ["count"]
-                },
-                {
-                    "name": "password",
-                    "type": "string",
-                    "unique": false,
-                    "nullable": false
-                },
-                {
-                    "name": "name",
-                    "type": "string",
-                    "nullable": true,
-                    "supportedOperations": ["searchable", "sortable", "indexable"]
-                },
-                {
-                    "name": "is_active",
-                    "type": "boolean",
-                    "default": true,
-                    "supportedOperations": ["equal"]
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "users_email_idx",
-                    "columns": ["email"],
-                    "unique": true
-                },
-                {
-                    "name": "users_name_is_active_idx",
-                    "columns": ["name", "is_active"],
-                    "unique": false
-                }
-            ]
-        },
-        {
-            "name": "posts",
-            "validation": {
-                "type": "object",
-                "required": ["title", "user_id"],
-                "properties": {
-                    "title": { "type": "string", "minLength": 5 },
-                    "body": { "type": "string" },
-                    "user_id": { "type": "integer", "minimum": 1 }
+                "indexes": {
+                    "email_unique": {
+                        "fields": ["email"],
+                        "unique": true
+                    },
+                    "name_active": {
+                        "fields": ["name", "isActive"],
+                        "unique": false
+                    }
                 }
             },
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable"]
+            "posts": {
+                "table": "posts",
+                "validation": {
+                    "type": "object",
+                    "required": ["title", "userId"],
+                    "properties": {
+                        "title": { "type": "string", "minLength": 5 },
+                        "body": { "type": "string" },
+                        "userId": { "type": "integer", "minimum": 1 }
+                    }
                 },
-                {
-                    "name": "title",
-                    "type": "string",
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "sortable"]
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "operations": ["edit", "delete"]
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": false,
+                        "operations": ["search", "sort"]
+                    },
+                    "body": {
+                        "type": "text",
+                        "nullable": true
+                    },
+                    "userId": {
+                        "type": "integer",
+                        "nullable": false,
+                        "operations": ["eq", "in"],
+                        "aggregations": ["count"]
+                    },
+                    "createdAt": {
+                        "type": "datetime",
+                        "operations": ["lt", "gt", "sort"]
+                    },
+                    "decimalNumber": {
+                        "type": "decimal",
+                        "operations": ["lt", "gt", "sort"],
+                        "aggregations": ["count", "avg", "sum", "min", "max"]
+                    }
                 },
-                {
-                    "name": "body",
-                    "type": "text",
-                    "nullable": true
+                "indexes": {
+                    "user_idx": {
+                        "fields": ["userId"],
+                        "unique": false
+                    }
                 },
-                {
-                    "name": "user_id",
-                    "type": "integer",
-                    "nullable": false,
-                    "supportedOperations": ["equal", "oneOf"],
-                    "supportedAggregation": ["count"]
-                },
-                {
-                    "name": "created_at",
-                    "type": "datetime",
-                    "supportedOperations": ["lessThan", "greaterThan", "sortable"]
-                },
-                {
-                    "name": "decimal_number",
-                    "type": "decimal",
-                    "supportedOperations": ["lessThan", "greaterThan", "sortable"],
-                    "supportedAggregation": ["count"]
+                "relations": {
+                    "author": {
+                        "type": "belongsTo",
+                        "model": "users",
+                        "localField": "userId",
+                        "foreignField": "id",
+                        "onDelete": "cascade",
+                        "onUpdate": "cascade"
+                    }
                 }
-            ],
-            "indexes": [
-                {
-                    "name": "posts_user_id_idx",
-                    "columns": ["user_id"],
-                    "unique": false
-                }
-            ],
-            "foreignKeys": [
-                {
-                    "name": "fk_posts_user_id",
-                    "columns": ["user_id"],
-                    "referenceTable": "users",
-                    "referenceColumns": ["id"],
-                    "onDelete": "CASCADE",
-                    "onUpdate": "CASCADE"
-                }
-            ]
+            }
         }
-    ],
+    },
     "customAPIs": {
         "customQueries": [
             {

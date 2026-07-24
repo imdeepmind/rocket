@@ -5,46 +5,44 @@ import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-const singleDeletableModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const singleDeletableModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['deletable'],
+        operations: ['delete'],
       },
-      {name: 'name', type: 'string'},
-    ],
+      name: {type: 'string'},
+    },
   },
-];
+};
 
-const multipleDeletableFieldsModel: ModelConfig[] = [
-  {
-    name: 'posts',
-    fields: [
-      {
-        name: 'id',
+const multipleDeletableFieldsModel: Record<string, ModelConfig> = {
+  posts: {
+    table: 'posts',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['deletable'],
+        operations: ['delete'],
       },
-      {name: 'slug', type: 'string', supportedOperations: ['deletable']},
-      {name: 'title', type: 'string'},
-    ],
+      slug: {type: 'string', operations: ['delete']},
+      title: {type: 'string'},
+    },
   },
-];
+};
 
-const noDeletableFieldsModel: ModelConfig[] = [
-  {
-    name: 'logs',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'message', type: 'string'},
-    ],
+const noDeletableFieldsModel: Record<string, ModelConfig> = {
+  logs: {
+    table: 'logs',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      message: {type: 'string'},
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -88,14 +86,14 @@ describe('test delete api', () => {
     });
 
     test('should delete a record by string field and return 204', async () => {
-      const customModels: ModelConfig[] = [
-        {
-          name: 'posts',
-          fields: [
-            {name: 'slug', type: 'string', supportedOperations: ['deletable']},
-          ],
+      const customModels: Record<string, ModelConfig> = {
+        posts: {
+          table: 'posts',
+          fields: {
+            slug: {type: 'string', operations: ['delete']},
+          },
         },
-      ];
+      };
       const fastify = await createTestApp(pgConfig, customModels);
 
       const response = await fastify.inject({

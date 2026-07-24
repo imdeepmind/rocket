@@ -12,7 +12,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register DELETE routes for deletable fields.
  *
- * For each model, for each field with 'deletable' in supportedOperations, creates:
+ * For each model, for each field with 'delete' in operations, creates:
  *   DELETE /{model}/{columnName}/:value
  *
  * Path params: the column value identifying the record to delete.
@@ -21,39 +21,31 @@ export function registerDeleteRoutes(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  // We're iterating over all models provided in the configuration.
-  // For each model, we'll check if there are any fields that support the 'deletable' operation.
-  const {models} = config;
+  const {models} = config.data;
 
-  for (const model of models) {
-    // Identifying fields that are marked as deletable in the configuration.
-    // If a field has 'deletable' in its supportedOperations array, it means
-    // we want to allow users to delete records by providing a value for this specific field.
-    const deletableFields = model.fields.filter(f =>
-      f.supportedOperations?.includes('deletable'),
+  for (const [modelName, model] of Object.entries(models)) {
+    const deletableFields = Object.entries(model.fields).filter(([, f]) =>
+      f.operations?.includes('delete'),
     );
 
-    // If we have deletable fields, we register a DELETE route for each.
-    for (const field of deletableFields) {
-      // constructing the api identifier
-      const apiIdentifier = `modelAPIs->${model.name}->${field.name}->delete`;
+    for (const [fieldName, field] of deletableFields) {
+      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->delete`;
 
-      // calculating the authroization based on auth flag, it can be true
-      // if the api level auth is enabled, or if the app level auth is enabled
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??
         config.authentication?.enabled ??
         false;
-      // we map the data type of the field to a JSON schema type for validation
       const schema: Record<string, unknown> = generateSchema(
+        fieldName,
         field,
         model,
+        modelName,
         config,
         authorization,
       );
 
       app.delete(
-        `/${model.name}/${field.name}/:${field.name}`,
+        `/${modelName}/${fieldName}/:${fieldName}`,
         {
           schema,
           config: {apiIdentifier},
@@ -83,26 +75,18 @@ export function registerDeleteRoutes(
           },
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
-          // extracting the parameter value from the request
-          const {[field.name]: value} = request.params as Record<
+          const {[fieldName]: value} = request.params as Record<
             string,
             unknown
           >;
 
-          // Before we execute the query, we identify the table and column names.
-          // In this architecture, they come directly from the model configuration.
-          const tableName = model.name;
-          const columnName = field.name;
+          const tableName = modelName;
+          const columnName = fieldName;
 
-          // Building the DELETE query. We use double quotes for table and column names
-          // to handle cases where they might be SQL reserved words or have special characters
           const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
 
-          // executing the deletion query in the database
-          // the value is passed as a parameter to prevent SQL injection
           await app.db.query(query, [value]);
 
-          // returning 204 No Content to indicate successful deletion
           return reply.status(204).send();
         },
       );
@@ -111,33 +95,30 @@ export function registerDeleteRoutes(
 }
 
 function generateSchema(
+  fieldName: string,
   field: ModelFieldConfig,
   model: ModelConfig,
+  modelName: string,
   config: AppConfig,
   authorization: boolean,
 ) {
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-  // now we're configuring the swagger schema for the DELETE API
-  // it uses the model details to generate the schema
   const schema: Record<string, unknown> = {
-    summary: `Delete ${capitalizeFirstLetter(model.name)} records by ${field.name}`,
-    description: `Delete records from ${capitalizeFirstLetter(model.name)} table where ${field.name} matches the provided value`,
-    tags: [capitalizeFirstLetter(model.name), 'Delete'],
+    summary: `Delete ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
+    description: `Delete records from ${capitalizeFirstLetter(modelName)} table where ${fieldName} matches the provided value`,
+    tags: [capitalizeFirstLetter(modelName), 'Delete'],
     params: {
       type: 'object',
       properties: {
-        // this is the identifier field we're using to locate the record(s) to delete
-        [field.name]: {
+        [fieldName]: {
           ...paramSchema,
-          description: `The ${field.name} value identifying the record to delete`,
+          description: `The ${fieldName} value identifying the record to delete`,
         },
       },
-      required: [field.name],
-      // we set additionalProperties to false for strict validation of the path parameters
+      required: [fieldName],
       additionalProperties: false,
     },
-    // standard response structure for successful deletion (204 No Content)
     response: getResponseStructureSchema([204], {}),
   };
 

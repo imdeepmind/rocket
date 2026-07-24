@@ -47,22 +47,24 @@ describe('welcome utility', () => {
         },
       },
     },
-    models: [
-      {
-        name: 'User',
-        fields: [
-          {name: 'id', type: 'integer', primaryKey: true},
-          {name: 'name', type: 'string'},
-        ],
+    data: {
+      models: {
+        User: {
+          table: 'User',
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            name: {type: 'string'},
+          },
+        },
+        Post: {
+          table: 'Post',
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            title: {type: 'string'},
+          },
+        },
       },
-      {
-        name: 'Post',
-        fields: [
-          {name: 'id', type: 'integer', primaryKey: true},
-          {name: 'title', type: 'string'},
-        ],
-      },
-    ],
+    },
   };
 
   const mockRoutes: RouteInfo[] = [

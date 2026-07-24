@@ -75,54 +75,55 @@ export function buildSortQueryProperties(
 
 /**
  * Build filter query parameter schema properties for a field
- * based on its supportedOperations (lessThan, greaterThan, equal, oneOf, etc.).
+ * based on its operations (lt, lte, gt, gte, eq, in, etc.).
  */
 export function buildFilterQueryProperties(
+  fieldName: string,
   field: ModelFieldConfig,
 ): Record<string, object> {
-  const ops = field.supportedOperations || [];
+  const ops = field.operations || [];
   const jsonType = mapDataTypeToJsonSchema(field.type);
   const properties: Record<string, object> = {};
 
-  if (ops.includes('lessThan')) {
-    properties[`${field.name}_lt`] = {
+  if (ops.includes('lt')) {
+    properties[`${fieldName}_lt`] = {
       ...jsonType,
-      description: `Filter where ${field.name} is less than this value`,
+      description: `Filter where ${fieldName} is less than this value`,
     };
   }
 
-  if (ops.includes('lessThanEqual')) {
-    properties[`${field.name}_lte`] = {
+  if (ops.includes('lte')) {
+    properties[`${fieldName}_lte`] = {
       ...jsonType,
-      description: `Filter where ${field.name} is less than or equal to this value`,
+      description: `Filter where ${fieldName} is less than or equal to this value`,
     };
   }
 
-  if (ops.includes('greaterThan')) {
-    properties[`${field.name}_gt`] = {
+  if (ops.includes('gt')) {
+    properties[`${fieldName}_gt`] = {
       ...jsonType,
-      description: `Filter where ${field.name} is greater than this value`,
+      description: `Filter where ${fieldName} is greater than this value`,
     };
   }
 
-  if (ops.includes('greaterThanEqual')) {
-    properties[`${field.name}_gte`] = {
+  if (ops.includes('gte')) {
+    properties[`${fieldName}_gte`] = {
       ...jsonType,
-      description: `Filter where ${field.name} is greater than or equal to this value`,
+      description: `Filter where ${fieldName} is greater than or equal to this value`,
     };
   }
 
-  if (ops.includes('equal')) {
-    properties[`${field.name}_eq`] = {
+  if (ops.includes('eq')) {
+    properties[`${fieldName}_eq`] = {
       ...jsonType,
-      description: `Filter where ${field.name} equals this value`,
+      description: `Filter where ${fieldName} equals this value`,
     };
   }
 
-  if (ops.includes('oneOf')) {
-    properties[`${field.name}_in`] = {
+  if (ops.includes('in')) {
+    properties[`${fieldName}_in`] = {
       type: 'string',
-      description: `Filter where ${field.name} is one of the provided comma-separated values`,
+      description: `Filter where ${fieldName} is one of the provided comma-separated values`,
     };
   }
 
@@ -167,20 +168,24 @@ export function generateJSONValidationSchema(
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
   const fields = options.ignorePrimaryKey
-    ? model.fields.filter(field => field.primaryKey !== true)
-    : model.fields;
+    ? Object.entries(model.fields).filter(
+        ([, field]) => field.primaryKey !== true,
+      )
+    : Object.entries(model.fields);
 
   const bodyProperties: Record<string, object> = {};
-  for (const field of fields) {
-    bodyProperties[field.name] = {
+  for (const [fieldName, field] of fields) {
+    bodyProperties[fieldName] = {
       ...mapDataTypeToJsonSchema(field.type),
-      description: `Value for ${field.name}`,
+      description: `Value for ${fieldName}`,
     };
   }
 
   const required = fields
-    .filter(field => field.nullable !== true && field.default === undefined)
-    .map(field => field.name);
+    .filter(
+      ([, field]) => field.nullable !== true && field.default === undefined,
+    )
+    .map(([fieldName]) => fieldName);
 
   return {
     type: 'object',
@@ -201,10 +206,12 @@ export function stripAdditionalPostFields(
   options: {ignorePrimaryKey?: boolean} = {},
 ): ModelBody {
   const allowedFields = options.ignorePrimaryKey
-    ? model.fields.filter(field => field.primaryKey !== true)
-    : model.fields;
+    ? Object.entries(model.fields).filter(
+        ([, field]) => field.primaryKey !== true,
+      )
+    : Object.entries(model.fields);
 
-  const allowed = new Set(allowedFields.map(field => field.name));
+  const allowed = new Set(allowedFields.map(([name]) => name));
   const filtered: ModelBody = {};
 
   for (const [key, value] of Object.entries(body)) {
@@ -276,6 +283,7 @@ export const filterIgnoreKeys = [
 
 /**
  * Shared filter application logic for SQL generation.
+ * The query param suffixes use the OLD naming convention (_eq, _lt, _lte, _gt, _gte, _in).
  */
 export function applyFilters(
   queryParams: Record<string, unknown>,

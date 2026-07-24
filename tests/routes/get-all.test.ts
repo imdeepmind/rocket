@@ -5,37 +5,26 @@ import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-const getAllModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const getAllModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'sortable',
-          'equal',
-          'lessThan',
-          'lessThanEqual',
-          'greaterThan',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        operations: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
       },
-      {
-        name: 'name',
+      name: {
         type: 'string',
-        supportedOperations: ['sortable', 'searchable', 'equal'],
+        operations: ['sort', 'search', 'eq'],
       },
-      {
-        name: 'email',
+      email: {
         type: 'string',
-        supportedOperations: ['equal'],
+        operations: ['eq'],
       },
-    ],
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -357,9 +346,9 @@ describe('test get-all api', () => {
     });
 
     test('should return rows in data even when model has no filterable fields', async () => {
-      const emptyModel: ModelConfig[] = [
-        {name: 'tags', fields: [{name: 'id', type: 'integer'}]},
-      ];
+      const emptyModel: Record<string, ModelConfig> = {
+        tags: {table: 'tags', fields: {id: {type: 'integer'}}},
+      };
       pgQueryMock
         .mockResolvedValueOnce({rows: [{total: 1}]})
         .mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1});

@@ -14,7 +14,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register EDIT routes for editable fields.
  *
- * For each model, for each field with 'editable' in supportedOperations, creates:
+ * For each model, for each field with 'edit' in operations, creates:
  *   PATCH /{model}/{columnName}/:value (partial update)
  *   PUT /{model}/{columnName}/:value (complete update)
  *
@@ -26,22 +26,16 @@ export function registerEditRoutes(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  // We're iterating over all models provided in the configuration.
-  // For each model, we'll check if there are any fields that support the 'editable' operation.
-  const {models} = config;
+  const {models} = config.data;
 
-  for (const model of models) {
-    // identifying fields that are marked as editable in the configuration
-    const editableFields = model.fields.filter(f =>
-      f.supportedOperations?.includes('editable'),
+  for (const [modelName, model] of Object.entries(models)) {
+    const editableFields = Object.entries(model.fields).filter(([, f]) =>
+      f.operations?.includes('edit'),
     );
 
-    for (const field of editableFields) {
-      // constructing the api identifier
-      const apiIdentifier = `modelAPIs->${model.name}->${field.name}->edit`;
+    for (const [fieldName, field] of editableFields) {
+      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->edit`;
 
-      // calculating the authroization based on auth flag, it can be true
-      // if the api level auth is enabled, or if the app level auth is enabled
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??
         config.authentication?.enabled ??
@@ -49,46 +43,37 @@ export function registerEditRoutes(
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-      // if the field is not unique, we can apply filters to target specific records
-      // for example, if we edit by "status", we might want to only update records where "age > 18"
       const queryProperties: Record<string, object> = {};
       if (!isUnique) {
-        for (const f of model.fields) {
-          Object.assign(queryProperties, buildFilterQueryProperties(f));
+        for (const [fName, f] of Object.entries(model.fields)) {
+          Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
         }
       }
 
-      // the body will contain all other fields that can be updated
-      // we exclude the current field we are using to identify the records
       const bodyProperties: Record<string, object> = {};
       const allBodyFieldNames: string[] = [];
 
-      for (const otherField of model.fields) {
-        if (otherField.name === field.name) continue;
-        bodyProperties[otherField.name] = {
+      for (const [otherName, otherField] of Object.entries(model.fields)) {
+        if (otherName === fieldName) continue;
+        bodyProperties[otherName] = {
           ...mapDataTypeToJsonSchema(otherField.type),
-          description: `Updated value for ${otherField.name}`,
+          description: `Updated value for ${otherName}`,
         };
-        allBodyFieldNames.push(otherField.name);
+        allBodyFieldNames.push(otherName);
       }
 
-      // building the schema for both PATCH (partial) and PUT (complete) updates
       const buildRouteSchema = (method: 'PATCH' | 'PUT') => {
         let finalBodySchema: Record<string, unknown>;
 
-        // if a custom validation schema is provided in the model, we use it
         if (model.validation) {
           finalBodySchema = {...model.validation};
           if (method === 'PATCH') {
-            // for PATCH requests, we remove 'required' to allow partial updates
             delete finalBodySchema.required;
           }
         } else {
-          // otherwise, we generate a default object schema
           finalBodySchema = {
             type: 'object',
             properties: bodyProperties,
-            // for PUT, all fields are required; for PATCH, they are optional
             required: method === 'PUT' ? allBodyFieldNames : [],
             additionalProperties: false,
           };
@@ -103,18 +88,18 @@ export function registerEditRoutes(
         }
 
         const schema: Record<string, unknown> = {
-          summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(model.name)} record(s) by ${field.name}`,
-          description: `${method} update on records from the database by ${field.name}`,
-          tags: [capitalizeFirstLetter(model.name), 'Update'],
+          summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(modelName)} record(s) by ${fieldName}`,
+          description: `${method} update on records from the database by ${fieldName}`,
+          tags: [capitalizeFirstLetter(modelName), 'Update'],
           params: {
             type: 'object',
             properties: {
-              [field.name]: {
+              [fieldName]: {
                 ...paramSchema,
-                description: `The ${field.name} value identifying the record to edit`,
+                description: `The ${fieldName} value identifying the record to edit`,
               },
             },
-            required: [field.name],
+            required: [fieldName],
             additionalProperties: false,
           },
           body: finalBodySchema,
@@ -160,11 +145,10 @@ export function registerEditRoutes(
       ) => {
         const queryParams = request.query as Record<string, unknown>;
         const params = request.params as Record<string, unknown>;
-        const tableName = model.name;
+        const tableName = modelName;
         const body = request.body as ModelBody;
 
-        // Remove the identifying field from the body if it was mistakenly provided
-        delete body[field.name];
+        delete body[fieldName];
 
         const keys = Object.keys(body);
         if (keys.length === 0) {
@@ -176,7 +160,6 @@ export function registerEditRoutes(
         const values: unknown[] = [];
         let paramIndex = 1;
 
-        // building the SET clause of the UPDATE query
         const setClauses: string[] = [];
         for (const key of keys) {
           setClauses.push(`"${key}" = $${paramIndex++}`);
@@ -184,27 +167,23 @@ export function registerEditRoutes(
         }
 
         const whereClauses: string[] = [];
-        // primary condition: match the record by the identifying field from the URL path
-        whereClauses.push(`"${field.name}" = $${paramIndex++}`);
-        values.push(params[field.name]);
+        whereClauses.push(`"${fieldName}" = $${paramIndex++}`);
+        values.push(params[fieldName]);
 
-        // if the field is not unique, we apply additional filters from the query string
         if (!isUnique) {
           const {
             whereClauses: filterClauses,
             values: filterValues,
             nextParamIndex,
-          } = applyFilters(queryParams, paramIndex, [field.name]);
+          } = applyFilters(queryParams, paramIndex, [fieldName]);
 
           whereClauses.push(...filterClauses);
           values.push(...filterValues);
           paramIndex = nextParamIndex;
         }
 
-        // join all parts to form the final UPDATE query
         const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
-        // executing the update in the database
         const res = await app.db.query(query, values);
 
         return reply
@@ -220,7 +199,7 @@ export function registerEditRoutes(
       };
 
       app.patch(
-        `/${model.name}/${field.name}/:${field.name}`,
+        `/${modelName}/${fieldName}/:${fieldName}`,
         {
           schema: buildRouteSchema('PATCH'),
           config: {apiIdentifier},
@@ -253,7 +232,7 @@ export function registerEditRoutes(
       );
 
       app.put(
-        `/${model.name}/${field.name}/:${field.name}`,
+        `/${modelName}/${fieldName}/:${fieldName}`,
         {
           schema: buildRouteSchema('PUT'),
           config: {apiIdentifier},

@@ -8,68 +8,44 @@ import {
 
 const ALLOWED_OPERATIONS: Record<string, string[]> = {
   integer: [
-    'sortable',
-    'editable',
-    'deletable',
-    'lessThan',
-    'lessThanEqual',
-    'greaterThan',
-    'greaterThanEqual',
-    'equal',
-    'oneOf',
-    'indexable',
+    'sort',
+    'lt',
+    'lte',
+    'gt',
+    'gte',
+    'eq',
+    'in',
+    'edit',
+    'delete',
+    'index',
   ],
   decimal: [
-    'sortable',
-    'editable',
-    'deletable',
-    'lessThan',
-    'lessThanEqual',
-    'greaterThan',
-    'greaterThanEqual',
-    'equal',
-    'oneOf',
-    'indexable',
+    'sort',
+    'lt',
+    'lte',
+    'gt',
+    'gte',
+    'eq',
+    'in',
+    'edit',
+    'delete',
+    'index',
   ],
-  string: [
-    'searchable',
-    'sortable',
-    'editable',
-    'deletable',
-    'equal',
-    'oneOf',
-    'indexable',
-  ],
-  boolean: ['equal'],
+  string: ['search', 'sort', 'eq', 'in', 'edit', 'delete', 'index'],
+  boolean: ['eq'],
   text: [],
-  datetime: [
-    'sortable',
-    'lessThan',
-    'lessThanEqual',
-    'greaterThan',
-    'greaterThanEqual',
-    'equal',
-    'oneOf',
-  ],
-  date: [
-    'sortable',
-    'lessThan',
-    'lessThanEqual',
-    'greaterThan',
-    'greaterThanEqual',
-    'equal',
-    'oneOf',
-  ],
+  datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+  date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
-  integer: ['mean', 'max', 'min', 'count', 'sum'],
-  decimal: ['mean', 'max', 'min', 'count', 'sum'],
+  integer: ['avg', 'max', 'min', 'count', 'sum'],
+  decimal: ['avg', 'max', 'min', 'count', 'sum'],
   string: ['count'],
   boolean: ['count', 'frequency'],
   text: [],
-  datetime: ['mean', 'max', 'min', 'count'],
-  date: ['mean', 'max', 'min', 'count'],
+  datetime: ['avg', 'max', 'min', 'count'],
+  date: ['avg', 'max', 'min', 'count'],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -116,50 +92,51 @@ function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
 function validateFieldConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  config.models.forEach((model, mi) => {
-    model.fields.forEach((field, fi) => {
-      const path = `/models/${mi}/fields/${fi}`;
-      const {
-        type,
-        primaryKey,
-        nullable,
-        unique,
-        supportedOperations,
-        supportedAggregation,
-      } = field;
+  Object.entries(config.data.models).forEach(([modelName, model]) => {
+    Object.entries(model.fields).forEach(([fieldName, field]) => {
+      const path = `/data/models/${modelName}/fields/${fieldName}`;
+      const {type, primaryKey, autoIncrement, operations, aggregations} = field;
 
       // Primary key rules
       if (primaryKey) {
-        if (nullable !== false)
-          errors.push(`${path}: primaryKey field must have nullable=false`);
-        if (unique !== true)
-          errors.push(`${path}: primaryKey field must have unique=true`);
         if (type !== 'integer' && type !== 'string') {
           errors.push(
             `${path}: primaryKey field must be of type integer or string (found ${type})`,
           );
         }
+
+        if (autoIncrement && type !== 'integer') {
+          errors.push(
+            `${path}: autoIncrement is only allowed on integer primaryKey fields`,
+          );
+        }
       }
 
-      // Validate supportedOperations against allowed list for this type
-      if (supportedOperations) {
+      if (autoIncrement && !primaryKey) {
+        errors.push(
+          `${path}: autoIncrement is only allowed on primaryKey fields`,
+        );
+      }
+
+      // Validate operations against allowed list for this type
+      if (operations) {
         const allowed = ALLOWED_OPERATIONS[type] ?? [];
-        supportedOperations.forEach(op => {
+        operations.forEach(op => {
           if (!allowed.includes(op)) {
             errors.push(
-              `${path}/supportedOperations: "${op}" is not allowed for type "${type}"`,
+              `${path}/operations: "${op}" is not allowed for type "${type}"`,
             );
           }
         });
       }
 
-      // Validate supportedAggregation against allowed list for this type
-      if (supportedAggregation) {
+      // Validate aggregations against allowed list for this type
+      if (aggregations) {
         const allowed = ALLOWED_AGGREGATIONS[type] ?? [];
-        supportedAggregation.forEach(agg => {
+        aggregations.forEach(agg => {
           if (!allowed.includes(agg)) {
             errors.push(
-              `${path}/supportedAggregation: "${agg}" is not allowed for type "${type}"`,
+              `${path}/aggregations: "${agg}" is not allowed for type "${type}"`,
             );
           }
         });
@@ -173,11 +150,11 @@ function validateFieldConstraints(config: AppConfig): string[] {
 function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
   const errors: string[] = [];
 
-  config.models.forEach((model, mi) => {
+  Object.entries(config.data.models).forEach(([modelName, model]) => {
     const validation = (model as {validation?: unknown}).validation;
     if (!validation) return;
 
-    const path = `/models/${mi}/validation`;
+    const path = `/data/models/${modelName}/validation`;
 
     const schema = validation as JsonSchemaObject;
 
@@ -190,7 +167,9 @@ function validateModelValidation(config: AppConfig, ajv: Ajv): string[] {
       errors.push(...schemaErrors);
     }
 
-    const fieldMap = new Map(model.fields.map(f => [f.name, f.type]));
+    const fieldMap = new Map(
+      Object.keys(model.fields).map(name => [name, model.fields[name].type]),
+    );
 
     // properties validation
     if (schema.properties && typeof schema.properties === 'object') {

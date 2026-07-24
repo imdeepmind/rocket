@@ -15,21 +15,15 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   };
 };
 
-const getDefaultModelConfig = (): ModelConfig[] => {
-  return [
-    {
-      name: 'users',
-      fields: [
-        {
-          name: 'id',
-          type: 'integer',
-          primaryKey: true,
-          unique: true,
-          nullable: false,
-        },
-      ],
+const getDefaultModelConfig = (): Record<string, ModelConfig> => {
+  return {
+    users: {
+      table: 'users',
+      fields: {
+        id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+      },
     },
-  ];
+  };
 };
 
 const validBaseConfig: AppConfig = {
@@ -49,7 +43,7 @@ const validBaseConfig: AppConfig = {
     },
   },
   infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
-  models: getDefaultModelConfig(),
+  data: {models: getDefaultModelConfig()},
 };
 
 describe('Config Environment Variable Resolution', () => {

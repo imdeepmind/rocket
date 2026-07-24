@@ -11,7 +11,8 @@ export function registerChangePasswordRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, authentication} = config;
+  const {authentication} = config;
+  const {models} = config.data;
 
   if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
     return;
@@ -20,7 +21,7 @@ export function registerChangePasswordRoute(
   const {model, idField, passwordField} =
     authentication.provider.config.userModel;
 
-  const authModelConfig = models.find(m => m.name === model);
+  const authModelConfig = models[model];
   if (!authModelConfig) {
     app.log.warn(
       `[auth/change-password] Could not find model config for "${model}". Skipping route registration.`,

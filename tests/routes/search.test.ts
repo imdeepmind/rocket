@@ -6,63 +6,52 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 // Model with a single searchable field
-const searchableModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const searchableModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'equal',
-          'lessThan',
-          'greaterThan',
-          'lessThanEqual',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        operations: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
-      {
-        name: 'name',
+      name: {
         type: 'string',
-        supportedOperations: ['searchable', 'sortable', 'equal'],
+        operations: ['search', 'sort', 'eq'],
       },
-      {name: 'email', type: 'string', supportedOperations: ['equal']},
-    ],
+      email: {type: 'string', operations: ['eq']},
+    },
   },
-];
+};
 
 // Model with multiple searchable fields
-const multiSearchableModel: ModelConfig[] = [
-  {
-    name: 'products',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {
-        name: 'title',
+const multiSearchableModel: Record<string, ModelConfig> = {
+  products: {
+    table: 'products',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      title: {
         type: 'string',
-        supportedOperations: ['searchable', 'sortable'],
+        operations: ['search', 'sort'],
       },
-      {
-        name: 'description',
+      description: {
         type: 'string',
-        supportedOperations: ['searchable'],
+        operations: ['search'],
       },
-    ],
+    },
   },
-];
+};
 
 // Model with no searchable fields
-const noSearchableModel: ModelConfig[] = [
-  {
-    name: 'logs',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'message', type: 'string'},
-    ],
+const noSearchableModel: Record<string, ModelConfig> = {
+  logs: {
+    table: 'logs',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      message: {type: 'string'},
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,

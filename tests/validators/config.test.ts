@@ -20,62 +20,37 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   };
 };
 
-const getDefaultModelConfig = (): ModelConfig[] => {
-  return [
-    {
-      name: 'users',
-      fields: [
-        {
-          name: 'id',
-          type: 'integer',
-          primaryKey: true,
-          unique: true,
-          nullable: false,
-        },
-        {
-          name: 'name',
-          type: 'string',
-        },
-        {
-          name: 'is_active',
-          type: 'boolean',
-        },
-        {
-          name: 'updated_at',
-          type: 'datetime',
-        },
-      ],
+const getDefaultModelConfig = (): Record<string, ModelConfig> => {
+  return {
+    users: {
+      table: 'users',
+      fields: {
+        id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+        name: {type: 'string'},
+        is_active: {type: 'boolean'},
+        updated_at: {type: 'datetime'},
+      },
     },
-    {
-      name: 'posts',
-      fields: [
-        {
-          name: 'title',
+    posts: {
+      table: 'posts',
+      fields: {
+        title: {
           type: 'string',
           nullable: false,
-          supportedOperations: ['searchable', 'sortable'],
-          supportedAggregation: ['count'],
+          operations: ['search', 'sort'],
+          aggregations: ['count'],
         },
-        {
-          name: 'body',
-          type: 'text',
-          nullable: true,
-        },
-        {
-          name: 'user_id',
+        body: {type: 'text', nullable: true},
+        user_id: {
           type: 'integer',
           nullable: false,
-          supportedOperations: ['equal', 'oneOf'],
-          supportedAggregation: ['count'],
+          operations: ['eq', 'in'],
+          aggregations: ['count'],
         },
-        {
-          name: 'created_at',
-          type: 'datetime',
-          supportedOperations: ['lessThan', 'greaterThan', 'sortable'],
-        },
-      ],
+        created_at: {type: 'datetime', operations: ['lt', 'gt', 'sort']},
+      },
     },
-  ];
+  };
 };
 
 const validBaseConfig: AppConfig = {
@@ -95,7 +70,7 @@ const validBaseConfig: AppConfig = {
     },
   },
   infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
-  models: getDefaultModelConfig(),
+  data: {models: getDefaultModelConfig()},
 };
 
 describe('validateInvalidDocsConfig', () => {
@@ -451,762 +426,434 @@ describe('validateInvalidModelFieldsConfig', () => {
     // ============== invalid name tests ==============
     {
       name: 'invalid name',
-      patch: {name: '132234asd'},
+      patch: {table: '132234asd'},
       expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
       name: 'invalid name',
-      patch: {name: 'sad asdas'},
+      patch: {table: 'sad asdas'},
       expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
-      name: 'name as undefined',
-      patch: {name: undefined},
-      expected: "/models/0 must have required property 'name'",
+      name: 'table as undefined',
+      patch: {table: undefined},
+      expected: "/data/models/test must have required property 'table'",
     },
     // ============== end of invalid name tests ===============
     // ============== invalid fields tests ==============
     {
       name: 'empty field',
-      patch: {name: 'test', fields: []},
-      expected: '/models/0/fields must NOT have fewer than 1 items',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: '132234asd'}]},
+      patch: {fields: {}},
       expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: 'sad asdas'}]},
-      expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: undefined}]},
-      expected: "/models/0/fields/0 must have required property 'name'",
+        '/data/models/test/fields must NOT have fewer than 1 properties',
     },
     {
       name: 'invalid field.type',
-      patch: {name: 'test', fields: [{name: 'test', type: undefined}]},
-      expected: "/models/0/fields/0 must have required property 'type'",
+      patch: {fields: {test: {type: undefined}}},
+      expected:
+        "/data/models/test/fields/test must have required property 'type'",
     },
     {
       name: 'invalid field.type',
-      patch: {name: 'test', fields: [{name: 'test', type: 'invalid'}]},
+      patch: {fields: {test: {type: 'invalid'}}},
       expected:
-        '/models/0/fields/0/type must be equal to one of the allowed values',
+        '/data/models/test/fields/test/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'integer', primaryKey: 'invalid'}],
+        fields: {test: {type: 'integer', primaryKey: 'invalid'}},
       },
-      expected: '/models/0/fields/0/primaryKey must be boolean',
+      expected: '/data/models/test/fields/test/primaryKey must be boolean',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'boolean', primaryKey: true}],
+        fields: {test: {type: 'boolean', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found boolean)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found boolean)',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', primaryKey: true}],
+        fields: {test: {type: 'text', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found text)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found text)',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'datetime', primaryKey: true}],
+        fields: {test: {type: 'datetime', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found datetime)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found datetime)',
     },
     {
       name: 'invalid field.unique',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', unique: 'invalid'}],
+        fields: {test: {type: 'string', unique: 'invalid'}},
       },
-      expected: '/models/0/fields/0/unique must be boolean',
+      expected: '/data/models/test/fields/test/unique must be boolean',
     },
     {
-      name: 'field.unique=False and primaryKey=True',
+      name: 'invalid field.autoIncrement',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', primaryKey: true, unique: false},
-        ],
+        fields: {test: {type: 'integer', autoIncrement: 'invalid'}},
       },
-      expected: '/models/0/fields/0: primaryKey field must have unique=true',
+      expected: '/data/models/test/fields/test/autoIncrement must be boolean',
+    },
+    {
+      name: 'autoIncrement on non-primaryKey field',
+      patch: {
+        fields: {test: {type: 'integer', autoIncrement: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: autoIncrement is only allowed on primaryKey fields',
+    },
+    {
+      name: 'autoIncrement on non-integer primaryKey',
+      patch: {
+        fields: {test: {type: 'string', primaryKey: true, autoIncrement: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: autoIncrement is only allowed on integer primaryKey fields',
     },
     {
       name: 'invalid field.nullable',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', nullable: 'invalid'}],
+        fields: {test: {type: 'string', nullable: 'invalid'}},
       },
-      expected: '/models/0/fields/0/nullable must be boolean',
+      expected: '/data/models/test/fields/test/nullable must be boolean',
     },
     {
-      name: 'field.nullable=False and primaryKey=True',
+      name: 'field.operations is not array',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            primaryKey: true,
-            unique: true,
-            nullable: true,
-          },
-        ],
+        fields: {test: {type: 'string', operations: 'invalid'}},
       },
-      expected: '/models/0/fields/0: primaryKey field must have nullable=false',
+      expected: '/data/models/test/fields/test/operations must be array',
     },
     {
-      name: 'field.supportedOperations is not array',
+      name: 'field.operations contains invalid value',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: 'invalid'},
-        ],
-      },
-      expected: '/models/0/fields/0/supportedOperations must be array',
-    },
-    {
-      name: 'field.supportedOperations contains invalid value',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['invalid']},
-        ],
+        fields: {test: {type: 'string', operations: ['invalid']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "invalid" is not allowed for type "string"',
+        '/data/models/test/fields/test/operations/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=integer',
+      name: 'field.operations contains invalid value for type=integer',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'integer', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'integer', operations: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "integer"',
+        '/data/models/test/fields/test/operations: "search" is not allowed for type "integer"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=decimal',
+      name: 'field.operations contains invalid value for type=decimal',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'decimal', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'decimal', operations: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "decimal"',
+        '/data/models/test/fields/test/operations: "search" is not allowed for type "decimal"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=date',
+      name: 'field.operations contains invalid value for type=date',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'date', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'date', operations: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "date"',
+        '/data/models/test/fields/test/operations: "search" is not allowed for type "date"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.operations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'string', operations: ['lt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "string"',
+        '/data/models/test/fields/test/operations: "lt" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.operations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            supportedOperations: ['lessThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'string', operations: ['lte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "string"',
+        '/data/models/test/fields/test/operations: "lte" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.operations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'string', operations: ['gt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "string"',
+        '/data/models/test/fields/test/operations: "gt" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.operations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'string', operations: ['gte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "string"',
+        '/data/models/test/fields/test/operations: "gte" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "search" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['sortable']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['sort']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "sort" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['edit']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "edit" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['delete']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "delete" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['lt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "lt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'boolean',
-            supportedOperations: ['lessThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'boolean', operations: ['lte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "lte" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'boolean', operations: ['gt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "gt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.operations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'boolean',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'boolean', operations: ['gte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/operations: "gte" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.aggregations is not array',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['oneOf']},
-        ],
+        fields: {test: {type: 'string', aggregations: 'invalid'}},
+      },
+      expected: '/data/models/test/fields/test/aggregations must be array',
+    },
+    {
+      name: 'field.aggregations contains invalid value',
+      patch: {
+        fields: {test: {type: 'string', aggregations: ['invalid']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/aggregations/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.aggregations contains invalid value for type=integer',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'integer', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "integer"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=decimal',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'decimal', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "decimal"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=date',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['sortable']},
-        ],
+        fields: {test: {type: 'date', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "date"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['lessThanEqual']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'text',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedOperations: ['equal']}],
+        fields: {test: {type: 'boolean', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "equal" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "boolean"',
     },
-
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedOperations: ['oneOf']}],
+        fields: {test: {type: 'boolean', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation is not array',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: 'invalid'},
-        ],
-      },
-      expected: '/models/0/fields/0/supportedAggregation must be array',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['invalid']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['count']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "invalid" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "count" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=integer',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'integer', supportedAggregation: ['frequency']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "integer"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=decimal',
+      name: 'field.aggregations contains invalid value for type=datetime',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'decimal', supportedAggregation: ['frequency']},
-        ],
+        fields: {test: {type: 'datetime', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "decimal"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "datetime"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=date',
+      name: 'field.aggregations contains invalid value for type=datetime',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'date', supportedAggregation: ['frequency']},
-        ],
+        fields: {test: {type: 'datetime', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "date"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=string',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['mean']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "string"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=string',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['max']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "string"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=string',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['min']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "string"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=string',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['sum']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "string"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=string',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['frequency']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "string"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['mean']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['max']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['min']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['sum']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['mean']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['max']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['min']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['sum']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['count']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "count" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedAggregation: ['frequency']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=datetime',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'datetime', supportedAggregation: ['sum']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "datetime"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=datetime',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'datetime', supportedAggregation: ['frequency']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "datetime"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: {
+            table: 'test',
+            fields: {test: {type: 'string'}},
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1215,152 +862,116 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
+        table: 'test',
+        fields: {
+          id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
+        table: 'test',
+        fields: {
+          id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
-            supportedOperations: ['indexable', 'sortable'],
+            operations: ['index', 'sort'],
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
+        table: 'test',
+        fields: {
+          id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
-            supportedOperations: ['indexable', 'sortable'],
-            supportedAggregation: ['mean', 'max', 'min', 'count', 'sum'],
+            operations: ['index', 'sort'],
+            aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
-        ],
+        },
       },
     },
   ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: patch as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
 describe('validateInvalidModelIndexesConfig', () => {
   it.each([
     {
-      name: 'index.name is not string',
+      name: 'index.fields is not array',
       patch: {
-        indexes: [{name: 123, columns: ['id']}],
+        indexes: {test_index: {fields: 'test'}},
       },
-      expected: '/models/0/indexes/0/name must be string',
+      expected: '/data/models/test/indexes/test_index/fields must be array',
     },
     {
-      name: 'index.name starts with number',
+      name: 'index.field is pointing to wrong field',
       patch: {
-        indexes: [{name: '12121asdas', columns: ['id']}],
+        indexes: {test_index: {fields: ['age']}},
       },
       expected:
-        'Entity name "12121asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        '/data/models/test/indexes/test_index/fields: field "age" does not exist in model fields',
     },
     {
-      name: 'index.name contains space',
+      name: 'index.field is empty',
       patch: {
-        indexes: [{name: 'cat dog', columns: ['id']}],
+        indexes: {test_index: {fields: ['']}},
       },
       expected:
-        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'index.name is duplicate',
-      patch: {
-        indexes: [
-          {name: 'valid_index', columns: ['id']},
-          {name: 'valid_index', columns: ['id']},
-        ],
-      },
-      expected: '/models/0/indexes/1: duplicate index name "valid_index"',
-    },
-    {
-      name: 'index.column is pointing to wrong field',
-      patch: {
-        indexes: [{name: 'valid_index', columns: ['age']}],
-      },
-      expected:
-        '/models/0/indexes/0/columns: column "age" does not exist in fields',
-    },
-    {
-      name: 'index.column is empty',
-      patch: {
-        indexes: [{name: 'valid_index', columns: ['']}],
-      },
-      expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'index.column is not array',
-      patch: {
-        indexes: [{name: 'valid_index', columns: 'test'}],
-      },
-      expected: '/models/0/indexes/0/columns must be array',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.unique is not boolean',
       patch: {
-        indexes: [{name: 'valid_index', columns: ['id'], unique: 'test'}],
+        indexes: {test_index: {fields: ['id'], unique: 'test'}},
       },
-      expected: '/models/0/indexes/0/unique must be boolean',
+      expected: '/data/models/test/indexes/test_index/unique must be boolean',
     },
     {
       name: 'index.unique is not boolean',
       patch: {
-        indexes: [{name: 'valid_index', columns: ['id'], unique: 123}],
+        indexes: {test_index: {fields: ['id'], unique: 123}},
       },
-      expected: '/models/0/indexes/0/unique must be boolean',
+      expected: '/data/models/test/indexes/test_index/unique must be boolean',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: {
+            table: 'test',
+            fields: {test: {type: 'string'}},
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1369,47 +980,47 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        indexes: [
-          {
-            name: 'valid_index',
-            columns: ['id'],
+        table: 'test',
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
+        indexes: {
+          valid_index: {
+            fields: ['id'],
             unique: true,
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        indexes: [
-          {
-            name: 'valid_index',
-            columns: ['id', 'name'],
+        table: 'test',
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
+        indexes: {
+          valid_index: {
+            fields: ['id', 'name'],
             unique: false,
           },
-        ],
+        },
       },
     },
     {
       name: 'not passing index',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
       },
     },
   ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: patch as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
@@ -1418,15 +1029,17 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation.type is not object',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {test: {type: 'string'}},
         validation: 13,
       },
-      expected: '/models/0/validation must be object',
+      expected: '/data/models/test/validation must be object',
     },
     {
       name: 'validation property column does not exist',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['id'],
@@ -1437,12 +1050,13 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/properties/age: field does not exist in model',
+        '/data/models/test/validation/properties/age: field does not exist in model',
     },
     {
       name: 'validation required is not array',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}, age: {type: 'integer'}},
         validation: {
           type: 'object',
           required: 'wrong type',
@@ -1452,12 +1066,13 @@ describe('validateInvalidModelValidationConfig', () => {
           },
         },
       },
-      expected: '/models/0/validation/required: must be an array',
+      expected: '/data/models/test/validation/required: must be an array',
     },
     {
       name: 'validation required is not array',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['wrong type'],
@@ -1468,12 +1083,13 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/required/0: field "wrong type" does not exist in model',
+        '/data/models/test/validation/required/0: field "wrong type" does not exist in model',
     },
     {
       name: 'validation property column data type does not match',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['id'],
@@ -1483,22 +1099,22 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/properties/id: type mismatch (model=integer, schema=string)',
+        '/data/models/test/validation/properties/id: type mismatch (model=integer, schema=string)',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: {
+            table: 'test',
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1507,7 +1123,13 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {
+          id: {type: 'integer'},
+          name: {type: 'string'},
+          is_active: {type: 'boolean'},
+          updated_at: {type: 'datetime'},
+        },
         validation: {
           type: 'object',
           required: ['id'],
@@ -1523,7 +1145,13 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {
+          id: {type: 'integer'},
+          name: {type: 'string'},
+          is_active: {type: 'boolean'},
+          updated_at: {type: 'datetime'},
+        },
         validation: {
           type: 'object',
           required: ['id'],
@@ -1539,374 +1167,327 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'not passing validation',
       patch: {
-        name: 'test',
+        table: 'test',
+        fields: {id: {type: 'integer'}},
       },
     },
   ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: patch as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
 describe('validateInvalidModelForeignKeyConfig', () => {
   it.each([
     {
-      name: 'foreignKey.name is not string',
+      name: 'foreignKey.type is missing',
       patch: {
-        foreignKeys: [
-          {
-            name: 123,
-            columns: ['id'],
-            referenceTable: 'test',
-            referenceColumns: ['id'],
+        relations: {
+          fk_rel: {
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/name must be string',
-    },
-    {
-      name: 'foreignKey.name is empty string',
-      patch: {
-        foreignKeys: [
-          {
-            name: '',
-            columns: ['id'],
-            referenceTable: 'test',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        "/data/models/fk_test/relations/fk_rel must have required property 'type'",
     },
     {
-      name: 'foreignKey.name is empty string',
+      name: 'foreignKey.localField is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['does_not_exist'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_rel: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 123 as unknown as string,
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "posts"',
+        '/data/models/fk_test/relations/fk_rel/localField must be string',
     },
     {
-      name: 'foreignKey.name is duplicate',
+      name: 'foreignKey.localField does not exist',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'does_not_exist',
+            foreignField: 'id',
           },
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/1: duplicate foreign key name "fk_id_id"',
+        '/data/models/fk_test/relations/fk_id_id/localField: field "does_not_exist" does not exist in model "fk_test"',
     },
     {
-      name: 'foreignKey.columns is not array',
+      name: 'foreignKey.fields is not array',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: 'id',
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'id',
+            foreignField: ['id'] as unknown as string,
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/columns must be array',
-    },
-    {
-      name: 'foreignKey.columns is empty array',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: [],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/columns must NOT have fewer than 1 items',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: [123],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/columns/0 must be string',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['1321asdas'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['cat dog'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'foreignKey.columns contains duplicate items',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id', 'id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        '/models/2/foreignKeys/0/columns must NOT have duplicate items (items ## 1 and 0 are identical)',
+        '/data/models/fk_test/relations/fk_id_id/foreignField must be string',
     },
     {
       name: 'foreignKey.referenceTable is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 123,
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 123,
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
-      expected: '/models/2/foreignKeys/0/referenceTable must be string',
+      expected: '/data/models/fk_test/relations/fk_id_id/model must be string',
     },
     {
       name: 'foreignKey.referenceTable is empty string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: '',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: '',
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
-      name: 'foreignKey.referenceTable is empty string',
+      name: 'foreignKey.referenceTable references non-existent model',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'does_not_exist',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'does_not_exist',
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: referenceTable "does_not_exist" does not exist',
+        '/data/models/fk_test/relations/fk_id_id/model: model "does_not_exist" does not exist',
     },
     {
-      name: 'foreignKey.referenceColumns is not array',
+      name: 'foreignKey.foreignField is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: 'id',
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'id',
+            foreignField: 123 as unknown as string,
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/referenceColumns must be array',
-    },
-    {
-      name: 'foreignKey.referenceColumns is empty array',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: [],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns must NOT have fewer than 1 items',
+        '/data/models/fk_test/relations/fk_id_id/foreignField must be string',
     },
     {
-      name: 'foreignKey.referenceColumns contains non-string',
+      name: 'foreignKey.fields is empty array',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: [123],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: '',
+            foreignField: 'id',
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/referenceColumns/0 must be string',
-    },
-    {
-      name: 'foreignKey.referenceColumns contains non-existent column',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['does_not_exist'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "users"',
+        '/data/models/fk_test/relations/fk_id_id/localField must NOT have fewer than 1 characters',
     },
     {
-      name: 'foreignKey.referenceColumns contains duplicate items',
+      name: 'foreignKey.localField array passed as string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id', 'id'],
+        relations: {
+          fk_test_a: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: [] as unknown as string,
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns must NOT have duplicate items (items ## 1 and 0 are identical)',
+        '/data/models/fk_test/relations/fk_test_a/localField must be string',
     },
     {
-      name: 'foreignKey.onUpdate is not one of allowed values',
+      name: 'foreignKey.localField invalid entity name starting with digit',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id', 'title'],
+        relations: {
+          fk_test_b: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: '1321asdas',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
+        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
-      name: 'foreignKey.onUpdate is not one of allowed values',
+      name: 'foreignKey.localField invalid entity name with spaces',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id', 'name'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_c: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'cat dog',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'foreignKey.foreignField does not exist in referenced model',
+      patch: {
+        relations: {
+          fk_test_d: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'nonexistent',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_d/foreignField: field "nonexistent" does not exist in model "users"',
+    },
+    {
+      name: 'foreignKey.foreignField is not string',
+      patch: {
+        relations: {
+          fk_test_e: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 123 as unknown as string,
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_e/foreignField must be string',
+    },
+    {
+      name: 'foreignKey.foreignField is empty string',
+      patch: {
+        relations: {
+          fk_test_f: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: '',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_f/foreignField must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'foreignKey.model does not exist',
+      patch: {
+        relations: {
+          fk_test_g: {
+            type: 'belongsTo',
+            model: 'nonexistent_model',
+            localField: 'user_id',
+            foreignField: 'id',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_g/model: model "nonexistent_model" does not exist',
+    },
+    {
+      name: 'foreignKey.type is invalid enum value',
+      patch: {
+        relations: {
+          fk_test_h: {
+            type: 'hasMany',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_h/type must be equal to one of the allowed values',
     },
     {
       name: 'foreignKey.onDelete is not one of allowed values',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_i: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
             onDelete: 'INVALID',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/onDelete must be equal to one of the allowed values',
+        '/data/models/fk_test/relations/fk_test_i/onDelete must be equal to one of the allowed values',
     },
     {
       name: 'foreignKey.onUpdate is not one of allowed values',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_j: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
             onUpdate: 'INVALID',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/onUpdate must be equal to one of the allowed values',
+        '/data/models/fk_test/relations/fk_test_j/onUpdate must be equal to one of the allowed values',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const fkTable = validBaseConfig.models[1];
-    const config = {
+    const fkTable = Object.values(validBaseConfig.data.models)[1];
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        ...validBaseConfig.models,
-        {
-          ...fkTable,
-          ...patch,
+      data: {
+        models: {
+          ...validBaseConfig.data.models,
+          fk_test: {
+            ...fkTable,
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1915,36 +1496,36 @@ describe('validateValidModelForeignKeyConfig', () => {
     {
       name: 'valid model',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
-      patch: {
-        foreignKeys: [],
-      },
+      patch: {},
     },
   ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const fkTable = validBaseConfig.models[1];
-    const config = {
+    const fkTable = Object.values(validBaseConfig.data.models)[1];
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        ...validBaseConfig.models,
-        {
-          ...fkTable,
-          ...patch,
+      data: {
+        models: {
+          ...validBaseConfig.data.models,
+          fk_test: {
+            ...fkTable,
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
@@ -2023,7 +1604,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
       name: 'name as invalid',
@@ -2033,7 +1614,7 @@ describe('validateInvalidApisConfig', () => {
         ],
       },
       expected:
-        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
       name: 'name as duplicate',
@@ -3866,15 +3447,17 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
   it('should catch non-string idField', () => {
     const config = {
       ...validBaseConfig,
-      models: [
-        {
-          name: 'users',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'name', type: 'string'},
-          ],
+      data: {
+        models: {
+          users: {
+            table: 'users',
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
         },
-      ],
+      },
       authentication: {
         enabled: true,
         provider: {
@@ -3904,15 +3487,17 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
   it('should catch non-string usernameField', () => {
     const config = {
       ...validBaseConfig,
-      models: [
-        {
-          name: 'users',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'name', type: 'string'},
-          ],
+      data: {
+        models: {
+          users: {
+            table: 'users',
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
         },
-      ],
+      },
       authentication: {
         enabled: true,
         provider: {
@@ -3942,15 +3527,17 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
   it('should catch non-string passwordField', () => {
     const config = {
       ...validBaseConfig,
-      models: [
-        {
-          name: 'users',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'name', type: 'string'},
-          ],
+      data: {
+        models: {
+          users: {
+            table: 'users',
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
         },
-      ],
+      },
       authentication: {
         enabled: true,
         provider: {
@@ -3980,15 +3567,17 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
   it('should catch non-string isVerifiedField', () => {
     const config = {
       ...validBaseConfig,
-      models: [
-        {
-          name: 'users',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'name', type: 'string'},
-          ],
+      data: {
+        models: {
+          users: {
+            table: 'users',
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
         },
-      ],
+      },
       authentication: {
         enabled: true,
         provider: {
