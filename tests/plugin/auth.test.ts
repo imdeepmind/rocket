@@ -4,6 +4,8 @@ import {describe, expect, it} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
 
+import {AuthenticationConfig} from '@/interfaces/config';
+
 describe('Auth Plugin — up-auth engine', () => {
   it('should register @fastify/jwt and expose jwt decorator', async () => {
     const app = Fastify();
@@ -44,16 +46,20 @@ describe('Auth Plugin — up-auth engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'up-auth',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          },
         },
-        jwtSecret: 'custom-secret-key',
       },
     };
     await app.register(authPlugin);
@@ -128,16 +134,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 
@@ -173,16 +177,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 
@@ -222,16 +224,14 @@ describe('Auth Plugin — api-key engine', () => {
         primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       models: [],
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {
+            key: 'my-secret-key',
+          },
         },
-        apiKey: 'my-secret-key',
       },
     };
 
@@ -253,5 +253,37 @@ describe('Auth Plugin — api-key engine', () => {
     });
     expect(res.statusCode).toBe(401);
     expect(res.json()).toEqual({ok: false});
+  });
+});
+
+describe('Auth Plugin — unknown provider type', () => {
+  it('should fall through without error when provider type is unknown', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {name: 'test', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+      },
+      models: [],
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'oauth',
+          config: {},
+        },
+      } as unknown as AuthenticationConfig,
+    };
+    await app.register(authPlugin);
+    await app.ready();
+
+    // JWT should not be registered since it's not up-auth
+    expect(app.jwt).toBeUndefined();
   });
 });

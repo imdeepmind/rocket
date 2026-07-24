@@ -64,7 +64,7 @@ function validateApisConstraints(config: AppConfig): string[] {
 
     // validate the authorization, true only when auth is enabled
     const authorization = apisConfigurations[key]?.authorization;
-    if (authorization && !config.auth?.enableAuth) {
+    if (authorization && !config.authentication?.enabled) {
       errors.push(
         `apis/${key}/authorization: authorization is only allowed when auth is enabled`,
       );

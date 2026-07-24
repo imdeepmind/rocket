@@ -12,7 +12,7 @@ import {registerRoutes} from '@/routes';
 import {
   ApisConfig,
   AppConfig,
-  AuthConfig,
+  AuthenticationConfig,
   CustomAPIConfig,
   DatabaseConfig,
   ModelConfig,
@@ -48,7 +48,7 @@ export async function createTestApp(
   models: ModelConfig[] = [],
   apis?: ApisConfig,
   customAPIs?: CustomAPIConfig,
-  auth?: AuthConfig,
+  authentication?: AuthenticationConfig,
 ): Promise<FastifyInstance> {
   const appConfig: AppConfig = {
     application: {name: 'Test App', logLevel: 'error'},
@@ -63,7 +63,7 @@ export async function createTestApp(
     models,
     apis,
     customAPIs,
-    auth,
+    authentication,
   };
 
   const fastify = Fastify();

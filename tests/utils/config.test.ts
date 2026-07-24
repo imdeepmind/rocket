@@ -11,8 +11,16 @@ describe('Config Utilities', () => {
       expect(resolveEnvVars('env:TEST_VAR')).toBe('resolved_value');
     });
 
-    it('should return original string if env var not found', () => {
-      expect(resolveEnvVars('env:NON_EXISTENT')).toBe('env:NON_EXISTENT');
+    it('should throw if env var is not found', () => {
+      expect(() => resolveEnvVars('env:NON_EXISTENT')).toThrow(
+        'environment variable "NON_EXISTENT"',
+      );
+    });
+
+    it('should throw if env var name is empty', () => {
+      expect(() => resolveEnvVars('env:')).toThrow(
+        'has an empty environment variable name',
+      );
     });
 
     it('should not change string if it does not start with env:', () => {

@@ -94,7 +94,7 @@ export function registerCustomQueryRoutes(
     // if the api level auth is enabled, or if the app level auth is enabled
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??
-      config.auth?.enableAuth ??
+      config.authentication?.enabled ??
       false;
 
     // body parameters are always in between @@
@@ -203,8 +203,8 @@ export function registerCustomQueryRoutes(
     // adding the security based on the auth flag and auth engine
     // if the auth flag is enabled and the auth engine is up-auth, then add the bearerAuth
     if (
-      config.auth?.enableAuth &&
-      config.auth?.authEngine === 'up-auth' &&
+      config.authentication?.enabled &&
+      config.authentication?.provider.type === 'up-auth' &&
       authorization
     ) {
       security.push({bearerAuth: []});
@@ -212,8 +212,8 @@ export function registerCustomQueryRoutes(
 
     // if the auth flag is enabled and the auth engine is api-key, then add the apiKeyAuth
     if (
-      config.auth?.enableAuth &&
-      config.auth?.authEngine === 'api-key' &&
+      config.authentication?.enabled &&
+      config.authentication?.provider.type === 'api-key' &&
       authorization
     ) {
       security.push({apiKeyAuth: []});
@@ -231,7 +231,7 @@ export function registerCustomQueryRoutes(
       schema,
       config: {apiIdentifier},
       preValidation: async (request, reply) => {
-        if (config.auth?.enableAuth && authorization) {
+        if (config.authentication?.enabled && authorization) {
           try {
             await request.authenticate();
           } catch {

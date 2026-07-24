@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/interfaces/config';
+import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -46,14 +46,18 @@ const noDeletableFieldsModel: ModelConfig[] = [
   },
 ];
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
@@ -262,14 +266,11 @@ describe('test delete api', () => {
     });
 
     test('should handle api-key auth (security schema check)', async () => {
-      const apiKeyAuth: AuthConfig = {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      const apiKeyAuth: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {key: 'test-key'},
         },
       };
 
@@ -287,6 +288,40 @@ describe('test delete api', () => {
       });
 
       expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should skip auth check when authentication.enabled is false', async () => {
+      const disabledAuth: AuthenticationConfig = {
+        enabled: false,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        disabledAuth,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      // Should succeed because authentication is disabled, auth check is skipped
+      expect(response.statusCode).toBe(204);
       await fastify.close();
     });
   });

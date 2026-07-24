@@ -432,54 +432,79 @@ const customAPIsSchema = {
   },
 };
 
-const authSchema = {
+const userModelSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['enableAuth', 'authEngine'],
+  required: ['model', 'idField', 'usernameField', 'passwordField'],
   properties: {
-    enableAuth: {
+    model: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    idField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    usernameField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    passwordField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    isVerifiedField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+  },
+};
+
+const authenticationSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['enabled', 'provider'],
+  properties: {
+    enabled: {
       type: 'boolean',
     },
-    authEngine: {
-      type: 'string',
-      enum: ['api-key', 'up-auth'],
-    },
-    authModel: {
+    provider: {
       type: 'object',
       additionalProperties: false,
-      required: ['modelName', 'idColumn', 'usernameColumn', 'passwordColumn'],
+      required: ['type', 'config'],
       properties: {
-        modelName: {
+        type: {
           type: 'string',
-          isEntityName: true,
-          minLength: 1,
+          enum: ['api-key', 'up-auth'],
         },
-        idColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
-        },
-        usernameColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
-        },
-        passwordColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
+        config: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            userModel: userModelSchema,
+            jwtSecret: {
+              type: 'string',
+              minLength: 32,
+            },
+            tokenExpiration: {
+              type: 'string',
+              pattern: '^\\d+[smhd]$',
+            },
+            mfaRequired: {
+              type: 'boolean',
+            },
+            key: {
+              type: 'string',
+              minLength: 1,
+            },
+          },
         },
       },
-    },
-    apiKey: {
-      type: 'string',
-      minLength: 1,
-      nullable: true,
-    },
-    jwtSecret: {
-      type: 'string',
-      minLength: 1,
-      nullable: true,
     },
   },
 };
@@ -519,7 +544,7 @@ const schema = {
     },
     apis: apisSchema,
     customAPIs: customAPIsSchema,
-    auth: authSchema,
+    authentication: authenticationSchema,
     communicate: communicateSchema,
   },
 };
