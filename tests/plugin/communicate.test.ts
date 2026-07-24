@@ -21,9 +21,9 @@ describe('communicate plugin', () => {
   it('decorates fastify with communicate', async () => {
     app = Fastify();
     app.appConfig = {
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'dummy',
+          provider: 'dummy',
         },
       },
     } as unknown as AppConfig;
@@ -36,12 +36,12 @@ describe('communicate plugin', () => {
     expect(typeof app.communicate.sendEmail).toBe('function');
   });
 
-  it('sends a dummy email when emailEngine is dummy', async () => {
+  it('sends a dummy email when provider is dummy', async () => {
     app = Fastify();
     app.appConfig = {
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'dummy',
+          provider: 'dummy',
         },
       },
     } as unknown as AppConfig;
@@ -64,12 +64,12 @@ describe('communicate plugin', () => {
     consoleLogSpy.mockRestore();
   });
 
-  it('does not send an email if emailEngine is not dummy', async () => {
+  it('does not send an email if provider is not dummy', async () => {
     app = Fastify();
     app.appConfig = {
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'other' as unknown as 'dummy',
+          provider: 'other' as unknown as 'dummy',
         },
       },
     } as unknown as AppConfig;

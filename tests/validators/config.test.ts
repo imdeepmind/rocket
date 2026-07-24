@@ -3588,7 +3588,7 @@ describe('validateInvalidAuthConfig', () => {
         },
       },
       expected:
-        '/authentication/provider/config/mfaRequired: communicate must be configured when mfaRequired is true',
+        '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
     },
     {
       name: 'non-string isVerifiedField',
@@ -3658,6 +3658,29 @@ describe('validateInvalidAuthConfig', () => {
       },
       expected:
         '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
+    },
+    {
+      name: 'isVerifiedField set but no integrations.email configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
     },
   ])('Scenario: $name -> should throw error', ({patch, expected}) => {
     const config = {
@@ -3774,7 +3797,7 @@ describe('validateValidAuthConfig', () => {
           engine: 'redis' as const,
           connection: {url: 'redis://localhost:6379'},
         },
-        communicate: {email: {emailEngine: 'dummy' as const}},
+        integrations: {email: {provider: 'dummy' as const}},
       },
     },
     {
@@ -3797,12 +3820,15 @@ describe('validateValidAuthConfig', () => {
           },
         },
       },
+      extra: {
+        integrations: {email: {provider: 'dummy' as const}},
+      },
     },
   ])('Scenario: $name -> should return', ({patch, extra}) => {
     const base = {...validBaseConfig};
     if (extra) {
       base.infrastructure = {...base.infrastructure, cache: extra.cache};
-      base.communicate = extra.communicate;
+      base.integrations = extra.integrations;
     }
     const config = {
       ...base,
@@ -4162,14 +4188,14 @@ describe('validateValidAuthorizationConfig', () => {
   });
 });
 
-// check communicate configs validation
-describe('validateCommunicateConfig', () => {
-  it('should pass when communicate config is valid', () => {
+// check integrations configs validation
+describe('validateIntegrationsConfig', () => {
+  it('should pass when integrations config is valid', () => {
     const config = {
       ...validBaseConfig,
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'dummy',
+          provider: 'dummy',
         },
       },
     };
@@ -4177,25 +4203,25 @@ describe('validateCommunicateConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 
-  it('should throw when email config is missing required emailEngine', () => {
+  it('should throw when email config is missing required provider', () => {
     const config = {
       ...validBaseConfig,
-      communicate: {
+      integrations: {
         email: {},
       },
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      "must have required property 'emailEngine'",
+      "must have required property 'provider'",
     );
   });
 
-  it('should throw when email config has invalid emailEngine enum value', () => {
+  it('should throw when email config has invalid provider enum value', () => {
     const config = {
       ...validBaseConfig,
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'invalid-engine',
+          provider: 'invalid-provider',
         },
       },
     };
@@ -4208,9 +4234,9 @@ describe('validateCommunicateConfig', () => {
   it('should throw when email config has extra properties', () => {
     const config = {
       ...validBaseConfig,
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'dummy',
+          provider: 'dummy',
           extraProperty: true,
         },
       },
@@ -4221,12 +4247,12 @@ describe('validateCommunicateConfig', () => {
     );
   });
 
-  it('should throw when communicate config itself has extra properties', () => {
+  it('should throw when integrations config itself has extra properties', () => {
     const config = {
       ...validBaseConfig,
-      communicate: {
+      integrations: {
         email: {
-          emailEngine: 'dummy',
+          provider: 'dummy',
         },
         extraProperty: true,
       },

@@ -512,16 +512,16 @@ const authenticationSchema = {
 const emailSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['emailEngine'],
+  required: ['provider'],
   properties: {
-    emailEngine: {
+    provider: {
       type: 'string',
       enum: ['dummy'],
     },
   },
 };
 
-const communicateSchema = {
+const integrationsSchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -545,7 +545,7 @@ const schema = {
     apis: apisSchema,
     customAPIs: customAPIsSchema,
     authentication: authenticationSchema,
-    communicate: communicateSchema,
+    integrations: integrationsSchema,
   },
 };
 

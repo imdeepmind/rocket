@@ -84,8 +84,8 @@ export async function startServer(
     await app.register(cachePlugin);
   }
 
-  // config-driven communicate
-  if (config.communicate) {
+  // config-driven integrations (email)
+  if (config.integrations?.email) {
     await app.register(communicatePlugin);
   }
 
