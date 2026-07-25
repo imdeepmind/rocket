@@ -199,8 +199,8 @@ export async function handleSql(
   reply: FastifyReply,
   sql: string,
 ): Promise<void> {
-  const params = (request.params as Record<string, unknown>) || {};
-  const query = (request.query as Record<string, unknown>) || {};
+  const params = request.params as Record<string, unknown>;
+  const query = request.query as Record<string, unknown>;
   const body = (request.body as Record<string, unknown>) || {};
 
   const interpolated = interpolateQuery(sql, {params, query, body});
