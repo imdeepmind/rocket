@@ -37,7 +37,9 @@ export function registerSearchRoutes(
     );
 
     for (const [fieldName, field] of searchableFields) {
-      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->search`;
+      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.search`;
+
+      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

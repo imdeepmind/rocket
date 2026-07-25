@@ -204,7 +204,7 @@ describe('validateInvalidDocsConfig', () => {
       },
       expected: '/docs/openapi/info/license/url must match format "uri"',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       docs: {
@@ -322,7 +322,7 @@ describe('validateValidDocsConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       docs: {
@@ -374,7 +374,7 @@ describe('validateInvalidDatabaseConfig', () => {
       expected:
         '/infrastructure/primaryDatabase/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
@@ -406,7 +406,7 @@ describe('validateValidDatabaseConfig', () => {
       name: 'engine as sqlite',
       patch: {engine: 'sqlite', connection: {url: './database.db'}},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
@@ -839,7 +839,7 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -904,7 +904,7 @@ describe('validateValidModelFieldsConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -957,7 +957,7 @@ describe('validateInvalidModelIndexesConfig', () => {
       },
       expected: '/data/models/test/indexes/test_index/unique must be boolean',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -1010,7 +1010,7 @@ describe('validateValidModelIndexesConfig', () => {
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
       },
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -1117,7 +1117,7 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -1256,7 +1256,7 @@ describe('validateValidModelValidationConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       data: {
@@ -1557,7 +1557,7 @@ describe('validateInvalidModelForeignKeyConfig', () => {
       expected:
         '/data/models/fk_test/relations/fk_test_j/onUpdate must be equal to one of the allowed values',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const fkTable = Object.values(validBaseConfig.data.models)[1];
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1595,7 +1595,7 @@ describe('validateValidModelForeignKeyConfig', () => {
       name: 'valid model',
       patch: {},
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
     const fkTable = Object.values(validBaseConfig.data.models)[1];
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1634,7 +1634,7 @@ describe('validateInvalidApplicationConfig', () => {
       expected:
         '/application/logLevel must be equal to one of the allowed values',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       application: {
@@ -1667,7 +1667,7 @@ describe('validateValidApplicationConfig', () => {
     {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
     {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
     {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       application: patch as AppConfig['application'],
@@ -1996,7 +1996,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'invalid',
@@ -2008,7 +2008,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.all.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/customEndpoints.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2026,7 +2026,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2037,7 +2037,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
       },
-      expected: '/apis/customEndpoints.all.test/webhooks/0/data must be array',
+      expected: '/apis/customEndpoints.test/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2055,7 +2055,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2067,7 +2067,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.all.test/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/customEndpoints.test/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2085,7 +2085,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2097,7 +2097,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.all.test/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/customEndpoints.test/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2115,7 +2115,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2127,7 +2127,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.all.test/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/customEndpoints.test/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2145,7 +2145,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2158,7 +2158,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.all.test/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/customEndpoints.test/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2176,7 +2176,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.test': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2189,9 +2189,9 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        'apis/customEndpoints.all.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
@@ -2325,7 +2325,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2350,7 +2350,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2375,7 +2375,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.all.sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2388,7 +2388,7 @@ describe('validateValidCustomEndpointsConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
@@ -2499,7 +2499,7 @@ describe('validateRateLimitConfig', () => {
       expected:
         "/application/rateLimit must have required property 'timeWindow'",
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       application: {
@@ -2556,7 +2556,7 @@ describe('validateRateLimitConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       application: {
@@ -2638,7 +2638,7 @@ describe('validateCacheDbConfig', () => {
       expected:
         "/infrastructure/cache must have required property 'connection'",
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
@@ -2679,7 +2679,7 @@ describe('validateCacheDbConfig', () => {
         connection: {url: 'redis://:mypassword@localhost:6379'},
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
@@ -2722,19 +2722,19 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid webhook for modelAPis',
       patch: {
-        'aggregateAPIs->users->id->getAggregation': 'invalid',
+        'aggregateAPIs.users.id.getAggregation': 'invalid',
       },
-      expected: '/apis/aggregateAPIs->users->id->getAggregation must be object',
+      expected: '/apis/aggregateAPIs.users.id.getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'aggregateAPIs->users->id->getAggregation': {
+        'aggregateAPIs.users.id.getAggregation': {
           webhooks: 'invalid',
         },
       },
       expected:
-        '/apis/aggregateAPIs->users->id->getAggregation/webhooks must be array',
+        '/apis/aggregateAPIs.users.id.getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -2743,7 +2743,7 @@ describe('validateInvalidModelAPIsConfig', () => {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: true,
               triggerOnResponse: true,
             },
@@ -2753,13 +2753,13 @@ describe('validateInvalidModelAPIsConfig', () => {
       expected: 'apis/invalid_key: invalid key format',
     },
     {
-      name: 'invalid data resp cannot be used when triggerOnRequest is true',
+      name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregateAPIs->users->id->getAggregation': {
+        'aggregateAPIs.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: true,
               triggerOnResponse: true,
             },
@@ -2767,9 +2767,9 @@ describe('validateInvalidModelAPIsConfig', () => {
         },
       },
       expected:
-        'apis/aggregateAPIs->users->id->getAggregation/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+        'apis/aggregateAPIs.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: patch,
@@ -2786,71 +2786,71 @@ describe('validateValidModelAPIsConfig', () => {
     {
       name: 'valid modelAPIs',
       patch: {
-        'aggregateAPIs->users->id->getAggregation': {
+        'aggregateAPIs.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->id->delete': {
+        'modelAPIs.users.id.delete': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->id->edit': {
+        'modelAPIs.users.id.edit': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->all->getAll': {
+        'modelAPIs.users.all.getAll': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->id->index': {
+        'modelAPIs.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->all->insert': {
+        'modelAPIs.users.all.insert': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->users->id->search': {
+        'modelAPIs.users.id.search': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
@@ -2858,7 +2858,7 @@ describe('validateValidModelAPIsConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: patch,
@@ -3423,7 +3423,7 @@ describe('validateInvalidAuthConfig', () => {
       expected:
         '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       authentication: patch.authentication as unknown as NonNullable<
@@ -3565,7 +3565,7 @@ describe('validateValidAuthConfig', () => {
         integrations: {email: {provider: 'dummy' as const}},
       },
     },
-  ])('Scenario: $name -> should return', ({patch, extra}) => {
+  ])('Scenario: $name . should return', ({patch, extra}) => {
     const base = {...validBaseConfig};
     if (extra) {
       base.infrastructure = {...base.infrastructure, cache: extra.cache};
@@ -3771,34 +3771,34 @@ describe('validateInvalidSspConfig', () => {
   it.each([
     {
       name: 'invalid ssp config param type',
-      patch: {ssp: [{paramType: 'invalid', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'invalid', name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param type',
-      patch: {ssp: [{paramType: 132, paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 132, name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param name',
-      patch: {ssp: [{paramType: 'body', paramName: 123, value: '1'}]},
+      patch: {serverParams: [{type: 'body', name: 123, value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/paramName must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/name must be string',
     },
     {
       name: 'invalid ssp config param value',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: null}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: null}]},
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/ssp/0/value must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/value must be string',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'customAPIs->customQueries->all->sample_query': {
-          ssp: patch.ssp,
+        'customAPIs.customQueries.all.sample_query': {
+          serverParams: patch.serverParams,
         },
       },
     };
@@ -3814,30 +3814,30 @@ describe('validateValidSspConfig', () => {
   it.each([
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: 1}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: 1}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: true}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: true}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'query', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'query', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'path', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'path', name: 'id', value: '1'}]},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->posts->all->getAll': {
-          ssp: patch.ssp,
+        'modelAPIs.posts.all.getAll': {
+          serverParams: patch.serverParams,
         },
       },
     };
@@ -3852,18 +3852,18 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'modelAPIs->posts->all->getAll/authorization must be boolean',
+      expected: 'modelAPIs.posts.all.getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'modelAPIs->posts->all->getAll/authorization must be boolean',
+      expected: 'modelAPIs.posts.all.getAll/authorization must be boolean',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->posts->all->getAll': {
+        'modelAPIs.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3881,9 +3881,9 @@ describe('validateInvalidAuthorizationConfig', () => {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/modelAPIs->posts->all->getAll/authorization: authorization is only allowed when auth is enabled',
+        'apis/modelAPIs.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       authentication: {
@@ -3894,7 +3894,7 @@ describe('validateInvalidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'modelAPIs->posts->all->getAll': {
+        'modelAPIs.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3916,7 +3916,7 @@ describe('validateValidAuthorizationConfig', () => {
       name: 'valid authorization config',
       patch: {authorization: false},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       authentication: {
@@ -3927,7 +3927,7 @@ describe('validateValidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'modelAPIs->posts->all->getAll': {
+        'modelAPIs.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },

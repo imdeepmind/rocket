@@ -344,7 +344,7 @@ const webhookSchema = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['query', 'body', 'params', 'resp'],
+        enum: ['query', 'body', 'params', 'response'],
       },
       minItems: 1,
     },
@@ -399,16 +399,16 @@ const customEndpointSchema = {
   },
 };
 
-const sspSchema = {
+const serverParamSchema = {
   type: 'object',
-  required: ['paramType', 'paramName', 'value'],
+  required: ['type', 'name', 'value'],
   additionalProperties: false,
   properties: {
-    paramType: {
+    type: {
       type: 'string',
       enum: ['path', 'query', 'body'],
     },
-    paramName: {
+    name: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
@@ -422,17 +422,20 @@ const sspSchema = {
 const apisSchema = {
   type: 'object',
   patternProperties: {
-    '^[A-Za-z0-9-_>.]+$': {
+    '^[A-Za-z0-9-_.]+$': {
       type: 'object',
       properties: {
+        enabled: {
+          type: 'boolean',
+        },
         webhooks: {
           type: 'array',
           items: webhookSchema,
           minItems: 1,
         },
-        ssp: {
+        serverParams: {
           type: 'array',
-          items: sspSchema,
+          items: serverParamSchema,
           minItems: 1,
         },
         authorization: {

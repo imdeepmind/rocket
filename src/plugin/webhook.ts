@@ -55,7 +55,7 @@ export default fp(
           body: dataToSend.includes('body') ? request.body : undefined,
           query: dataToSend.includes('query') ? request.query : undefined,
           params: dataToSend.includes('params') ? request.params : undefined,
-          resp: dataToSend.includes('resp') ? payload : undefined,
+          response: dataToSend.includes('response') ? payload : undefined,
         };
         const shouldCall = isRequestTrigger
           ? config.triggerOnRequest

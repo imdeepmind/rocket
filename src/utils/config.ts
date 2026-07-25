@@ -52,8 +52,8 @@ export function getAPIFromUniqueIdentifier(
   const parts = identifier.split('.');
 
   if (parts[0] === 'customEndpoints') {
-    if (parts[1] === 'all' && parts.length === 3) {
-      return config?.customEndpoints?.[parts[2]] ?? null;
+    if (parts.length === 2) {
+      return config?.customEndpoints?.[parts[1]] ?? null;
     }
   }
 

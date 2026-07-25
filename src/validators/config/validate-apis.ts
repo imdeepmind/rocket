@@ -14,10 +14,10 @@ function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
       );
     }
 
-    // data resp cannot be used when triggerOnRequest is true
-    if (webhook.triggerOnRequest && webhook.data.includes('resp')) {
+    // data response cannot be used when triggerOnRequest is true
+    if (webhook.triggerOnRequest && webhook.data.includes('response')) {
       errors.push(
-        `${path}: data resp cannot be used when triggerOnRequest is true`,
+        `${path}: data response cannot be used when triggerOnRequest is true`,
       );
     }
   });
@@ -35,7 +35,7 @@ function validateApisConstraints(config: AppConfig): string[] {
     const parts = key.split('.');
 
     if (parts[0] === 'customEndpoints') {
-      if (parts[1] === 'all' && parts.length === 3) {
+      if (parts.length === 2) {
         const endpointConfig = getAPIFromUniqueIdentifier(config, key);
 
         if (!endpointConfig) {
@@ -46,7 +46,7 @@ function validateApisConstraints(config: AppConfig): string[] {
         errors.push(`apis/${key}: invalid key format`);
         continue;
       }
-    } else if (key.split('->').length !== 4) {
+    } else if (parts.length !== 4) {
       errors.push(`apis/${key}: invalid key format`);
       continue;
     }

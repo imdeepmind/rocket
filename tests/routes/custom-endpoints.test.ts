@@ -288,7 +288,7 @@ describe('test custom-endpoints api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'customEndpoints.all.searchUsers': {
+      'customEndpoints.searchUsers': {
         authorization: true,
       },
     };

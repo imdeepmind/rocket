@@ -29,13 +29,17 @@ export function registerChangePasswordRoute(
     return;
   }
 
+  const apiIdentifier = `authAPIs.${model}.all.changePassword`;
+
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(model);
 
   app.post(
     '/auth/change-password',
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${model}->all->changePassword`},
+      config: {apiIdentifier},
       preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
         try {
           await request.authenticate();

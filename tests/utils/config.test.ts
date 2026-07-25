@@ -85,7 +85,7 @@ describe('Config Utilities', () => {
     it('should return the correct custom endpoint config for a valid identifier', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customEndpoints.all.get_users',
+        'customEndpoints.get_users',
       );
       expect(result).toEqual(mockConfig.customEndpoints?.get_users);
     });
@@ -109,7 +109,7 @@ describe('Config Utilities', () => {
     it('should return null if the custom endpoint name is not found', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customEndpoints.all.non_existent',
+        'customEndpoints.non_existent',
       );
       expect(result).toBeNull();
     });
@@ -117,7 +117,7 @@ describe('Config Utilities', () => {
     it('should return null if customEndpoints is missing in config', () => {
       const result = getAPIFromUniqueIdentifier(
         {} as AppConfig,
-        'customEndpoints.all.get_users',
+        'customEndpoints.get_users',
       );
       expect(result).toBeNull();
     });

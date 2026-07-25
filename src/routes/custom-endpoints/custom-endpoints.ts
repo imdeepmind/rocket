@@ -17,7 +17,9 @@ export function registerCustomEndpointRoutes(
   if (!customEndpoints) return;
 
   for (const [name, endpoint] of Object.entries(customEndpoints)) {
-    const apiIdentifier = `customEndpoints.all.${name}`;
+    const apiIdentifier = `customEndpoints.${name}`;
+
+    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??

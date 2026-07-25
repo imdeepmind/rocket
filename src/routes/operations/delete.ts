@@ -29,7 +29,9 @@ export function registerDeleteRoutes(
     );
 
     for (const [fieldName, field] of deletableFields) {
-      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->delete`;
+      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.delete`;
+
+      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

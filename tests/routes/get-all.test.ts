@@ -380,7 +380,7 @@ describe('test get-all api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs->users->all->getAll': {
+      'modelAPIs.users.all.getAll': {
         authorization: true,
       },
     };

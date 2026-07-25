@@ -134,7 +134,7 @@ describe('webhook plugin', () => {
     const webhookConfigs: WebhookConfig[] = [
       {
         url: 'https://example.com/webhook-resp',
-        data: ['resp'],
+        data: ['response'],
         triggerOnRequest: false,
         triggerOnResponse: true,
       },
@@ -168,7 +168,7 @@ describe('webhook plugin', () => {
     expect(global.fetch).toHaveBeenCalled();
     const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(callArgs[1].body);
-    expect(body.resp).toEqual(responsePayload);
+    expect(body.response).toEqual(responsePayload);
     expect(body.body).toBeUndefined();
   });
 
@@ -247,7 +247,7 @@ describe('webhook plugin', () => {
     const webhookConfigs: WebhookConfig[] = [
       {
         url: 'https://example.com/webhook',
-        data: ['body', 'query', 'params', 'resp'],
+        data: ['body', 'query', 'params', 'response'],
         triggerOnRequest: true,
         triggerOnResponse: true,
       },
@@ -289,7 +289,7 @@ describe('webhook plugin', () => {
       body: {id: 123},
       query: {active: 'true'},
       params: {tenant: 'default'},
-      resp: responsePayload,
+      response: responsePayload,
     });
   });
 

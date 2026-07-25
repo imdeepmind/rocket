@@ -32,7 +32,9 @@ export function registerAggregateRoutes(
     );
 
     for (const [fieldName, field] of aggregatableFields) {
-      const apiIdentifier = `aggregateAPIs->${modelName}->${fieldName}->getAggregation`;
+      const apiIdentifier = `aggregateAPIs.${modelName}.${fieldName}.getAggregation`;
+
+      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

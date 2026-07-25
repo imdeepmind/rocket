@@ -25,7 +25,9 @@ export function registerPostRoutes(
   const {models} = config.data;
 
   for (const [modelName, model] of Object.entries(models)) {
-    const apiIdentifier = `modelAPIs->${modelName}->all->insert`;
+    const apiIdentifier = `modelAPIs.${modelName}.all.insert`;
+
+    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??

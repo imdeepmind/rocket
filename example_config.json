@@ -202,20 +202,20 @@
         }
     },
     "apis": {
-        "aggregateAPIs->users->id->getAggregation": {
+        "aggregateAPIs.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
-                    "data": ["query", "body", "params", "resp"],
+                    "data": ["query", "body", "params", "response"],
                     "triggerOnRequest": false,
                     "triggerOnResponse": true
                 }
             ],
             "authorization": true,
-            "ssp": [
+            "serverParams": [
                 {
-                    "paramType": "query",
-                    "paramName": "operations",
+                    "type": "query",
+                    "name": "operations",
                     "value": "[userEmail]"
                 }
             ]

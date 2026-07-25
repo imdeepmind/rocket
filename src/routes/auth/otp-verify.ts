@@ -32,6 +32,10 @@ function registerOtpVerifyBase(
 
   const upConfig = authentication.provider.config as UpAuthProviderConfig;
 
+  const apiIdentifier = `authAPIs.${model}.all.otp-verify-${action}`;
+
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
@@ -44,7 +48,7 @@ function registerOtpVerifyBase(
     path,
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${model}->all->otp-verify-${action}`},
+      config: {apiIdentifier},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const {ulid, otp, [usernameField]: username} = request.body;
