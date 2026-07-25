@@ -42,6 +42,10 @@ export function registerRegistrationRoute(
   const requiresOtp = !!upConfig.userModel.isVerifiedField;
   const isVerifiedField = upConfig.userModel.isVerifiedField;
 
+  const apiIdentifier = `authAPIs.${model}.all.registration`;
+
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     passwordField,
@@ -54,7 +58,7 @@ export function registerRegistrationRoute(
     '/auth/register',
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${model}->all->registration`},
+      config: {apiIdentifier},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const incomingBody = request.body;

@@ -1,27 +1,44 @@
 import {describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig, CustomAPIConfig} from '@/interfaces/config';
+import {AuthenticationConfig} from '@/interfaces/config';
 
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-describe('test custom-queries api', () => {
-  const customApis: CustomAPIConfig = {
-    customQueries: [
-      {
-        name: 'searchUsers',
-        method: 'GET',
-        path: '/search-users',
-        query:
-          'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
+describe('test custom-endpoints api', () => {
+  const customEndpoints = {
+    searchUsers: {
+      method: 'GET' as const,
+      path: '/search-users',
+      description: 'Search users by status and age',
+      validation: {
+        type: 'object',
+        required: ['minAge'],
+        properties: {
+          minAge: {type: 'integer', minimum: 1},
+        },
       },
-      {
-        name: 'updateUser',
-        method: 'POST',
-        path: '/update-user',
-        query:
-          'UPDATE users SET name = @@name:string@@ WHERE id = $$id:integer$$;',
+      handler: {
+        type: 'sql' as const,
+        sql: 'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
       },
-    ],
+    },
+    updateUser: {
+      method: 'POST' as const,
+      path: '/update-user',
+      description: 'Update a user by ID',
+      validation: {
+        type: 'object',
+        required: ['name', 'id'],
+        properties: {
+          name: {type: 'string'},
+          id: {type: 'integer', minimum: 1},
+        },
+      },
+      handler: {
+        type: 'sql' as const,
+        sql: 'UPDATE users SET name = @@name:string@@ WHERE id = $$id:integer$$;',
+      },
+    },
   };
 
   const upAuthConfig: AuthenticationConfig = {
@@ -40,13 +57,18 @@ describe('test custom-queries api', () => {
   };
 
   describe('happy path', () => {
-    test('should register GET custom queries and validate querystrings', async () => {
-      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
+    test('should register GET custom endpoints and validate querystrings', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
 
       // Successfully call the endpoint with correct schema
       const validResponse = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/search-users',
+        url: '/custom-endpoints/search-users',
         query: {
           status: 'active',
           minAge: '18',
@@ -62,14 +84,19 @@ describe('test custom-queries api', () => {
       await fastify.close();
     });
 
-    test('should register POST custom queries and validate path params and body schemas', async () => {
-      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
+    test('should register POST custom endpoints and validate path params and body schemas', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
 
       // Successfully call the endpoint with correct schema
       // Since it's a POST with path variables, we use the injected /:id
       const validResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/update-user/42',
+        url: '/custom-endpoints/update-user/42',
         payload: {
           name: 'Jane Doe',
         },
@@ -85,27 +112,28 @@ describe('test custom-queries api', () => {
     });
 
     test('should support all data types in magic variables', async () => {
-      const allTypesApis: CustomAPIConfig = {
-        customQueries: [
-          {
-            name: 'allTypes',
-            method: 'POST',
-            path: '/all-types',
-            query:
-              'INSERT INTO test (b, t, d, dec, dt) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@, @@dec:decimal@@, @@dt:date@@);',
+      const allTypesEndpoints = {
+        allTypes: {
+          method: 'POST' as const,
+          path: '/all-types',
+          description: 'Test all types',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
+            sql: 'INSERT INTO test (b, t, d, dec, dt) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@, @@dec:decimal@@, @@dt:date@@);',
           },
-        ],
+        },
       };
       const fastify = await createTestApp(
         pgConfig,
         {},
         undefined,
-        allTypesApis,
+        allTypesEndpoints,
       );
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/all-types',
+        url: '/custom-endpoints/all-types',
         payload: {
           b: true,
           t: 'some long text',
@@ -122,12 +150,17 @@ describe('test custom-queries api', () => {
 
   describe('schema checking and rejections', () => {
     test('should fail GET query when omitting required querystrings not passed depending on fastify settings or passing invalid type', async () => {
-      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
 
       // minAge is expected to be integer. If we pass a string that isn't parseable as int, fastify fails
       const invalidResponse = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/search-users',
+        url: '/custom-endpoints/search-users',
         query: {
           status: 'active',
           minAge: 'invalid-string',
@@ -140,11 +173,16 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when extra body parameters passed', async () => {
-      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
 
       const invalidBodyResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/update-user/42',
+        url: '/custom-endpoints/update-user/42',
         payload: {
           name: 'Jane Doe',
           extra_field: 'not allowed',
@@ -158,11 +196,16 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when path param type fails cast', async () => {
-      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
 
       const invalidPathResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/update-user/not-a-number',
+        url: '/custom-endpoints/update-user/not-a-number',
         payload: {
           name: 'Jane Doe',
         },
@@ -177,25 +220,27 @@ describe('test custom-queries api', () => {
   describe('interpolation error handling', () => {
     test('should throw error when a required variable is missing in request', async () => {
       const fastify = await createTestApp(pgConfig, {}, undefined, {
-        customQueries: [
-          {
-            name: 'missingParam',
-            method: 'POST',
-            path: '/missing-param',
-            query: 'SELECT * FROM users WHERE status = &&status:string&&;',
+        missingParam: {
+          method: 'POST' as const,
+          path: '/missing-param',
+          description: 'Test missing param',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
+            sql: 'SELECT * FROM users WHERE status = &&status:string&&;',
           },
-        ],
+        },
       });
 
       // To hit the "Missing value for parameter" error or "Missing query param",
       // we need a query that expects a param that isn't provided.
       // But Fastify's AJV will normally catch this if it's required.
       // However, we don't mark these as "required" in the JSON schema currently!
-      // In registerCustomQueryRoutes, we only list them in `properties`.
+      // In registerCustomEndpointRoutes, we only list them in `properties`.
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/missing-param',
+        url: '/custom-endpoints/missing-param',
         // Omitting 'status' query string
       });
 
@@ -212,19 +257,21 @@ describe('test custom-queries api', () => {
 
     test('should throw error when a required body variable is missing', async () => {
       const fastify = await createTestApp(pgConfig, {}, undefined, {
-        customQueries: [
-          {
-            name: 'missingBody',
-            method: 'POST',
-            path: '/missing-body',
-            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+        missingBody: {
+          method: 'POST' as const,
+          path: '/missing-body',
+          description: 'Test missing body',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
+            sql: 'SELECT * FROM users WHERE id = @@id:integer@@;',
           },
-        ],
+        },
       });
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-queries/missing-body',
+        url: '/custom-endpoints/missing-body',
         payload: {
           // 'id' is missing
         },
@@ -241,7 +288,7 @@ describe('test custom-queries api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'customAPIs->all->all->searchUsers': {
+      'customEndpoints.searchUsers': {
         authorization: true,
       },
     };
@@ -251,13 +298,13 @@ describe('test custom-queries api', () => {
         pgConfig,
         {},
         apisConfig,
-        customApis,
+        customEndpoints,
         upAuthConfig,
       );
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/search-users',
+        url: '/custom-endpoints/search-users',
         query: {status: 'active', minAge: '18'},
       });
 
@@ -270,7 +317,7 @@ describe('test custom-queries api', () => {
         pgConfig,
         {},
         apisConfig,
-        customApis,
+        customEndpoints,
         upAuthConfig,
       );
 
@@ -278,7 +325,7 @@ describe('test custom-queries api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/search-users',
+        url: '/custom-endpoints/search-users',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -302,13 +349,13 @@ describe('test custom-queries api', () => {
         pgConfig,
         {},
         apisConfig,
-        customApis,
+        customEndpoints,
         apiKeyAuthConfig,
       );
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/search-users',
+        url: '/custom-endpoints/search-users',
         headers: {
           'x-api-key': 'test-key-123',
         },
@@ -320,29 +367,67 @@ describe('test custom-queries api', () => {
     });
   });
 
-  describe('parsing edge cases', () => {
-    test('should handle mismatched delimiters gracefully', async () => {
-      const mismatchedApis: CustomAPIConfig = {
-        customQueries: [
-          {
-            name: 'mismatched',
-            method: 'GET',
-            path: '/mismatched',
-            query: 'SELECT * FROM users WHERE id = $$id:integer@@;',
+  describe('handler type dispatch', () => {
+    test('should return 500 for unsupported handler type', async () => {
+      const unsupportedEndpoints = {
+        unsupported: {
+          method: 'GET' as const,
+          path: '/unsupported',
+          description: 'Test unsupported handler type',
+          validation: {},
+          handler: {
+            type: 'function' as const,
+            sql: 'SELECT 1;',
           },
-        ],
+        },
       };
 
       const fastify = await createTestApp(
         pgConfig,
         {},
         undefined,
-        mismatchedApis,
+        unsupportedEndpoints,
       );
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/mismatched',
+        url: '/custom-endpoints/unsupported',
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(JSON.parse(response.body).message).toBe(
+        'Handler type "function" not supported',
+      );
+
+      await fastify.close();
+    });
+  });
+
+  describe('parsing edge cases', () => {
+    test('should handle mismatched delimiters gracefully', async () => {
+      const mismatchedEndpoints = {
+        mismatched: {
+          method: 'GET' as const,
+          path: '/mismatched',
+          description: 'Test mismatched delimiters',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
+            sql: 'SELECT * FROM users WHERE id = $$id:integer@@;',
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        mismatchedEndpoints,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/mismatched',
       });
 
       // It should still register but without the parameters
@@ -351,32 +436,113 @@ describe('test custom-queries api', () => {
     });
 
     test('should hit default case in cast with unknown type', async () => {
-      const unknownTypeApis: CustomAPIConfig = {
-        customQueries: [
-          {
-            name: 'unknownType',
-            method: 'GET',
-            path: '/unknown-type',
+      const unknownTypeEndpoints = {
+        unknownType: {
+          method: 'GET' as const,
+          path: '/unknown-type',
+          description: 'Test unknown type',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
             // Using a type that is not in the DataType union but bypasses simple regex
-            query: 'SELECT * FROM users WHERE name = &&name:unknown&&;',
+            sql: 'SELECT * FROM users WHERE name = &&name:unknown&&;',
           },
-        ],
+        },
       };
 
       const fastify = await createTestApp(
         pgConfig,
         {},
         undefined,
-        unknownTypeApis as unknown as CustomAPIConfig, // Bypass TS check
+        unknownTypeEndpoints,
       );
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-queries/unknown-type',
+        url: '/custom-endpoints/unknown-type',
         query: {name: 'Alice'},
       });
 
       expect(response.statusCode).toBe(200);
+      await fastify.close();
+    });
+  });
+
+  describe('optional validation and AJV error handling', () => {
+    test('should work when validation property is completely omitted from endpoint config', async () => {
+      const noValidationEndpoints = {
+        getUser: {
+          method: 'GET' as const,
+          path: '/get-user',
+          description: 'Get user by id without explicit validation in config',
+          handler: {
+            type: 'sql' as const,
+            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        noValidationEndpoints,
+      );
+
+      // Path param 'id' is required by default, query params are optional
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/get-user/10',
+      });
+
+      expect(res.statusCode).toBe(200);
+      await fastify.close();
+    });
+
+    test('should return 400 when combined parameters fail AJV validation constraints', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
+
+      // searchUsers has validation requiring minAge >= 1
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/search-users',
+        query: {
+          status: 'active',
+          minAge: '0', // violates minimum: 1
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.message).toContain('minAge');
+
+      await fastify.close();
+    });
+
+    test('should return 400 when a required validation property is missing', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
+
+      // searchUsers requires minAge in validation
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/search-users',
+        query: {},
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.message).toContain('minAge');
+
       await fastify.close();
     });
   });

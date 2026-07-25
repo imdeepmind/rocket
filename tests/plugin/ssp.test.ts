@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import sspPlugin from '@/plugin/ssp';
 
-import {AppConfig, SspConfig} from '@/interfaces/config';
+import {AppConfig, ServerParamConfig} from '@/interfaces/config';
 
 describe('ssp plugin', () => {
   beforeEach(() => {
@@ -51,7 +51,7 @@ describe('ssp plugin', () => {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: [],
+          serverParams: [],
         },
       },
     } as unknown as AppConfig;
@@ -78,17 +78,17 @@ describe('ssp plugin', () => {
 
   it('should add SSP values to query, body, and params if missing', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'qParam', value: 'qValue'},
-      {paramType: 'body', paramName: 'bParam', value: 123},
-      {paramType: 'path', paramName: 'pParam', value: true},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'qParam', value: 'qValue'},
+      {type: 'body', name: 'bParam', value: 123},
+      {type: 'path', name: 'pParam', value: true},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -115,17 +115,17 @@ describe('ssp plugin', () => {
 
   it('should overwrite existing values in query, body, and params', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'tenantId', value: 'newTenant'},
-      {paramType: 'body', paramName: 'userId', value: 'newUser'},
-      {paramType: 'path', paramName: 'groupId', value: 'newGroup'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'tenantId', value: 'newTenant'},
+      {type: 'body', name: 'userId', value: 'newUser'},
+      {type: 'path', name: 'groupId', value: 'newGroup'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -152,15 +152,15 @@ describe('ssp plugin', () => {
 
   it('should handle missing request properties gracefully', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'tenantId', value: 'newTenant'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'tenantId', value: 'newTenant'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -181,17 +181,17 @@ describe('ssp plugin', () => {
 
   it('should not apply SSPs if the target property is an array', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'tenantId', value: 'newTenant'},
-      {paramType: 'body', paramName: 'userId', value: 'newUser'},
-      {paramType: 'path', paramName: 'groupId', value: 'newGroup'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'tenantId', value: 'newTenant'},
+      {type: 'body', name: 'userId', value: 'newUser'},
+      {type: 'path', name: 'groupId', value: 'newGroup'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -218,15 +218,15 @@ describe('ssp plugin', () => {
 
   it('should replace [userId] magic variable with request.user.id', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'ownerId', value: '[userId]'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'ownerId', value: '[userId]'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -250,15 +250,15 @@ describe('ssp plugin', () => {
 
   it('should replace [userEmail] magic variable with request.user.email', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'body', paramName: 'user_email', value: '[userEmail]'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'body', name: 'user_email', value: '[userEmail]'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;
@@ -282,15 +282,15 @@ describe('ssp plugin', () => {
 
   it('should handle missing request.user when magic variables are used', async () => {
     const app = Fastify();
-    const ssps: SspConfig[] = [
-      {paramType: 'query', paramName: 'ownerId', value: '[userId]'},
+    const ssps: ServerParamConfig[] = [
+      {type: 'query', name: 'ownerId', value: '[userId]'},
     ];
 
     app.appConfig = {
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
-          ssp: ssps,
+          serverParams: ssps,
         },
       },
     } as unknown as AppConfig;

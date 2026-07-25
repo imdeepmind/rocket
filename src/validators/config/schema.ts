@@ -344,7 +344,7 @@ const webhookSchema = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['query', 'body', 'params', 'resp'],
+        enum: ['query', 'body', 'params', 'response'],
       },
       minItems: 1,
     },
@@ -359,41 +359,56 @@ const webhookSchema = {
   },
 };
 
-const customQuerySchema = {
+const customEndpointHandlerSchema = {
   type: 'object',
-  required: ['name', 'method', 'path', 'query'],
+  required: ['type', 'sql'],
   additionalProperties: false,
   properties: {
-    name: {
+    type: {
       type: 'string',
-      minLength: 1,
-      isEntityName: true,
+      enum: ['sql'],
     },
-    method: {
-      type: 'string',
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    },
-    path: {
-      type: 'string',
-      pattern: '^\\/[a-z_\\-\\/]+$',
-    },
-    query: {
+    sql: {
       type: 'string',
       minLength: 1,
     },
   },
 };
 
-const sspSchema = {
+const customEndpointSchema = {
   type: 'object',
-  required: ['paramType', 'paramName', 'value'],
+  required: ['method', 'path', 'description', 'handler'],
   additionalProperties: false,
   properties: {
-    paramType: {
+    method: {
+      type: 'string',
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    },
+    path: {
+      type: 'string',
+      pattern: '^\\/[a-zA-Z0-9_-]+$',
+    },
+    description: {
+      type: 'string',
+      minLength: 1,
+    },
+    validation: {
+      type: 'object',
+    },
+    handler: customEndpointHandlerSchema,
+  },
+};
+
+const serverParamSchema = {
+  type: 'object',
+  required: ['type', 'name', 'value'],
+  additionalProperties: false,
+  properties: {
+    type: {
       type: 'string',
       enum: ['path', 'query', 'body'],
     },
-    paramName: {
+    name: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
@@ -407,17 +422,20 @@ const sspSchema = {
 const apisSchema = {
   type: 'object',
   patternProperties: {
-    '^[A-Za-z0-9-_>]+$': {
+    '^[A-Za-z0-9-_.]+$': {
       type: 'object',
       properties: {
+        enabled: {
+          type: 'boolean',
+        },
         webhooks: {
           type: 'array',
           items: webhookSchema,
           minItems: 1,
         },
-        ssp: {
+        serverParams: {
           type: 'array',
-          items: sspSchema,
+          items: serverParamSchema,
           minItems: 1,
         },
         authorization: {
@@ -430,15 +448,10 @@ const apisSchema = {
   additionalProperties: false,
 };
 
-const customAPIsSchema = {
+const customEndpointsSchema = {
   type: 'object',
-  additionalProperties: false,
-  properties: {
-    customQueries: {
-      type: 'array',
-      items: customQuerySchema,
-    },
-  },
+  minProperties: 1,
+  additionalProperties: customEndpointSchema,
 };
 
 const userModelSchema = {
@@ -559,7 +572,7 @@ const schema = {
       },
     },
     apis: apisSchema,
-    customAPIs: customAPIsSchema,
+    customEndpoints: customEndpointsSchema,
     authentication: authenticationSchema,
     integrations: integrationsSchema,
   },

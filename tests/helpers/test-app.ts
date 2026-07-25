@@ -13,7 +13,7 @@ import {
   ApisConfig,
   AppConfig,
   AuthenticationConfig,
-  CustomAPIConfig,
+  CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
@@ -43,7 +43,7 @@ export async function createTestApp(
   dbConfig: DatabaseConfig,
   models: Record<string, ModelConfig> = {},
   apis?: ApisConfig,
-  customAPIs?: CustomAPIConfig,
+  customEndpoints?: Record<string, CustomEndpointConfig>,
   authentication?: AuthenticationConfig,
 ): Promise<FastifyInstance> {
   const appConfig: AppConfig = {
@@ -58,7 +58,7 @@ export async function createTestApp(
     infrastructure: {primaryDatabase: dbConfig},
     data: {models},
     apis,
-    customAPIs,
+    customEndpoints,
     authentication,
   };
 
@@ -72,7 +72,7 @@ export async function createTestApp(
   await fastify.register(webhookPlugin);
   await fastify.register(authPlugin);
 
-  if (Object.keys(models).length > 0 || apis || customAPIs) {
+  if (Object.keys(models).length > 0 || apis || customEndpoints) {
     registerRoutes(fastify, appConfig);
   }
   await fastify.ready();

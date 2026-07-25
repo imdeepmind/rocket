@@ -35,7 +35,9 @@ export function registerIndexRoutes(
     });
 
     for (const [fieldName, field] of indexFields) {
-      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->index`;
+      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.index`;
+
+      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

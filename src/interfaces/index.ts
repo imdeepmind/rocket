@@ -22,7 +22,7 @@ export interface WebhookPayload {
   body?: unknown;
   query?: unknown;
   params?: unknown;
-  resp?: unknown;
+  response?: unknown;
 }
 
 export type WebhookTriggerType = 'request' | 'response';

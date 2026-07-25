@@ -180,31 +180,42 @@
             }
         }
     },
-    "customAPIs": {
-        "customQueries": [
-            {
-                "name": "get_user_by_id",
-                "method": "POST",
-                "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+    "customEndpoints": {
+        "getUserById": {
+            "method": "POST",
+            "path": "/users-by-id",
+            "description": "Returns a user by ID.",
+            "validation": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "minimum": 5
+                    }
+                }
+            },
+            "handler": {
+                "type": "sql",
+                "sql": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
             }
-        ]
+        }
     },
     "apis": {
-        "aggregateAPIs->users->id->getAggregation": {
+        "aggregateAPIs.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
-                    "data": ["query", "body", "params", "resp"],
+                    "data": ["query", "body", "params", "response"],
                     "triggerOnRequest": false,
                     "triggerOnResponse": true
                 }
             ],
             "authorization": true,
-            "ssp": [
+            "serverParams": [
                 {
-                    "paramType": "query",
-                    "paramName": "operations",
+                    "type": "query",
+                    "name": "operations",
                     "value": "[userEmail]"
                 }
             ]

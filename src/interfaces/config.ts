@@ -45,9 +45,9 @@ export type JsonSchemaObject = {
   required?: string[];
   [key: string]: unknown;
 };
-export type WebhookData = 'query' | 'body' | 'params' | 'resp';
+export type WebhookData = 'query' | 'body' | 'params' | 'response';
 export type AuthProviderType = 'api-key' | 'up-auth';
-export type SspParamType = 'path' | 'query' | 'body';
+export type ServerParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
 export type RelationType = 'belongsTo';
 export type ForeignKeyAction =
@@ -152,11 +152,17 @@ export interface WebhookConfig {
   triggerOnResponse: boolean;
 }
 
-export interface CustomQueryConfig {
-  name: string;
+export interface CustomEndpointHandler {
+  type: string;
+  sql: string;
+}
+
+export interface CustomEndpointConfig {
   method: HTTPMethod;
   path: string;
-  query: string;
+  description: string;
+  validation?: Record<string, unknown>;
+  handler: CustomEndpointHandler;
 }
 
 export interface ModelAPIConfig {
@@ -183,22 +189,19 @@ export interface ModelAPIConfig {
   };
 }
 
-export interface SspConfig {
-  paramType: SspParamType;
-  paramName: string;
+export interface ServerParamConfig {
+  type: ServerParamType;
+  name: string;
   value: number | string | boolean;
 }
 
 export interface ApisConfig {
   [key: string]: {
+    enabled?: boolean;
     webhooks?: WebhookConfig[];
-    ssp?: SspConfig[];
+    serverParams?: ServerParamConfig[];
     authorization?: boolean;
   };
-}
-
-export interface CustomAPIConfig {
-  customQueries?: CustomQueryConfig[];
 }
 
 export interface UserModelConfig {
@@ -256,7 +259,7 @@ export interface AppConfig {
   infrastructure: InfrastructureConfig;
   data: DataConfig;
   apis?: ApisConfig;
-  customAPIs?: CustomAPIConfig;
+  customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
   integrations?: IntegrationsConfig;
 }

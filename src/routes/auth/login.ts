@@ -32,6 +32,10 @@ export function registerLoginRoute(
 
   const upConfig = authentication.provider.config as UpAuthProviderConfig;
 
+  const apiIdentifier = `authAPIs.${model}.all.login`;
+
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     passwordField,
@@ -43,7 +47,7 @@ export function registerLoginRoute(
     '/auth/login',
     {
       schema,
-      config: {apiIdentifier: `authAPIs->${model}->all->login`},
+      config: {apiIdentifier},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const {[usernameField]: username, [passwordField]: password} =

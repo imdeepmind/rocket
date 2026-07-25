@@ -34,7 +34,9 @@ export function registerEditRoutes(
     );
 
     for (const [fieldName, field] of editableFields) {
-      const apiIdentifier = `modelAPIs->${modelName}->${fieldName}->edit`;
+      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.edit`;
+
+      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??
