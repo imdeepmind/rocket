@@ -180,15 +180,26 @@
             }
         }
     },
-    "customAPIs": {
-        "customQueries": [
-            {
-                "name": "get_user_by_id",
-                "method": "POST",
-                "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+    "customEndpoints": {
+        "getUserById": {
+            "method": "POST",
+            "path": "/users-by-id",
+            "description": "Returns a user by ID.",
+            "validation": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                }
+            },
+            "handler": {
+                "type": "sql",
+                "sql": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
             }
-        ]
+        }
     },
     "apis": {
         "aggregateAPIs->users->id->getAggregation": {

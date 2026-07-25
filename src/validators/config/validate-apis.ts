@@ -32,22 +32,23 @@ function validateApisConstraints(config: AppConfig): string[] {
   const keys = Object.keys(apisConfigurations);
 
   for (const key of keys) {
-    const parts = key.split('->');
+    const parts = key.split('.');
 
-    if (parts.length !== 4) {
-      errors.push(`apis/${key}: invalid key format`);
-      continue;
-    }
+    if (parts[0] === 'customEndpoints') {
+      if (parts[1] === 'all' && parts.length === 3) {
+        const endpointConfig = getAPIFromUniqueIdentifier(config, key);
 
-    if (parts[0] === 'customAPIs') {
-      if (parts[1] === 'all' && parts[2] === 'all') {
-        const customQueryConfig = getAPIFromUniqueIdentifier(config, key);
-
-        if (!customQueryConfig) {
-          errors.push(`apis/${key}: custom query not found`);
+        if (!endpointConfig) {
+          errors.push(`apis/${key}: custom endpoint not found`);
           continue;
         }
+      } else {
+        errors.push(`apis/${key}: invalid key format`);
+        continue;
       }
+    } else if (key.split('->').length !== 4) {
+      errors.push(`apis/${key}: invalid key format`);
+      continue;
     }
 
     // validate the webhook

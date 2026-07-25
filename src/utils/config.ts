@@ -1,4 +1,4 @@
-import {AppConfig, CustomQueryConfig} from '@/interfaces/config';
+import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
 /**
  * Recursively resolves environment variables in the configuration object.
@@ -48,14 +48,12 @@ export function resolveEnvVars<T>(config: T): T {
 export function getAPIFromUniqueIdentifier(
   config: AppConfig,
   identifier: string,
-): CustomQueryConfig | null {
-  const parts = identifier.split('->');
+): CustomEndpointConfig | null {
+  const parts = identifier.split('.');
 
-  if (parts[0] === 'customAPIs') {
-    if (parts[1] === 'customQueries' && parts[2] === 'all') {
-      const customQueries = config?.customAPIs?.customQueries ?? [];
-
-      return customQueries.find(cq => cq.name === parts[3]) ?? null;
+  if (parts[0] === 'customEndpoints') {
+    if (parts[1] === 'all' && parts.length === 3) {
+      return config?.customEndpoints?.[parts[2]] ?? null;
     }
   }
 

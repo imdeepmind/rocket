@@ -3,21 +3,16 @@ import {AppConfig} from '@/interfaces/config';
 function validateCustomAPIs(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  const customQueries = config.customAPIs?.customQueries ?? [];
+  const customEndpoints = config.customEndpoints ?? {};
 
-  const existingNames = new Set<string>();
+  const names = Object.keys(customEndpoints);
 
-  if (customQueries.length > 0) {
-    customQueries.forEach((cq, i) => {
-      const path = `/customAPIs/customQueries/${i}`;
+  if (names.length > 0) {
+    names.forEach(name => {
+      const endpoint = customEndpoints[name];
+      const path = `/customEndpoints/${name}`;
 
-      const q = cq.query.trim().toUpperCase();
-
-      // validate the name to make sure it is unique and follow naming convention
-      if (!cq.name || existingNames.has(cq.name)) {
-        errors.push(`${path}/name: name must be unique and non-empty`);
-      }
-      existingNames.add(cq.name);
+      const q = endpoint.handler.sql.trim().toUpperCase();
 
       // DDL commands usually start with CREATE, ALTER, DROP, TRUNCATE, RENAME
       const ddlPrefixes = [
@@ -28,7 +23,7 @@ function validateCustomAPIs(config: AppConfig): string[] {
         'RENAME ',
       ];
       if (ddlPrefixes.some(prefix => q.startsWith(prefix))) {
-        errors.push(`${path}/query: DDL queries are not allowed`);
+        errors.push(`${path}/handler/sql: DDL queries are not allowed`);
         return;
       }
 
@@ -36,15 +31,17 @@ function validateCustomAPIs(config: AppConfig): string[] {
       const dmlPrefixes = ['INSERT ', 'UPDATE ', 'DELETE '];
       const isDml = dmlPrefixes.some(prefix => q.startsWith(prefix));
 
-      if (cq.method === 'GET') {
+      if (endpoint.method === 'GET') {
         if (!isDql) {
           errors.push(
-            `${path}/query: only DQL queries are allowed for GET method`,
+            `${path}/handler/sql: only DQL queries are allowed for GET method`,
           );
         }
       } else {
         if (!isDql && !isDml) {
-          errors.push(`${path}/query: only DQL and DML queries are allowed`);
+          errors.push(
+            `${path}/handler/sql: only DQL and DML queries are allowed`,
+          );
         }
       }
 
@@ -53,10 +50,10 @@ function validateCustomAPIs(config: AppConfig): string[] {
       const foundDelims: {pos: number; type: string}[] = [];
 
       delims.forEach(d => {
-        let pos = cq.query.indexOf(d);
+        let pos = endpoint.handler.sql.indexOf(d);
         while (pos !== -1) {
           foundDelims.push({pos, type: d});
-          pos = cq.query.indexOf(d, pos + 2);
+          pos = endpoint.handler.sql.indexOf(d, pos + 2);
         }
       });
 
@@ -68,19 +65,22 @@ function validateCustomAPIs(config: AppConfig): string[] {
 
         if (!end) {
           errors.push(
-            `${path}/query: unclosed magic variable delimiter "${start.type}"`,
+            `${path}/handler/sql: unclosed magic variable delimiter "${start.type}"`,
           );
           break;
         }
 
         if (start.type !== end.type) {
           errors.push(
-            `${path}/query: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
+            `${path}/handler/sql: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
           );
           continue;
         }
 
-        const varString = cq.query.substring(start.pos + 2, end.pos);
+        const varString = endpoint.handler.sql.substring(
+          start.pos + 2,
+          end.pos,
+        );
         const parts = varString.split(':');
         const varName = parts[0];
         const varType = parts[1];
@@ -94,18 +94,18 @@ function validateCustomAPIs(config: AppConfig): string[] {
         // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
         if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
           errors.push(
-            `${path}/query: invalid magic variable name "${varName}" for ${typeName} parameter`,
+            `${path}/handler/sql: invalid magic variable name "${varName}" for ${typeName} parameter`,
           );
         }
 
         // 2. Validate datatype
         if (parts.length > 2) {
           errors.push(
-            `${path}/query: invalid magic variable format "${varString}", multiple types provided`,
+            `${path}/handler/sql: invalid magic variable format "${varString}", multiple types provided`,
           );
         } else if (!varType) {
           errors.push(
-            `${path}/query: missing data type for magic variable "${varName}" in ${typeName} parameter`,
+            `${path}/handler/sql: missing data type for magic variable "${varName}" in ${typeName} parameter`,
           );
         } else if (
           !['integer', 'string', 'boolean', 'text', 'datetime'].includes(
@@ -113,14 +113,14 @@ function validateCustomAPIs(config: AppConfig): string[] {
           )
         ) {
           errors.push(
-            `${path}/query: invalid magic variable type "${varType}" for ${typeName} parameter`,
+            `${path}/handler/sql: invalid magic variable type "${varType}" for ${typeName} parameter`,
           );
         }
 
         // 3. GET method should not have body magic variables (@@)
-        if (cq.method === 'GET' && start.type === '@@') {
+        if (endpoint.method === 'GET' && start.type === '@@') {
           errors.push(
-            `${path}/query: body magic variables (@@) are not allowed for GET method`,
+            `${path}/handler/sql: body magic variables (@@) are not allowed for GET method`,
           );
         }
       }

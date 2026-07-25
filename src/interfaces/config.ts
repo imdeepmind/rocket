@@ -152,11 +152,17 @@ export interface WebhookConfig {
   triggerOnResponse: boolean;
 }
 
-export interface CustomQueryConfig {
-  name: string;
+export interface CustomEndpointHandler {
+  type: string;
+  sql: string;
+}
+
+export interface CustomEndpointConfig {
   method: HTTPMethod;
   path: string;
-  query: string;
+  description: string;
+  validation: Record<string, unknown>;
+  handler: CustomEndpointHandler;
 }
 
 export interface ModelAPIConfig {
@@ -195,10 +201,6 @@ export interface ApisConfig {
     ssp?: SspConfig[];
     authorization?: boolean;
   };
-}
-
-export interface CustomAPIConfig {
-  customQueries?: CustomQueryConfig[];
 }
 
 export interface UserModelConfig {
@@ -256,7 +258,7 @@ export interface AppConfig {
   infrastructure: InfrastructureConfig;
   data: DataConfig;
   apis?: ApisConfig;
-  customAPIs?: CustomAPIConfig;
+  customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
   integrations?: IntegrationsConfig;
 }

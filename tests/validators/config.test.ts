@@ -3,7 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {
   ApisConfig,
   AppConfig,
-  CustomQueryConfig,
+  CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
@@ -1679,298 +1679,324 @@ describe('validateValidApplicationConfig', () => {
   });
 });
 
-describe('validateInvalidApisConfig', () => {
+describe('validateInvalidCustomEndpointsConfig', () => {
   it.each([
-    {
-      name: 'name as invalid',
-      patch: {
-        customQueries: [
-          {name: '123_asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'name as invalid',
-      patch: {
-        customQueries: [
-          {name: 'asd&*asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'name as duplicate',
-      patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test',
-            query: 'SELECT 1;',
-          },
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test-different',
-            query: 'SELECT 1;',
-          },
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/1/name: name must be unique and non-empty',
-    },
     {
       name: 'method as invalid',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'OPTIONS',
+        customEndpoints: {
+          test: {
+            method: 'OPTIONS' as const,
             path: '/test',
-            query: 'SELECT 1;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/method must be equal to one of the allowed values',
+        '/customEndpoints/test/method must be equal to one of the allowed values',
     },
     {
       name: 'path without slash',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: 'test',
-            query: 'SELECT 1;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
     },
     {
-      name: 'path with space and uppercase',
+      name: 'path with space',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test-api asdas',
-            query: 'SELECT 1;',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test api',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
     },
     {
-      name: 'empty query',
+      name: 'empty description',
       patch: {
-        customQueries: [
-          {name: 'sample_query', method: 'GET', path: '/test', query: ''},
-        ],
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: '',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
+          },
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query must NOT have fewer than 1 characters',
+        '/customEndpoints/test/description must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'empty handler.sql',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: ''},
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql must NOT have fewer than 1 characters',
     },
     {
       name: 'DDL query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'CREATE TABLE x (id INTEGER);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'CREATE TABLE x (id INTEGER);'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: DDL queries are not allowed',
+        '/customEndpoints/test/handler/sql: DDL queries are not allowed',
     },
     {
       name: 'GET method with DML query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'INSERT INTO x (id) VALUES (1);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'INSERT INTO x (id) VALUES (1);'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: only DQL queries are allowed for GET method',
+        '/customEndpoints/test/handler/sql: only DQL queries are allowed for GET method',
     },
     {
       name: 'POST method with invalid SQL starting word',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'RANDOM COMMAND;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'RANDOM COMMAND;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: only DQL and DML queries are allowed',
+        '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
       name: 'GET method with body magic variables (@@)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body magic variables (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@first name:string@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@first name:string@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE country = &&country space:string&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE country = &&country space:string&&;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: mixed magic variable delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@id@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@id@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: unclosed magic variable delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed magic variable delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid magic variable format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@name:varchar@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@name:varchar@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
       patch: {
-        customQueries: [
-          {
-            name: 'update_users',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@name@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@name@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for magic variable "name" in body (@@) parameter',
     },
     {
       name: 'invalid webhook url',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'invalid',
@@ -1982,47 +2008,54 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/customEndpoints.all.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
-                data: 'query',
+                data: 'query' as unknown as string[],
                 triggerOnRequest: true,
               },
             ],
           },
         },
       },
-      expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data must be array',
+      expected: '/apis/customEndpoints.all.test/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2034,21 +2067,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/customEndpoints.all.test/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2060,21 +2097,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/customEndpoints.all.test/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2086,21 +2127,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/customEndpoints.all.test/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2113,21 +2158,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->all->sample_query/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/customEndpoints.all.test/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2140,15 +2189,16 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        'apis/customAPIs->customQueries->all->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/customEndpoints.all.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
   ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: {
-        customQueries: patchObj.customQueries as CustomQueryConfig[],
-      },
+      customEndpoints: patchObj.customEndpoints as Record<
+        string,
+        CustomEndpointConfig
+      >,
       apis: patchObj.apis as ApisConfig,
     };
 
@@ -2158,102 +2208,118 @@ describe('validateInvalidApisConfig', () => {
   });
 });
 
-describe('validateValidApisConfig', () => {
+describe('validateValidCustomEndpointsConfig', () => {
   it.each([
     {
       name: 'valid GET query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
       },
     },
     {
       name: 'valid POST insert query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          sample_query: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'INSERT INTO users (name) VALUES (1);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'INSERT INTO users (name) VALUES (1);'},
           },
-        ],
+        },
       },
     },
     {
       name: 'valid WITH query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid variables in POST query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          sample_query: {
+            method: 'POST' as const,
             path: '/test',
-            query:
-              'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid variables in GET query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid magic variable with hyphen and underscore',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid webhook with triggerOnRequest',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2268,16 +2334,17 @@ describe('validateValidApisConfig', () => {
     {
       name: 'valid webhook with triggerOnResponse',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2292,16 +2359,17 @@ describe('validateValidApisConfig', () => {
     {
       name: 'a valid webhook with both triggerOnRequest and triggerOnResponse',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->all->sample_query': {
+          'customEndpoints.all.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2318,9 +2386,10 @@ describe('validateValidApisConfig', () => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: {
-        customQueries: patchObj.customQueries as CustomQueryConfig[],
-      },
+      customEndpoints: patchObj.customEndpoints as Record<
+        string,
+        CustomEndpointConfig
+      >,
       apis: patchObj.apis as ApisConfig,
     };
 
