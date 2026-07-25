@@ -101,13 +101,13 @@ describe('test post api', () => {
 
   describe('validation', () => {
     test('should return 400 when required fields are missing', async () => {
-      const modelsWithRequired: ModelConfig[] = [
-        {
-          name: 'products',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'title', type: 'string'},
-          ],
+      const modelsWithRequired: Record<string, ModelConfig> = {
+        products: {
+          table: 'products',
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            title: {type: 'string'},
+          },
           // Provide an explicit validation schema that marks fields as required
           validation: {
             type: 'object',
@@ -118,7 +118,7 @@ describe('test post api', () => {
             required: ['id', 'title'],
           },
         },
-      ];
+      };
 
       const fastify = await createTestApp(pgConfig, modelsWithRequired);
 
@@ -135,10 +135,10 @@ describe('test post api', () => {
     });
 
     test('should return 400 when body is invalid JSON type', async () => {
-      const modelsWithRequired: ModelConfig[] = [
-        {
-          name: 'items',
-          fields: [{name: 'count', type: 'integer'}],
+      const modelsWithRequired: Record<string, ModelConfig> = {
+        items: {
+          table: 'items',
+          fields: {count: {type: 'integer'}},
           validation: {
             type: 'object',
             properties: {
@@ -147,7 +147,7 @@ describe('test post api', () => {
             required: ['count'],
           },
         },
-      ];
+      };
 
       const fastify = await createTestApp(pgConfig, modelsWithRequired);
 

@@ -131,19 +131,21 @@ export function showWelcomeScreen(
   console.log('  ' + chalk.white('Cache DB:    ') + cacheDbStatus);
   console.log('  ' + chalk.white('Rate Limit:  ') + rateLimitStatus);
   console.log(
-    '  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length),
+    '  ' +
+      chalk.white('Models:      ') +
+      chalk.magenta(Object.keys(config.data.models).length),
   );
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
 
   // Log models
   console.log('\n  ' + chalk.cyan('Models:'));
-  config.models.forEach((model, index) => {
+  Object.entries(config.data.models).forEach(([modelName, model], index) => {
     const color = MODEL_COLORS[index % MODEL_COLORS.length];
     console.log(
       '  ' +
         chalk.white('• ') +
-        color(model.name.padEnd(15)) +
-        chalk.gray(` (${model.fields.length} fields)`),
+        color(modelName.padEnd(15)) +
+        chalk.gray(` (${Object.keys(model.fields).length} fields)`),
     );
   });
 

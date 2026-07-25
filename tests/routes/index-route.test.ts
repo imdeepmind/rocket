@@ -6,100 +6,79 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 // Model with a unique (primaryKey) field — returns single record
-const uniqueFieldModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'name', type: 'string'},
-      {name: 'email', type: 'string'},
-    ],
+const uniqueFieldModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      name: {type: 'string'},
+      email: {type: 'string'},
+    },
   },
-];
+};
 
 // Model with a unique but non-PK field
-const uniqueNonPkModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'email', type: 'string', unique: true},
-    ],
+const uniqueNonPkModel: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', unique: true},
+    },
   },
-];
+};
 
 // Model with an indexable (non-unique) field — returns array
-const indexableFieldModel: ModelConfig[] = [
-  {
-    name: 'posts',
-    fields: [
-      {
-        name: 'id',
+const indexableFieldModel: Record<string, ModelConfig> = {
+  posts: {
+    table: 'posts',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'sortable',
-          'equal',
-          'lessThan',
-          'greaterThan',
-          'lessThanEqual',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
-      {
-        name: 'category',
+      category: {
         type: 'string',
-        supportedOperations: ['indexable', 'sortable', 'equal'],
+        operations: ['index', 'sort', 'eq'],
       },
-      {
-        name: 'title',
+      title: {
         type: 'string',
-        supportedOperations: ['sortable', 'equal'],
+        operations: ['sort', 'eq'],
       },
-    ],
+    },
   },
-];
+};
 
 // Model with both unique and indexable fields
-const mixedFieldModel: ModelConfig[] = [
-  {
-    name: 'articles',
-    fields: [
-      {
-        name: 'id',
+const mixedFieldModel: Record<string, ModelConfig> = {
+  articles: {
+    table: 'articles',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'sortable',
-          'equal',
-          'lessThan',
-          'greaterThan',
-          'lessThanEqual',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
-      {name: 'slug', type: 'string', unique: true},
-      {
-        name: 'tag',
+      slug: {type: 'string', unique: true},
+      tag: {
         type: 'string',
-        supportedOperations: ['indexable', 'sortable', 'equal'],
+        operations: ['index', 'sort', 'eq'],
       },
-    ],
+    },
   },
-];
+};
 
 // Model with no index-eligible fields
-const noIndexFieldModel: ModelConfig[] = [
-  {
-    name: 'logs',
-    fields: [
-      {name: 'message', type: 'string'},
-      {name: 'level', type: 'string'},
-    ],
+const noIndexFieldModel: Record<string, ModelConfig> = {
+  logs: {
+    table: 'logs',
+    fields: {
+      message: {type: 'string'},
+      level: {type: 'string'},
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,

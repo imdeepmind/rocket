@@ -21,16 +21,16 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const authModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'email', type: 'string', nullable: false},
-      {name: 'password', type: 'string', nullable: false},
-    ],
+const authModels: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false},
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -60,7 +60,7 @@ const pgConfig: DatabaseConfig = {
 
 async function createAuthApp(
   authentication: AuthenticationConfig,
-  models: ModelConfig[] = authModels,
+  models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
@@ -74,7 +74,7 @@ async function createAuthApp(
       },
     },
     infrastructure: {primaryDatabase: dbConfig},
-    models,
+    data: {models},
     authentication,
   };
   app.appConfig = config;

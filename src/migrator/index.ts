@@ -4,143 +4,177 @@ import * as path from 'path';
 
 import {AppConfig, DBEngine, ModelConfig} from '@/interfaces/config';
 
-function generateForeignKeys(
-  foreignKeys: NonNullable<ModelConfig['foreignKeys']>,
+function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
+  if (!model.timestamps) return;
+
+  const nowDefault =
+    engine === 'sqlite' ? {raw: "(datetime('now'))"} : {raw: 'now()'};
+
+  if (!('created_at' in model.fields)) {
+    model.fields.created_at = {
+      type: 'datetime',
+      nullable: false,
+      default: nowDefault,
+    };
+  }
+
+  if (!('updated_at' in model.fields)) {
+    model.fields.updated_at = {
+      type: 'datetime',
+      nullable: false,
+      default: nowDefault,
+    };
+  }
+}
+
+function generateRelations(
+  modelName: string,
+  relations: NonNullable<ModelConfig['relations']>,
 ): string {
-  return foreignKeys
-    .map(fk => {
-      const cols = fk.columns.map(c => `t.${c}`).join(', ');
-      const refCols = fk.referenceColumns
-        .map(c => `${fk.referenceTable}.${c}`)
-        .join(', ');
-      let fkDef = `    foreignKey({ name: '${fk.name}', columns: [${cols}], foreignColumns: [${refCols}] })`;
-      if (fk.onDelete) {
-        fkDef += `.onDelete('${fk.onDelete.toLowerCase()}')`;
+  return Object.entries(relations)
+    .map(([relationName, rel]) => {
+      let fkDef = `    foreignKey({ name: '${relationName}', columns: [t.${rel.localField}], foreignColumns: [${rel.model}.${rel.foreignField}] })`;
+      if (rel.onDelete) {
+        fkDef += `.onDelete('${rel.onDelete}')`;
       }
-      if (fk.onUpdate) {
-        fkDef += `.onUpdate('${fk.onUpdate.toLowerCase()}')`;
+      if (rel.onUpdate) {
+        fkDef += `.onUpdate('${rel.onUpdate}')`;
       }
       return fkDef;
     })
     .join(',\n');
 }
 
-function generateSchemaFile(config: ModelConfig, engine: DBEngine): string {
-  if (engine === 'sqlite') {
-    const columns = config.fields
-      .map(f => {
-        let col = '';
+function generateSchemaFile(
+  modelName: string,
+  config: ModelConfig,
+  engine: DBEngine,
+): string {
+  // inject timestamps into the model config in-memory
+  injectTimestamps(config, engine);
+
+  const columns = Object.entries(config.fields)
+    .map(([fName, f]) => {
+      let col = '';
+      if (engine === 'sqlite') {
         switch (f.type) {
           case 'integer':
           case 'boolean':
-            col = `integer('${f.name}')`;
+            col = `integer('${fName}')`;
             break;
           case 'string':
           case 'text':
-            col = `text('${f.name}')`;
+            col = `text('${fName}')`;
             break;
           case 'datetime':
-            col = `integer('${f.name}', { mode: 'timestamp' })`;
+            col = `integer('${fName}', { mode: 'timestamp' })`;
             break;
           case 'decimal':
-            col = `real('${f.name}')`;
+            col = `real('${fName}')`;
             break;
           case 'date':
-            col = `text('${f.name}')`;
+            col = `text('${fName}')`;
             break;
           default:
-            col = `text('${f.name}')`;
-            break; // fallback
+            col = `text('${fName}')`;
+            break;
         }
-        if (f.primaryKey) col += '.primaryKey({ autoIncrement: true })';
+        if (f.primaryKey) {
+          if (f.autoIncrement) {
+            col += '.primaryKey({ autoIncrement: true })';
+          } else {
+            col += '.primaryKey()';
+          }
+        }
         if (f.unique && !f.primaryKey) col += '.unique()';
         if (f.nullable === false) col += '.notNull()';
-        if (f.default !== undefined)
-          col += `.default(${JSON.stringify(f.default)})`;
-        return `    ${f.name}: ${col}`;
-      })
-      .join(',\n');
+        if (f.default !== undefined) {
+          const def = f.default as Record<string, unknown>;
+          if (def && typeof def === 'object' && 'raw' in def) {
+            col += `.default(sql\`${def.raw}\`)`;
+          } else {
+            col += `.default(${JSON.stringify(f.default)})`;
+          }
+        }
+      } else {
+        switch (f.type) {
+          case 'integer':
+            col = f.primaryKey ? `serial('${fName}')` : `integer('${fName}')`;
+            break;
+          case 'string':
+          case 'text':
+            col = `text('${fName}')`;
+            break;
+          case 'boolean':
+            col = `boolean('${fName}')`;
+            break;
+          case 'datetime':
+            col = `timestamp('${fName}')`;
+            break;
+          case 'decimal':
+            col = `doublePrecision('${fName}')`;
+            break;
+          case 'date':
+            col = `date('${fName}')`;
+            break;
+          default:
+            col = `text('${fName}')`;
+            break;
+        }
+        if (f.primaryKey) {
+          if (f.autoIncrement) {
+            col += '.primaryKey()';
+            // serial already implies auto-increment in PG
+          } else {
+            col += '.primaryKey()';
+          }
+        }
+        if (f.unique && !f.primaryKey) col += '.unique()';
+        if (f.nullable === false) col += '.notNull()';
+        if (f.default !== undefined) {
+          const def = f.default as Record<string, unknown>;
+          if (def && typeof def === 'object' && 'raw' in def) {
+            col += `.default(sql\`${def.raw}\`)`;
+          } else {
+            col += `.default(${JSON.stringify(f.default)})`;
+          }
+        }
+      }
+      return `    ${fName}: ${col}`;
+    })
+    .join(',\n');
 
-    const indexes = (config.indexes ?? [])
-      .map(idx => {
-        const cols = idx.columns.map(c => `t.${c}`).join(', ');
-        return idx.unique
-          ? `    uniqueIndex('${idx.name}').on(${cols})`
-          : `    index('${idx.name}').on(${cols})`;
-      })
-      .join(',\n');
+  const indexes = Object.entries(config.indexes ?? {})
+    .map(([idxName, idx]) => {
+      const cols = idx.fields.map(c => `t.${c}`).join(', ');
+      return idx.unique
+        ? `    uniqueIndex('${idxName}').on(${cols})`
+        : `    index('${idxName}').on(${cols})`;
+    })
+    .join(',\n');
 
-    const foreignKeys =
-      config.foreignKeys && config.foreignKeys.length > 0
-        ? generateForeignKeys(config.foreignKeys)
-        : '';
+  const relations =
+    config.relations && Object.keys(config.relations).length > 0
+      ? generateRelations(modelName, config.relations)
+      : '';
 
-    const extras = [indexes, foreignKeys].filter(Boolean).join(',\n');
+  const extras = [indexes, relations].filter(Boolean).join(',\n');
 
+  if (engine === 'sqlite') {
     return `
 import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
-export const ${config.name} = sqliteTable('${config.name}', {
+export const ${modelName} = sqliteTable('${config.table}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
   } else {
-    const columns = config.fields
-      .map(f => {
-        let col = '';
-        switch (f.type) {
-          case 'integer':
-            col = f.primaryKey ? `serial('${f.name}')` : `integer('${f.name}')`;
-            break;
-          case 'string':
-          case 'text':
-            col = `text('${f.name}')`;
-            break;
-          case 'boolean':
-            col = `boolean('${f.name}')`;
-            break;
-          case 'datetime':
-            col = `timestamp('${f.name}')`;
-            break;
-          case 'decimal':
-            col = `doublePrecision('${f.name}')`;
-            break;
-          case 'date':
-            col = `date('${f.name}')`;
-            break;
-          default:
-            col = `text('${f.name}')`;
-            break; // fallback
-        }
-        if (f.primaryKey) col += '.primaryKey()';
-        if (f.unique && !f.primaryKey) col += '.unique()';
-        if (f.nullable === false) col += '.notNull()';
-        if (f.default !== undefined)
-          col += `.default(${JSON.stringify(f.default)})`;
-        return `    ${f.name}: ${col}`;
-      })
-      .join(',\n');
-
-    const indexes = (config.indexes ?? [])
-      .map(idx => {
-        const cols = idx.columns.map(c => `t.${c}`).join(', ');
-        return idx.unique
-          ? `    uniqueIndex('${idx.name}').on(${cols})`
-          : `    index('${idx.name}').on(${cols})`;
-      })
-      .join(',\n');
-
-    const foreignKeys =
-      config.foreignKeys && config.foreignKeys.length > 0
-        ? generateForeignKeys(config.foreignKeys)
-        : '';
-
-    const extras = [indexes, foreignKeys].filter(Boolean).join(',\n');
-
     return `
 import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
-export const ${config.name} = pgTable('${config.name}', {
+export const ${modelName} = pgTable('${config.table}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
@@ -148,14 +182,13 @@ ${columns}
 }
 
 async function generateMigrationSQL(
-  config: ModelConfig[],
+  configs: Array<{name: string; model: ModelConfig}>,
   engine: DBEngine,
   dbUrl: string,
 ): Promise<void> {
   let tmpDir: string | undefined;
 
   try {
-    // Make sure test_data exists
     const testDataPath = path.join(process.cwd(), '.migrations');
     if (!fs.existsSync(testDataPath)) {
       fs.mkdirSync(testDataPath, {recursive: true});
@@ -168,8 +201,8 @@ async function generateMigrationSQL(
 
     const schemas = [];
 
-    for (const model of config) {
-      schemas.push(generateSchemaFile(model, engine));
+    for (const {name, model} of configs) {
+      schemas.push(generateSchemaFile(name, model, engine));
     }
 
     // write schema.ts
@@ -211,7 +244,10 @@ async function generateMigrationSQL(
 
 const migrateDatabase = async (config: AppConfig) => {
   const engine = config.infrastructure.primaryDatabase.engine;
-  const models = config.models;
+  const models = Object.entries(config.data.models).map(([name, model]) => ({
+    name,
+    model,
+  }));
 
   await generateMigrationSQL(
     models,

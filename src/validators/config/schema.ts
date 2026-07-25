@@ -192,13 +192,8 @@ const infrastructureSchema = {
 const fieldSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'type'],
+  required: ['type'],
   properties: {
-    name: {
-      type: 'string',
-      minLength: 1,
-      isEntityName: true,
-    },
     type: {
       type: 'string',
       enum: [
@@ -212,17 +207,36 @@ const fieldSchema = {
       ],
     },
     primaryKey: {type: 'boolean', default: false},
+    autoIncrement: {type: 'boolean', default: false},
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
-    supportedOperations: {
+    operations: {
       type: 'array',
-      items: {type: 'string'},
+      items: {
+        type: 'string',
+        enum: [
+          'search',
+          'sort',
+          'eq',
+          'lt',
+          'lte',
+          'gt',
+          'gte',
+          'in',
+          'edit',
+          'delete',
+          'index',
+        ],
+      },
       uniqueItems: true,
     },
-    supportedAggregation: {
+    aggregations: {
       type: 'array',
-      items: {type: 'string'},
+      items: {
+        type: 'string',
+        enum: ['count', 'avg', 'sum', 'min', 'max', 'frequency'],
+      },
       uniqueItems: true,
     },
   },
@@ -231,14 +245,9 @@ const fieldSchema = {
 const indexSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'columns'],
+  required: ['fields'],
   properties: {
-    name: {
-      type: 'string',
-      minLength: 1,
-      isEntityName: true,
-    },
-    columns: {
+    fields: {
       type: 'array',
       minItems: 1,
       items: {
@@ -254,66 +263,66 @@ const indexSchema = {
   },
 };
 
-const foreignKeySchema = {
+const relationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'columns', 'referenceTable', 'referenceColumns'],
+  required: ['type', 'model', 'localField', 'foreignField'],
   properties: {
-    name: {
+    type: {
+      type: 'string',
+      enum: ['belongsTo'],
+    },
+    model: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
     },
-    columns: {
-      type: 'array',
-      minItems: 1,
-      items: {type: 'string', isEntityName: true},
-      uniqueItems: true,
-    },
-    referenceTable: {
+    localField: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
     },
-    referenceColumns: {
-      type: 'array',
-      minItems: 1,
-      items: {type: 'string', isEntityName: true},
-      uniqueItems: true,
+    foreignField: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
     },
     onDelete: {
       type: 'string',
-      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+      enum: ['cascade', 'set null', 'set default', 'restrict', 'no action'],
     },
     onUpdate: {
       type: 'string',
-      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+      enum: ['cascade', 'set null', 'set default', 'restrict', 'no action'],
     },
   },
 };
 
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields'],
+  required: ['table', 'fields'],
   additionalProperties: false,
   properties: {
-    name: {
+    table: {
       type: 'string',
       isEntityName: true,
       minLength: 1,
     },
+    timestamps: {
+      type: 'boolean',
+    },
     fields: {
-      type: 'array',
-      minItems: 1,
-      items: fieldSchema,
+      type: 'object',
+      minProperties: 1,
+      additionalProperties: fieldSchema,
     },
     indexes: {
-      type: 'array',
-      items: indexSchema,
+      type: 'object',
+      additionalProperties: indexSchema,
     },
-    foreignKeys: {
-      type: 'array',
-      items: foreignKeySchema,
+    relations: {
+      type: 'object',
+      additionalProperties: relationSchema,
     },
     validation: {
       type: 'object',
@@ -531,16 +540,23 @@ const integrationsSchema = {
 
 const schema = {
   type: 'object',
-  required: ['application', 'docs', 'infrastructure', 'models'],
+  required: ['application', 'docs', 'infrastructure', 'data'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,
     docs: docsSchema,
     infrastructure: infrastructureSchema,
-    models: {
-      type: 'array',
-      minItems: 1,
-      items: modelSchema,
+    data: {
+      type: 'object',
+      required: ['models'],
+      additionalProperties: false,
+      properties: {
+        models: {
+          type: 'object',
+          minProperties: 1,
+          additionalProperties: modelSchema,
+        },
+      },
     },
     apis: apisSchema,
     customAPIs: customAPIsSchema,

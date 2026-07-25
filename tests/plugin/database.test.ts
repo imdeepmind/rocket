@@ -29,7 +29,7 @@ describe('database plugin', () => {
         },
       },
       infrastructure: {primaryDatabase: dbConfig},
-      models: [],
+      data: {models: {}},
     };
     return fastify;
   }

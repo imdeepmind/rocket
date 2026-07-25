@@ -20,7 +20,8 @@ export function registerRegistrationRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, authentication} = config;
+  const {authentication} = config;
+  const {models} = config.data;
 
   if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
     return;
@@ -28,7 +29,7 @@ export function registerRegistrationRoute(
 
   const {model, passwordField} = authentication.provider.config.userModel;
 
-  const authModelConfig = models.find(m => m.name === model);
+  const authModelConfig = models[model];
 
   if (!authModelConfig) {
     app.log.warn(
@@ -128,8 +129,10 @@ function generateSchema(
     requiresOtp && isVerifiedField
       ? {
           ...authModelConfig,
-          fields: authModelConfig.fields.filter(
-            f => f.name !== isVerifiedField,
+          fields: Object.fromEntries(
+            Object.entries(authModelConfig.fields).filter(
+              ([name]) => name !== isVerifiedField,
+            ),
           ),
         }
       : authModelConfig;
@@ -146,7 +149,11 @@ function generateSchema(
     : generateJSONValidationSchema(
         {
           ...authModelConfig,
-          fields: authModelConfig.fields.filter(f => f.name !== passwordField),
+          fields: Object.fromEntries(
+            Object.entries(authModelConfig.fields).filter(
+              ([name]) => name !== passwordField,
+            ),
+          ),
         },
         {ignorePrimaryKey: true, additionalProperties: false},
       );

@@ -97,7 +97,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
     if (upConfig.userModel) {
       const targetModel = upConfig.userModel.model
-        ? config.models.find(m => m.name === upConfig.userModel.model)
+        ? config.data.models[upConfig.userModel.model]
         : undefined;
 
       if (upConfig.userModel.model && !targetModel) {
@@ -145,7 +145,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
       if (targetModel) {
         if (
           typeof upConfig.userModel.idField === 'string' &&
-          !targetModel.fields.some(f => f.name === upConfig.userModel.idField)
+          !(upConfig.userModel.idField in targetModel.fields)
         ) {
           errors.push(
             '/authentication/provider/config/userModel/idField: field does not exist in model',
@@ -154,9 +154,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
         if (
           typeof upConfig.userModel.usernameField === 'string' &&
-          !targetModel.fields.some(
-            f => f.name === upConfig.userModel.usernameField,
-          )
+          !(upConfig.userModel.usernameField in targetModel.fields)
         ) {
           errors.push(
             '/authentication/provider/config/userModel/usernameField: field does not exist in model',
@@ -165,9 +163,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
         if (
           typeof upConfig.userModel.passwordField === 'string' &&
-          !targetModel.fields.some(
-            f => f.name === upConfig.userModel.passwordField,
-          )
+          !(upConfig.userModel.passwordField in targetModel.fields)
         ) {
           errors.push(
             '/authentication/provider/config/userModel/passwordField: field does not exist in model',
@@ -176,9 +172,7 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
         if (
           typeof upConfig.userModel.isVerifiedField === 'string' &&
-          !targetModel.fields.some(
-            f => f.name === upConfig.userModel.isVerifiedField,
-          )
+          !(upConfig.userModel.isVerifiedField in targetModel.fields)
         ) {
           errors.push(
             '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
@@ -187,12 +181,9 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
         if (
           typeof upConfig.userModel.isVerifiedField === 'string' &&
-          targetModel.fields.some(
-            f => f.name === upConfig.userModel.isVerifiedField,
-          ) &&
-          targetModel.fields.find(
-            f => f.name === upConfig.userModel.isVerifiedField,
-          )?.type !== 'boolean'
+          upConfig.userModel.isVerifiedField in targetModel.fields &&
+          targetModel.fields[upConfig.userModel.isVerifiedField]?.type !==
+            'boolean'
         ) {
           errors.push(
             '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',

@@ -19,7 +19,7 @@ const baseConfig = {
   infrastructure: {
     primaryDatabase: {engine: 'sqlite', connection: {url: ':memory:'}},
   },
-  models: [],
+  data: {models: {}},
 };
 
 describe('Swagger Plugin', () => {

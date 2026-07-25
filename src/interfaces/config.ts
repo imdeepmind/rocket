@@ -18,31 +18,19 @@ export type LogLevel =
   | 'error'
   | 'fatal'
   | 'silent';
-export type ForeignKeyAction =
-  | 'CASCADE'
-  | 'SET NULL'
-  | 'SET DEFAULT'
-  | 'RESTRICT'
-  | 'NO ACTION';
-export type SupportedOperations =
-  | 'searchable'
-  | 'sortable'
-  | 'editable'
-  | 'deletable'
-  | 'lessThan'
-  | 'lessThanEqual'
-  | 'greaterThan'
-  | 'greaterThanEqual'
-  | 'equal'
-  | 'oneOf'
-  | 'indexable';
-export type SupportedAggregationOperation =
-  | 'mean'
-  | 'max'
-  | 'min'
-  | 'count'
-  | 'sum'
-  | 'frequency';
+export type Operation =
+  | 'search'
+  | 'sort'
+  | 'eq'
+  | 'lt'
+  | 'lte'
+  | 'gt'
+  | 'gte'
+  | 'in'
+  | 'edit'
+  | 'delete'
+  | 'index';
+export type Aggregation = 'count' | 'avg' | 'sum' | 'min' | 'max' | 'frequency';
 export type ModelBody = Record<
   string,
   string | number | boolean | null | undefined
@@ -61,6 +49,13 @@ export type WebhookData = 'query' | 'body' | 'params' | 'resp';
 export type AuthProviderType = 'api-key' | 'up-auth';
 export type SspParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
+export type RelationType = 'belongsTo';
+export type ForeignKeyAction =
+  | 'cascade'
+  | 'set null'
+  | 'set default'
+  | 'restrict'
+  | 'no action';
 
 export interface DocsConfig {
   openapi: {
@@ -107,37 +102,41 @@ export interface RateLimitConfig {
 }
 
 export interface ModelFieldConfig {
-  name: string;
   type: DataType;
   primaryKey?: boolean;
+  autoIncrement?: boolean;
   nullable?: boolean;
   unique?: boolean;
   default?: unknown;
-  supportedOperations?: SupportedOperations[];
-  supportedAggregation?: SupportedAggregationOperation[];
+  operations?: Operation[];
+  aggregations?: Aggregation[];
 }
 
 export interface ModelIndexConfig {
-  name: string;
-  columns: string[];
+  fields: string[];
   unique?: boolean;
 }
 
-export interface ModelForeignKeyConfig {
-  name: string;
-  columns: string[];
-  referenceTable: string;
-  referenceColumns: string[];
+export interface ModelRelationConfig {
+  type: RelationType;
+  model: string;
+  localField: string;
+  foreignField: string;
   onDelete?: ForeignKeyAction;
   onUpdate?: ForeignKeyAction;
 }
 
 export interface ModelConfig {
-  name: string;
-  fields: ModelFieldConfig[];
-  indexes?: ModelIndexConfig[];
-  foreignKeys?: ModelForeignKeyConfig[];
+  table: string;
+  timestamps?: boolean;
   validation?: Record<string, unknown>;
+  fields: Record<string, ModelFieldConfig>;
+  indexes?: Record<string, ModelIndexConfig>;
+  relations?: Record<string, ModelRelationConfig>;
+}
+
+export interface DataConfig {
+  models: Record<string, ModelConfig>;
 }
 
 export interface ApplicationConfig {
@@ -255,7 +254,7 @@ export interface AppConfig {
   application: ApplicationConfig;
   docs: DocsConfig;
   infrastructure: InfrastructureConfig;
-  models: ModelConfig[];
+  data: DataConfig;
   apis?: ApisConfig;
   customAPIs?: CustomAPIConfig;
   authentication?: AuthenticationConfig;

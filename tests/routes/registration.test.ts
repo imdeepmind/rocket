@@ -24,24 +24,18 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 // ---------------------------------------------------------------------------
 
 /** Minimal model config that matches the authModel in example_config. */
-const authModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
-        type: 'integer',
-        primaryKey: true,
-        unique: true,
-        nullable: false,
-      },
-      {name: 'email', type: 'string', nullable: false},
-      {name: 'password', type: 'string', nullable: false},
-      {name: 'name', type: 'string', nullable: true},
-      {name: 'is_active', type: 'boolean', default: false},
-    ],
+const authModels: Record<string, ModelConfig> = {
+  users: {
+    table: 'users',
+    fields: {
+      id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+      email: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false},
+      name: {type: 'string', nullable: true},
+      is_active: {type: 'boolean', default: false},
+    },
   },
-];
+};
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -71,7 +65,7 @@ const pgConfig: DatabaseConfig = {
 
 async function createAuthApp(
   authentication: AuthenticationConfig,
-  models: ModelConfig[] = authModels,
+  models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
@@ -85,7 +79,7 @@ async function createAuthApp(
       },
     },
     infrastructure: {primaryDatabase: dbConfig},
-    models,
+    data: {models},
     authentication,
   };
   app.appConfig = config;
@@ -151,8 +145,8 @@ describe('POST /auth/register', () => {
     });
 
     test('should NOT register the route and log a warning when model is not found in models', async () => {
-      // Pass an empty models array so the "users" model cannot be found
-      const app = await createAuthApp(upAuthConfig, []);
+      // Pass an empty models object so the "users" model cannot be found
+      const app = await createAuthApp(upAuthConfig, {});
 
       const response = await app.inject({
         method: 'POST',
@@ -442,22 +436,21 @@ describe('POST /auth/register', () => {
   // -------------------------------------------------------------------------
 
   describe('custom authModel column names', () => {
-    const customModels: ModelConfig[] = [
-      {
-        name: 'accounts',
-        fields: [
-          {
-            name: 'account_id',
+    const customModels: Record<string, ModelConfig> = {
+      accounts: {
+        table: 'accounts',
+        fields: {
+          account_id: {
             type: 'integer',
             primaryKey: true,
             nullable: false,
             unique: true,
           },
-          {name: 'username', type: 'string', nullable: false},
-          {name: 'secret', type: 'string', nullable: false},
-        ],
+          username: {type: 'string', nullable: false},
+          secret: {type: 'string', nullable: false},
+        },
       },
-    ];
+    };
 
     const customAuth: AuthenticationConfig = {
       enabled: true,
@@ -516,7 +509,7 @@ describe('POST /auth/register', () => {
   describe('MFA registration flow', () => {
     async function createAuthAppWithMfa(
       authentication: AuthenticationConfig,
-      models: ModelConfig[] = authModels,
+      models: Record<string, ModelConfig> = authModels,
       dbConfig: DatabaseConfig = pgConfig,
     ): Promise<FastifyInstance> {
       const app = Fastify();
@@ -530,7 +523,7 @@ describe('POST /auth/register', () => {
           },
         },
         infrastructure: {primaryDatabase: dbConfig},
-        models,
+        data: {models},
         authentication,
       };
       app.appConfig = config;

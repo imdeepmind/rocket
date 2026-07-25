@@ -41,7 +41,7 @@ describe('test custom-queries api', () => {
 
   describe('happy path', () => {
     test('should register GET custom queries and validate querystrings', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
+      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
 
       // Successfully call the endpoint with correct schema
       const validResponse = await fastify.inject({
@@ -63,7 +63,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should register POST custom queries and validate path params and body schemas', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
+      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
 
       // Successfully call the endpoint with correct schema
       // Since it's a POST with path variables, we use the injected /:id
@@ -98,7 +98,7 @@ describe('test custom-queries api', () => {
       };
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         undefined,
         allTypesApis,
       );
@@ -122,7 +122,7 @@ describe('test custom-queries api', () => {
 
   describe('schema checking and rejections', () => {
     test('should fail GET query when omitting required querystrings not passed depending on fastify settings or passing invalid type', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
+      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
 
       // minAge is expected to be integer. If we pass a string that isn't parseable as int, fastify fails
       const invalidResponse = await fastify.inject({
@@ -140,7 +140,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when extra body parameters passed', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
+      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
 
       const invalidBodyResponse = await fastify.inject({
         method: 'POST',
@@ -158,7 +158,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should fail POST query when path param type fails cast', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, customApis);
+      const fastify = await createTestApp(pgConfig, {}, undefined, customApis);
 
       const invalidPathResponse = await fastify.inject({
         method: 'POST',
@@ -176,7 +176,7 @@ describe('test custom-queries api', () => {
 
   describe('interpolation error handling', () => {
     test('should throw error when a required variable is missing in request', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, {
+      const fastify = await createTestApp(pgConfig, {}, undefined, {
         customQueries: [
           {
             name: 'missingParam',
@@ -211,7 +211,7 @@ describe('test custom-queries api', () => {
     });
 
     test('should throw error when a required body variable is missing', async () => {
-      const fastify = await createTestApp(pgConfig, [], undefined, {
+      const fastify = await createTestApp(pgConfig, {}, undefined, {
         customQueries: [
           {
             name: 'missingBody',
@@ -249,7 +249,7 @@ describe('test custom-queries api', () => {
     test('should return 401 when auth is enabled and no token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         apisConfig,
         customApis,
         upAuthConfig,
@@ -268,7 +268,7 @@ describe('test custom-queries api', () => {
     test('should return 200 when auth is enabled and valid token is provided', async () => {
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         apisConfig,
         customApis,
         upAuthConfig,
@@ -300,7 +300,7 @@ describe('test custom-queries api', () => {
 
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         apisConfig,
         customApis,
         apiKeyAuthConfig,
@@ -335,7 +335,7 @@ describe('test custom-queries api', () => {
 
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         undefined,
         mismatchedApis,
       );
@@ -365,7 +365,7 @@ describe('test custom-queries api', () => {
 
       const fastify = await createTestApp(
         pgConfig,
-        [],
+        {},
         undefined,
         unknownTypeApis as unknown as CustomAPIConfig, // Bypass TS check
       );

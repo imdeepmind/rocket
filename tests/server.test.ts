@@ -83,12 +83,16 @@ const mockConfig: AppConfig = {
       info: {title: 'Test', description: 'Test API', version: '1.0'},
     },
   },
-  models: [
-    {
-      name: 'users',
-      fields: [{name: 'id', type: 'integer', primaryKey: true}],
+  data: {
+    models: {
+      users: {
+        table: 'users',
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+        },
+      },
     },
-  ],
+  },
 };
 
 type MockedApp = FastifyInstance & {
@@ -247,7 +251,10 @@ describe('Server', () => {
   });
 
   it('should not register routes if models are missing/empty', async () => {
-    const noModelsConfig = {...mockConfig, models: []} as unknown as AppConfig;
+    const noModelsConfig = {
+      ...mockConfig,
+      data: {models: {}},
+    } as unknown as AppConfig;
     await startServer(noModelsConfig, 3000, 'prod');
 
     expect(registerRoutes).toHaveBeenCalledWith(

@@ -53,17 +53,9 @@ describe('test schema helper', () => {
 
   // test cases for buildFilterQueryProperties
   test('should build filter query properties', () => {
-    const field = {
-      name: 'age',
+    const field: ModelFieldConfig = {
       type: 'integer',
-      supportedOperations: [
-        'lessThan',
-        'lessThanEqual',
-        'greaterThan',
-        'greaterThanEqual',
-        'equal',
-        'oneOf',
-      ],
+      operations: ['lt', 'lte', 'gt', 'gte', 'eq', 'in'],
     };
     const expectedSchema = {
       age_lt: {
@@ -92,21 +84,19 @@ describe('test schema helper', () => {
           'Filter where age is one of the provided comma-separated values',
       },
     };
-    expect(buildFilterQueryProperties(field as ModelFieldConfig)).toEqual(
-      expectedSchema,
-    );
+    expect(buildFilterQueryProperties('age', field)).toEqual(expectedSchema);
   });
 
   // test cases for buildPostBodyValidationSchema
   test('should build post body validation schema', () => {
     const model: ModelConfig = {
-      name: 'test',
-      fields: [
-        {name: 'id', type: 'integer', primaryKey: true},
-        {name: 'name', type: 'string'},
-        {name: 'email', type: 'string'},
-        {name: 'age', type: 'integer', nullable: true},
-      ],
+      table: 'test',
+      fields: {
+        id: {type: 'integer', primaryKey: true},
+        name: {type: 'string'},
+        email: {type: 'string'},
+        age: {type: 'integer', nullable: true},
+      },
     };
     const expectedSchema = {
       type: 'object',
@@ -136,13 +126,13 @@ describe('test schema helper', () => {
 
   test('should build post body validation schema ignoring primary key', () => {
     const model: ModelConfig = {
-      name: 'test',
-      fields: [
-        {name: 'id', type: 'integer', primaryKey: true},
-        {name: 'name', type: 'string'},
-        {name: 'email', type: 'string'},
-        {name: 'age', type: 'integer', nullable: true},
-      ],
+      table: 'test',
+      fields: {
+        id: {type: 'integer', primaryKey: true},
+        name: {type: 'string'},
+        email: {type: 'string'},
+        age: {type: 'integer', nullable: true},
+      },
     };
     const expectedSchema = {
       type: 'object',
@@ -170,13 +160,13 @@ describe('test schema helper', () => {
 
   test('should build post body validation schema', () => {
     const model: ModelConfig = {
-      name: 'test',
-      fields: [
-        {name: 'id', type: 'integer', primaryKey: true},
-        {name: 'name', type: 'string'},
-        {name: 'email', type: 'string'},
-        {name: 'age', type: 'integer', nullable: true},
-      ],
+      table: 'test',
+      fields: {
+        id: {type: 'integer', primaryKey: true},
+        name: {type: 'string'},
+        email: {type: 'string'},
+        age: {type: 'integer', nullable: true},
+      },
       validation: {
         type: 'object',
         properties: {
@@ -245,8 +235,8 @@ describe('test schema helper', () => {
 
   test('should build post body validation schmea without and requird fields', () => {
     const model: ModelConfig = {
-      name: 'test',
-      fields: [{name: 'age', type: 'integer', nullable: true}],
+      table: 'test',
+      fields: {age: {type: 'integer', nullable: true}},
     };
     const expectedSchema = {
       type: 'object',
@@ -265,13 +255,13 @@ describe('test schema helper', () => {
   // test cases for stripAdditionalPostFields
   test('should strip additional post fields', () => {
     const model: ModelConfig = {
-      name: 'test',
-      fields: [
-        {name: 'id', type: 'integer', primaryKey: true},
-        {name: 'name', type: 'string'},
-        {name: 'email', type: 'string'},
-        {name: 'age', type: 'integer', nullable: true},
-      ],
+      table: 'test',
+      fields: {
+        id: {type: 'integer', primaryKey: true},
+        name: {type: 'string'},
+        email: {type: 'string'},
+        age: {type: 'integer', nullable: true},
+      },
     };
     const body = {
       id: 1,
