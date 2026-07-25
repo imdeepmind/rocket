@@ -467,4 +467,83 @@ describe('test custom-endpoints api', () => {
       await fastify.close();
     });
   });
+
+  describe('optional validation and AJV error handling', () => {
+    test('should work when validation property is completely omitted from endpoint config', async () => {
+      const noValidationEndpoints = {
+        getUser: {
+          method: 'GET' as const,
+          path: '/get-user',
+          description: 'Get user by id without explicit validation in config',
+          handler: {
+            type: 'sql' as const,
+            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        noValidationEndpoints,
+      );
+
+      // Path param 'id' is required by default, query params are optional
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/get-user/10',
+      });
+
+      expect(res.statusCode).toBe(200);
+      await fastify.close();
+    });
+
+    test('should return 400 when combined parameters fail AJV validation constraints', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
+
+      // searchUsers has validation requiring minAge >= 1
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/search-users',
+        query: {
+          status: 'active',
+          minAge: '0', // violates minimum: 1
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.message).toContain('minAge');
+
+      await fastify.close();
+    });
+
+    test('should return 400 when a required validation property is missing', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+      );
+
+      // searchUsers requires minAge in validation
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/search-users',
+        query: {},
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = JSON.parse(res.body);
+      expect(body.message).toContain('minAge');
+
+      await fastify.close();
+    });
+  });
 });

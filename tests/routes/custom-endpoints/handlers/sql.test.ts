@@ -6,9 +6,11 @@ import {
 } from '@/routes/custom-endpoints/handlers/sql';
 
 describe('buildSqlEndpoint', () => {
-  it('should return empty schema and routePath when no delimiters', () => {
+  it('should return empty result when no delimiters', () => {
     const result = buildSqlEndpoint('SELECT * FROM users;', 'GET');
-    expect(result.schema).toEqual({});
+    expect(result.params).toBeUndefined();
+    expect(result.querystring).toBeUndefined();
+    expect(result.body).toBeUndefined();
     expect(result.routePath).toBe('');
   });
 
@@ -17,8 +19,8 @@ describe('buildSqlEndpoint', () => {
       'SELECT * FROM users WHERE id = $$id:integer$$;',
       'GET',
     );
-    expect(result.schema.params).toBeDefined();
-    expect(result.schema.params).toHaveProperty('properties.id');
+    expect(result.params).toBeDefined();
+    expect(result.params).toHaveProperty('properties.id');
     expect(result.routePath).toBe('/:id');
   });
 
@@ -27,9 +29,9 @@ describe('buildSqlEndpoint', () => {
       'UPDATE users SET name = @@name:string@@ WHERE id = @@id:integer@@;',
       'POST',
     );
-    expect(result.schema.body).toBeDefined();
-    expect(result.schema.body).toHaveProperty('properties.name');
-    expect(result.schema.body).toHaveProperty('properties.id');
+    expect(result.body).toBeDefined();
+    expect(result.body).toHaveProperty('properties.name');
+    expect(result.body).toHaveProperty('properties.id');
     expect(result.routePath).toBe('');
   });
 
@@ -38,9 +40,9 @@ describe('buildSqlEndpoint', () => {
       'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
       'GET',
     );
-    expect(result.schema.querystring).toBeDefined();
-    expect(result.schema.querystring).toHaveProperty('properties.status');
-    expect(result.schema.querystring).toHaveProperty('properties.minAge');
+    expect(result.querystring).toBeDefined();
+    expect(result.querystring).toHaveProperty('properties.status');
+    expect(result.querystring).toHaveProperty('properties.minAge');
     expect(result.routePath).toBe('');
   });
 
@@ -49,7 +51,7 @@ describe('buildSqlEndpoint', () => {
       'SELECT * FROM users WHERE id = @@id:integer@@;',
       'GET',
     );
-    expect(result.schema.body).toBeUndefined();
+    expect(result.body).toBeUndefined();
   });
 
   it('should handle mismatched delimiters gracefully', () => {
@@ -57,7 +59,9 @@ describe('buildSqlEndpoint', () => {
       'SELECT * FROM users WHERE id = $$id:integer@@;',
       'GET',
     );
-    expect(result.schema).toEqual({});
+    expect(result.params).toBeUndefined();
+    expect(result.querystring).toBeUndefined();
+    expect(result.body).toBeUndefined();
     expect(result.routePath).toBe('');
   });
 });

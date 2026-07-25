@@ -70,7 +70,13 @@ function interpolateQuery(
 export function buildSqlEndpoint(
   sql: string,
   method: string,
-): {schema: Record<string, unknown>; routePath: string} {
+  configValidation?: Record<string, unknown>,
+): {
+  params?: Record<string, unknown>;
+  querystring?: Record<string, unknown>;
+  body?: Record<string, unknown>;
+  routePath: string;
+} {
   const paramsProperties: Record<string, object> = {};
   const queryProperties: Record<string, object> = {};
   const bodyProperties: Record<string, object> = {};
@@ -114,36 +120,77 @@ export function buildSqlEndpoint(
     }
   }
 
-  const schema: Record<string, unknown> = {};
-  let routePath = '';
   const paramsKeys = Object.keys(paramsProperties);
+  const queryKeys = Object.keys(queryProperties);
+  const bodyKeys = Object.keys(bodyProperties);
+
+  const configProps: Record<string, object> =
+    (configValidation?.properties as Record<string, object> | undefined) ?? {};
+  const configRequired = Array.isArray(configValidation?.required)
+    ? (configValidation.required as string[])
+    : [];
+
+  const result: {
+    routePath: string;
+    params?: Record<string, unknown>;
+    querystring?: Record<string, unknown>;
+    body?: Record<string, unknown>;
+  } = {routePath: ''};
 
   if (paramsKeys.length > 0) {
     for (const key of paramsKeys) {
-      routePath += `/:${key}`;
+      result.routePath += `/:${key}`;
     }
-    schema.params = {
+    const finalParamsProps: Record<string, object> = {};
+    for (const key of paramsKeys) {
+      finalParamsProps[key] = {
+        ...paramsProperties[key],
+        ...(configProps[key] ?? {}),
+      };
+    }
+    result.params = {
       type: 'object',
-      properties: paramsProperties,
-      additionalProperties: false,
-    };
-  }
-  if (Object.keys(queryProperties).length > 0) {
-    schema.querystring = {
-      type: 'object',
-      properties: queryProperties,
-      additionalProperties: false,
-    };
-  }
-  if (Object.keys(bodyProperties).length > 0 && method !== 'GET') {
-    schema.body = {
-      type: 'object',
-      properties: bodyProperties,
+      properties: finalParamsProps,
+      required: paramsKeys,
       additionalProperties: false,
     };
   }
 
-  return {schema, routePath};
+  if (queryKeys.length > 0) {
+    const finalQueryProps: Record<string, object> = {};
+    for (const key of queryKeys) {
+      finalQueryProps[key] = {
+        ...queryProperties[key],
+        ...(configProps[key] ?? {}),
+      };
+    }
+    const requiredQuery = queryKeys.filter(k => configRequired.includes(k));
+    result.querystring = {
+      type: 'object',
+      properties: finalQueryProps,
+      ...(requiredQuery.length > 0 ? {required: requiredQuery} : {}),
+      additionalProperties: false,
+    };
+  }
+
+  if (bodyKeys.length > 0 && method !== 'GET') {
+    const finalBodyProps: Record<string, object> = {};
+    for (const key of bodyKeys) {
+      finalBodyProps[key] = {
+        ...bodyProperties[key],
+        ...(configProps[key] ?? {}),
+      };
+    }
+    const requiredBody = bodyKeys.filter(k => configRequired.includes(k));
+    result.body = {
+      type: 'object',
+      properties: finalBodyProps,
+      ...(requiredBody.length > 0 ? {required: requiredBody} : {}),
+      additionalProperties: false,
+    };
+  }
+
+  return result;
 }
 
 export async function handleSql(
@@ -152,9 +199,9 @@ export async function handleSql(
   reply: FastifyReply,
   sql: string,
 ): Promise<void> {
-  const params = request.params as Record<string, unknown>;
-  const query = request.query as Record<string, unknown>;
-  const body = request.body as Record<string, unknown>;
+  const params = (request.params as Record<string, unknown>) || {};
+  const query = (request.query as Record<string, unknown>) || {};
+  const body = (request.body as Record<string, unknown>) || {};
 
   const interpolated = interpolateQuery(sql, {params, query, body});
 

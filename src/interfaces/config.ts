@@ -161,7 +161,7 @@ export interface CustomEndpointConfig {
   method: HTTPMethod;
   path: string;
   description: string;
-  validation: Record<string, unknown>;
+  validation?: Record<string, unknown>;
   handler: CustomEndpointHandler;
 }
 

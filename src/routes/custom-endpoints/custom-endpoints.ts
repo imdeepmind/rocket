@@ -84,7 +84,10 @@ function generateSchema(
   endpoint: CustomEndpointConfig,
   name: string,
   authorization: boolean,
-): {schema: Record<string, unknown>; routePathSuffix: string} {
+): {
+  schema: Record<string, unknown>;
+  routePathSuffix: string;
+} {
   const schema: Record<string, unknown> = {
     summary: `Custom Endpoint: ${endpoint.path}`,
     description: endpoint.description,
@@ -94,9 +97,15 @@ function generateSchema(
   let routePathSuffix = '';
 
   if (endpoint.handler.type === 'sql') {
-    const sqlEndpoint = buildSqlEndpoint(endpoint.handler.sql, endpoint.method);
-    Object.assign(schema, sqlEndpoint.schema);
-    routePathSuffix = sqlEndpoint.routePath;
+    const {params, querystring, body, routePath} = buildSqlEndpoint(
+      endpoint.handler.sql,
+      endpoint.method,
+      endpoint.validation,
+    );
+    if (params) schema.params = params;
+    if (querystring) schema.querystring = querystring;
+    if (body) schema.body = body;
+    routePathSuffix = routePath;
   }
 
   schema.response = getResponseStructureSchema([200], {

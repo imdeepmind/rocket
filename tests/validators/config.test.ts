@@ -2263,7 +2263,10 @@ describe('validateValidCustomEndpointsConfig', () => {
             method: 'POST' as const,
             path: '/test',
             description: 'test',
-            validation: {},
+            validation: {
+              type: 'object',
+              required: ['id'],
+            },
             handler: {
               type: 'sql',
               sql: 'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
@@ -2280,7 +2283,10 @@ describe('validateValidCustomEndpointsConfig', () => {
             method: 'GET' as const,
             path: '/test',
             description: 'test',
-            validation: {},
+            validation: {
+              type: 'object',
+              required: ['id'],
+            },
             handler: {
               type: 'sql',
               sql: 'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
@@ -4003,6 +4009,77 @@ describe('validateIntegrationsConfig', () => {
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
       'must NOT have additional properties',
+    );
+  });
+});
+
+describe('validateCustomEndpointsConfig', () => {
+  it('should pass when validation property is omitted', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should pass when validation includes path parameters in required', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {
+            type: 'object',
+            required: ['id'],
+            properties: {
+              id: {type: 'integer'},
+            },
+          },
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when endpoint validation is not a valid JSON schema', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {
+            type: 'invalid-type',
+          },
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      '/customEndpoints/testEndpoint/validation:',
     );
   });
 });

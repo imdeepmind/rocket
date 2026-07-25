@@ -377,7 +377,7 @@ const customEndpointHandlerSchema = {
 
 const customEndpointSchema = {
   type: 'object',
-  required: ['method', 'path', 'description', 'validation', 'handler'],
+  required: ['method', 'path', 'description', 'handler'],
   additionalProperties: false,
   properties: {
     method: {

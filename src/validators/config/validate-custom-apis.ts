@@ -1,5 +1,7 @@
 import {AppConfig} from '@/interfaces/config';
 
+import {ajv} from './schema';
+
 function validateCustomAPIs(config: AppConfig): string[] {
   const errors: string[] = [];
 
@@ -11,6 +13,18 @@ function validateCustomAPIs(config: AppConfig): string[] {
     names.forEach(name => {
       const endpoint = customEndpoints[name];
       const path = `/customEndpoints/${name}`;
+
+      if (endpoint.validation) {
+        const isValidSchema = ajv.validateSchema(endpoint.validation);
+        if (!isValidSchema) {
+          const schemaErrors = ajv.errors
+            ? ajv.errors.map(e =>
+                `${path}/validation: ${e.instancePath} ${e.message}`.trim(),
+              )
+            : [`${path}/validation: invalid JSON schema`];
+          errors.push(...schemaErrors);
+        }
+      }
 
       const q = endpoint.handler.sql.trim().toUpperCase();
 
