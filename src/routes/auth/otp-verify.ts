@@ -15,24 +15,18 @@ function registerOtpVerifyBase(
   const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
+  if (!authentication?.enabled || authentication.provider.type !== 'up-auth')
     return;
-  }
 
   const {model, usernameField} = authentication.provider.config.userModel;
 
   const authModelConfig = models[model];
 
-  if (!authModelConfig) {
-    app.log.warn(
-      `[auth/otp-verify] Could not find model config for "${model}". Skipping route registration.`,
-    );
-    return;
-  }
+  if (!authModelConfig) return;
 
   const upConfig = authentication.provider.config as UpAuthProviderConfig;
 
-  const apiIdentifier = `authAPIs.${model}.all.otp-verify-${action}`;
+  const apiIdentifier = `auth.${model}.all.otp-verify-${action}`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

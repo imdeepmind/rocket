@@ -80,9 +80,7 @@ export async function startServer(
   await app.register(dbPlugin);
 
   // config-driven cache (Redis or NodeCache)
-  if (config.infrastructure.cache) {
-    await app.register(cachePlugin);
-  }
+  await app.register(cachePlugin);
 
   // config-driven integrations (email)
   if (config.integrations?.email) {
