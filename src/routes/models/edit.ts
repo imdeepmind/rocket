@@ -14,7 +14,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register EDIT routes for editable fields.
  *
- * For each model, for each field with 'edit' in operations, creates:
+ * For each model, for each field with 'edit' in apis, creates:
  *   PATCH /{model}/{columnName}/:value (partial update)
  *   PUT /{model}/{columnName}/:value (complete update)
  *
@@ -30,7 +30,7 @@ export function registerEditRoutes(
 
   for (const [modelName, model] of Object.entries(models)) {
     const editableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.operations?.includes('edit'),
+      f.apis?.includes('edit'),
     );
 
     for (const [fieldName, field] of editableFields) {

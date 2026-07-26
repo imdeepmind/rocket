@@ -7,7 +7,6 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const aggregateModel: Record<string, ModelConfig> = {
   sales: {
-    table: 'sales',
     fields: {
       id: {type: 'integer', primaryKey: true},
       amount: {
@@ -133,7 +132,6 @@ describe('test aggregate api', () => {
 
       const combinedModel: Record<string, ModelConfig> = {
         stats: {
-          table: 'stats',
           fields: {
             score: {
               type: 'integer',

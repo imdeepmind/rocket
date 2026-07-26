@@ -17,7 +17,7 @@ const baseConfig = {
     },
   },
   infrastructure: {
-    primaryDatabase: {engine: 'sqlite', connection: {url: ':memory:'}},
+    database: {engine: 'sqlite', connection: {url: ':memory:'}},
   },
   data: {models: {}},
 };

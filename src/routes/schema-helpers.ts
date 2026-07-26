@@ -75,13 +75,13 @@ export function buildSortQueryProperties(
 
 /**
  * Build filter query parameter schema properties for a field
- * based on its operations (lt, lte, gt, gte, eq, in, etc.).
+ * based on its query operations (lt, lte, gt, gte, eq, in, etc.).
  */
 export function buildFilterQueryProperties(
   fieldName: string,
   field: ModelFieldConfig,
 ): Record<string, object> {
-  const ops = field.operations || [];
+  const ops = field.query || [];
   const jsonType = mapDataTypeToJsonSchema(field.type);
   const properties: Record<string, object> = {};
 

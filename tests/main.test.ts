@@ -110,7 +110,7 @@ describe('main.ts CLI', () => {
       migrate: true,
     };
     const mockAppConfig = {
-      infrastructure: {primaryDatabase: {engine: 'postgres'}},
+      infrastructure: {database: {engine: 'postgres'}},
     };
 
     // Mock readFileSync behavior for config loading
@@ -175,7 +175,7 @@ describe('main.ts CLI', () => {
       migrate: false,
     };
     vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({infrastructure: {primaryDatabase: {engine: 'sqlite'}}}),
+      JSON.stringify({infrastructure: {database: {engine: 'sqlite'}}}),
     );
     await mockAction(cliOptions);
 
@@ -222,7 +222,7 @@ describe('main.ts CLI', () => {
       migrate: false,
     };
     vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({infrastructure: {primaryDatabase: {engine: 'sqlite'}}}),
+      JSON.stringify({infrastructure: {database: {engine: 'sqlite'}}}),
     );
     await mockAction(cliOptions);
 

@@ -17,7 +17,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register INDEX routes for indexed fields.
  *
- * For each model, for each field with primaryKey, unique, or 'index' in operations, creates:
+ * For each model, for each field with primaryKey, unique, or 'index' in apis, creates:
  *   GET /{model}/{columnName}/:value
  *
  * Includes filter query params based on the model's operations,
@@ -31,7 +31,7 @@ export function registerIndexRoutes(
 
   for (const [modelName, model] of Object.entries(models)) {
     const indexFields = Object.entries(model.fields).filter(([, f]) => {
-      return f.primaryKey || f.unique || f.operations?.includes('index');
+      return f.primaryKey || f.unique || f.apis?.includes('index');
     });
 
     for (const [fieldName, field] of indexFields) {
@@ -193,7 +193,7 @@ function generateSchema(
     }
 
     const sortableFields = Object.entries(model.fields)
-      .filter(([, f]) => f.operations?.includes('sort'))
+      .filter(([, f]) => f.query?.includes('sort'))
       .map(([fName]) => fName);
     Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 

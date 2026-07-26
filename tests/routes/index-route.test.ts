@@ -8,7 +8,6 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 // Model with a unique (primaryKey) field — returns single record
 const uniqueFieldModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {type: 'integer', primaryKey: true},
       name: {type: 'string'},
@@ -20,7 +19,6 @@ const uniqueFieldModel: Record<string, ModelConfig> = {
 // Model with a unique but non-PK field
 const uniqueNonPkModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {type: 'integer', primaryKey: true},
       email: {type: 'string', unique: true},
@@ -31,20 +29,20 @@ const uniqueNonPkModel: Record<string, ModelConfig> = {
 // Model with an indexable (non-unique) field — returns array
 const indexableFieldModel: Record<string, ModelConfig> = {
   posts: {
-    table: 'posts',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       category: {
         type: 'string',
-        operations: ['index', 'sort', 'eq'],
+        apis: ['index'],
+        query: ['sort', 'eq'],
       },
       title: {
         type: 'string',
-        operations: ['sort', 'eq'],
+        query: ['sort', 'eq'],
       },
     },
   },
@@ -53,17 +51,17 @@ const indexableFieldModel: Record<string, ModelConfig> = {
 // Model with both unique and indexable fields
 const mixedFieldModel: Record<string, ModelConfig> = {
   articles: {
-    table: 'articles',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       slug: {type: 'string', unique: true},
       tag: {
         type: 'string',
-        operations: ['index', 'sort', 'eq'],
+        apis: ['index'],
+        query: ['sort', 'eq'],
       },
     },
   },
@@ -72,7 +70,6 @@ const mixedFieldModel: Record<string, ModelConfig> = {
 // Model with no index-eligible fields
 const noIndexFieldModel: Record<string, ModelConfig> = {
   logs: {
-    table: 'logs',
     fields: {
       message: {type: 'string'},
       level: {type: 'string'},

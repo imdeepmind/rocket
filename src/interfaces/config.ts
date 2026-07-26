@@ -18,18 +18,8 @@ export type LogLevel =
   | 'error'
   | 'fatal'
   | 'silent';
-export type Operation =
-  | 'search'
-  | 'sort'
-  | 'eq'
-  | 'lt'
-  | 'lte'
-  | 'gt'
-  | 'gte'
-  | 'in'
-  | 'edit'
-  | 'delete'
-  | 'index';
+export type ApiOperation = 'search' | 'index' | 'edit' | 'delete';
+export type QueryOperation = 'eq' | 'lt' | 'lte' | 'gt' | 'gte' | 'in' | 'sort';
 export type Aggregation = 'count' | 'avg' | 'sum' | 'min' | 'max' | 'frequency';
 export type ModelBody = Record<
   string,
@@ -108,7 +98,8 @@ export interface ModelFieldConfig {
   nullable?: boolean;
   unique?: boolean;
   default?: unknown;
-  operations?: Operation[];
+  apis?: ApiOperation[];
+  query?: QueryOperation[];
   aggregations?: Aggregation[];
 }
 
@@ -127,7 +118,6 @@ export interface ModelRelationConfig {
 }
 
 export interface ModelConfig {
-  table: string;
   timestamps?: boolean;
   validation?: Record<string, unknown>;
   fields: Record<string, ModelFieldConfig>;
@@ -249,7 +239,7 @@ export interface IntegrationsConfig {
 }
 
 export interface InfrastructureConfig {
-  primaryDatabase: DatabaseConfig;
+  database: DatabaseConfig;
   cache?: CacheDbConfig;
 }
 

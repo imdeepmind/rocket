@@ -8,18 +8,18 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 // Model with a single searchable field
 const searchableModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       name: {
         type: 'string',
-        operations: ['search', 'sort', 'eq'],
+        apis: ['search'],
+        query: ['sort', 'eq'],
       },
-      email: {type: 'string', operations: ['eq']},
+      email: {type: 'string', query: ['eq']},
     },
   },
 };
@@ -27,16 +27,16 @@ const searchableModel: Record<string, ModelConfig> = {
 // Model with multiple searchable fields
 const multiSearchableModel: Record<string, ModelConfig> = {
   products: {
-    table: 'products',
     fields: {
       id: {type: 'integer', primaryKey: true},
       title: {
         type: 'string',
-        operations: ['search', 'sort'],
+        apis: ['search'],
+        query: ['sort'],
       },
       description: {
         type: 'string',
-        operations: ['search'],
+        apis: ['search'],
       },
     },
   },
@@ -45,7 +45,6 @@ const multiSearchableModel: Record<string, ModelConfig> = {
 // Model with no searchable fields
 const noSearchableModel: Record<string, ModelConfig> = {
   logs: {
-    table: 'logs',
     fields: {
       id: {type: 'integer', primaryKey: true},
       message: {type: 'string'},

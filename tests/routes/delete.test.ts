@@ -7,12 +7,11 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const singleDeletableModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['delete'],
+        apis: ['delete'],
       },
       name: {type: 'string'},
     },
@@ -21,14 +20,13 @@ const singleDeletableModel: Record<string, ModelConfig> = {
 
 const multipleDeletableFieldsModel: Record<string, ModelConfig> = {
   posts: {
-    table: 'posts',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['delete'],
+        apis: ['delete'],
       },
-      slug: {type: 'string', operations: ['delete']},
+      slug: {type: 'string', apis: ['delete']},
       title: {type: 'string'},
     },
   },
@@ -36,7 +34,6 @@ const multipleDeletableFieldsModel: Record<string, ModelConfig> = {
 
 const noDeletableFieldsModel: Record<string, ModelConfig> = {
   logs: {
-    table: 'logs',
     fields: {
       id: {type: 'integer', primaryKey: true},
       message: {type: 'string'},
@@ -88,9 +85,8 @@ describe('test delete api', () => {
     test('should delete a record by string field and return 204', async () => {
       const customModels: Record<string, ModelConfig> = {
         posts: {
-          table: 'posts',
           fields: {
-            slug: {type: 'string', operations: ['delete']},
+            slug: {type: 'string', apis: ['delete']},
           },
         },
       };

@@ -20,7 +20,6 @@ import {
 
 export const mockModels: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {type: 'integer', primaryKey: true, autoIncrement: true},
       name: {type: 'string'},
@@ -55,7 +54,7 @@ export async function createTestApp(
         info: {title: 'Test', description: 'Test', version: '1.0.0'},
       },
     },
-    infrastructure: {primaryDatabase: dbConfig},
+    infrastructure: {database: dbConfig},
     data: {models},
     apis,
     customEndpoints,

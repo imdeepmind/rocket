@@ -6,32 +6,20 @@ import {
   JsonSchemaProperty,
 } from '@/interfaces/config';
 
-const ALLOWED_OPERATIONS: Record<string, string[]> = {
-  integer: [
-    'sort',
-    'lt',
-    'lte',
-    'gt',
-    'gte',
-    'eq',
-    'in',
-    'edit',
-    'delete',
-    'index',
-  ],
-  decimal: [
-    'sort',
-    'lt',
-    'lte',
-    'gt',
-    'gte',
-    'eq',
-    'in',
-    'edit',
-    'delete',
-    'index',
-  ],
-  string: ['search', 'sort', 'eq', 'in', 'edit', 'delete', 'index'],
+const ALLOWED_APIS: Record<string, string[]> = {
+  integer: ['edit', 'delete', 'index'],
+  decimal: ['edit', 'delete', 'index'],
+  string: ['search', 'edit', 'delete', 'index'],
+  boolean: [],
+  text: [],
+  datetime: [],
+  date: [],
+};
+
+const ALLOWED_QUERY: Record<string, string[]> = {
+  integer: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+  decimal: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+  string: ['sort', 'eq', 'in'],
   boolean: ['eq'],
   text: [],
   datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
@@ -95,7 +83,8 @@ function validateFieldConstraints(config: AppConfig): string[] {
   Object.entries(config.data.models).forEach(([modelName, model]) => {
     Object.entries(model.fields).forEach(([fieldName, field]) => {
       const path = `/data/models/${modelName}/fields/${fieldName}`;
-      const {type, primaryKey, autoIncrement, operations, aggregations} = field;
+      const {type, primaryKey, autoIncrement, apis, query, aggregations} =
+        field;
 
       // Primary key rules
       if (primaryKey) {
@@ -118,13 +107,25 @@ function validateFieldConstraints(config: AppConfig): string[] {
         );
       }
 
-      // Validate operations against allowed list for this type
-      if (operations) {
-        const allowed = ALLOWED_OPERATIONS[type]!;
-        operations.forEach(op => {
+      // Validate apis against allowed list for this type
+      if (apis) {
+        const allowed = ALLOWED_APIS[type]!;
+        apis.forEach(op => {
           if (!allowed.includes(op)) {
             errors.push(
-              `${path}/operations: "${op}" is not allowed for type "${type}"`,
+              `${path}/apis: "${op}" is not allowed for type "${type}"`,
+            );
+          }
+        });
+      }
+
+      // Validate query against allowed list for this type
+      if (query) {
+        const allowed = ALLOWED_QUERY[type]!;
+        query.forEach(op => {
+          if (!allowed.includes(op)) {
+            errors.push(
+              `${path}/query: "${op}" is not allowed for type "${type}"`,
             );
           }
         });

@@ -7,20 +7,20 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const getAllModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
       },
       name: {
         type: 'string',
-        operations: ['sort', 'search', 'eq'],
+        apis: ['search'],
+        query: ['sort', 'eq'],
       },
       email: {
         type: 'string',
-        operations: ['eq'],
+        query: ['eq'],
       },
     },
   },
@@ -347,7 +347,7 @@ describe('test get-all api', () => {
 
     test('should return rows in data even when model has no filterable fields', async () => {
       const emptyModel: Record<string, ModelConfig> = {
-        tags: {table: 'tags', fields: {id: {type: 'integer'}}},
+        tags: {fields: {id: {type: 'integer'}}},
       };
       pgQueryMock
         .mockResolvedValueOnce({rows: [{total: 1}]})

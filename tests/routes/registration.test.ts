@@ -26,7 +26,6 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 /** Minimal model config that matches the authModel in example_config. */
 const authModels: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
       email: {type: 'string', nullable: false},
@@ -78,7 +77,7 @@ async function createAuthApp(
         info: {title: 'Test', description: 'Test', version: '1.0.0'},
       },
     },
-    infrastructure: {primaryDatabase: dbConfig},
+    infrastructure: {database: dbConfig},
     data: {models},
     authentication,
   };
@@ -438,7 +437,6 @@ describe('POST /auth/register', () => {
   describe('custom authModel column names', () => {
     const customModels: Record<string, ModelConfig> = {
       accounts: {
-        table: 'accounts',
         fields: {
           account_id: {
             type: 'integer',
@@ -522,7 +520,7 @@ describe('POST /auth/register', () => {
             info: {title: 'Test', description: 'Test', version: '1.0.0'},
           },
         },
-        infrastructure: {primaryDatabase: dbConfig},
+        infrastructure: {database: dbConfig},
         data: {models},
         authentication,
       };

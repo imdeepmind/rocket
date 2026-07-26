@@ -43,7 +43,7 @@ describe('Auth Plugin — up-auth engine', () => {
         },
       },
       infrastructure: {
-        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+        database: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       data: {models: {}},
       authentication: {
@@ -131,7 +131,7 @@ describe('Auth Plugin — api-key engine', () => {
         },
       },
       infrastructure: {
-        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+        database: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       data: {models: {}},
       authentication: {
@@ -174,7 +174,7 @@ describe('Auth Plugin — api-key engine', () => {
         },
       },
       infrastructure: {
-        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+        database: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       data: {models: {}},
       authentication: {
@@ -221,7 +221,7 @@ describe('Auth Plugin — api-key engine', () => {
         },
       },
       infrastructure: {
-        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+        database: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       data: {models: {}},
       authentication: {
@@ -269,7 +269,7 @@ describe('Auth Plugin — unknown provider type', () => {
         },
       },
       infrastructure: {
-        primaryDatabase: {engine: 'postgres', connection: {url: ':memory:'}},
+        database: {engine: 'postgres', connection: {url: ':memory:'}},
       },
       data: {models: {}},
       authentication: {

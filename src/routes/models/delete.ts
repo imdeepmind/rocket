@@ -12,7 +12,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register DELETE routes for deletable fields.
  *
- * For each model, for each field with 'delete' in operations, creates:
+ * For each model, for each field with 'delete' in apis, creates:
  *   DELETE /{model}/{columnName}/:value
  *
  * Path params: the column value identifying the record to delete.
@@ -25,7 +25,7 @@ export function registerDeleteRoutes(
 
   for (const [modelName, model] of Object.entries(models)) {
     const deletableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.operations?.includes('delete'),
+      f.apis?.includes('delete'),
     );
 
     for (const [fieldName, field] of deletableFields) {

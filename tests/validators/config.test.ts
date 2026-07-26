@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 
 import {
   ApisConfig,
@@ -9,7 +9,9 @@ import {
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
+import {ajv} from '@/validators/config/schema';
 import validateAuthConstraints from '@/validators/config/validate-auth';
+import * as entityModule from '@/validators/entity';
 
 const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
@@ -23,7 +25,6 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): Record<string, ModelConfig> => {
   return {
     users: {
-      table: 'users',
       fields: {
         id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
         name: {type: 'string'},
@@ -32,22 +33,22 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => {
       },
     },
     posts: {
-      table: 'posts',
       fields: {
         title: {
           type: 'string',
           nullable: false,
-          operations: ['search', 'sort'],
+          apis: ['search'],
+          query: ['sort'],
           aggregations: ['count'],
         },
         body: {type: 'text', nullable: true},
         user_id: {
           type: 'integer',
           nullable: false,
-          operations: ['eq', 'in'],
+          query: ['eq', 'in'],
           aggregations: ['count'],
         },
-        created_at: {type: 'datetime', operations: ['lt', 'gt', 'sort']},
+        created_at: {type: 'datetime', query: ['lt', 'gt', 'sort']},
       },
     },
   };
@@ -69,7 +70,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
+  infrastructure: {database: getDefaultDatabaseConfig()},
   data: {models: getDefaultModelConfig()},
 };
 
@@ -342,26 +343,24 @@ describe('validateInvalidDatabaseConfig', () => {
     {
       name: 'engine as invalid',
       patch: {engine: 'wrong', connection: {url: './database.db'}},
-      expected:
-        '/infrastructure/primaryDatabase/engine must be equal to constant',
+      expected: '/infrastructure/database/engine must be equal to constant',
     },
     {
       name: 'engine as undefined',
       patch: {engine: undefined, connection: {url: './database.db'}},
-      expected:
-        "/infrastructure/primaryDatabase must have required property 'engine'",
+      expected: "/infrastructure/database must have required property 'engine'",
     },
     {
       name: 'connection.url as empty string',
       patch: {engine: 'postgres', connection: {url: ''}},
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
       name: 'connection.url wrong pg connection string',
       patch: {engine: 'postgres', connection: {url: './database.db'}},
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
       name: 'connection.url wrong sqlite connection string',
@@ -372,14 +371,14 @@ describe('validateInvalidDatabaseConfig', () => {
         },
       },
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+        '/infrastructure/database/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           ...patch,
         },
       },
@@ -410,8 +409,8 @@ describe('validateValidDatabaseConfig', () => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           ...patch,
         },
       },
@@ -423,24 +422,6 @@ describe('validateValidDatabaseConfig', () => {
 
 describe('validateInvalidModelFieldsConfig', () => {
   it.each([
-    // ============== invalid name tests ==============
-    {
-      name: 'invalid name',
-      patch: {table: '132234asd'},
-      expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid name',
-      patch: {table: 'sad asdas'},
-      expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'table as undefined',
-      patch: {table: undefined},
-      expected: "/data/models/test must have required property 'table'",
-    },
     // ============== end of invalid name tests ===============
     // ============== invalid fields tests ==============
     {
@@ -530,139 +511,154 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected: '/data/models/test/fields/test/nullable must be boolean',
     },
     {
-      name: 'field.operations is not array',
+      name: 'field.apis is not array',
       patch: {
-        fields: {test: {type: 'string', operations: 'invalid'}},
+        fields: {test: {type: 'string', apis: 'invalid'}},
       },
-      expected: '/data/models/test/fields/test/operations must be array',
+      expected: '/data/models/test/fields/test/apis must be array',
     },
     {
-      name: 'field.operations contains invalid value',
+      name: 'field.query is not array',
       patch: {
-        fields: {test: {type: 'string', operations: ['invalid']}},
+        fields: {test: {type: 'string', query: 'invalid'}},
       },
-      expected:
-        '/data/models/test/fields/test/operations/0 must be equal to one of the allowed values',
+      expected: '/data/models/test/fields/test/query must be array',
     },
     {
-      name: 'field.operations contains invalid value for type=integer',
+      name: 'field.apis contains invalid value',
       patch: {
-        fields: {test: {type: 'integer', operations: ['search']}},
+        fields: {test: {type: 'string', apis: ['invalid']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "integer"',
+        '/data/models/test/fields/test/apis/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.operations contains invalid value for type=decimal',
+      name: 'field.query contains invalid value',
       patch: {
-        fields: {test: {type: 'decimal', operations: ['search']}},
+        fields: {test: {type: 'string', query: ['invalid']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "decimal"',
+        '/data/models/test/fields/test/query/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.operations contains invalid value for type=date',
+      name: 'field.apis contains invalid value for type=integer',
       patch: {
-        fields: {test: {type: 'date', operations: ['search']}},
+        fields: {test: {type: 'integer', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "date"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "integer"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=decimal',
       patch: {
-        fields: {test: {type: 'string', operations: ['lt']}},
+        fields: {test: {type: 'decimal', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lt" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "decimal"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=date',
       patch: {
-        fields: {test: {type: 'string', operations: ['lte']}},
+        fields: {test: {type: 'date', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lte" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "date"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'string', operations: ['gt']}},
+        fields: {test: {type: 'string', query: ['lt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gt" is not allowed for type "string"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'string', operations: ['gte']}},
+        fields: {test: {type: 'string', query: ['lte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gte" is not allowed for type "string"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['search']}},
+        fields: {test: {type: 'string', query: ['gt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['sort']}},
+        fields: {test: {type: 'string', query: ['gte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "sort" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['edit']}},
+        fields: {test: {type: 'boolean', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "edit" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['delete']}},
+        fields: {test: {type: 'boolean', query: ['sort']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "delete" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['lt']}},
+        fields: {test: {type: 'boolean', apis: ['edit']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lt" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "edit" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['lte']}},
+        fields: {test: {type: 'boolean', apis: ['delete']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lte" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "delete" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['gt']}},
+        fields: {test: {type: 'boolean', query: ['lt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gt" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['gte']}},
+        fields: {test: {type: 'boolean', query: ['lte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gte" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.query contains invalid value for type=boolean',
+      patch: {
+        fields: {test: {type: 'boolean', query: ['gt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.query contains invalid value for type=boolean',
+      patch: {
+        fields: {test: {type: 'boolean', query: ['gte']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "boolean"',
     },
     {
       name: 'field.aggregations is not array',
@@ -845,7 +841,6 @@ describe('validateInvalidModelFieldsConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             fields: {test: {type: 'string'}},
             ...(patch as Record<string, unknown>),
           } as ModelConfig,
@@ -862,7 +857,6 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
@@ -876,14 +870,14 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
-            operations: ['index', 'sort'],
+            apis: ['index'],
+            query: ['sort'],
           },
         },
       },
@@ -891,14 +885,14 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
-            operations: ['index', 'sort'],
+            apis: ['index'],
+            query: ['sort'],
             aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
         },
@@ -963,7 +957,6 @@ describe('validateInvalidModelIndexesConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             fields: {test: {type: 'string'}},
             ...(patch as Record<string, unknown>),
           } as ModelConfig,
@@ -980,7 +973,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
         indexes: {
           valid_index: {
@@ -993,7 +985,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
         indexes: {
           valid_index: {
@@ -1006,7 +997,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'not passing index',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
       },
     },
@@ -1029,7 +1019,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation.type is not object',
       patch: {
-        table: 'test',
         fields: {test: {type: 'string'}},
         validation: 13,
       },
@@ -1038,7 +1027,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation property column does not exist',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1055,7 +1043,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation required is not array',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, age: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1071,7 +1058,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation required is not array',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1088,7 +1074,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation property column data type does not match',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1104,7 +1089,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'date field with mismatched schema type',
       patch: {
-        table: 'test',
         fields: {eventDate: {type: 'date'}},
         validation: {
           type: 'object',
@@ -1123,9 +1107,8 @@ describe('validateInvalidModelValidationConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             ...(patch as Record<string, unknown>),
-          } as ModelConfig,
+          } as unknown as ModelConfig,
         },
       },
     };
@@ -1139,7 +1122,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           name: {type: 'string'},
@@ -1161,7 +1143,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           name: {type: 'string'},
@@ -1183,14 +1164,12 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'not passing validation',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
       },
     },
     {
       name: 'valid model with decimal and date fields',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           price: {type: 'decimal'},
@@ -1210,7 +1189,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model without validation required',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1223,7 +1201,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with validation but no properties',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1233,7 +1210,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with boolean schema property',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1246,7 +1222,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with schema property without type',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -2191,6 +2166,22 @@ describe('validateInvalidCustomEndpointsConfig', () => {
       expected:
         'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
+    {
+      name: 'custom endpoint with invalid validation schema',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {type: 123},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/validation: /type must be equal to one of the allowed values',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
@@ -2768,6 +2759,36 @@ describe('validateInvalidModelAPIsConfig', () => {
       },
       expected:
         'apis/aggregateAPIs.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+    },
+    {
+      name: 'custom endpoint key not found',
+      patch: {
+        'customEndpoints.nonexistent': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.nonexistent: custom endpoint not found',
+    },
+    {
+      name: 'custom endpoint key invalid format',
+      patch: {
+        'customEndpoints.test.extra': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.test.extra: invalid key format',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3610,7 +3631,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3650,7 +3670,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3690,7 +3709,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3730,7 +3748,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3763,6 +3780,33 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
     expect(errors).toContain(
       '/authentication/provider/config/userModel/isVerifiedField: must be a string',
     );
+  });
+
+  it('should handle falsy model name in userModel', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: '',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toHaveLength(0);
   });
 });
 
@@ -4081,5 +4125,64 @@ describe('validateCustomEndpointsConfig', () => {
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
       '/customEndpoints/testEndpoint/validation:',
     );
+  });
+
+  it('should use fallback message when ajv.errors is null after failed validation', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {type: 'invalid'},
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    const spy = vi.spyOn(ajv, 'validateSchema').mockReturnValue(false);
+    ajv.errors = null;
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      '/customEndpoints/testEndpoint/validation: invalid JSON schema',
+    );
+
+    spy.mockRestore();
+  });
+});
+
+describe('validateSchemaKeyword', () => {
+  it('should use fallback message when validateEntityName throws non-Error', () => {
+    const spy = vi
+      .spyOn(entityModule, 'validateEntityName')
+      .mockImplementation(() => {
+        throw {};
+      });
+
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: {
+            fields: {testField: {type: 'string'}},
+            indexes: {
+              test_index: {
+                fields: ['invalid-name'],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'Entity name is invalid',
+    );
+
+    spy.mockRestore();
   });
 });

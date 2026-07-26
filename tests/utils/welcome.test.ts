@@ -40,7 +40,7 @@ describe('welcome utility', () => {
       },
     },
     infrastructure: {
-      primaryDatabase: {
+      database: {
         engine: 'sqlite',
         connection: {
           url: ':memory:',
@@ -50,14 +50,12 @@ describe('welcome utility', () => {
     data: {
       models: {
         User: {
-          table: 'User',
           fields: {
             id: {type: 'integer', primaryKey: true},
             name: {type: 'string'},
           },
         },
         Post: {
-          table: 'Post',
           fields: {
             id: {type: 'integer', primaryKey: true},
             title: {type: 'string'},
@@ -115,7 +113,7 @@ describe('welcome utility', () => {
     const pgConfig: AppConfig = {
       ...mockConfig,
       infrastructure: {
-        primaryDatabase: {
+        database: {
           engine: 'postgres',
           connection: {url: 'postgresql://localhost'},
         },

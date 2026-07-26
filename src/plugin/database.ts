@@ -42,7 +42,7 @@ function isDdlQuery(sql: string): boolean {
 }
 
 export default fp(async (fastify: FastifyInstance) => {
-  const dbConfig = fastify.appConfig.infrastructure.primaryDatabase;
+  const dbConfig = fastify.appConfig.infrastructure.database;
   let dbInstance: DatabaseQuery;
   const timeout = dbConfig.timeout ?? 10000;
 

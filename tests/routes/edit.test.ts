@@ -22,12 +22,11 @@ const upAuthConfig: AuthenticationConfig = {
 
 const defaultEditModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['edit'],
+        apis: ['edit'],
       },
       name: {type: 'string'},
       email: {type: 'string'},
@@ -37,25 +36,24 @@ const defaultEditModel: Record<string, ModelConfig> = {
 
 const nonUniqueEditModel: Record<string, ModelConfig> = {
   tasks: {
-    table: 'tasks',
     fields: {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['lt', 'lte', 'gt', 'gte', 'in'],
       },
       status: {
         type: 'string',
-        operations: ['edit', 'eq', 'lt'], // Non-unique identifier
+        apis: ['edit'],
+        query: ['eq', 'lt'], // Non-unique identifier
       },
-      title: {type: 'string', operations: ['eq']},
+      title: {type: 'string', query: ['eq']},
     },
   },
 };
 
 const validatedEditModel: Record<string, ModelConfig> = {
   posts: {
-    table: 'posts',
     validation: {
       type: 'object',
       properties: {
@@ -68,7 +66,7 @@ const validatedEditModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['edit'],
+        apis: ['edit'],
       },
       title: {type: 'string'},
       content: {type: 'string'},

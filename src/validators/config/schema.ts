@@ -110,7 +110,7 @@ const docsSchema = {
   },
 };
 
-const primaryDatabaseSchema = {
+const databaseSchema = {
   type: 'object',
   required: ['engine', 'connection'],
   properties: {
@@ -181,10 +181,10 @@ const cacheDbSchema = {
 
 const infrastructureSchema = {
   type: 'object',
-  required: ['primaryDatabase'],
+  required: ['database'],
   additionalProperties: false,
   properties: {
-    primaryDatabase: primaryDatabaseSchema,
+    database: databaseSchema,
     cache: cacheDbSchema,
   },
 };
@@ -211,23 +211,19 @@ const fieldSchema = {
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
-    operations: {
+    apis: {
       type: 'array',
       items: {
         type: 'string',
-        enum: [
-          'search',
-          'sort',
-          'eq',
-          'lt',
-          'lte',
-          'gt',
-          'gte',
-          'in',
-          'edit',
-          'delete',
-          'index',
-        ],
+        enum: ['search', 'index', 'edit', 'delete'],
+      },
+      uniqueItems: true,
+    },
+    query: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['eq', 'lt', 'lte', 'gt', 'gte', 'in', 'sort'],
       },
       uniqueItems: true,
     },
@@ -300,14 +296,9 @@ const relationSchema = {
 
 const modelSchema = {
   type: 'object',
-  required: ['table', 'fields'],
+  required: ['fields'],
   additionalProperties: false,
   properties: {
-    table: {
-      type: 'string',
-      isEntityName: true,
-      minLength: 1,
-    },
     timestamps: {
       type: 'boolean',
     },
