@@ -90,7 +90,6 @@ describe('test schema helper', () => {
   // test cases for buildPostBodyValidationSchema
   test('should build post body validation schema', () => {
     const model: ModelConfig = {
-      table: 'test',
       fields: {
         id: {type: 'integer', primaryKey: true},
         name: {type: 'string'},
@@ -126,7 +125,6 @@ describe('test schema helper', () => {
 
   test('should build post body validation schema ignoring primary key', () => {
     const model: ModelConfig = {
-      table: 'test',
       fields: {
         id: {type: 'integer', primaryKey: true},
         name: {type: 'string'},
@@ -160,7 +158,6 @@ describe('test schema helper', () => {
 
   test('should build post body validation schema', () => {
     const model: ModelConfig = {
-      table: 'test',
       fields: {
         id: {type: 'integer', primaryKey: true},
         name: {type: 'string'},
@@ -235,7 +232,6 @@ describe('test schema helper', () => {
 
   test('should build post body validation schmea without and requird fields', () => {
     const model: ModelConfig = {
-      table: 'test',
       fields: {age: {type: 'integer', nullable: true}},
     };
     const expectedSchema = {
@@ -255,7 +251,6 @@ describe('test schema helper', () => {
   // test cases for stripAdditionalPostFields
   test('should strip additional post fields', () => {
     const model: ModelConfig = {
-      table: 'test',
       fields: {
         id: {type: 'integer', primaryKey: true},
         name: {type: 'string'},

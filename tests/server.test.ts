@@ -71,7 +71,7 @@ const mockConfig: AppConfig = {
     logLevel: 'info',
   },
   infrastructure: {
-    primaryDatabase: {
+    database: {
       engine: 'sqlite',
       connection: {url: ':memory:'},
     },
@@ -86,7 +86,6 @@ const mockConfig: AppConfig = {
   data: {
     models: {
       users: {
-        table: 'users',
         fields: {
           id: {type: 'integer', primaryKey: true},
         },

@@ -30,7 +30,7 @@
         }
     },
     "infrastructure": {
-        "primaryDatabase": {
+        "database": {
             "engine": "sqlite",
             "connection": {
                 "url": "./database.db"
@@ -70,7 +70,6 @@
     "data": {
         "models": {
             "users": {
-                "table": "users",
                 "timestamps": true,
                 "fields": {
                     "id": {
@@ -117,7 +116,6 @@
                 }
             },
             "posts": {
-                "table": "posts",
                 "validation": {
                     "type": "object",
                     "required": ["title", "userId"],

@@ -126,7 +126,7 @@ export function showWelcomeScreen(
   console.log(
     '  ' +
       chalk.white('Database:    ') +
-      chalk.magenta(config.infrastructure.primaryDatabase.engine.toUpperCase()),
+      chalk.magenta(config.infrastructure.database.engine.toUpperCase()),
   );
   console.log('  ' + chalk.white('Cache DB:    ') + cacheDbStatus);
   console.log('  ' + chalk.white('Rate Limit:  ') + rateLimitStatus);

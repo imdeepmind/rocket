@@ -7,7 +7,6 @@ import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const getAllModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
@@ -347,7 +346,7 @@ describe('test get-all api', () => {
 
     test('should return rows in data even when model has no filterable fields', async () => {
       const emptyModel: Record<string, ModelConfig> = {
-        tags: {table: 'tags', fields: {id: {type: 'integer'}}},
+        tags: {fields: {id: {type: 'integer'}}},
       };
       pgQueryMock
         .mockResolvedValueOnce({rows: [{total: 1}]})

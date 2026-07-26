@@ -23,7 +23,6 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): Record<string, ModelConfig> => {
   return {
     users: {
-      table: 'users',
       fields: {
         id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
         name: {type: 'string'},
@@ -32,7 +31,6 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => {
       },
     },
     posts: {
-      table: 'posts',
       fields: {
         title: {
           type: 'string',
@@ -69,7 +67,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
+  infrastructure: {database: getDefaultDatabaseConfig()},
   data: {models: getDefaultModelConfig()},
 };
 
@@ -342,26 +340,24 @@ describe('validateInvalidDatabaseConfig', () => {
     {
       name: 'engine as invalid',
       patch: {engine: 'wrong', connection: {url: './database.db'}},
-      expected:
-        '/infrastructure/primaryDatabase/engine must be equal to constant',
+      expected: '/infrastructure/database/engine must be equal to constant',
     },
     {
       name: 'engine as undefined',
       patch: {engine: undefined, connection: {url: './database.db'}},
-      expected:
-        "/infrastructure/primaryDatabase must have required property 'engine'",
+      expected: "/infrastructure/database must have required property 'engine'",
     },
     {
       name: 'connection.url as empty string',
       patch: {engine: 'postgres', connection: {url: ''}},
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
       name: 'connection.url wrong pg connection string',
       patch: {engine: 'postgres', connection: {url: './database.db'}},
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
       name: 'connection.url wrong sqlite connection string',
@@ -372,14 +368,14 @@ describe('validateInvalidDatabaseConfig', () => {
         },
       },
       expected:
-        '/infrastructure/primaryDatabase/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+        '/infrastructure/database/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           ...patch,
         },
       },
@@ -410,8 +406,8 @@ describe('validateValidDatabaseConfig', () => {
     const config = {
       ...validBaseConfig,
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           ...patch,
         },
       },
@@ -423,24 +419,6 @@ describe('validateValidDatabaseConfig', () => {
 
 describe('validateInvalidModelFieldsConfig', () => {
   it.each([
-    // ============== invalid name tests ==============
-    {
-      name: 'invalid name',
-      patch: {table: '132234asd'},
-      expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid name',
-      patch: {table: 'sad asdas'},
-      expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'table as undefined',
-      patch: {table: undefined},
-      expected: "/data/models/test must have required property 'table'",
-    },
     // ============== end of invalid name tests ===============
     // ============== invalid fields tests ==============
     {
@@ -845,7 +823,6 @@ describe('validateInvalidModelFieldsConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             fields: {test: {type: 'string'}},
             ...(patch as Record<string, unknown>),
           } as ModelConfig,
@@ -862,7 +839,6 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
@@ -876,7 +852,6 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
@@ -891,7 +866,6 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {
             type: 'integer',
@@ -963,7 +937,6 @@ describe('validateInvalidModelIndexesConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             fields: {test: {type: 'string'}},
             ...(patch as Record<string, unknown>),
           } as ModelConfig,
@@ -980,7 +953,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
         indexes: {
           valid_index: {
@@ -993,7 +965,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
         indexes: {
           valid_index: {
@@ -1006,7 +977,6 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'not passing index',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, name: {type: 'string'}},
       },
     },
@@ -1029,7 +999,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation.type is not object',
       patch: {
-        table: 'test',
         fields: {test: {type: 'string'}},
         validation: 13,
       },
@@ -1038,7 +1007,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation property column does not exist',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1055,7 +1023,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation required is not array',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}, age: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1071,7 +1038,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation required is not array',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1088,7 +1054,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation property column data type does not match',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1104,7 +1069,6 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'date field with mismatched schema type',
       patch: {
-        table: 'test',
         fields: {eventDate: {type: 'date'}},
         validation: {
           type: 'object',
@@ -1123,9 +1087,8 @@ describe('validateInvalidModelValidationConfig', () => {
       data: {
         models: {
           test: {
-            table: 'test',
             ...(patch as Record<string, unknown>),
-          } as ModelConfig,
+          } as unknown as ModelConfig,
         },
       },
     };
@@ -1139,7 +1102,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           name: {type: 'string'},
@@ -1161,7 +1123,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           name: {type: 'string'},
@@ -1183,14 +1144,12 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'not passing validation',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
       },
     },
     {
       name: 'valid model with decimal and date fields',
       patch: {
-        table: 'test',
         fields: {
           id: {type: 'integer'},
           price: {type: 'decimal'},
@@ -1210,7 +1169,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model without validation required',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1223,7 +1181,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with validation but no properties',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1233,7 +1190,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with boolean schema property',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -1246,7 +1202,6 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model with schema property without type',
       patch: {
-        table: 'test',
         fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
@@ -3610,7 +3565,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3650,7 +3604,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3690,7 +3643,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},
@@ -3730,7 +3682,6 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       data: {
         models: {
           users: {
-            table: 'users',
             fields: {
               id: {type: 'integer', primaryKey: true},
               name: {type: 'string'},

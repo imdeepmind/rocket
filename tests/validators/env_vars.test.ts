@@ -18,7 +18,6 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
 const getDefaultModelConfig = (): Record<string, ModelConfig> => {
   return {
     users: {
-      table: 'users',
       fields: {
         id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
       },
@@ -42,7 +41,7 @@ const validBaseConfig: AppConfig = {
       },
     },
   },
-  infrastructure: {primaryDatabase: getDefaultDatabaseConfig()},
+  infrastructure: {database: getDefaultDatabaseConfig()},
   data: {models: getDefaultModelConfig()},
 };
 
@@ -58,8 +57,8 @@ describe('Config Environment Variable Resolution', () => {
         logLevel: 'env:LOG_LEVEL' as unknown as LogLevel,
       },
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           connection: {
             url: 'env:DB_PATH',
           },
@@ -75,7 +74,7 @@ describe('Config Environment Variable Resolution', () => {
     const validated = validateConfig(resolved);
 
     expect(validated.application.logLevel).toBe('debug');
-    expect(validated.infrastructure.primaryDatabase.connection.url).toBe(
+    expect(validated.infrastructure.database.connection.url).toBe(
       './env-resolved.db',
     );
   });
@@ -86,8 +85,8 @@ describe('Config Environment Variable Resolution', () => {
     const config: AppConfig = {
       ...validBaseConfig,
       infrastructure: {
-        primaryDatabase: {
-          ...validBaseConfig.infrastructure.primaryDatabase,
+        database: {
+          ...validBaseConfig.infrastructure.database,
           connection: {
             url: 'env:NON_EXISTENT_VAR',
           },

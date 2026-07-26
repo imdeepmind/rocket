@@ -110,7 +110,7 @@ const docsSchema = {
   },
 };
 
-const primaryDatabaseSchema = {
+const databaseSchema = {
   type: 'object',
   required: ['engine', 'connection'],
   properties: {
@@ -181,10 +181,10 @@ const cacheDbSchema = {
 
 const infrastructureSchema = {
   type: 'object',
-  required: ['primaryDatabase'],
+  required: ['database'],
   additionalProperties: false,
   properties: {
-    primaryDatabase: primaryDatabaseSchema,
+    database: databaseSchema,
     cache: cacheDbSchema,
   },
 };
@@ -300,14 +300,9 @@ const relationSchema = {
 
 const modelSchema = {
   type: 'object',
-  required: ['table', 'fields'],
+  required: ['fields'],
   additionalProperties: false,
   properties: {
-    table: {
-      type: 'string',
-      isEntityName: true,
-      minLength: 1,
-    },
     timestamps: {
       type: 'boolean',
     },

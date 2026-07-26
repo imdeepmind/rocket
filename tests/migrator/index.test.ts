@@ -38,7 +38,7 @@ describe('migrateDatabase', () => {
     ({
       name: 'test-app',
       infrastructure: {
-        primaryDatabase: {
+        database: {
           engine,
           connection: {
             url: engine === 'sqlite' ? 'test.db' : 'postgres://db',
@@ -53,7 +53,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {
           id: {type: 'integer', primaryKey: true},
           isActive: {type: 'boolean'},
@@ -71,7 +70,6 @@ describe('migrateDatabase', () => {
         },
       },
     };
-
     await migrateDatabase(config);
 
     // checking if it is trying to write schema and config
@@ -121,7 +119,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       posts: {
-        table: 'posts',
         fields: {
           id: {type: 'integer', primaryKey: true},
           count: {type: 'integer'},
@@ -182,7 +179,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       empty: {
-        table: 'empty',
         fields: {},
       },
     };
@@ -284,11 +280,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       posts: {
-        table: 'posts',
         fields: {
           id: {type: 'integer', primaryKey: true},
           user_id: {type: 'integer'},
@@ -322,11 +316,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       posts: {
-        table: 'posts',
         fields: {
           id: {type: 'integer', primaryKey: true},
           user_id: {type: 'integer'},
@@ -360,11 +352,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       categories: {
-        table: 'categories',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       products: {
-        table: 'products',
         fields: {
           id: {type: 'integer', primaryKey: true},
           category_id: {type: 'integer'},
@@ -394,11 +384,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       authors: {
-        table: 'authors',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       books: {
-        table: 'books',
         fields: {
           id: {type: 'integer', primaryKey: true},
           author_id: {type: 'integer'},
@@ -430,15 +418,12 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       categories: {
-        table: 'categories',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       posts: {
-        table: 'posts',
         fields: {
           id: {type: 'integer', primaryKey: true},
           user_id: {type: 'integer'},
@@ -480,11 +465,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       posts: {
-        table: 'posts',
         fields: {
           id: {type: 'integer', primaryKey: true},
           title: {type: 'string'},
@@ -519,11 +502,9 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       users: {
-        table: 'users',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
       comments: {
-        table: 'comments',
         fields: {
           id: {type: 'integer', primaryKey: true},
           user_id: {type: 'integer'},
@@ -556,10 +537,9 @@ describe('migrateDatabase', () => {
   it('should not write dbUrl with special chars to drizzle config (env var only)', async () => {
     const urlWithQuotes = "postgres://user:p'ass'word@localhost/db";
     const config = getBaseConfig('postgres');
-    config.infrastructure.primaryDatabase.connection.url = urlWithQuotes;
+    config.infrastructure.database.connection.url = urlWithQuotes;
     config.data.models = {
       test: {
-        table: 'test',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
     };
@@ -586,10 +566,9 @@ describe('migrateDatabase', () => {
   it('should not write dbUrl with double quotes to drizzle config (env var only)', async () => {
     const urlWithDoubleQuotes = 'sqlite://path/to/"my db".db';
     const config = getBaseConfig('sqlite');
-    config.infrastructure.primaryDatabase.connection.url = urlWithDoubleQuotes;
+    config.infrastructure.database.connection.url = urlWithDoubleQuotes;
     config.data.models = {
       test: {
-        table: 'test',
         fields: {id: {type: 'integer', primaryKey: true}},
       },
     };
@@ -619,7 +598,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       simple: {
-        table: 'simple',
         fields: {
           id: {type: 'integer', primaryKey: true},
           name: {type: 'string'},
@@ -639,7 +617,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       records: {
-        table: 'records',
         timestamps: true,
         fields: {
           id: {type: 'integer', primaryKey: true, autoIncrement: true},
@@ -661,7 +638,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('postgres');
     config.data.models = {
       records: {
-        table: 'records',
         timestamps: true,
         fields: {
           id: {type: 'integer', primaryKey: true, autoIncrement: true},
@@ -683,7 +659,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       records: {
-        table: 'records',
         timestamps: true,
         fields: {
           id: {type: 'integer', primaryKey: true},
@@ -707,7 +682,6 @@ describe('migrateDatabase', () => {
     const config = getBaseConfig('sqlite');
     config.data.models = {
       records: {
-        table: 'records',
         timestamps: true,
         fields: {
           id: {type: 'integer', primaryKey: true},

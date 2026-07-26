@@ -23,7 +23,6 @@ import {pgQueryMock} from '@tests/helpers/db-mocks';
 
 const authModels: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {type: 'integer', primaryKey: true},
       email: {type: 'string', nullable: false},
@@ -73,7 +72,7 @@ async function createAuthApp(
         info: {title: 'Test', description: 'Test', version: '1.0.0'},
       },
     },
-    infrastructure: {primaryDatabase: dbConfig},
+    infrastructure: {database: dbConfig},
     data: {models},
     authentication,
   };

@@ -22,7 +22,6 @@ const upAuthConfig: AuthenticationConfig = {
 
 const defaultEditModel: Record<string, ModelConfig> = {
   users: {
-    table: 'users',
     fields: {
       id: {
         type: 'integer',
@@ -37,7 +36,6 @@ const defaultEditModel: Record<string, ModelConfig> = {
 
 const nonUniqueEditModel: Record<string, ModelConfig> = {
   tasks: {
-    table: 'tasks',
     fields: {
       id: {
         type: 'integer',
@@ -55,7 +53,6 @@ const nonUniqueEditModel: Record<string, ModelConfig> = {
 
 const validatedEditModel: Record<string, ModelConfig> = {
   posts: {
-    table: 'posts',
     validation: {
       type: 'object',
       properties: {

@@ -103,7 +103,6 @@ describe('test post api', () => {
     test('should return 400 when required fields are missing', async () => {
       const modelsWithRequired: Record<string, ModelConfig> = {
         products: {
-          table: 'products',
           fields: {
             id: {type: 'integer', primaryKey: true},
             title: {type: 'string'},
@@ -137,7 +136,6 @@ describe('test post api', () => {
     test('should return 400 when body is invalid JSON type', async () => {
       const modelsWithRequired: Record<string, ModelConfig> = {
         items: {
-          table: 'items',
           fields: {count: {type: 'integer'}},
           validation: {
             type: 'object',

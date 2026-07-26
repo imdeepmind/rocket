@@ -127,7 +127,6 @@ export interface ModelRelationConfig {
 }
 
 export interface ModelConfig {
-  table: string;
   timestamps?: boolean;
   validation?: Record<string, unknown>;
   fields: Record<string, ModelFieldConfig>;
@@ -249,7 +248,7 @@ export interface IntegrationsConfig {
 }
 
 export interface InfrastructureConfig {
-  primaryDatabase: DatabaseConfig;
+  database: DatabaseConfig;
   cache?: CacheDbConfig;
 }
 

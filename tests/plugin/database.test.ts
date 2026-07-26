@@ -28,7 +28,7 @@ describe('database plugin', () => {
           info: {title: 'Test', description: 'Test', version: '1.0.0'},
         },
       },
-      infrastructure: {primaryDatabase: dbConfig},
+      infrastructure: {database: dbConfig},
       data: {models: {}},
     };
     return fastify;

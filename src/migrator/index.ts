@@ -165,7 +165,7 @@ function generateSchemaFile(
 import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
-export const ${modelName} = sqliteTable('${config.table}', {
+export const ${modelName} = sqliteTable('${modelName}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
@@ -174,7 +174,7 @@ ${columns}
 import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-export const ${modelName} = pgTable('${config.table}', {
+export const ${modelName} = pgTable('${modelName}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
@@ -243,7 +243,7 @@ async function generateMigrationSQL(
 }
 
 const migrateDatabase = async (config: AppConfig) => {
-  const engine = config.infrastructure.primaryDatabase.engine;
+  const engine = config.infrastructure.database.engine;
   const models = Object.entries(config.data.models).map(([name, model]) => ({
     name,
     model,
@@ -252,7 +252,7 @@ const migrateDatabase = async (config: AppConfig) => {
   await generateMigrationSQL(
     models,
     engine,
-    config.infrastructure.primaryDatabase.connection.url,
+    config.infrastructure.database.connection.url,
   );
 };
 
