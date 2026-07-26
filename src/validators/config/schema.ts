@@ -211,23 +211,19 @@ const fieldSchema = {
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
-    operations: {
+    apis: {
       type: 'array',
       items: {
         type: 'string',
-        enum: [
-          'search',
-          'sort',
-          'eq',
-          'lt',
-          'lte',
-          'gt',
-          'gte',
-          'in',
-          'edit',
-          'delete',
-          'index',
-        ],
+        enum: ['search', 'index', 'edit', 'delete'],
+      },
+      uniqueItems: true,
+    },
+    query: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['eq', 'lt', 'lte', 'gt', 'gte', 'in', 'sort'],
       },
       uniqueItems: true,
     },

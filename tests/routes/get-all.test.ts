@@ -11,15 +11,16 @@ const getAllModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
       },
       name: {
         type: 'string',
-        operations: ['sort', 'search', 'eq'],
+        apis: ['search'],
+        query: ['sort', 'eq'],
       },
       email: {
         type: 'string',
-        operations: ['eq'],
+        query: ['eq'],
       },
     },
   },

@@ -35,17 +35,18 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => {
         title: {
           type: 'string',
           nullable: false,
-          operations: ['search', 'sort'],
+          apis: ['search'],
+          query: ['sort'],
           aggregations: ['count'],
         },
         body: {type: 'text', nullable: true},
         user_id: {
           type: 'integer',
           nullable: false,
-          operations: ['eq', 'in'],
+          query: ['eq', 'in'],
           aggregations: ['count'],
         },
-        created_at: {type: 'datetime', operations: ['lt', 'gt', 'sort']},
+        created_at: {type: 'datetime', query: ['lt', 'gt', 'sort']},
       },
     },
   };
@@ -508,139 +509,154 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected: '/data/models/test/fields/test/nullable must be boolean',
     },
     {
-      name: 'field.operations is not array',
+      name: 'field.apis is not array',
       patch: {
-        fields: {test: {type: 'string', operations: 'invalid'}},
+        fields: {test: {type: 'string', apis: 'invalid'}},
       },
-      expected: '/data/models/test/fields/test/operations must be array',
+      expected: '/data/models/test/fields/test/apis must be array',
     },
     {
-      name: 'field.operations contains invalid value',
+      name: 'field.query is not array',
       patch: {
-        fields: {test: {type: 'string', operations: ['invalid']}},
+        fields: {test: {type: 'string', query: 'invalid'}},
       },
-      expected:
-        '/data/models/test/fields/test/operations/0 must be equal to one of the allowed values',
+      expected: '/data/models/test/fields/test/query must be array',
     },
     {
-      name: 'field.operations contains invalid value for type=integer',
+      name: 'field.apis contains invalid value',
       patch: {
-        fields: {test: {type: 'integer', operations: ['search']}},
+        fields: {test: {type: 'string', apis: ['invalid']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "integer"',
+        '/data/models/test/fields/test/apis/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.operations contains invalid value for type=decimal',
+      name: 'field.query contains invalid value',
       patch: {
-        fields: {test: {type: 'decimal', operations: ['search']}},
+        fields: {test: {type: 'string', query: ['invalid']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "decimal"',
+        '/data/models/test/fields/test/query/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.operations contains invalid value for type=date',
+      name: 'field.apis contains invalid value for type=integer',
       patch: {
-        fields: {test: {type: 'date', operations: ['search']}},
+        fields: {test: {type: 'integer', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "date"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "integer"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=decimal',
       patch: {
-        fields: {test: {type: 'string', operations: ['lt']}},
+        fields: {test: {type: 'decimal', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lt" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "decimal"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=date',
       patch: {
-        fields: {test: {type: 'string', operations: ['lte']}},
+        fields: {test: {type: 'date', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lte" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "date"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'string', operations: ['gt']}},
+        fields: {test: {type: 'string', query: ['lt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gt" is not allowed for type "string"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=string',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'string', operations: ['gte']}},
+        fields: {test: {type: 'string', query: ['lte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gte" is not allowed for type "string"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['search']}},
+        fields: {test: {type: 'string', query: ['gt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "search" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['sort']}},
+        fields: {test: {type: 'string', query: ['gte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "sort" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "string"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['edit']}},
+        fields: {test: {type: 'boolean', apis: ['search']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "edit" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['delete']}},
+        fields: {test: {type: 'boolean', query: ['sort']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "delete" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['lt']}},
+        fields: {test: {type: 'boolean', apis: ['edit']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lt" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "edit" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['lte']}},
+        fields: {test: {type: 'boolean', apis: ['delete']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "lte" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "delete" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['gt']}},
+        fields: {test: {type: 'boolean', query: ['lt']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gt" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.operations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        fields: {test: {type: 'boolean', operations: ['gte']}},
+        fields: {test: {type: 'boolean', query: ['lte']}},
       },
       expected:
-        '/data/models/test/fields/test/operations: "gte" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.query contains invalid value for type=boolean',
+      patch: {
+        fields: {test: {type: 'boolean', query: ['gt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "boolean"',
+    },
+    {
+      name: 'field.query contains invalid value for type=boolean',
+      patch: {
+        fields: {test: {type: 'boolean', query: ['gte']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "boolean"',
     },
     {
       name: 'field.aggregations is not array',
@@ -858,7 +874,8 @@ describe('validateValidModelFieldsConfig', () => {
             primaryKey: true,
             unique: true,
             nullable: false,
-            operations: ['index', 'sort'],
+            apis: ['index'],
+            query: ['sort'],
           },
         },
       },
@@ -872,7 +889,8 @@ describe('validateValidModelFieldsConfig', () => {
             primaryKey: true,
             unique: true,
             nullable: false,
-            operations: ['index', 'sort'],
+            apis: ['index'],
+            query: ['sort'],
             aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
         },

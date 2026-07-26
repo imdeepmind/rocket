@@ -20,7 +20,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
  *   GET /{model}/
  *
  * Query params:
- *   - Filter params for ALL fields based on their operations
+ *   - Filter params for ALL fields based on their query operations
  *   - orderBy / orderDir for sortable fields
  *   - page / limit for pagination
  */
@@ -153,7 +153,7 @@ function generateSchema(
   }
 
   const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.operations?.includes('sort'))
+    .filter(([, f]) => f.query?.includes('sort'))
     .map(([fName]) => fName);
   Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 

@@ -33,15 +33,16 @@ const indexableFieldModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       category: {
         type: 'string',
-        operations: ['index', 'sort', 'eq'],
+        apis: ['index'],
+        query: ['sort', 'eq'],
       },
       title: {
         type: 'string',
-        operations: ['sort', 'eq'],
+        query: ['sort', 'eq'],
       },
     },
   },
@@ -54,12 +55,13 @@ const mixedFieldModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       slug: {type: 'string', unique: true},
       tag: {
         type: 'string',
-        operations: ['index', 'sort', 'eq'],
+        apis: ['index'],
+        query: ['sort', 'eq'],
       },
     },
   },

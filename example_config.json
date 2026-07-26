@@ -78,14 +78,16 @@
                         "autoIncrement": true,
                         "unique": true,
                         "nullable": false,
-                        "operations": ["edit", "delete", "gte"],
+                        "apis": ["edit", "delete"],
+                        "query": ["gte"],
                         "aggregations": ["count", "avg", "max", "min", "sum"]
                     },
                     "email": {
                         "type": "string",
                         "unique": true,
                         "nullable": false,
-                        "operations": ["search", "eq", "sort", "index"],
+                        "apis": ["search", "index"],
+                        "query": ["eq", "sort"],
                         "aggregations": ["count"]
                     },
                     "password": {
@@ -96,12 +98,13 @@
                     "name": {
                         "type": "string",
                         "nullable": true,
-                        "operations": ["search", "sort", "index"]
+                        "apis": ["search", "index"],
+                        "query": ["sort"]
                     },
                     "isActive": {
                         "type": "boolean",
                         "default": true,
-                        "operations": ["eq"]
+                        "query": ["eq"]
                     }
                 },
                 "indexes": {
@@ -132,12 +135,13 @@
                         "autoIncrement": true,
                         "unique": true,
                         "nullable": false,
-                        "operations": ["edit", "delete"]
+                        "apis": ["edit", "delete"]
                     },
                     "title": {
                         "type": "string",
                         "nullable": false,
-                        "operations": ["search", "sort"]
+                        "apis": ["search"],
+                        "query": ["sort"]
                     },
                     "body": {
                         "type": "text",
@@ -146,16 +150,16 @@
                     "userId": {
                         "type": "integer",
                         "nullable": false,
-                        "operations": ["eq", "in"],
+                        "query": ["eq", "in"],
                         "aggregations": ["count"]
                     },
                     "createdAt": {
                         "type": "datetime",
-                        "operations": ["lt", "gt", "sort"]
+                        "query": ["lt", "gt", "sort"]
                     },
                     "decimalNumber": {
                         "type": "decimal",
-                        "operations": ["lt", "gt", "sort"],
+                        "query": ["lt", "gt", "sort"],
                         "aggregations": ["count", "avg", "sum", "min", "max"]
                     }
                 },

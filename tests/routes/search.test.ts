@@ -12,13 +12,14 @@ const searchableModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
       },
       name: {
         type: 'string',
-        operations: ['search', 'sort', 'eq'],
+        apis: ['search'],
+        query: ['sort', 'eq'],
       },
-      email: {type: 'string', operations: ['eq']},
+      email: {type: 'string', query: ['eq']},
     },
   },
 };
@@ -30,11 +31,12 @@ const multiSearchableModel: Record<string, ModelConfig> = {
       id: {type: 'integer', primaryKey: true},
       title: {
         type: 'string',
-        operations: ['search', 'sort'],
+        apis: ['search'],
+        query: ['sort'],
       },
       description: {
         type: 'string',
-        operations: ['search'],
+        apis: ['search'],
       },
     },
   },

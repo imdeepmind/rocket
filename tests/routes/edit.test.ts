@@ -26,7 +26,7 @@ const defaultEditModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['edit'],
+        apis: ['edit'],
       },
       name: {type: 'string'},
       email: {type: 'string'},
@@ -40,13 +40,14 @@ const nonUniqueEditModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['lt', 'lte', 'gt', 'gte', 'in'],
       },
       status: {
         type: 'string',
-        operations: ['edit', 'eq', 'lt'], // Non-unique identifier
+        apis: ['edit'],
+        query: ['eq', 'lt'], // Non-unique identifier
       },
-      title: {type: 'string', operations: ['eq']},
+      title: {type: 'string', query: ['eq']},
     },
   },
 };
@@ -65,7 +66,7 @@ const validatedEditModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['edit'],
+        apis: ['edit'],
       },
       title: {type: 'string'},
       content: {type: 'string'},

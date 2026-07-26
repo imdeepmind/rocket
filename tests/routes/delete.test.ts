@@ -11,7 +11,7 @@ const singleDeletableModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['delete'],
+        apis: ['delete'],
       },
       name: {type: 'string'},
     },
@@ -24,9 +24,9 @@ const multipleDeletableFieldsModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        operations: ['delete'],
+        apis: ['delete'],
       },
-      slug: {type: 'string', operations: ['delete']},
+      slug: {type: 'string', apis: ['delete']},
       title: {type: 'string'},
     },
   },
@@ -86,7 +86,7 @@ describe('test delete api', () => {
       const customModels: Record<string, ModelConfig> = {
         posts: {
           fields: {
-            slug: {type: 'string', operations: ['delete']},
+            slug: {type: 'string', apis: ['delete']},
           },
         },
       };

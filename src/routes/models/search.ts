@@ -16,7 +16,7 @@ import {capitalizeFirstLetter} from '@/utils/string';
 /**
  * Register SEARCH routes for searchable fields.
  *
- * For each model, for each field with 'search' in operations, creates:
+ * For each model, for each field with 'search' in apis, creates:
  *   GET /{model}/search/{columnName}
  *
  * Query params:
@@ -33,7 +33,7 @@ export function registerSearchRoutes(
 
   for (const [modelName, model] of Object.entries(models)) {
     const searchableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.operations?.includes('search'),
+      f.apis?.includes('search'),
     );
 
     for (const [fieldName, field] of searchableFields) {
@@ -173,7 +173,7 @@ function generateSchema(
   }
 
   const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.operations?.includes('sort'))
+    .filter(([, f]) => f.query?.includes('sort'))
     .map(([fName]) => fName);
   Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
 

@@ -55,7 +55,7 @@ describe('test schema helper', () => {
   test('should build filter query properties', () => {
     const field: ModelFieldConfig = {
       type: 'integer',
-      operations: ['lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+      query: ['lt', 'lte', 'gt', 'gte', 'eq', 'in'],
     };
     const expectedSchema = {
       age_lt: {
