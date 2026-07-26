@@ -248,6 +248,34 @@ describe('handleSql', () => {
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 
+  it('should cast string "true"/"false" to boolean for path params', async () => {
+    const app = mockApp();
+    const reply = mockReply();
+
+    await handleSql(
+      app as never,
+      {params: {flag: 'true'}, query: {}, body: {}} as never,
+      reply as never,
+      'SELECT * FROM users WHERE active = $$flag:boolean$$;',
+    );
+
+    let callArgs = app.db.query.mock.calls[0][1];
+    expect(callArgs[0]).toBe(true);
+    expect(reply.status).toHaveBeenCalledWith(200);
+
+    const reply2 = mockReply();
+    await handleSql(
+      app as never,
+      {params: {flag: 'false'}, query: {}, body: {}} as never,
+      reply2 as never,
+      'SELECT * FROM users WHERE active = $$flag:boolean$$;',
+    );
+
+    callArgs = app.db.query.mock.calls[1][1];
+    expect(callArgs[0]).toBe(false);
+    expect(reply2.status).toHaveBeenCalledWith(200);
+  });
+
   it('should handle unknown type by casting to string', async () => {
     const app = mockApp();
     app.db.query = vi.fn().mockResolvedValue({rows: [], changes: 0});
