@@ -93,7 +93,7 @@ describe('Config Utilities', () => {
     it('should return null if the first part is not customEndpoints', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'modelAPIs.users.all.getAll',
+        'model.users.all.getAll',
       );
       expect(result).toBeNull();
     });

@@ -40,13 +40,13 @@ export function registerAggregateRoutes(
         config.authentication?.enabled ??
         false;
 
-      const operations = field.aggregations!;
+      const aggregations = field.aggregations!;
 
       const schema: Record<string, unknown> = generateSchema(
         config,
         fieldName,
         modelName,
-        operations,
+        aggregations,
         authorization,
       );
 
@@ -83,7 +83,7 @@ export function registerAggregateRoutes(
           }
 
           for (const op of requestedOps) {
-            if (!operations.includes(op as Aggregation)) {
+            if (!aggregations.includes(op as Aggregation)) {
               return reply
                 .status(400)
                 .send(
@@ -154,7 +154,7 @@ function generateSchema(
   config: AppConfig,
   fieldName: string,
   modelName: string,
-  operations: Aggregation[],
+  aggregations: Aggregation[],
   authorization: boolean,
 ) {
   const security = buildSecurityArray(config, authorization);
@@ -168,7 +168,7 @@ function generateSchema(
       properties: {
         operations: {
           type: 'string',
-          description: `Comma-separated list of operations to perform: ${operations.join(', ')}`,
+          description: `Comma-separated list of operations to perform: ${aggregations.join(', ')}`,
         },
       },
       required: ['operations'],

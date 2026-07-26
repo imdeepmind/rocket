@@ -198,7 +198,7 @@ describe('test post api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs.users.all.insert': {
+      'model.users.all.insert': {
         authorization: true,
       },
     };

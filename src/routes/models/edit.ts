@@ -3,6 +3,8 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   applyFilters,
   buildFilterQueryProperties,
+  buildPreValidation,
+  buildSecurityArray,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
@@ -34,7 +36,7 @@ export function registerEditRoutes(
     );
 
     for (const [fieldName, field] of editableFields) {
-      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.edit`;
+      const apiIdentifier = `model.${modelName}.${fieldName}.edit`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -108,23 +110,7 @@ export function registerEditRoutes(
           response: getResponseStructureSchema([200], responseDataSchema),
         };
 
-        const security: Array<{[key: string]: string[]}> = [];
-
-        if (
-          config.authentication?.enabled &&
-          config.authentication?.provider.type === 'up-auth' &&
-          authorization
-        ) {
-          security.push({bearerAuth: []});
-        }
-
-        if (
-          config.authentication?.enabled &&
-          config.authentication?.provider.type === 'api-key' &&
-          authorization
-        ) {
-          security.push({apiKeyAuth: []});
-        }
+        const security = buildSecurityArray(config, authorization);
 
         if (security.length > 0) {
           schema.security = security;
@@ -205,24 +191,7 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PATCH'),
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
@@ -238,24 +207,7 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PUT'),
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },

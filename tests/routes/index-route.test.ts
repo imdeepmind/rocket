@@ -541,7 +541,7 @@ describe('test index-route api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs.users.id.index': {
+      'model.users.id.index': {
         authorization: true,
       },
     };

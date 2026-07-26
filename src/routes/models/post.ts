@@ -1,6 +1,8 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  buildPreValidation,
+  buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
   stripAdditionalPostFields,
@@ -25,7 +27,7 @@ export function registerPostRoutes(
   const {models} = config.data;
 
   for (const [modelName, model] of Object.entries(models)) {
-    const apiIdentifier = `modelAPIs.${modelName}.all.insert`;
+    const apiIdentifier = `model.${modelName}.all.insert`;
 
     if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -46,24 +48,7 @@ export function registerPostRoutes(
       {
         schema,
         config: {apiIdentifier},
-        preValidation: async (request, reply) => {
-          if (config.authentication?.enabled && authorization) {
-            try {
-              await request.authenticate();
-            } catch {
-              return reply
-                .status(401)
-                .send(
-                  app.buildResponse(
-                    401,
-                    'Invalid or expired authentication token',
-                    null,
-                  ),
-                );
-            }
-          }
-          app.enforceSSP(request);
-        },
+        preValidation: buildPreValidation(app, config, authorization),
         preHandler: async request => {
           await app.callWebhook('request', request, null);
         },
@@ -71,12 +56,9 @@ export function registerPostRoutes(
           await app.callWebhook('response', request, payload);
         },
       },
-      async (
-        request: FastifyRequest<{Body: ModelBody}>,
-        reply: FastifyReply,
-      ) => {
+      async (request: FastifyRequest, reply: FastifyReply) => {
         const tableName = modelName;
-        const incomingBody = request.body;
+        const incomingBody = request.body as ModelBody;
 
         const body = stripAdditionalPostFields(model, incomingBody, {
           ignorePrimaryKey: true,
@@ -125,23 +107,7 @@ function generateSchema(
     response: getResponseStructureSchema([201], bodySchema, bodySchema),
   };
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;

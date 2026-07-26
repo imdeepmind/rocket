@@ -464,7 +464,7 @@ describe('test search api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs.users.name.search': {
+      'model.users.name.search': {
         authorization: true,
       },
     };
