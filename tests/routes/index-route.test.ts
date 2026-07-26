@@ -338,6 +338,24 @@ describe('test index-route api', () => {
       await fastify.close();
     });
 
+    test('should fallback to empty array when SELECT returns no rows property for indexable field', async () => {
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 0}]})
+        .mockResolvedValueOnce({}); // no rows property
+
+      const fastify = await createTestApp(pgConfig, indexableFieldModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/posts/category/tech',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([]);
+
+      await fastify.close();
+    });
+
     test('should apply _lt filter alongside path param', async () => {
       const fastify = await createTestApp(pgConfig, indexableFieldModel);
 
@@ -480,6 +498,21 @@ describe('test index-route api', () => {
   });
 
   describe('error handling', () => {
+    test('should return 404 when the index API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, uniqueFieldModel, {
+        'model.users.id.index': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 500 when database query throws for unique field', async () => {
       const fastify = await createTestApp(pgConfig, uniqueFieldModel);
       pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));

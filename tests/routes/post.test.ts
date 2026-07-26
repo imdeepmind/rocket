@@ -163,6 +163,22 @@ describe('test post api', () => {
   });
 
   describe('error handling', () => {
+    test('should return 404 when the post API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels, {
+        'model.users.all.insert': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, mockModels);
       pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));

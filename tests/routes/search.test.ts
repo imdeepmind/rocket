@@ -127,6 +127,24 @@ describe('test search api', () => {
       await fastify.close();
     });
 
+    test('should fallback to empty array when SELECT returns no rows property', async () => {
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 0}]})
+        .mockResolvedValueOnce({}); // no rows property
+
+      const fastify = await createTestApp(pgConfig, searchableModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/search/name?name_search=test',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([]);
+
+      await fastify.close();
+    });
+
     test('should include correct message in the response', async () => {
       const fastify = await createTestApp(pgConfig, searchableModel);
 
@@ -385,6 +403,21 @@ describe('test search api', () => {
   });
 
   describe('error handling', () => {
+    test('should return 404 when the search API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, searchableModel, {
+        'model.users.name.search': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/search/name?name_search=test',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, searchableModel);
       pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));

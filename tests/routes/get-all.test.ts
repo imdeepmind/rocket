@@ -316,6 +316,21 @@ describe('test get-all api', () => {
   });
 
   describe('error handling', () => {
+    test('should return 404 when the get-all API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel, {
+        'model.users.all.getAll': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, getAllModel);
       pgQueryMock.mockRejectedValueOnce(new Error('Database error'));
@@ -359,6 +374,21 @@ describe('test get-all api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data).toHaveLength(1);
+
+      await fastify.close();
+    });
+
+    test('should fallback to empty array when SELECT query returns no rows property', async () => {
+      pgQueryMock
+        .mockResolvedValueOnce({rows: [{total: 0}]})
+        .mockResolvedValueOnce({}); // no rows property
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({method: 'GET', url: '/users/'});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([]);
 
       await fastify.close();
     });

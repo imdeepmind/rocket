@@ -97,13 +97,11 @@ export function registerIndexRoutes(
             paramIndex = nextParamIndex;
           }
 
-          if (whereClauses.length > 0) {
-            query += ` WHERE ${whereClauses.join(' AND ')}`;
-          }
+          query += ` WHERE ${whereClauses.join(' AND ')}`;
 
           let total = 0;
           if (!isUnique) {
-            const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
+            const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
             const countRes = await app.db.query<{total: number | string}>(
               countQuery,
               values,

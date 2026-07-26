@@ -350,6 +350,22 @@ describe('test edit api', () => {
   });
 
   describe('error handling / edge cases', () => {
+    test('should return 404 when the edit API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, defaultEditModel, {
+        'model.users.id.edit': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 400 for unknown keys in body (schema rejects them)', async () => {
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 

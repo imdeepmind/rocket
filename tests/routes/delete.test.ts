@@ -143,6 +143,21 @@ describe('test delete api', () => {
   });
 
   describe('edge cases', () => {
+    test('should return 404 when the delete API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel, {
+        'model.users.id.delete': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 404 when model has no deletable fields', async () => {
       const fastify = await createTestApp(pgConfig, noDeletableFieldsModel);
 
