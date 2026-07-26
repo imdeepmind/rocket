@@ -83,7 +83,9 @@ async function createAuthApp(
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  registerChangePasswordRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerChangePasswordRoute(app, config);
+  }
   await app.ready();
   return app;
 }

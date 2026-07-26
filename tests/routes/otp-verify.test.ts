@@ -114,9 +114,11 @@ async function createOtpApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  registerLoginOtpVerifyRoute(app, config);
-  registerRegistrationOtpVerifyRoute(app, config);
-  registerForgotPasswordOtpVerifyRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerLoginOtpVerifyRoute(app, config);
+    registerRegistrationOtpVerifyRoute(app, config);
+    registerForgotPasswordOtpVerifyRoute(app, config);
+  }
   await app.ready();
   return app;
 }

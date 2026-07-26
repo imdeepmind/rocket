@@ -87,7 +87,9 @@ async function createAuthApp(
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  registerLoginRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerLoginRoute(app, config);
+  }
   await app.ready();
   return app;
 }
@@ -137,7 +139,9 @@ async function createAuthAppWithMfa(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  registerLoginRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerLoginRoute(app, config);
+  }
   await app.ready();
   return app;
 }

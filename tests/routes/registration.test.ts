@@ -87,7 +87,9 @@ async function createAuthApp(
   await app.register(databasePlugin);
   await app.register(responsePlugin);
 
-  registerRegistrationRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerRegistrationRoute(app, config);
+  }
   await app.ready();
   return app;
 }
@@ -569,7 +571,12 @@ describe('POST /auth/register', () => {
       await app.register(responsePlugin);
       await app.register(otpPlugin);
 
-      registerRegistrationRoute(app, config);
+      if (
+        authentication?.enabled &&
+        authentication.provider?.type === 'up-auth'
+      ) {
+        registerRegistrationRoute(app, config);
+      }
       await app.ready();
       return app;
     }

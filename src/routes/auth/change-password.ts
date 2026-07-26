@@ -5,7 +5,7 @@ import {
   getResponseStructureSchema,
 } from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -14,14 +14,11 @@ export function registerChangePasswordRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth')
-    return;
-
-  const {model, idField, passwordField} =
-    authentication.provider.config.userModel;
+  const {model, idField, passwordField} = (
+    config.authentication!.provider.config as UpAuthProviderConfig
+  ).userModel;
 
   const authModelConfig = models[model];
 

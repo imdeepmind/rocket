@@ -13,19 +13,15 @@ function registerOtpVerifyBase(
   path: string,
   action: 'login' | 'registration' | 'forgot-password',
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth')
-    return;
-
-  const {model, usernameField} = authentication.provider.config.userModel;
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, usernameField} = upConfig.userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
-
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
 
   const apiIdentifier = `auth.${model}.all.otp-verify-${action}`;
 

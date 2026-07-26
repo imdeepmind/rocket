@@ -122,8 +122,11 @@ export async function startServer(
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);
 
-  // register auth routes (only when up-auth is configured)
-  if (config.authentication) {
+  // register auth routes (only when up-auth is configured and enabled)
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider?.type === 'up-auth'
+  ) {
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);

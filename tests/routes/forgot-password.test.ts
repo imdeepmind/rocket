@@ -106,7 +106,9 @@ async function createAuthApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  registerForgotPasswordRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerForgotPasswordRoute(app, config);
+  }
   await app.ready();
   return app;
 }

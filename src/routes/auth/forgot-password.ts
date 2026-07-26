@@ -2,7 +2,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -10,13 +10,11 @@ export function registerForgotPasswordRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth')
-    return;
-
-  const {model, usernameField} = authentication.provider.config.userModel;
+  const {model, usernameField} = (
+    config.authentication!.provider.config as UpAuthProviderConfig
+  ).userModel;
 
   const authModelConfig = models[model];
 

@@ -11,20 +11,15 @@ export function registerLoginRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth')
-    return;
-
-  const {model, usernameField, passwordField} =
-    authentication.provider.config.userModel;
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, usernameField, passwordField} = upConfig.userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
-
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
 
   const apiIdentifier = `auth.${model}.all.login`;
 
