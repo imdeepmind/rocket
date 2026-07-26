@@ -1,8 +1,11 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {
+  buildPreValidation,
+  getResponseStructureSchema,
+} from '@/routes/schema-helpers';
 
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -11,25 +14,17 @@ export function registerChangePasswordRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
-    return;
-  }
-
-  const {model, idField, passwordField} =
-    authentication.provider.config.userModel;
+  const {model, idField, passwordField} = (
+    config.authentication!.provider.config as UpAuthProviderConfig
+  ).userModel;
 
   const authModelConfig = models[model];
-  if (!authModelConfig) {
-    app.log.warn(
-      `[auth/change-password] Could not find model config for "${model}". Skipping route registration.`,
-    );
-    return;
-  }
 
-  const apiIdentifier = `authAPIs.${model}.all.changePassword`;
+  if (!authModelConfig) return;
+
+  const apiIdentifier = `auth.${model}.all.changePassword`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 
@@ -40,21 +35,7 @@ export function registerChangePasswordRoute(
     {
       schema,
       config: {apiIdentifier},
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.authenticate();
-        } catch {
-          return reply
-            .status(401)
-            .send(
-              app.buildResponse(
-                401,
-                'Invalid or expired authentication token',
-                null,
-              ),
-            );
-        }
-      },
+      preValidation: buildPreValidation(app, config, true, ['auth']),
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const {existingPassword, newPassword} = request.body as Record<

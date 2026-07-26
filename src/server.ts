@@ -19,8 +19,10 @@ import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
+import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {
+  registerForgotPasswordOtpVerifyRoute,
   registerLoginOtpVerifyRoute,
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
@@ -80,9 +82,7 @@ export async function startServer(
   await app.register(dbPlugin);
 
   // config-driven cache (Redis or NodeCache)
-  if (config.infrastructure.cache) {
-    await app.register(cachePlugin);
-  }
+  await app.register(cachePlugin);
 
   // config-driven integrations (email)
   if (config.integrations?.email) {
@@ -100,11 +100,12 @@ export async function startServer(
   if (config.authentication) {
     await app.register(authPlugin);
   }
-  // config-driven OTP (required for MFA)
+  // config-driven OTP (required for MFA or forgot-password)
   if (
     config.authentication?.provider.type === 'up-auth' &&
-    (config.authentication.provider.config as {mfaRequired?: boolean})
-      ?.mfaRequired
+    ((config.authentication.provider.config as {mfaRequired?: boolean})
+      ?.mfaRequired ||
+      config.integrations?.email)
   ) {
     await app.register(otpPlugin);
   }
@@ -121,13 +122,18 @@ export async function startServer(
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);
 
-  // register auth routes (only when up-auth is configured)
-  if (config.authentication) {
+  // register auth routes (only when up-auth is configured and enabled)
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider?.type === 'up-auth'
+  ) {
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
+    registerForgotPasswordRoute(app, config);
     registerLoginOtpVerifyRoute(app, config);
     registerRegistrationOtpVerifyRoute(app, config);
+    registerForgotPasswordOtpVerifyRoute(app, config);
   }
 
   // Global error handler

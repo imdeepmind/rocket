@@ -226,7 +226,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(5);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -246,7 +246,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(4);
+    expect(mockApp.register).toHaveBeenCalledTimes(5);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -566,14 +566,14 @@ describe('Server', () => {
       expect(cachePluginCall).toBeDefined();
     });
 
-    it('should not register cache plugin when cache is not configured', async () => {
+    it('should register cache plugin even when cache is not configured', async () => {
       const registerMock = mockApp.register;
       await startServer(mockConfig, 3000, 'dev');
 
       const cachePluginCall = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === cachePlugin,
       );
-      expect(cachePluginCall).toBeUndefined();
+      expect(cachePluginCall).toBeDefined();
     });
   });
 });

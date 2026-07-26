@@ -11,28 +11,17 @@ export function registerLoginRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
-    return;
-  }
-
-  const {model, usernameField, passwordField} =
-    authentication.provider.config.userModel;
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, usernameField, passwordField} = upConfig.userModel;
 
   const authModelConfig = models[model];
 
-  if (!authModelConfig) {
-    app.log.warn(
-      `[auth/login] Could not find model config for "${model}". Skipping route registration.`,
-    );
-    return;
-  }
+  if (!authModelConfig) return;
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-
-  const apiIdentifier = `authAPIs.${model}.all.login`;
+  const apiIdentifier = `auth.${model}.all.login`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

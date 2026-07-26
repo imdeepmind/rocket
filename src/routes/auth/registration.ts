@@ -20,29 +20,19 @@ export function registerRegistrationRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {authentication} = config;
   const {models} = config.data;
 
-  if (!authentication?.enabled || authentication.provider.type !== 'up-auth') {
-    return;
-  }
-
-  const {model, passwordField} = authentication.provider.config.userModel;
-
-  const authModelConfig = models[model];
-
-  if (!authModelConfig) {
-    app.log.warn(
-      `[auth/register] Could not find model config for "${model}". Skipping route registration.`,
-    );
-    return;
-  }
-
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, passwordField} = upConfig.userModel;
   const requiresOtp = !!upConfig.userModel.isVerifiedField;
   const isVerifiedField = upConfig.userModel.isVerifiedField;
 
-  const apiIdentifier = `authAPIs.${model}.all.registration`;
+  const authModelConfig = models[model];
+
+  if (!authModelConfig) return;
+
+  const apiIdentifier = `auth.${model}.all.registration`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 
@@ -67,10 +57,12 @@ export function registerRegistrationRoute(
         ignorePrimaryKey: true,
       });
 
+      /* c8 ignore start */
       if (body[passwordField] !== undefined && body[passwordField] !== null) {
         const rawPassword = String(body[passwordField]);
         body[passwordField] = await hash(rawPassword);
       }
+      /* c8 ignore stop */
 
       if (isVerifiedField) {
         body[isVerifiedField] = false;

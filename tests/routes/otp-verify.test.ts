@@ -11,6 +11,7 @@ import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
 import {
+  registerForgotPasswordOtpVerifyRoute,
   registerLoginOtpVerifyRoute,
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
@@ -70,6 +71,7 @@ async function createOtpApp(
   authentication: AuthenticationConfig,
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
+  apis?: Record<string, {enabled: boolean}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -84,6 +86,7 @@ async function createOtpApp(
     infrastructure: {database: dbConfig},
     data: {models},
     authentication,
+    ...(apis ? {apis} : {}),
   };
   app.appConfig = config;
 
@@ -111,8 +114,11 @@ async function createOtpApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  registerLoginOtpVerifyRoute(app, config);
-  registerRegistrationOtpVerifyRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerLoginOtpVerifyRoute(app, config);
+    registerRegistrationOtpVerifyRoute(app, config);
+    registerForgotPasswordOtpVerifyRoute(app, config);
+  }
   await app.ready();
   return app;
 }
@@ -142,6 +148,36 @@ describe('POST /auth/login/verify/otp', () => {
       });
 
       expect(response.statusCode).toBe(404);
+      await app.close();
+    });
+
+    test('should NOT register the route when model is not found in models', async () => {
+      const app = await createOtpApp(upAuthConfig, {});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login/verify/otp',
+        payload: {ulid: 'test-ulid', otp: '123456', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    test('should NOT register the route when the API is disabled via apis config', async () => {
+      const app = await createOtpApp(upAuthConfig, authModels, pgConfig, {
+        'auth.users.all.otp-verify-login': {enabled: false},
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login/verify/otp',
+        payload: {ulid: 'test-ulid', otp: '123456', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
       await app.close();
     });
   });
@@ -238,6 +274,32 @@ describe('POST /auth/login/verify/otp', () => {
       expect(response.statusCode).toBe(400);
       await app.close();
     });
+
+    test('should return 401 when user is not found in the database', async () => {
+      const app = await createOtpApp(upAuthConfig);
+
+      // Send a valid OTP first
+      const sendResponse = await app.otp.sendOTPForVerification(
+        'unknown@example.com',
+      );
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      // Mock bcrypt.compare so OTP verification succeeds
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      // Mock DB: no user found
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'unknown@example.com'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('User not found');
+      await app.close();
+    });
   });
 });
 
@@ -311,6 +373,57 @@ describe('POST /auth/registration/verify/otp', () => {
 
       await app.close();
     });
+
+    test('should return 200 without UPDATE when isVerifiedField is not configured', async () => {
+      const authWithoutVerified: AuthenticationConfig = {
+        ...upAuthConfig,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      };
+      const app = await createOtpApp(authWithoutVerified);
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'alice@example.com', password: 'hashed'}],
+        rowCount: 1,
+      });
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/registration/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('OTP verification successful');
+      expect(body.data).toBeNull();
+
+      // No UPDATE query should have been executed
+      const updateCall = pgQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return (
+          typeof query === 'string' && (query as string).includes('UPDATE')
+        );
+      });
+      expect(updateCall).toBeUndefined();
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {
@@ -342,6 +455,131 @@ describe('POST /auth/registration/verify/otp', () => {
         method: 'POST',
         url: '/auth/registration/verify/otp',
         payload: {ulid: 'test-ulid'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      await app.close();
+    });
+  });
+});
+
+describe('POST /auth/forgot-password/verify/otp', () => {
+  beforeEach(() => {
+    pgQueryMock.mockClear();
+    vi.restoreAllMocks();
+  });
+
+  describe('guard conditions', () => {
+    test('should NOT register the route when enabled is false', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        enabled: false,
+      };
+      const app = await createOtpApp(authentication);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password/verify/otp',
+        payload: {
+          ulid: 'test-ulid',
+          otp: '123456',
+          email: 'test@example.com',
+          newPassword: 'newPass123',
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+      await app.close();
+    });
+  });
+
+  describe('happy path', () => {
+    test('should return 200 and update password on successful OTP verification', async () => {
+      const app = await createOtpApp(upAuthConfig);
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      // Mock SELECT + UPDATE queries
+      pgQueryMock
+        .mockResolvedValueOnce({
+          rows: [{id: 1, email: 'alice@example.com', password: 'old_hashed'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 1});
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'hash').mockResolvedValue(
+        'new_hashed_password' as never,
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password/verify/otp',
+        payload: {
+          ulid,
+          otp: '000000',
+          email: 'alice@example.com',
+          newPassword: 'newPass123',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('OTP verification successful');
+      expect(body.data.success).toBe(true);
+
+      // Verify the UPDATE query was executed
+      const updateCall = pgQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return (
+          typeof query === 'string' && (query as string).includes('UPDATE')
+        );
+      });
+      expect(updateCall).toBeDefined();
+      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
+      expect(updateQuery).toContain('UPDATE "users"');
+      expect(updateQuery).toContain('"password" = $1');
+
+      await app.close();
+    });
+  });
+
+  describe('unhappy path', () => {
+    test('should return 401 with invalid OTP', async () => {
+      const app = await createOtpApp(upAuthConfig);
+
+      await app.otp.sendOTPForVerification('alice@example.com');
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password/verify/otp',
+        payload: {
+          ulid: 'wrong-ulid',
+          otp: '000000',
+          email: 'alice@example.com',
+          newPassword: 'newPass123',
+        },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('Invalid or expired OTP');
+      await app.close();
+    });
+
+    test('should return 400 if newPassword is missing', async () => {
+      const app = await createOtpApp(upAuthConfig);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/forgot-password/verify/otp',
+        payload: {
+          ulid: 'test-ulid',
+          otp: '000000',
+          email: 'alice@example.com',
+        },
       });
 
       expect(response.statusCode).toBe(400);
