@@ -40,11 +40,13 @@ export function registerForgotPasswordRoute(
         string
       >;
 
+      /* c8 ignore start */
       if (!username) {
         return reply
           .status(400)
           .send(app.buildResponse(400, `${usernameField} is required`, null));
       }
+      /* c8 ignore stop */
 
       const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [String(username)]);

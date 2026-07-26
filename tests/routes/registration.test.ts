@@ -66,6 +66,7 @@ async function createAuthApp(
   authentication: AuthenticationConfig,
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
+  apis?: Record<string, {enabled: boolean}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -80,6 +81,7 @@ async function createAuthApp(
     infrastructure: {database: dbConfig},
     data: {models},
     authentication,
+    ...(apis ? {apis} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -146,6 +148,22 @@ describe('POST /auth/register', () => {
     test('should NOT register the route and log a warning when model is not found in models', async () => {
       // Pass an empty models object so the "users" model cannot be found
       const app = await createAuthApp(upAuthConfig, {});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {email: 'a@b.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    test('should NOT register the route when the API is disabled via apis config', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
+        'auth.users.all.registration': {enabled: false},
+      });
 
       const response = await app.inject({
         method: 'POST',

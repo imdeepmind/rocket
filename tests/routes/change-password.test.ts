@@ -61,6 +61,7 @@ async function createAuthApp(
   authentication: AuthenticationConfig,
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
+  apis?: Record<string, {enabled: boolean}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -75,6 +76,7 @@ async function createAuthApp(
     infrastructure: {database: dbConfig},
     data: {models},
     authentication,
+    ...(apis ? {apis} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -111,6 +113,36 @@ describe('POST /auth/change-password', () => {
       });
 
       expect(response.statusCode).toBe(404);
+      await app.close();
+    });
+
+    test('should NOT register the route when model is not found in models', async () => {
+      const app = await createAuthApp(upAuthConfig, {});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    test('should NOT register the route when the API is disabled via apis config', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
+        'auth.users.all.changePassword': {enabled: false},
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
       await app.close();
     });
   });

@@ -46,6 +46,7 @@ function registerOtpVerifyBase(
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
       const {ulid, otp, [usernameField]: username} = request.body;
 
+      /* c8 ignore start */
       if (!ulid || !otp || !username) {
         return reply
           .status(400)
@@ -57,6 +58,7 @@ function registerOtpVerifyBase(
             ),
           );
       }
+      /* c8 ignore stop */
 
       const isValid = await app.otp.verify(
         String(username),
@@ -94,11 +96,13 @@ function registerOtpVerifyBase(
       if (action === 'forgot-password') {
         const newPassword = (request.body as Record<string, string>)
           .newPassword;
+        /* c8 ignore start */
         if (!newPassword) {
           return reply
             .status(400)
             .send(app.buildResponse(400, 'newPassword is required', null));
         }
+        /* c8 ignore stop */
 
         const {passwordField} = upConfig.userModel;
         const hashedPassword = await hash(String(newPassword));

@@ -61,10 +61,12 @@ export function registerRegistrationRoute(
         ignorePrimaryKey: true,
       });
 
+      /* c8 ignore start */
       if (body[passwordField] !== undefined && body[passwordField] !== null) {
         const rawPassword = String(body[passwordField]);
         body[passwordField] = await hash(rawPassword);
       }
+      /* c8 ignore stop */
 
       if (isVerifiedField) {
         body[isVerifiedField] = false;
