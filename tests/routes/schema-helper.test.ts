@@ -1,6 +1,7 @@
 import {describe, expect, it, test} from 'vitest';
 
 import {
+  applyFilters,
   buildFilterQueryProperties,
   buildSecurityArray,
   buildSortQueryProperties,
@@ -502,5 +503,102 @@ describe('test schema helper', () => {
       },
     };
     expect(buildSecurityArray(config, false)).toEqual([]);
+  });
+
+  // test cases for applyFilters
+  test('applyFilters should skip keys that do not match any suffix', () => {
+    const result = applyFilters({unknown_field: 'val'}, 1);
+    expect(result.whereClauses).toEqual([]);
+    expect(result.values).toEqual([]);
+    expect(result.nextParamIndex).toBe(1);
+  });
+
+  test('applyFilters should skip ignore keys', () => {
+    const result = applyFilters({page: '1', limit: '20', q: 'search'}, 1);
+    expect(result.whereClauses).toEqual([]);
+    expect(result.values).toEqual([]);
+    expect(result.nextParamIndex).toBe(1);
+  });
+
+  test('applyFilters should use extraIgnoreKeys', () => {
+    const result = applyFilters({name_eq: 'foo', extra_ignore: 'bar'}, 1, [
+      'extra_ignore',
+    ]);
+    expect(result.whereClauses).toEqual(['"name" = $1']);
+    expect(result.values).toEqual(['foo']);
+    expect(result.nextParamIndex).toBe(2);
+  });
+
+  test('applyFilters should handle all filter suffixes', () => {
+    const result = applyFilters(
+      {
+        age_eq: '25',
+        age_lt: '30',
+        age_lte: '30',
+        age_gt: '20',
+        age_gte: '20',
+        age_in: '1,2,3',
+      },
+      1,
+    );
+    expect(result.whereClauses).toEqual([
+      '"age" = $1',
+      '"age" < $2',
+      '"age" <= $3',
+      '"age" > $4',
+      '"age" >= $5',
+      '"age" IN ($6, $7, $8)',
+    ]);
+    expect(result.values).toEqual([
+      '25',
+      '30',
+      '30',
+      '20',
+      '20',
+      '1',
+      '2',
+      '3',
+    ]);
+    expect(result.nextParamIndex).toBe(9);
+  });
+
+  // test generateJSONValidationSchema with additionalProperties: true
+  test('should build validation schema with additionalProperties: true', () => {
+    const model: ModelConfig = {
+      fields: {name: {type: 'string'}},
+    };
+    const result = generateJSONValidationSchema(model, {
+      additionalProperties: true,
+    });
+    expect(result.additionalProperties).toBe(true);
+  });
+
+  // test normalizeSchemaForAjv with type: 'date'
+  test('should normalize date type in validation schema', () => {
+    const model: ModelConfig = {
+      fields: {birthday: {type: 'date'}},
+      validation: {
+        type: 'object',
+        properties: {
+          birthday: {type: 'date', description: 'Value for birthday'},
+        },
+      },
+    };
+    const result = generateJSONValidationSchema(model);
+    expect((result.properties as Record<string, object>).birthday).toEqual({
+      type: 'string',
+      format: 'date',
+      description: 'Value for birthday',
+    });
+  });
+
+  // test normalizeSchemaForAjv with no properties
+  test('should handle validation schema without properties', () => {
+    const model: ModelConfig = {
+      fields: {name: {type: 'string'}},
+      validation: {type: 'object'},
+    };
+    const result = generateJSONValidationSchema(model);
+    expect(result).toEqual({type: 'object'});
   });
 });
