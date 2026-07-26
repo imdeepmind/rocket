@@ -4,7 +4,11 @@ import {
   buildSqlEndpoint,
   handleSql,
 } from '@/routes/custom-endpoints/handlers/sql';
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {
+  buildPreValidation,
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/routes/schema-helpers';
 
 import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
@@ -29,7 +33,6 @@ export function registerCustomEndpointRoutes(
     const {schema, routePathSuffix} = generateSchema(
       config,
       endpoint,
-      name,
       authorization,
     );
     const routePath = `/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
@@ -39,24 +42,7 @@ export function registerCustomEndpointRoutes(
       url: routePath,
       schema,
       config: {apiIdentifier},
-      preValidation: async (request, reply) => {
-        if (config.authentication?.enabled && authorization) {
-          try {
-            await request.authenticate();
-          } catch {
-            return reply
-              .status(401)
-              .send(
-                app.buildResponse(
-                  401,
-                  'Invalid or expired authentication token',
-                  null,
-                ),
-              );
-          }
-        }
-        app.enforceSSP(request);
-      },
+      preValidation: buildPreValidation(app, config, authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -84,7 +70,6 @@ export function registerCustomEndpointRoutes(
 function generateSchema(
   config: AppConfig,
   endpoint: CustomEndpointConfig,
-  name: string,
   authorization: boolean,
 ): {
   schema: Record<string, unknown>;
@@ -121,23 +106,7 @@ function generateSchema(
     },
   });
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;

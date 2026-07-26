@@ -1,6 +1,7 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  buildPreValidation,
   buildSecurityArray,
   getResponseStructureSchema,
 } from '@/routes/schema-helpers';
@@ -54,24 +55,7 @@ export function registerAggregateRoutes(
         {
           schema,
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
