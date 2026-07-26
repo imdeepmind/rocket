@@ -2713,19 +2713,19 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid webhook for modelAPis',
       patch: {
-        'aggregateAPIs.users.id.getAggregation': 'invalid',
+        'aggregate.users.id.getAggregation': 'invalid',
       },
-      expected: '/apis/aggregateAPIs.users.id.getAggregation must be object',
+      expected: '/apis/aggregate.users.id.getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'aggregateAPIs.users.id.getAggregation': {
+        'aggregate.users.id.getAggregation': {
           webhooks: 'invalid',
         },
       },
       expected:
-        '/apis/aggregateAPIs.users.id.getAggregation/webhooks must be array',
+        '/apis/aggregate.users.id.getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -2746,7 +2746,7 @@ describe('validateInvalidModelAPIsConfig', () => {
     {
       name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregateAPIs.users.id.getAggregation': {
+        'aggregate.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2758,7 +2758,7 @@ describe('validateInvalidModelAPIsConfig', () => {
         },
       },
       expected:
-        'apis/aggregateAPIs.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+        'apis/aggregate.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
     {
       name: 'custom endpoint key not found',
@@ -2807,7 +2807,7 @@ describe('validateValidModelAPIsConfig', () => {
     {
       name: 'valid modelAPIs',
       patch: {
-        'aggregateAPIs.users.id.getAggregation': {
+        'aggregate.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',

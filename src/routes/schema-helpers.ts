@@ -1,4 +1,5 @@
 import {
+  AppConfig,
   DataType,
   JsonSchemaObject,
   ModelBody,
@@ -269,6 +270,34 @@ export const getResponseStructureSchema = (
 
   return respSchema;
 };
+
+/**
+ * Build the security array for the schema based on authentication config.
+ */
+export function buildSecurityArray(
+  config: AppConfig,
+  authorization: boolean,
+): Array<{[key: string]: string[]}> {
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'up-auth' &&
+    authorization
+  ) {
+    security.push({bearerAuth: []});
+  }
+
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'api-key' &&
+    authorization
+  ) {
+    security.push({apiKeyAuth: []});
+  }
+
+  return security;
+}
 
 /**
  * Common signal and pagination keys to ignore when applying filters.

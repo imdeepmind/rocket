@@ -246,6 +246,27 @@ describe('test aggregate api', () => {
       await fastify.close();
     });
 
+    test('should return 404 when the API is disabled in config', async () => {
+      const disabledApiConfig = {
+        'aggregate.sales.amount.getAggregation': {enabled: false},
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        disabledApiConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=count',
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      await fastify.close();
+    });
+
     test('should handle empty result sets gracefully for numeric aggregation', async () => {
       pgQueryMock.mockResolvedValueOnce({
         rows: [],
@@ -268,7 +289,7 @@ describe('test aggregate api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'aggregateAPIs.sales.amount.getAggregation': {
+      'aggregate.sales.amount.getAggregation': {
         authorization: true,
       },
     };
