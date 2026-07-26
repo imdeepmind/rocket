@@ -11,10 +11,11 @@ type ParamSource = {
 };
 
 const cast = (value: unknown, type: DataType): unknown => {
-  /* istanbul ignore next */
+  /* c8 ignore start */
   if (value === undefined || value === null) {
     throw new Error('Missing value for parameter');
   }
+  /* c8 ignore stop */
   switch (type) {
     case 'integer':
       return Math.trunc(Number(value));
@@ -55,7 +56,7 @@ function interpolateQuery(
     } else if (typeSymbol === '@@') {
       val = body[name];
       if (val === undefined) throw new Error(`Missing body param: "${name}"`);
-    } else if (typeSymbol === '&&') {
+    } else {
       val = query[name];
       if (val === undefined) throw new Error(`Missing query param: "${name}"`);
     }
@@ -115,7 +116,7 @@ export function buildSqlEndpoint(
       paramsProperties[varName] = jsonSchema;
     } else if (start.type === '&&') {
       queryProperties[varName] = jsonSchema;
-    } else if (start.type === '@@') {
+    } else {
       bodyProperties[varName] = jsonSchema;
     }
   }

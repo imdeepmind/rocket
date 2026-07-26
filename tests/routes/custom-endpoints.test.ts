@@ -468,6 +468,33 @@ describe('test custom-endpoints api', () => {
     });
   });
 
+  describe('api config disabled', () => {
+    test('should skip endpoint when enabled is false', async () => {
+      const apisConfig = {
+        'customEndpoints.searchUsers': {
+          enabled: false,
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        apisConfig,
+        customEndpoints,
+      );
+
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/custom-endpoints/search-users',
+        query: {status: 'active', minAge: '18'},
+      });
+
+      expect(res.statusCode).toBe(404);
+
+      await fastify.close();
+    });
+  });
+
   describe('optional validation and AJV error handling', () => {
     test('should work when validation property is completely omitted from endpoint config', async () => {
       const noValidationEndpoints = {
