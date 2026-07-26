@@ -442,6 +442,23 @@ describe('POST /auth/register', () => {
       await app.close();
     });
 
+    test('should handle rollback failure gracefully', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {email: 'ivan@example.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
     test('should return 500 on DB error (bare test app has no custom PG-code handler)', async () => {
       // Note: the custom 23xxx → 400 mapping lives in server.ts's global error
       // handler which is NOT registered in the bare createAuthApp helper.

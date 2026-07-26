@@ -296,6 +296,26 @@ describe('POST /auth/change-password', () => {
       await app.close();
     });
 
+    test('should handle rollback failure on DB error', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('Query failed')) // SELECT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
     test('should return 401 if existing password does not match', async () => {
       const app = await createAuthApp(upAuthConfig);
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});

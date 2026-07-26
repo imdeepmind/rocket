@@ -20,10 +20,10 @@ export default defineConfig({
       exclude: ['node_modules/**', 'tests/**'], // Ignore external libs and tests themselves
       // intentinally keeping the coverage low for now as we just added test cases
       thresholds: {
-        lines: 95,
+        lines: 99,
         functions: 100,
-        branches: 90,
-        statements: 95,
+        branches: 97,
+        statements: 99,
       },
     },
     setupFiles: ['./tests/setup.ts'],

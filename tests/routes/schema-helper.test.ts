@@ -539,6 +539,20 @@ describe('test schema helper', () => {
     expect(result.nextParamIndex).toBe(2);
   });
 
+  test('applyFilters should handle _in with empty string values', () => {
+    const result = applyFilters({age_in: '1,,3'}, 1);
+    expect(result.whereClauses).toEqual(['"age" IN ($1, $2, $3)']);
+    expect(result.values).toEqual([1, '', 3]);
+    expect(result.nextParamIndex).toBe(4);
+  });
+
+  test('applyFilters should handle _in with non-numeric values', () => {
+    const result = applyFilters({age_in: 'abc,def'}, 1);
+    expect(result.whereClauses).toEqual(['"age" IN ($1, $2)']);
+    expect(result.values).toEqual(['abc', 'def']);
+    expect(result.nextParamIndex).toBe(3);
+  });
+
   test('applyFilters should handle all filter suffixes', () => {
     const result = applyFilters(
       {

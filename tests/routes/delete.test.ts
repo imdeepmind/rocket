@@ -202,6 +202,22 @@ describe('test delete api', () => {
       expect(response.statusCode).toBe(500);
       await fastify.close();
     });
+
+    test('should handle rollback failure gracefully', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // DELETE
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      expect(response.statusCode).toBe(500);
+      await fastify.close();
+    });
   });
 
   describe('authentication', () => {

@@ -366,7 +366,7 @@ describe('test get-all api', () => {
       await fastify.close();
     });
 
-    test('should return 500 when database query throws', async () => {
+    test('should return 500 when database query throws before BEGIN', async () => {
       const fastify = await createTestApp(pgConfig, getAllModel);
       pgClientQueryMock.mockRejectedValueOnce(new Error('Database error'));
 
@@ -376,6 +376,57 @@ describe('test get-all api', () => {
       });
 
       expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when count query fails after BEGIN', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Count failed')) // COUNT fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after count query error', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Count failed')) // COUNT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+  });
+
+  describe('limit edge cases', () => {
+    test('should reject limit=0 with 400 due to minimum constraint', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/?limit=0',
+      });
+
+      expect(response.statusCode).toBe(400);
 
       await fastify.close();
     });

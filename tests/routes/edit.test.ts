@@ -507,6 +507,81 @@ describe('test edit api', () => {
     });
   });
 
+  describe('error handling during database operations', () => {
+    test('should return 500 when UPDATE query fails after BEGIN (PATCH)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after UPDATE error (PATCH)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when UPDATE query fails after BEGIN (PUT)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/users/id/1',
+        payload: {name: 'Bob', email: 'bob@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when BEGIN itself fails (PATCH)', async () => {
+      pgClientQueryMock.mockRejectedValueOnce(new Error('BEGIN failed')); // BEGIN fails
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+  });
+
   describe('authentication', () => {
     const apisConfig = {
       'model.users.id.edit': {

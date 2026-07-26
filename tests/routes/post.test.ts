@@ -196,6 +196,24 @@ describe('test post api', () => {
 
       await fastify.close();
     });
+
+    test('should handle rollback failure gracefully', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
   });
 
   describe('edge cases', () => {

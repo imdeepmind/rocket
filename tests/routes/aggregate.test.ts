@@ -291,6 +291,59 @@ describe('test aggregate api', () => {
     });
   });
 
+  describe('error handling during database operations', () => {
+    test('should return 500 when aggregation query fails after BEGIN', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Query failed')) // aggregation query fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after query error', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Query failed')) // aggregation query fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when BEGIN itself fails', async () => {
+      pgClientQueryMock.mockRejectedValueOnce(new Error('BEGIN failed')); // BEGIN fails
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+  });
+
   describe('authentication', () => {
     const apisConfig = {
       'aggregate.sales.amount.getAggregation': {

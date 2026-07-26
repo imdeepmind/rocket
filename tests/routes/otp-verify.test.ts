@@ -280,6 +280,30 @@ describe('POST /auth/login/verify/otp', () => {
       await app.close();
     });
 
+    test('should handle rollback failure on DB error', async () => {
+      const app = await createOtpApp(upAuthConfig);
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('Query failed')) // SELECT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
     test('should return 401 when user is not found in the database', async () => {
       const app = await createOtpApp(upAuthConfig);
 

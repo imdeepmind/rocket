@@ -587,6 +587,24 @@ describe('test index-route api', () => {
 
       await fastify.close();
     });
+
+    test('should handle rollback failure for indexable field query', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('Count failed')) // COUNT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, indexableFieldModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/posts/category/tech',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
   });
 
   describe('edge cases', () => {

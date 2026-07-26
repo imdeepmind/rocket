@@ -195,6 +195,28 @@ describe('database plugin', () => {
       await fastify.close();
     });
 
+    test('beginTransaction handles missing rowCount in non-SELECT query', async () => {
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: null}) // INSERT with null rowCount
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES ($1)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
+
+      await fastify.close();
+    });
+
     test('beginTransaction rolls back on error', async () => {
       const fastify = buildApp(pgConfig);
       await fastify.register(databasePlugin);
@@ -381,6 +403,7 @@ describe('database plugin', () => {
         'test',
       ]);
       await tx.commit();
+      tx.release();
 
       expect(result).toEqual({changes: 0, rows: []});
       expect(sqliteExecMock).toHaveBeenNthCalledWith(1, 'BEGIN');
@@ -388,6 +411,25 @@ describe('database plugin', () => {
         'INSERT INTO test (name) VALUES (?)',
       );
       expect(sqliteExecMock).toHaveBeenNthCalledWith(2, 'COMMIT');
+
+      await fastify.close();
+    });
+
+    test('beginTransaction handles missing changes in non-SELECT query', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteRunMock.mockReturnValueOnce({changes: undefined});
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES (?)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
 
       await fastify.close();
     });
@@ -409,6 +451,7 @@ describe('database plugin', () => {
       } catch {
         await tx.rollback();
       }
+      tx.release();
 
       expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
       expect(sqliteExecMock).not.toHaveBeenCalledWith('COMMIT');
