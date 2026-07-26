@@ -2,6 +2,7 @@ import {describe, expect, it, test} from 'vitest';
 
 import {
   buildFilterQueryProperties,
+  buildSecurityArray,
   buildSortQueryProperties,
   generateJSONValidationSchema,
   getResponseStructureSchema,
@@ -9,7 +10,12 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {DataType, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+import {
+  AppConfig,
+  DataType,
+  ModelConfig,
+  ModelFieldConfig,
+} from '@/interfaces/config';
 
 describe('test schema helper', () => {
   // test cases for mapDataTypeToJsonSchema
@@ -404,5 +410,97 @@ describe('test schema helper', () => {
     expect(getResponseStructureSchema(codes, dataSchema)).toEqual(
       expectedSchema,
     );
+  });
+
+  // test cases for buildSecurityArray
+  const baseConfig: AppConfig = {
+    application: {name: 'test', logLevel: 'info'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', version: '1.0.0'},
+      },
+    },
+    infrastructure: {
+      database: {
+        engine: 'postgres',
+        connection: {url: 'postgresql://localhost:5432/test'},
+      },
+    },
+    data: {models: {}},
+  };
+
+  const upAuthUserModel = {
+    model: 'user',
+    idField: 'id',
+    usernameField: 'email',
+    passwordField: 'password',
+  };
+
+  test('should return empty array when authentication is disabled', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: false,
+        provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+      },
+    };
+    expect(buildSecurityArray(config, true)).toEqual([]);
+  });
+
+  test('should return empty array when authentication is disabled and authorization is false', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: false,
+        provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+      },
+    };
+    expect(buildSecurityArray(config, false)).toEqual([]);
+  });
+
+  test('should return bearerAuth when provider is up-auth and authorization is true', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: true,
+        provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+      },
+    };
+    expect(buildSecurityArray(config, true)).toEqual([{bearerAuth: []}]);
+  });
+
+  test('should return apiKeyAuth when provider is api-key and authorization is true', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: true,
+        provider: {type: 'api-key', config: {key: 'test-key'}},
+      },
+    };
+    expect(buildSecurityArray(config, true)).toEqual([{apiKeyAuth: []}]);
+  });
+
+  test('should return empty array when authorization is false even if auth is enabled', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: true,
+        provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+      },
+    };
+    expect(buildSecurityArray(config, false)).toEqual([]);
+  });
+
+  test('should return empty array when authorization is false with api-key provider', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      authentication: {
+        enabled: true,
+        provider: {type: 'api-key', config: {key: 'test-key'}},
+      },
+    };
+    expect(buildSecurityArray(config, false)).toEqual([]);
   });
 });

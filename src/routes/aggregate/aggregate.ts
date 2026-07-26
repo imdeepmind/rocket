@@ -1,6 +1,9 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/routes/schema-helpers';
 
 import {
   Aggregation,
@@ -89,8 +92,6 @@ export function registerAggregateRoutes(
             .split(',')
             .map(s => s.trim())
             .filter(Boolean);
-
-          console.log({requestedOps});
 
           if (requestedOps.length === 0) {
             return reply
@@ -181,23 +182,7 @@ function generateSchema(
   operations: Aggregation[],
   authorization: boolean,
 ) {
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   const schema: Record<string, unknown> = {
     summary: `Aggregate ${fieldName} on ${capitalizeFirstLetter(modelName)}`,
