@@ -5,12 +5,7 @@ import {
   getResponseStructureSchema,
 } from '@/routes/schema-helpers';
 
-import {
-  Aggregation,
-  AppConfig,
-  ModelConfig,
-  ModelFieldConfig,
-} from '@/interfaces/config';
+import {Aggregation, AppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -35,7 +30,7 @@ export function registerAggregateRoutes(
     );
 
     for (const [fieldName, field] of aggregatableFields) {
-      const apiIdentifier = `aggregateAPIs.${modelName}.${fieldName}.getAggregation`;
+      const apiIdentifier = `aggregate.${modelName}.${fieldName}.getAggregation`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -49,8 +44,6 @@ export function registerAggregateRoutes(
       const schema: Record<string, unknown> = generateSchema(
         config,
         fieldName,
-        field,
-        model,
         modelName,
         operations,
         authorization,
@@ -176,8 +169,6 @@ export function registerAggregateRoutes(
 function generateSchema(
   config: AppConfig,
   fieldName: string,
-  field: ModelFieldConfig,
-  model: ModelConfig,
   modelName: string,
   operations: Aggregation[],
   authorization: boolean,

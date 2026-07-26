@@ -204,7 +204,7 @@
         }
     },
     "apis": {
-        "aggregateAPIs.users.id.getAggregation": {
+        "aggregate.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
