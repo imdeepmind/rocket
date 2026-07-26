@@ -1,10 +1,14 @@
+import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
+
 import {
+  AppConfig,
   DataType,
-  JsonSchemaObject,
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
 } from '@/interfaces/config';
+
+import {normalizeSchemaForAjv} from '@/utils/schema';
 
 /**
  * Map config DataType to JSON Schema type definition for Swagger.
@@ -24,6 +28,10 @@ export function mapDataTypeToJsonSchema(type: DataType): {
       return {type: 'string'};
     case 'datetime':
       return {type: 'string', format: 'date-time'};
+    case 'date':
+      return {type: 'string', format: 'date'};
+    case 'decimal':
+      return {type: 'number'};
     default:
       return {type: 'string'};
   }
@@ -70,78 +78,97 @@ export function buildSortQueryProperties(
 }
 
 /**
- * Build filter query parameter schema properties for a field
- * based on its supportedOperations (lessThan, greaterThan, equal, oneOf, etc.).
+ * Build all query parameter schema properties for a model:
+ * filter params, sort params, and pagination params.
  */
-export function buildFilterQueryProperties(
-  field: ModelFieldConfig,
+export function buildAllQueryProperties(
+  model: ModelConfig,
 ): Record<string, object> {
-  const ops = field.supportedOperations || [];
-  const jsonType = mapDataTypeToJsonSchema(field.type);
   const properties: Record<string, object> = {};
 
-  if (ops.includes('lessThan')) {
-    properties[`${field.name}_lt`] = {
-      ...jsonType,
-      description: `Filter where ${field.name} is less than this value`,
-    };
+  for (const [fName, f] of Object.entries(model.fields)) {
+    Object.assign(properties, buildFilterQueryProperties(fName, f));
   }
 
-  if (ops.includes('lessThanEqual')) {
-    properties[`${field.name}_lte`] = {
-      ...jsonType,
-      description: `Filter where ${field.name} is less than or equal to this value`,
-    };
-  }
+  const sortableFields = Object.entries(model.fields)
+    .filter(([, f]) => f.query?.includes('sort'))
+    .map(([fName]) => fName);
+  Object.assign(properties, buildSortQueryProperties(sortableFields));
 
-  if (ops.includes('greaterThan')) {
-    properties[`${field.name}_gt`] = {
-      ...jsonType,
-      description: `Filter where ${field.name} is greater than this value`,
-    };
-  }
-
-  if (ops.includes('greaterThanEqual')) {
-    properties[`${field.name}_gte`] = {
-      ...jsonType,
-      description: `Filter where ${field.name} is greater than or equal to this value`,
-    };
-  }
-
-  if (ops.includes('equal')) {
-    properties[`${field.name}_eq`] = {
-      ...jsonType,
-      description: `Filter where ${field.name} equals this value`,
-    };
-  }
-
-  if (ops.includes('oneOf')) {
-    properties[`${field.name}_in`] = {
-      type: 'string',
-      description: `Filter where ${field.name} is one of the provided comma-separated values`,
-    };
-  }
+  Object.assign(properties, paginationQueryProperties);
 
   return properties;
 }
 
 /**
- * Normalize the schema for AJV by converting custom types to standard ones.
+ * Build filter query parameter schema properties for a field
+ * based on its query operations (lt, lte, gt, gte, eq, in, etc.).
  */
-function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
-  const normalized = JSON.parse(JSON.stringify(schema));
-  if (normalized.properties && typeof normalized.properties === 'object') {
-    Object.keys(normalized.properties).forEach(key => {
-      const prop = (normalized.properties as Record<string, JsonSchemaObject>)[
-        key
-      ];
-      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
-        prop.type = 'string';
-        prop.format = 'date-time';
-      }
-    });
+export function buildFilterQueryProperties(
+  fieldName: string,
+  field: ModelFieldConfig,
+): Record<string, object> {
+  const ops = field.query || [];
+  const jsonType = mapDataTypeToJsonSchema(field.type);
+  const properties: Record<string, object> = {};
+
+  if (ops.includes('lt')) {
+    properties[`${fieldName}_lt`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} is less than this value`,
+    };
   }
-  return normalized;
+
+  if (ops.includes('lte')) {
+    properties[`${fieldName}_lte`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} is less than or equal to this value`,
+    };
+  }
+
+  if (ops.includes('gt')) {
+    properties[`${fieldName}_gt`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} is greater than this value`,
+    };
+  }
+
+  if (ops.includes('gte')) {
+    properties[`${fieldName}_gte`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} is greater than or equal to this value`,
+    };
+  }
+
+  if (ops.includes('eq')) {
+    properties[`${fieldName}_eq`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} equals this value`,
+    };
+  }
+
+  if (ops.includes('in')) {
+    properties[`${fieldName}_in`] = {
+      type: 'string',
+      description: `Filter where ${fieldName} is one of the provided comma-separated values`,
+    };
+  }
+
+  if (ops.includes('ne')) {
+    properties[`${fieldName}_ne`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} does not equal this value`,
+    };
+  }
+
+  if (ops.includes('not_in')) {
+    properties[`${fieldName}_not_in`] = {
+      type: 'string',
+      description: `Filter where ${fieldName} is not one of the provided comma-separated values`,
+    };
+  }
+
+  return properties;
 }
 
 /**
@@ -159,20 +186,24 @@ export function generateJSONValidationSchema(
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
   const fields = options.ignorePrimaryKey
-    ? model.fields.filter(field => field.primaryKey !== true)
-    : model.fields;
+    ? Object.entries(model.fields).filter(
+        ([, field]) => field.primaryKey !== true,
+      )
+    : Object.entries(model.fields);
 
   const bodyProperties: Record<string, object> = {};
-  for (const field of fields) {
-    bodyProperties[field.name] = {
+  for (const [fieldName, field] of fields) {
+    bodyProperties[fieldName] = {
       ...mapDataTypeToJsonSchema(field.type),
-      description: `Value for ${field.name}`,
+      description: `Value for ${fieldName}`,
     };
   }
 
   const required = fields
-    .filter(field => field.nullable !== true && field.default === undefined)
-    .map(field => field.name);
+    .filter(
+      ([, field]) => field.nullable !== true && field.default === undefined,
+    )
+    .map(([fieldName]) => fieldName);
 
   return {
     type: 'object',
@@ -193,10 +224,12 @@ export function stripAdditionalPostFields(
   options: {ignorePrimaryKey?: boolean} = {},
 ): ModelBody {
   const allowedFields = options.ignorePrimaryKey
-    ? model.fields.filter(field => field.primaryKey !== true)
-    : model.fields;
+    ? Object.entries(model.fields).filter(
+        ([, field]) => field.primaryKey !== true,
+      )
+    : Object.entries(model.fields);
 
-  const allowed = new Set(allowedFields.map(field => field.name));
+  const allowed = new Set(allowedFields.map(([name]) => name));
   const filtered: ModelBody = {};
 
   for (const [key, value] of Object.entries(body)) {
@@ -256,6 +289,87 @@ export const getResponseStructureSchema = (
 };
 
 /**
+ * Build the security array for the schema based on authentication config.
+ */
+export function buildSecurityArray(
+  config: AppConfig,
+  authorization: boolean,
+): Array<{[key: string]: string[]}> {
+  const security: Array<{[key: string]: string[]}> = [];
+
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'up-auth' &&
+    authorization
+  ) {
+    security.push({bearerAuth: []});
+  }
+
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider.type === 'api-key' &&
+    authorization
+  ) {
+    security.push({apiKeyAuth: []});
+  }
+
+  return security;
+}
+
+/**
+ * Auth + SSP checks that can be performed in preValidation.
+ */
+export type PreValidationCheck = 'auth' | 'ssp';
+
+/**
+ * Build a preValidation handler that runs the specified checks.
+ *
+ *   - 'auth': authenticate the request if auth is enabled + authorization flag is set
+ *   - 'ssp':  enforce single-session-policy
+ */
+export function buildPreValidation(
+  app: FastifyInstance,
+  config: AppConfig,
+  authorization: boolean,
+  checks: PreValidationCheck[] = ['auth', 'ssp'],
+): (request: FastifyRequest, reply: FastifyReply) => Promise<void | undefined> {
+  return async (request, reply) => {
+    if (
+      checks.includes('auth') &&
+      config.authentication?.enabled &&
+      authorization
+    ) {
+      try {
+        await request.authenticate();
+      } catch {
+        return reply
+          .status(401)
+          .send(
+            app.buildResponse(
+              401,
+              'Invalid or expired authentication token',
+              null,
+            ),
+          );
+      }
+    }
+    if (checks.includes('ssp')) {
+      app.enforceSSP(request);
+    }
+  };
+}
+
+/**
+ * Try to parse a string as a number; return the original if it fails.
+ */
+function tryParseNumber(value: string): string | number {
+  const trimmed = value.trim();
+  if (trimmed === '') return value;
+  const n = Number(trimmed);
+  return Number.isNaN(n) ? value : n;
+}
+
+/**
  * Common signal and pagination keys to ignore when applying filters.
  */
 export const filterIgnoreKeys = [
@@ -268,6 +382,7 @@ export const filterIgnoreKeys = [
 
 /**
  * Shared filter application logic for SQL generation.
+ * The query param suffixes use the OLD naming convention (_eq, _lt, _lte, _gt, _gte, _in).
  */
 export function applyFilters(
   queryParams: Record<string, unknown>,
@@ -302,11 +417,21 @@ export function applyFilters(
     } else if (key.endsWith('_gte')) {
       whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
       values.push(queryParams[key]);
+    } else if (key.endsWith('_not_in')) {
+      const notInValues = String(queryParams[key]).split(',');
+      const notInParams = notInValues.map(() => `$${paramIndex++}`).join(', ');
+      whereClauses.push(
+        `"${key.replace('_not_in', '')}" NOT IN (${notInParams})`,
+      );
+      values.push(...notInValues.map(tryParseNumber));
     } else if (key.endsWith('_in')) {
       const inValues = String(queryParams[key]).split(',');
       const inParams = inValues.map(() => `$${paramIndex++}`).join(', ');
       whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
-      values.push(...inValues);
+      values.push(...inValues.map(tryParseNumber));
+    } else if (key.endsWith('_ne')) {
+      whereClauses.push(`"${key.replace('_ne', '')}" != $${paramIndex++}`);
+      values.push(queryParams[key]);
     }
   }
 

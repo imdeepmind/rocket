@@ -10,43 +10,39 @@ const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
     engine: 'sqlite',
     connection: {
-      urlOrPath: './test.db',
+      url: './test.db',
     },
   };
 };
 
-const getDefaultModelConfig = (): ModelConfig[] => {
-  return [
-    {
-      name: 'users',
-      fields: [
-        {
-          name: 'id',
-          type: 'integer',
-          primaryKey: true,
-          unique: true,
-          nullable: false,
-        },
-      ],
+const getDefaultModelConfig = (): Record<string, ModelConfig> => {
+  return {
+    users: {
+      fields: {
+        id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+      },
     },
-  ];
+  };
 };
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
-  swagger: {
-    enabled: true,
-    basePath: '/api',
-    info: {
-      title: 'Test API',
-      description: 'Test API description for testing',
-      version: '1.0.0',
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/api',
+      info: {
+        title: 'Test API',
+        description: 'Test API description for testing',
+        version: '1.0.0',
+      },
     },
   },
-  database: getDefaultDatabaseConfig(),
-  models: getDefaultModelConfig(),
+  infrastructure: {database: getDefaultDatabaseConfig()},
+  data: {models: getDefaultModelConfig()},
 };
 
 describe('Config Environment Variable Resolution', () => {
@@ -60,10 +56,12 @@ describe('Config Environment Variable Resolution', () => {
         ...validBaseConfig.application,
         logLevel: 'env:LOG_LEVEL' as unknown as LogLevel,
       },
-      database: {
-        ...validBaseConfig.database,
-        connection: {
-          urlOrPath: 'env:DB_PATH',
+      infrastructure: {
+        database: {
+          ...validBaseConfig.infrastructure.database,
+          connection: {
+            url: 'env:DB_PATH',
+          },
         },
       },
     };
@@ -76,25 +74,28 @@ describe('Config Environment Variable Resolution', () => {
     const validated = validateConfig(resolved);
 
     expect(validated.application.logLevel).toBe('debug');
-    expect(validated.database.connection.urlOrPath).toBe('./env-resolved.db');
+    expect(validated.infrastructure.database.connection.url).toBe(
+      './env-resolved.db',
+    );
   });
 
-  it('should leave env:VAR if environment variable is not set', () => {
+  it('should throw if environment variable is not set', () => {
     delete process.env.NON_EXISTENT_VAR;
 
     const config: AppConfig = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        connection: {
-          urlOrPath: 'env:NON_EXISTENT_VAR',
+      infrastructure: {
+        database: {
+          ...validBaseConfig.infrastructure.database,
+          connection: {
+            url: 'env:NON_EXISTENT_VAR',
+          },
         },
       },
     };
 
-    const resolved = resolveEnvVars(config);
-    // This should probably fail validation if the value is required and invalid
-    // But for resolution, it stays as is.
-    expect(() => validateConfig(resolved)).toThrow();
+    expect(() => resolveEnvVars(config)).toThrow(
+      'environment variable "NON_EXISTENT_VAR"',
+    );
   });
 });

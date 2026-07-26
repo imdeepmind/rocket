@@ -1,62 +1,48 @@
-import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody} from '@/interfaces/config';
+import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register the POST /auth/login route.
- *
- * This route is ONLY registered when:
- *   - auth.enableAuth === true
- *   - auth.authEngine === 'up-auth'
- *
- * @param app     - The Fastify application instance.
- * @param models  - All model configs from the top-level config.
- * @param auth    - The auth block from the app config.
- */
 export function registerLoginRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, auth} = config;
+  const {models} = config.data;
 
-  // Guard: only register when up-auth is enabled
-  if (!auth || !auth.enableAuth || auth.authEngine !== 'up-auth') {
-    return;
-  }
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, usernameField, passwordField} = upConfig.userModel;
 
-  const {modelName, usernameColumn, passwordColumn} = auth.authModel;
+  const authModelConfig = models[model];
 
-  // Find the model config that matches the authModel.modelName
-  const authModelConfig = models.find(m => m.name === modelName);
+  if (!authModelConfig) return;
 
-  if (!authModelConfig) {
-    app.log.warn(
-      `[auth/login] Could not find model config for "${modelName}". Skipping route registration.`,
-    );
-    return;
-  }
+  const apiIdentifier = `auth.${model}.all.login`;
 
-  // Request body schema for login
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(
-    usernameColumn,
-    passwordColumn,
-    modelName,
+    usernameField,
+    passwordField,
+    model,
+    upConfig.mfaRequired ?? false,
   );
 
   app.post(
     '/auth/login',
-    {schema},
+    {
+      schema,
+      config: {apiIdentifier},
+    },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
-      const {[usernameColumn]: username, [passwordColumn]: password} =
+      const {[usernameField]: username, [passwordField]: password} =
         request.body;
 
-      // Find user by username
-      const query = `SELECT * FROM "${modelName}" WHERE "${usernameColumn}" = $1 LIMIT 1;`;
+      const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [username]);
 
       if (res.rows.length === 0) {
@@ -66,10 +52,9 @@ export function registerLoginRoute(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
-      const hashedPassword = user[passwordColumn] as string;
+      const hashedPassword = user[passwordField] as string;
 
-      // Compare passwords
-      const isMatch = await bcrypt.compare(String(password), hashedPassword);
+      const isMatch = await compare(String(password), hashedPassword);
 
       if (!isMatch) {
         return reply
@@ -77,14 +62,25 @@ export function registerLoginRoute(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
-      // We include the user ID and username in the payload
+      if (upConfig.mfaRequired) {
+        const userEmail = String(user[usernameField]);
+        const ulid = await app.otp.sendOTPForVerification(userEmail);
+
+        return reply.status(200).send(
+          app.buildResponse(200, 'Login successful. OTP sent to your email.', {
+            requiresMfa: true,
+            ulid,
+          }),
+        );
+      }
+
       const payload = {
-        id: user[auth.authModel.idColumn],
-        [usernameColumn]: user[usernameColumn],
+        id: user[upConfig.userModel.idField],
+        [usernameField]: user[usernameField],
       };
 
       const token = app.jwt.sign(payload, {
-        expiresIn: '1d',
+        expiresIn: upConfig.tokenExpiration || '1d',
       });
 
       return reply.status(200).send(
@@ -97,35 +93,42 @@ export function registerLoginRoute(
 }
 
 function generateSchema(
-  usernameColumn: string,
-  passwordColumn: string,
-  modelName: string,
+  usernameField: string,
+  passwordField: string,
+  model: string,
+  mfaRequired: boolean,
 ) {
   const bodySchema = {
     type: 'object',
-    required: [usernameColumn, passwordColumn],
+    required: [usernameField, passwordField],
     properties: {
-      [usernameColumn]: {type: 'string', description: 'The user identifier'},
-      [passwordColumn]: {type: 'string', description: 'The user password'},
+      [usernameField]: {type: 'string', description: 'The user identifier'},
+      [passwordField]: {type: 'string', description: 'The user password'},
     },
     additionalProperties: false,
   };
 
-  // Response schema for successful login
-  const dataSchema = {
+  const dataSchema: Record<string, unknown> = {
     type: 'object',
-    properties: {
-      accessToken: {type: 'string', description: 'JWT access token'},
-    },
+    properties: mfaRequired
+      ? {
+          requiresMfa: {
+            type: 'boolean',
+            description: 'Indicates MFA is required',
+          },
+          ulid: {type: 'string', description: 'OTP verification ULID'},
+        }
+      : {
+          accessToken: {type: 'string', description: 'JWT access token'},
+        },
   };
 
   const responseSchema = getResponseStructureSchema([200], dataSchema);
 
-  // Swagger declaration for this route
   const schema: Record<string, unknown> = {
-    summary: `Login for ${capitalizeFirstLetter(modelName)}`,
-    description: `Authenticates a user from the "${modelName}" table and returns a JWT access token.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Login'],
+    summary: `Login for ${capitalizeFirstLetter(model)}`,
+    description: `Authenticates a user from the "${model}" table and returns a JWT access token.`,
+    tags: [capitalizeFirstLetter(model), 'Auth', 'Login'],
     body: bodySchema,
     response: responseSchema,
   };

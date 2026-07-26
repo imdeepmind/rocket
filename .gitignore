@@ -127,7 +127,8 @@ dist
 # TernJS port file
 .tern-port
 
-# Stores VSCode versions used for testing VSCode extensions
+# Agent memory directory
+agent_memory/
 .vscode-test
 
 # yarn v3

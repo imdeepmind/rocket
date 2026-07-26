@@ -1,4 +1,4 @@
-const ENTITY_REGEX = /^[a-z_][a-z0-9_-]*$/;
+const ENTITY_REGEX = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
 
 const ENTITY_RESRVED_WORDS = [
   'all',
@@ -86,7 +86,7 @@ export const validateEntityName = (name: string) => {
   }
   if (!ENTITY_REGEX.test(name)) {
     throw new Error(
-      `Entity name "${name}" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores`,
+      `Entity name "${name}" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores`,
     );
   }
 };

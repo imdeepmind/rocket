@@ -1,5 +1,3 @@
-import swagger from '@fastify/swagger';
-import swaggerUI from '@fastify/swagger-ui';
 import Fastify, {
   FastifyError,
   FastifyInstance,
@@ -9,14 +7,25 @@ import Fastify, {
 
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
+import cachePlugin from '@/plugin/cache';
+import communicatePlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
-import redisPlugin from '@/plugin/redis';
 import responsePlugin from '@/plugin/response';
+import sspPlugin from '@/plugin/ssp';
+import swaggerPlugin from '@/plugin/swagger';
+import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
+import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {
+  registerForgotPasswordOtpVerifyRoute,
+  registerLoginOtpVerifyRoute,
+  registerRegistrationOtpVerifyRoute,
+} from '@/routes/auth/otp-verify';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/interfaces';
@@ -28,50 +37,6 @@ import {RouteInfo} from '@/utils/welcome';
 export interface StartServerResult {
   app: FastifyInstance;
   routes: RouteInfo[];
-}
-
-async function registerSwagger(app: FastifyInstance, config: AppConfig) {
-  const {swagger: swaggerConfig, auth} = config;
-  const components: Record<string, unknown> = {};
-
-  if (auth?.enableAuth && auth?.authEngine === 'up-auth') {
-    components['securitySchemes'] = {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-    };
-  }
-
-  if (auth?.enableAuth && auth.authEngine === 'api-key') {
-    components['securitySchemes'] = {
-      apiKeyAuth: {
-        type: 'apiKey',
-        name: 'api_key',
-        in: 'header',
-      },
-    };
-  }
-
-  if (swaggerConfig.enabled) {
-    // Swagger (OpenAPI spec)
-    await app.register(swagger, {
-      openapi: {
-        info: swaggerConfig.info,
-        components,
-      },
-    });
-
-    // Swagger UI
-    await app.register(swaggerUI, {
-      routePrefix: swaggerConfig.basePath, // UI available at /docs
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: false,
-      },
-    });
-  }
 }
 
 export async function startServer(
@@ -99,6 +64,8 @@ export async function startServer(
     },
   });
 
+  app.appConfig = config;
+
   // Track each registered route
   app.addHook('onRoute', routeOptions => {
     routes.push({
@@ -106,32 +73,45 @@ export async function startServer(
         ? routeOptions.method.join('/')
         : routeOptions.method,
       url: routeOptions.url,
+      apiIdentifier: (routeOptions.config as {apiIdentifier?: string})
+        ?.apiIdentifier,
     });
   });
 
   // config-driven DB
-  await app.register(dbPlugin, config.database);
+  await app.register(dbPlugin);
 
-  // config-driven Redis cache (if configured)
-  if (config.cache_db) {
-    await app.register(redisPlugin, config.cache_db);
+  // config-driven cache (Redis or NodeCache)
+  await app.register(cachePlugin);
+
+  // config-driven integrations (email)
+  if (config.integrations?.email) {
+    await app.register(communicatePlugin);
   }
 
   // config-driven rate limit
-  if (config.application.rateLimit) {
-    const redis =
-      config.cache_db && config.application.rateLimit.useRedis
-        ? app.redis
-        : undefined;
-    await app.register(rateLimitPlugin, {
-      rateLimit: config.application.rateLimit,
-      redis,
-    });
+  if (config.application.rateLimit?.enabled) {
+    await app.register(rateLimitPlugin);
   }
 
   await app.register(responsePlugin);
-  if (config.auth) {
+  await app.register(sspPlugin);
+  await app.register(webhookPlugin);
+  if (config.authentication) {
     await app.register(authPlugin);
+  }
+  // config-driven OTP (required for MFA or forgot-password)
+  if (
+    config.authentication?.provider.type === 'up-auth' &&
+    ((config.authentication.provider.config as {mfaRequired?: boolean})
+      ?.mfaRequired ||
+      config.integrations?.email)
+  ) {
+    await app.register(otpPlugin);
+  }
+  // register swagger
+  if (config.docs.openapi.enabled) {
+    await app.register(swaggerPlugin);
   }
 
   // migrate the db based on config
@@ -139,17 +119,21 @@ export async function startServer(
     await migrateDatabase(config);
   }
 
-  // register swagger
-  await registerSwagger(app, config);
-
   // register config-driven routes (models, aggregations, custom queries)
   registerRoutes(app, config);
 
-  // register auth routes (only when up-auth is configured)
-  if (config.auth) {
+  // register auth routes (only when up-auth is configured and enabled)
+  if (
+    config.authentication?.enabled &&
+    config.authentication?.provider?.type === 'up-auth'
+  ) {
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
+    registerForgotPasswordRoute(app, config);
+    registerLoginOtpVerifyRoute(app, config);
+    registerRegistrationOtpVerifyRoute(app, config);
+    registerForgotPasswordOtpVerifyRoute(app, config);
   }
 
   // Global error handler
@@ -160,6 +144,14 @@ export async function startServer(
       reply: FastifyReply,
     ) => {
       req.log.error(err);
+
+      const errRecord = err as unknown as Record<string, unknown>;
+      if (errRecord.body) {
+        reply
+          .status((errRecord.statusCode as number) || 500)
+          .send(errRecord.body);
+        return;
+      }
 
       // Default from Fastify or fallback
       let statusCode: number = err.statusCode || 500;

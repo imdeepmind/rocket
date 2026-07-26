@@ -1,13 +1,13 @@
 import {FastifyInstance} from 'fastify';
 
 import {registerAggregateRoutes} from '@/routes/aggregate/aggregate';
-import {registerCustomQueryRoutes} from '@/routes/custom-queries/custom-queries';
-import {registerDeleteRoutes} from '@/routes/operations/delete';
-import {registerEditRoutes} from '@/routes/operations/edit';
-import {registerGetAllRoutes} from '@/routes/operations/get-all';
-import {registerIndexRoutes} from '@/routes/operations/index-route';
-import {registerPostRoutes} from '@/routes/operations/post';
-import {registerSearchRoutes} from '@/routes/operations/search';
+import {registerCustomEndpointRoutes} from '@/routes/custom-endpoints/custom-endpoints';
+import {registerDeleteRoutes} from '@/routes/models/delete';
+import {registerEditRoutes} from '@/routes/models/edit';
+import {registerGetAllRoutes} from '@/routes/models/get-all';
+import {registerIndexRoutes} from '@/routes/models/index-route';
+import {registerPostRoutes} from '@/routes/models/post';
+import {registerSearchRoutes} from '@/routes/models/search';
 
 import {AppConfig} from '@/interfaces/config';
 
@@ -25,10 +25,10 @@ import {AppConfig} from '@/interfaces/config';
  *
  *   - AGGREGATE (fields with supportedAggregation)
  *
- *   - CUSTOM_QUERIES (custom queries)
+ *   - CUSTOM_ENDPOINTS (custom endpoints)
  */
 export function registerRoutes(app: FastifyInstance, config: AppConfig): void {
-  // operations
+  // models
   registerIndexRoutes(app, config);
   registerSearchRoutes(app, config);
   registerEditRoutes(app, config);
@@ -39,6 +39,6 @@ export function registerRoutes(app: FastifyInstance, config: AppConfig): void {
   // aggregations
   registerAggregateRoutes(app, config);
 
-  // custom queries
-  registerCustomQueryRoutes(app, config);
+  // custom endpoints
+  registerCustomEndpointRoutes(app, config);
 }

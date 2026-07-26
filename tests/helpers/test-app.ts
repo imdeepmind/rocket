@@ -1,71 +1,77 @@
 import Fastify, {FastifyInstance} from 'fastify';
 
 import authPlugin from '@/plugin/auth';
+import cachePlugin from '@/plugin/cache';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
+import sspPlugin from '@/plugin/ssp';
+import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
 
 import {
   ApisConfig,
   AppConfig,
-  AuthConfig,
-  CustomAPIConfig,
+  AuthenticationConfig,
+  CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
 
-export const mockModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'name', type: 'string'},
-      {name: 'email', type: 'string'},
-    ],
+export const mockModels: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true, autoIncrement: true},
+      name: {type: 'string'},
+      email: {type: 'string'},
+    },
   },
-];
+};
 
 export const pgConfig: DatabaseConfig = {
-  engine: 'pg',
-  connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
-  },
+  engine: 'postgres',
+  connection: {url: 'postgresql://postgres:postgres@localhost:5432/postgres'},
 };
 
 export const sqliteConfig: DatabaseConfig = {
   engine: 'sqlite',
-  connection: {
-    urlOrPath: ':memory:',
-  },
+  connection: {url: ':memory:'},
 };
 
 export async function createTestApp(
   dbConfig: DatabaseConfig,
-  models: ModelConfig[] = [],
+  models: Record<string, ModelConfig> = {},
   apis?: ApisConfig,
-  customAPIs?: CustomAPIConfig,
-  auth?: AuthConfig,
+  customEndpoints?: Record<string, CustomEndpointConfig>,
+  authentication?: AuthenticationConfig,
 ): Promise<FastifyInstance> {
-  const fastify = Fastify();
-  await fastify.register(databasePlugin, dbConfig);
-  await fastify.register(responsePlugin);
-  await fastify.register(authPlugin);
   const appConfig: AppConfig = {
-    application: {logLevel: 'error'},
-    swagger: {
-      enabled: false,
-      basePath: '/docs',
-      info: {title: 'Test', description: 'Test', version: '1.0.0'},
+    application: {name: 'Test App', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
     },
-    database: dbConfig,
-    models,
+    infrastructure: {database: dbConfig},
+    data: {models},
     apis,
-    customAPIs,
-    auth,
+    customEndpoints,
+    authentication,
   };
 
-  if (models.length > 0 || apis || customAPIs) {
+  const fastify = Fastify();
+  fastify.appConfig = appConfig;
+
+  await fastify.register(databasePlugin);
+  await fastify.register(cachePlugin);
+  await fastify.register(responsePlugin);
+  await fastify.register(sspPlugin);
+  await fastify.register(webhookPlugin);
+  await fastify.register(authPlugin);
+
+  if (Object.keys(models).length > 0 || apis || customEndpoints) {
     registerRoutes(fastify, appConfig);
   }
   await fastify.ready();

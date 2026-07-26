@@ -1,66 +1,59 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/interfaces/config';
+import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
-const defaultEditModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const defaultEditModel: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['editable'],
+        apis: ['edit'],
       },
-      {name: 'name', type: 'string'},
-      {name: 'email', type: 'string'},
-    ],
+      name: {type: 'string'},
+      email: {type: 'string'},
+    },
   },
-];
+};
 
-const nonUniqueEditModel: ModelConfig[] = [
-  {
-    name: 'tasks',
-    fields: [
-      {
-        name: 'id',
+const nonUniqueEditModel: Record<string, ModelConfig> = {
+  tasks: {
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: [
-          'lessThan',
-          'lessThanEqual',
-          'greaterThan',
-          'greaterThanEqual',
-          'oneOf',
-        ],
+        query: ['lt', 'lte', 'gt', 'gte', 'in', 'ne', 'not_in'],
       },
-      {
-        name: 'status',
+      status: {
         type: 'string',
-        supportedOperations: ['editable', 'equal', 'lessThan'], // Non-unique identifier
+        apis: ['edit'],
+        query: ['eq', 'lt', 'ne'], // Non-unique identifier
       },
-      {name: 'title', type: 'string', supportedOperations: ['equal']},
-    ],
+      title: {type: 'string', query: ['eq']},
+    },
   },
-];
+};
 
-const validatedEditModel: ModelConfig[] = [
-  {
-    name: 'posts',
+const validatedEditModel: Record<string, ModelConfig> = {
+  posts: {
     validation: {
       type: 'object',
       properties: {
@@ -69,30 +62,30 @@ const validatedEditModel: ModelConfig[] = [
       },
       required: ['title', 'content'],
     },
-    fields: [
-      {
-        name: 'id',
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['editable'],
+        apis: ['edit'],
       },
-      {name: 'title', type: 'string'},
-      {name: 'content', type: 'string'},
-    ],
+      title: {type: 'string'},
+      content: {type: 'string'},
+    },
   },
-];
+};
 
 describe('test edit api', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('PATCH partial updates', () => {
     test('should return 200 on successful PATCH update', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [],
-        rowCount: 1,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -125,8 +118,7 @@ describe('test edit api', () => {
         },
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgClientQueryMock.mock.calls[1];
       // Note: order of keys is not guaranteed by Object.keys, but usually preserved
       expect(callArgs[0]).toMatch(
         /UPDATE "users" SET ".*" = \$1, ".*" = \$2 WHERE "id" = \$3/,
@@ -164,7 +156,7 @@ describe('test edit api', () => {
       });
 
       // The update query should only set "name"
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "users" SET "name" = $1 WHERE "id" = $2',
         ['Alice', 1],
       );
@@ -175,6 +167,11 @@ describe('test edit api', () => {
 
   describe('PUT complete updates', () => {
     test('should return 200 on successful PUT update with all required fields', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
       const response = await fastify.inject({
@@ -230,7 +227,10 @@ describe('test edit api', () => {
     test('should allow partial custom validation for PATCH (required removed)', async () => {
       const fastify = await createTestApp(pgConfig, validatedEditModel);
 
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const response = await fastify.inject({
         method: 'PATCH',
@@ -258,7 +258,7 @@ describe('test edit api', () => {
         },
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" < $3',
         ['Urgent Pending Task', 'pending', 10],
       );
@@ -275,7 +275,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" <= $3',
         ['Update', 'pending', 5],
       );
@@ -292,7 +292,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" > $3',
         ['Update', 'pending', 1],
       );
@@ -309,7 +309,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" >= $3',
         ['Update', 'pending', 2],
       );
@@ -329,9 +329,43 @@ describe('test edit api', () => {
       });
 
       // Query should not include page, limit, or order stuff in WHERE
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2',
         ['Ignored Params Task', 'pending'],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _ne filter alongside path param', async () => {
+      const fastify = await createTestApp(pgConfig, nonUniqueEditModel);
+
+      await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/status/pending?id_ne=10',
+        payload: {title: 'Update'},
+      });
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" != $3',
+        ['Update', 'pending', 10],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _not_in filter alongside path param', async () => {
+      const fastify = await createTestApp(pgConfig, nonUniqueEditModel);
+
+      await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/status/pending?id_not_in=1,2,3',
+        payload: {title: 'Update'},
+      });
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" NOT IN ($3, $4, $5)',
+        ['Update', 'pending', 1, 2, 3],
       );
 
       await fastify.close();
@@ -348,7 +382,7 @@ describe('test edit api', () => {
         },
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgClientQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain(
         'WHERE "status" = $2 AND "title" = $3 AND "id" IN ($4, $5, $6)',
       );
@@ -358,6 +392,85 @@ describe('test edit api', () => {
   });
 
   describe('error handling / edge cases', () => {
+    test('should return 404 when PATCH updates zero rows (record not found)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/999',
+        payload: {name: 'Nobody'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().message).toBe(
+        'No users record found matching the given criteria',
+      );
+
+      await fastify.close();
+    });
+
+    test('should return 404 when PUT updates zero rows (record not found)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/users/id/999',
+        payload: {name: 'Nobody', email: 'nobody@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().message).toBe(
+        'No users record found matching the given criteria',
+      );
+
+      await fastify.close();
+    });
+
+    test('should return 200 when PATCH updates a record successfully', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Found'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      await fastify.close();
+    });
+
+    test('should return 404 when the edit API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, defaultEditModel, {
+        'model.users.id.edit': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 400 for unknown keys in body (schema rejects them)', async () => {
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -394,9 +507,84 @@ describe('test edit api', () => {
     });
   });
 
+  describe('error handling during database operations', () => {
+    test('should return 500 when UPDATE query fails after BEGIN (PATCH)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after UPDATE error (PATCH)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when UPDATE query fails after BEGIN (PUT)', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Update failed')) // UPDATE fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/users/id/1',
+        payload: {name: 'Bob', email: 'bob@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when BEGIN itself fails (PATCH)', async () => {
+      pgClientQueryMock.mockRejectedValueOnce(new Error('BEGIN failed')); // BEGIN fails
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+  });
+
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs->edit->users': {
+      'model.users.id.edit': {
         authorization: true,
       },
     };
@@ -440,7 +628,10 @@ describe('test edit api', () => {
     });
 
     test('should return 200 when auth is enabled and valid token is provided (PATCH)', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(
         pgConfig,

@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
@@ -7,158 +6,178 @@ import {
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
-import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
+import {
+  AppConfig,
+  ModelBody,
+  ModelConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
 
+import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * The number of bcrypt salt rounds used when hashing passwords.
- * 10 is a widely accepted default that balances security and performance.
- */
-const BCRYPT_SALT_ROUNDS = 10;
-
-/**
- * Register the POST /auth/register route.
- *
- * This route is ONLY registered when:
- *   - auth.enableAuth === true
- *   - auth.authEngine === 'up-auth'
- *
- * It accepts the same fields as the auth model (minus the primary key)
- * and hashes the password column before inserting the record into
- * the authModel.modelName table.
- *
- * @param app     - The Fastify application instance.
- * @param models  - All model configs from the top-level config.
- * @param auth    - The auth block from the app config.
- */
 export function registerRegistrationRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  const {models, auth} = config;
+  const {models} = config.data;
 
-  // Guard: only register when up-auth is enabled
-  if (!auth || !auth.enableAuth || auth.authEngine !== 'up-auth') {
-    return;
-  }
+  const upConfig = config.authentication!.provider
+    .config as UpAuthProviderConfig;
+  const {model, passwordField} = upConfig.userModel;
+  const requiresOtp = !!upConfig.userModel.isVerifiedField;
+  const isVerifiedField = upConfig.userModel.isVerifiedField;
 
-  const {modelName, passwordColumn} = auth.authModel;
+  const authModelConfig = models[model];
 
-  // Find the model config that matches the authModel.modelName so we can
-  // derive the request body schema from its fields (just like the POST route).
-  const authModelConfig = models.find(m => m.name === modelName);
+  if (!authModelConfig) return;
 
-  if (!authModelConfig) {
-    // If no matching model is configured, skip silently – config validation
-    // should catch this earlier in the start-up flow.
-    app.log.warn(
-      `[auth/register] Could not find model config for "${modelName}". Skipping route registration.`,
-    );
-    return;
-  }
+  const apiIdentifier = `auth.${model}.all.registration`;
 
-  // Build a JSON schema for the request body, ignoring the primary key column
-  // (the DB generates it) and disallowing additional properties.
+  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
-    passwordColumn,
-    modelName,
+    passwordField,
+    model,
+    requiresOtp,
+    isVerifiedField,
   );
 
   app.post(
     '/auth/register',
-    {schema},
+    {
+      schema,
+      config: {apiIdentifier},
+    },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
-      const incomingBody = request.body;
+      let tx;
+      try {
+        tx = await app.db.beginTransaction();
 
-      // Strip any fields not declared in the model config so nothing sneaks
-      // past the schema validator (primary key excluded as well).
-      const body = stripAdditionalPostFields(authModelConfig, incomingBody, {
-        ignorePrimaryKey: true,
-      });
+        const incomingBody = request.body;
 
-      // Hash the password before storing it.
-      // We only do this when the password column is actually present in the
-      // incoming body; if it's missing AJV validation would have already
-      // rejected the request.
-      if (body[passwordColumn] !== undefined && body[passwordColumn] !== null) {
-        const rawPassword = String(body[passwordColumn]);
-        body[passwordColumn] = await bcrypt.hash(
-          rawPassword,
-          BCRYPT_SALT_ROUNDS,
-        );
-      }
+        const body = stripAdditionalPostFields(authModelConfig, incomingBody, {
+          ignorePrimaryKey: true,
+        });
 
-      // Build the INSERT statement dynamically from the sanitised body keys.
-      const keys = Object.keys(body);
-      const values = Object.values(body);
-      const columns = keys.map(key => `"${key}"`).join(', ');
-      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-      const query = `INSERT INTO "${modelName}" (${columns}) VALUES (${placeholders});`;
-
-      // Execute the query against the configured database.
-      const res = await app.db.query(query, values);
-
-      // Return the created record without leaking the hashed password.
-      // We build a safe copy that omits the password column from the response data.
-      const responseData: ModelBody = {};
-      for (const [k, v] of Object.entries(body)) {
-        if (k !== passwordColumn) {
-          responseData[k] = v;
+        /* c8 ignore start */
+        if (body[passwordField] !== undefined && body[passwordField] !== null) {
+          const rawPassword = String(body[passwordField]);
+          body[passwordField] = await hash(rawPassword);
         }
-      }
+        /* c8 ignore stop */
 
-      return reply
-        .status(201)
-        .send(
-          app.buildResponse(
-            201,
-            `Successfully registered a new user in the ${modelName} table`,
-            responseData,
-            res,
-          ),
-        );
+        if (isVerifiedField) {
+          body[isVerifiedField] = false;
+        }
+
+        const keys = Object.keys(body);
+        const values = Object.values(body);
+        const columns = keys.map(key => `"${key}"`).join(', ');
+        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+        const query = `INSERT INTO "${model}" (${columns}) VALUES (${placeholders});`;
+
+        const res = await tx.query(query, values);
+
+        if (requiresOtp) {
+          const usernameField = upConfig.userModel.usernameField;
+          const userEmail = String(incomingBody[usernameField]);
+          const ulid = await app.otp.sendOTPForVerification(userEmail);
+
+          await tx.commit();
+
+          return reply
+            .status(201)
+            .send(
+              app.buildResponse(
+                201,
+                'Registration successful. OTP sent to your email.',
+                {requiresMfa: true, ulid},
+                res,
+              ),
+            );
+        }
+
+        const responseData: ModelBody = {};
+        for (const [k, v] of Object.entries(body)) {
+          if (k !== passwordField) {
+            responseData[k] = v;
+          }
+        }
+
+        await tx.commit();
+
+        return reply
+          .status(201)
+          .send(
+            app.buildResponse(
+              201,
+              `Successfully registered a new user in the ${model} table`,
+              responseData,
+              res,
+            ),
+          );
+      } catch (err) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw err;
+      } finally {
+        tx?.release();
+      }
     },
   );
 }
 
 function generateSchema(
   authModelConfig: ModelConfig,
-  passwordColumn: string,
-  modelName: string,
+  passwordField: string,
+  model: string,
+  requiresOtp: boolean = false,
+  isVerifiedField?: string,
 ) {
-  const bodySchema = generateJSONValidationSchema(authModelConfig, {
+  const bodyModelConfig =
+    requiresOtp && isVerifiedField
+      ? {
+          ...authModelConfig,
+          fields: Object.fromEntries(
+            Object.entries(authModelConfig.fields).filter(
+              ([name]) => name !== isVerifiedField,
+            ),
+          ),
+        }
+      : authModelConfig;
+  const bodySchema = generateJSONValidationSchema(bodyModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
   });
 
-  // Build a JSON schema for require body, ignoring the password field
-  const authModelConfigWithoutPassowrd = {...authModelConfig};
-  authModelConfigWithoutPassowrd['fields'] = authModelConfigWithoutPassowrd[
-    'fields'
-  ].filter(f => f.name !== passwordColumn);
-  const requiredBodySchema = generateJSONValidationSchema(
-    authModelConfigWithoutPassowrd,
-    {
-      ignorePrimaryKey: true,
-      additionalProperties: false,
-    },
-  );
+  const responseData = requiresOtp
+    ? {
+        type: 'object',
+        properties: {requiresMfa: {type: 'boolean'}, ulid: {type: 'string'}},
+      }
+    : generateJSONValidationSchema(
+        {
+          ...authModelConfig,
+          fields: Object.fromEntries(
+            Object.entries(authModelConfig.fields).filter(
+              ([name]) => name !== passwordField,
+            ),
+          ),
+        },
+        {ignorePrimaryKey: true, additionalProperties: false},
+      );
 
-  // Build the response schema — we mirror the same 201 shape used by the
-  // generic POST route so clients get a consistent envelope.
   const responseSchema = getResponseStructureSchema(
     [201],
-    requiredBodySchema,
-    requiredBodySchema,
+    responseData,
+    responseData,
   );
 
-  // Swagger / JSON-Schema declaration for this route.
   const schema: Record<string, unknown> = {
-    summary: `Register a new ${capitalizeFirstLetter(modelName)} user`,
-    description: `Creates a new user record in the "${modelName}" table. The password is hashed with bcrypt before being persisted.`,
-    tags: [capitalizeFirstLetter(modelName), 'Auth', 'Register'],
+    summary: `Register a new ${capitalizeFirstLetter(model)} user`,
+    description: `Creates a new user record in the "${model}" table. The password is hashed with bcrypt before being persisted.`,
+    tags: [capitalizeFirstLetter(model), 'Auth', 'Register'],
     body: bodySchema,
     response: responseSchema,
   };

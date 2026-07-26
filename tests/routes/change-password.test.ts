@@ -10,43 +10,46 @@ import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 
 import {
   AppConfig,
-  AuthConfig,
+  AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const authModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'email', type: 'string', nullable: false},
-      {name: 'password', type: 'string', nullable: false},
-    ],
+const authModels: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false},
+    },
   },
-];
+};
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
 const pgConfig: DatabaseConfig = {
-  engine: 'pg',
+  engine: 'postgres',
   connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 };
 
@@ -55,28 +58,34 @@ const pgConfig: DatabaseConfig = {
 // ---------------------------------------------------------------------------
 
 async function createAuthApp(
-  auth: AuthConfig,
-  models: ModelConfig[] = authModels,
+  authentication: AuthenticationConfig,
+  models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
+  apis?: Record<string, {enabled: boolean}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  await app.register(databasePlugin, dbConfig);
+  const config: AppConfig = {
+    application: {name: 'Test App', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
+    },
+    infrastructure: {database: dbConfig},
+    data: {models},
+    authentication,
+    ...(apis ? {apis} : {}),
+  };
+  app.appConfig = config;
+  await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  const config: AppConfig = {
-    application: {logLevel: 'error'},
-    swagger: {
-      enabled: false,
-      basePath: '/docs',
-      info: {title: 'Test', description: 'Test', version: '1.0.0'},
-    },
-    database: dbConfig,
-    models,
-    auth,
-  };
-
-  registerChangePasswordRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerChangePasswordRoute(app, config);
+  }
   await app.ready();
   return app;
 }
@@ -88,13 +97,17 @@ async function createAuthApp(
 describe('POST /auth/change-password', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     vi.restoreAllMocks();
   });
 
   describe('guard conditions', () => {
-    test('should NOT register the route when enableAuth is false', async () => {
-      const auth: AuthConfig = {...upAuthConfig, enableAuth: false};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when enabled is false', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        enabled: false,
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',
@@ -105,6 +118,36 @@ describe('POST /auth/change-password', () => {
       expect(response.statusCode).toBe(404);
       await app.close();
     });
+
+    test('should NOT register the route when model is not found in models', async () => {
+      const app = await createAuthApp(upAuthConfig, {});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    test('should NOT register the route when the API is disabled via apis config', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
+        'auth.users.all.changePassword': {enabled: false},
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
   });
 
   describe('happy path', () => {
@@ -113,19 +156,18 @@ describe('POST /auth/change-password', () => {
 
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: user exists for select query
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
-        ],
-        rowCount: 1,
-      });
-
-      // Mock DB: update query success
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [],
-        rowCount: 1,
-      });
+      // Mock transaction: BEGIN, SELECT (user exists), UPDATE, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       // Mock bcrypt: password matches
       const compareSpy = vi
@@ -160,15 +202,13 @@ describe('POST /auth/change-password', () => {
       );
       expect(hashSpy).toHaveBeenCalledWith('new_password', 10);
 
-      // Select query check
-      expect(pgQueryMock).toHaveBeenNthCalledWith(
-        1,
+      // Select query check (inside transaction)
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" = $1 LIMIT 1;',
         [1],
       );
-      // Update query check
-      expect(pgQueryMock).toHaveBeenNthCalledWith(
-        2,
+      // Update query check (inside transaction)
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "users" SET "password" = $1 WHERE "id" = $2;',
         ['new_hashed_password', 1],
       );
@@ -237,8 +277,10 @@ describe('POST /auth/change-password', () => {
       const app = await createAuthApp(upAuthConfig);
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: no user
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      // Mock transaction: BEGIN, SELECT (no user), ROLLBACK
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // SELECT (empty)
 
       const response = await app.inject({
         method: 'POST',
@@ -254,17 +296,40 @@ describe('POST /auth/change-password', () => {
       await app.close();
     });
 
+    test('should handle rollback failure on DB error', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('Query failed')) // SELECT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/change-password',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
     test('should return 401 if existing password does not match', async () => {
       const app = await createAuthApp(upAuthConfig);
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: user exists
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
-        ],
-        rowCount: 1,
-      });
+      // Mock transaction: BEGIN, SELECT (user exists), ROLLBACK
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        });
 
       // Mock bcrypt: password mismatch
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);

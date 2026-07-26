@@ -11,8 +11,16 @@ describe('Config Utilities', () => {
       expect(resolveEnvVars('env:TEST_VAR')).toBe('resolved_value');
     });
 
-    it('should return original string if env var not found', () => {
-      expect(resolveEnvVars('env:NON_EXISTENT')).toBe('env:NON_EXISTENT');
+    it('should throw if env var is not found', () => {
+      expect(() => resolveEnvVars('env:NON_EXISTENT')).toThrow(
+        'environment variable "NON_EXISTENT"',
+      );
+    });
+
+    it('should throw if env var name is empty', () => {
+      expect(() => resolveEnvVars('env:')).toThrow(
+        'has an empty environment variable name',
+      );
     });
 
     it('should not change string if it does not start with env:', () => {
@@ -50,60 +58,66 @@ describe('Config Utilities', () => {
 
   describe('getAPIFromUniqueIdentifier', () => {
     const mockConfig: Partial<AppConfig> = {
-      customAPIs: {
-        customQueries: [
-          {
-            name: 'get_users',
-            method: 'GET',
-            path: '/users',
-            query: 'SELECT * FROM users',
+      customEndpoints: {
+        get_users: {
+          method: 'GET',
+          path: '/users',
+          description: 'Get all users',
+          validation: {},
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users',
           },
-          {
-            name: 'create_user',
-            method: 'POST',
-            path: '/users',
-            query: 'INSERT INTO users ...',
+        },
+        create_user: {
+          method: 'POST',
+          path: '/users',
+          description: 'Create a user',
+          validation: {},
+          handler: {
+            type: 'sql',
+            sql: 'INSERT INTO users ...',
           },
-        ],
+        },
       },
     };
 
-    it('should return the correct custom query config for a valid identifier', () => {
+    it('should return the correct custom endpoint config for a valid identifier', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customAPIs->customQueries->get_users',
+        'customEndpoints.get_users',
       );
-      expect(result).toEqual(mockConfig.customAPIs?.customQueries?.[0]);
+      expect(result).toEqual(mockConfig.customEndpoints?.get_users);
     });
 
-    it('should return null if the first part is not customAPIs', () => {
+    it('should return null if the first part is not customEndpoints', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'modelAPIs->get-all->users',
-      );
-      expect(result).toBeNull();
-    });
-
-    it('should return null if the second part is not customQueries', () => {
-      const result = getAPIFromUniqueIdentifier(
-        mockConfig as AppConfig,
-        'customAPIs->somethingElse->get_users',
+        'model.users.all.getAll',
       );
       expect(result).toBeNull();
     });
 
-    it('should return null if the custom query name is not found', () => {
+    it('should return null if the second part is not all', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customAPIs->customQueries->non_existent',
+        'customEndpoints.somethingElse.get_users',
       );
       expect(result).toBeNull();
     });
 
-    it('should return null if customQueries is missing in config', () => {
+    it('should return null if the custom endpoint name is not found', () => {
+      const result = getAPIFromUniqueIdentifier(
+        mockConfig as AppConfig,
+        'customEndpoints.non_existent',
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should return null if customEndpoints is missing in config', () => {
       const result = getAPIFromUniqueIdentifier(
         {} as AppConfig,
-        'customAPIs->customQueries->get_users',
+        'customEndpoints.get_users',
       );
       expect(result).toBeNull();
     });

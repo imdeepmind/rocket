@@ -1,9 +1,8 @@
 import '@fastify/jwt';
 import 'fastify';
 
-import type Redis from 'ioredis';
-
 import {DatabaseQuery, StructuredResponse} from '@/interfaces';
+import {AppConfig} from '@/interfaces/config';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -15,6 +14,14 @@ declare module '@fastify/jwt' {
 }
 
 declare module 'fastify' {
+  interface FastifyContextConfig {
+    apiIdentifier?: string;
+  }
+
+  interface FastifyRequest {
+    authenticate: () => Promise<void>;
+  }
+
   interface FastifyInstance {
     db: DatabaseQuery;
     buildResponse: <T = unknown, R = unknown>(
@@ -23,7 +30,22 @@ declare module 'fastify' {
       data: T,
       raw_data?: R,
     ) => StructuredResponse<T, R>;
-    redis?: Redis;
+    cache: import('@/plugin/cache').ICache;
     jwt: import('@fastify/jwt').JWT;
+    appConfig: AppConfig;
+    callWebhook: (
+      trigger: 'request' | 'response',
+      request: import('fastify').FastifyRequest,
+      payload: unknown,
+    ) => Promise<void>;
+    enforceSSP: (request: import('fastify').FastifyRequest) => void;
+    communicate: {
+      sendEmail: (
+        email: string,
+        htmlBody: string,
+        body: string,
+      ) => Promise<void>;
+    };
+    otp: import('@/interfaces/otp').IOtpService;
   }
 }

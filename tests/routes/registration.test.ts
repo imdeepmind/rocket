@@ -1,60 +1,60 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import bcrypt from 'bcrypt';
 import Fastify, {FastifyInstance} from 'fastify';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 
 import databasePlugin from '@/plugin/database';
+import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {
   AppConfig,
-  AuthConfig,
+  AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
 /** Minimal model config that matches the authModel in example_config. */
-const authModels: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
-        type: 'integer',
-        primaryKey: true,
-        unique: true,
-        nullable: false,
-      },
-      {name: 'email', type: 'string', nullable: false},
-      {name: 'password', type: 'string', nullable: false},
-      {name: 'name', type: 'string', nullable: true},
-    ],
+const authModels: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+      email: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false},
+      name: {type: 'string', nullable: true},
+      is_active: {type: 'boolean', default: false},
+    },
   },
-];
+};
 
-/** auth config that enables up-auth pointing at the "users" model. */
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
 const pgConfig: DatabaseConfig = {
-  engine: 'pg',
+  engine: 'postgres',
   connection: {
-    urlOrPath: 'postgresql://postgres:postgres@localhost:5432/postgres',
+    url: 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
 };
 
@@ -63,27 +63,33 @@ const pgConfig: DatabaseConfig = {
 // ---------------------------------------------------------------------------
 
 async function createAuthApp(
-  auth: AuthConfig,
-  models: ModelConfig[] = authModels,
+  authentication: AuthenticationConfig,
+  models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
+  apis?: Record<string, {enabled: boolean}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  await app.register(databasePlugin, dbConfig);
+  const config: AppConfig = {
+    application: {name: 'Test App', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
+    },
+    infrastructure: {database: dbConfig},
+    data: {models},
+    authentication,
+    ...(apis ? {apis} : {}),
+  };
+  app.appConfig = config;
+  await app.register(databasePlugin);
   await app.register(responsePlugin);
 
-  const config: AppConfig = {
-    application: {logLevel: 'error'},
-    swagger: {
-      enabled: false,
-      basePath: '/docs',
-      info: {title: 'Test', description: 'Test', version: '1.0.0'},
-    },
-    database: dbConfig,
-    models,
-    auth,
-  };
-
-  registerRegistrationRoute(app, config);
+  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+    registerRegistrationRoute(app, config);
+  }
   await app.ready();
   return app;
 }
@@ -95,8 +101,9 @@ async function createAuthApp(
 describe('POST /auth/register', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     // Default DB response: empty result set
-    pgQueryMock.mockResolvedValue({rows: [], rowCount: 0});
+    pgClientQueryMock.mockResolvedValue({rows: [], rowCount: 0});
   });
 
   // -------------------------------------------------------------------------
@@ -104,9 +111,12 @@ describe('POST /auth/register', () => {
   // -------------------------------------------------------------------------
 
   describe('guard conditions', () => {
-    test('should NOT register the route when enableAuth is false', async () => {
-      const auth: AuthConfig = {...upAuthConfig, enableAuth: false};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when enabled is false', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        enabled: false,
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',
@@ -120,9 +130,12 @@ describe('POST /auth/register', () => {
       await app.close();
     });
 
-    test('should NOT register the route when authEngine is not "up-auth"', async () => {
-      const auth: AuthConfig = {...upAuthConfig, authEngine: 'api-key'};
-      const app = await createAuthApp(auth);
+    test('should NOT register the route when provider type is not "up-auth"', async () => {
+      const authentication: AuthenticationConfig = {
+        ...upAuthConfig,
+        provider: {type: 'api-key', config: {key: 'xxx'}},
+      };
+      const app = await createAuthApp(authentication);
 
       const response = await app.inject({
         method: 'POST',
@@ -135,9 +148,25 @@ describe('POST /auth/register', () => {
       await app.close();
     });
 
-    test('should NOT register the route and log a warning when modelName is not found in models', async () => {
-      // Pass an empty models array so the "users" model cannot be found
-      const app = await createAuthApp(upAuthConfig, []);
+    test('should NOT register the route and log a warning when model is not found in models', async () => {
+      // Pass an empty models object so the "users" model cannot be found
+      const app = await createAuthApp(upAuthConfig, {});
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {email: 'a@b.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    test('should NOT register the route when the API is disabled via apis config', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
+        'auth.users.all.registration': {enabled: false},
+      });
 
       const response = await app.inject({
         method: 'POST',
@@ -212,8 +241,10 @@ describe('POST /auth/register', () => {
         payload: {email: 'carol@example.com', password: 'plaintext'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const [, queryValues] = pgQueryMock.mock.calls[0] as [string, string[]];
+      expect(pgClientQueryMock).toHaveBeenCalled();
+      const [, queryValues] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, string[]];
 
       // The stored password should be a bcrypt hash, not the plain text
       const storedPassword = queryValues[1]; // password is the 2nd value (after email)
@@ -232,8 +263,9 @@ describe('POST /auth/register', () => {
         payload: {email: 'dave@example.com', password: 'secret'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Table name must be the authModel.modelName
       expect(query).toContain('INSERT INTO "users"');
@@ -258,7 +290,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query, values] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query, values] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       expect(query).toContain('"name"');
       // "Eve" should appear in the values (name is the last value)
@@ -287,7 +321,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Unknown fields must not appear in the query
       expect(query).not.toContain('unknownField');
@@ -309,7 +345,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Primary key "id" must be stripped
       expect(query).not.toContain('"id"');
@@ -389,7 +427,27 @@ describe('POST /auth/register', () => {
   describe('error handling', () => {
     test('should return 500 when the database query throws', async () => {
       const app = await createAuthApp(upAuthConfig);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {email: 'ivan@example.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
+    test('should handle rollback failure gracefully', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
 
       const response = await app.inject({
         method: 'POST',
@@ -409,7 +467,10 @@ describe('POST /auth/register', () => {
       const constraintError = Object.assign(new Error('unique violation'), {
         code: '23505',
       });
-      pgQueryMock.mockRejectedValueOnce(constraintError);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(constraintError) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
 
       const response = await app.inject({
         method: 'POST',
@@ -427,31 +488,33 @@ describe('POST /auth/register', () => {
   // -------------------------------------------------------------------------
 
   describe('custom authModel column names', () => {
-    const customModels: ModelConfig[] = [
-      {
-        name: 'accounts',
-        fields: [
-          {
-            name: 'account_id',
+    const customModels: Record<string, ModelConfig> = {
+      accounts: {
+        fields: {
+          account_id: {
             type: 'integer',
             primaryKey: true,
             nullable: false,
             unique: true,
           },
-          {name: 'username', type: 'string', nullable: false},
-          {name: 'secret', type: 'string', nullable: false},
-        ],
+          username: {type: 'string', nullable: false},
+          secret: {type: 'string', nullable: false},
+        },
       },
-    ];
+    };
 
-    const customAuth: AuthConfig = {
-      enableAuth: true,
-      authEngine: 'up-auth',
-      authModel: {
-        modelName: 'accounts',
-        idColumn: 'account_id',
-        usernameColumn: 'username',
-        passwordColumn: 'secret',
+    const customAuth: AuthenticationConfig = {
+      enabled: true,
+      provider: {
+        type: 'up-auth',
+        config: {
+          userModel: {
+            model: 'accounts',
+            idField: 'account_id',
+            usernameField: 'username',
+            passwordField: 'secret',
+          },
+        },
       },
     };
 
@@ -471,7 +534,9 @@ describe('POST /auth/register', () => {
       expect(body.data).not.toHaveProperty('secret');
       expect(body.data).toMatchObject({username: 'judy'});
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
       expect(query).toContain('INSERT INTO "accounts"');
 
       await app.close();
@@ -490,6 +555,153 @@ describe('POST /auth/register', () => {
       expect(hashSpy).toHaveBeenCalledWith('rawpass', 10);
 
       hashSpy.mockRestore();
+      await app.close();
+    });
+  });
+
+  describe('MFA registration flow', () => {
+    async function createAuthAppWithMfa(
+      authentication: AuthenticationConfig,
+      models: Record<string, ModelConfig> = authModels,
+      dbConfig: DatabaseConfig = pgConfig,
+    ): Promise<FastifyInstance> {
+      const app = Fastify();
+      const config: AppConfig = {
+        application: {name: 'Test App', logLevel: 'error'},
+        docs: {
+          openapi: {
+            enabled: false,
+            path: '/docs',
+            info: {title: 'Test', description: 'Test', version: '1.0.0'},
+          },
+        },
+        infrastructure: {database: dbConfig},
+        data: {models},
+        authentication,
+      };
+      app.appConfig = config;
+
+      const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
+      (app as any).cache = {
+        get: vi.fn(async (key: string) => {
+          const item = cacheStorage.get(key);
+          if (!item) return null;
+          return item.value;
+        }),
+        set: vi.fn(async (key: string, value: unknown, ttlSeconds?: number) => {
+          const expiry = ttlSeconds
+            ? Date.now() + ttlSeconds * 1000
+            : undefined;
+          cacheStorage.set(key, {value, expiry});
+        }),
+        delete: vi.fn(async (key: string) => {
+          cacheStorage.delete(key);
+        }),
+      };
+      (app as any).communicate = {
+        sendEmail: vi.fn(async () => {}),
+      };
+
+      await app.register(databasePlugin);
+      await app.register(responsePlugin);
+      await app.register(otpPlugin);
+
+      if (
+        authentication?.enabled &&
+        authentication.provider?.type === 'up-auth'
+      ) {
+        registerRegistrationRoute(app, config);
+      }
+      await app.ready();
+      return app;
+    }
+
+    test('should return requiresMfa and ulid when isVerifiedField is set', async () => {
+      const otpAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+              isVerifiedField: 'is_active',
+            },
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(otpAuthConfig);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'alice@example.com',
+          password: 'p@ssw0rd',
+          name: 'Alice',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = response.json();
+      expect(body.message).toBe(
+        'Registration successful. OTP sent to your email.',
+      );
+      expect(body.data.requiresMfa).toBe(true);
+      expect(typeof body.data.ulid).toBe('string');
+      expect(body.data.ulid.length).toBeGreaterThan(0);
+
+      await app.close();
+    });
+
+    test('should strip isVerifiedField from body and force to false in INSERT query', async () => {
+      const otpAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+              isVerifiedField: 'is_active',
+            },
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(otpAuthConfig);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'bob@example.com',
+          password: 'secret',
+          name: 'Bob',
+          is_active: true,
+        },
+      });
+
+      // is_active is silently stripped/overridden; registration proceeds
+      expect(response.statusCode).toBe(201);
+
+      // Verify the INSERT query includes is_active = false
+      const insertCall = pgClientQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return (
+          typeof query === 'string' && (query as string).includes('INSERT')
+        );
+      });
+      expect(insertCall).toBeDefined();
+      const [insertQuery, insertValues] = insertCall as [string, unknown[]];
+      expect(insertQuery).toContain('"is_active"');
+      const isActiveIdx = insertValues.findIndex(v => v === false);
+      expect(isActiveIdx).toBeGreaterThanOrEqual(0);
+      expect(insertValues[isActiveIdx]).toBe(false);
+
       await app.close();
     });
   });

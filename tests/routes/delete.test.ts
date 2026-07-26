@@ -1,59 +1,58 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/interfaces/config';
+import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
-const singleDeletableModel: ModelConfig[] = [
-  {
-    name: 'users',
-    fields: [
-      {
-        name: 'id',
+const singleDeletableModel: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['deletable'],
+        apis: ['delete'],
       },
-      {name: 'name', type: 'string'},
-    ],
+      name: {type: 'string'},
+    },
   },
-];
+};
 
-const multipleDeletableFieldsModel: ModelConfig[] = [
-  {
-    name: 'posts',
-    fields: [
-      {
-        name: 'id',
+const multipleDeletableFieldsModel: Record<string, ModelConfig> = {
+  posts: {
+    fields: {
+      id: {
         type: 'integer',
         primaryKey: true,
-        supportedOperations: ['deletable'],
+        apis: ['delete'],
       },
-      {name: 'slug', type: 'string', supportedOperations: ['deletable']},
-      {name: 'title', type: 'string'},
-    ],
+      slug: {type: 'string', apis: ['delete']},
+      title: {type: 'string'},
+    },
   },
-];
+};
 
-const noDeletableFieldsModel: ModelConfig[] = [
-  {
-    name: 'logs',
-    fields: [
-      {name: 'id', type: 'integer', primaryKey: true},
-      {name: 'message', type: 'string'},
-    ],
+const noDeletableFieldsModel: Record<string, ModelConfig> = {
+  logs: {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      message: {type: 'string'},
+    },
   },
-];
+};
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
@@ -61,6 +60,7 @@ describe('test delete api', () => {
   beforeEach(() => {
     // Clear mock state between tests so call assertions are isolated
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('happy path', () => {
@@ -74,8 +74,7 @@ describe('test delete api', () => {
 
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "users" WHERE "id" = $1;',
         [42],
       );
@@ -84,14 +83,13 @@ describe('test delete api', () => {
     });
 
     test('should delete a record by string field and return 204', async () => {
-      const customModels: ModelConfig[] = [
-        {
-          name: 'posts',
-          fields: [
-            {name: 'slug', type: 'string', supportedOperations: ['deletable']},
-          ],
+      const customModels: Record<string, ModelConfig> = {
+        posts: {
+          fields: {
+            slug: {type: 'string', apis: ['delete']},
+          },
         },
-      ];
+      };
       const fastify = await createTestApp(pgConfig, customModels);
 
       const response = await fastify.inject({
@@ -101,8 +99,7 @@ describe('test delete api', () => {
 
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "slug" = $1;',
         ['hello-world'],
       );
@@ -122,12 +119,12 @@ describe('test delete api', () => {
         url: '/posts/id/10',
       });
       expect(byId.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "id" = $1;',
         [10],
       );
 
-      pgQueryMock.mockClear();
+      pgClientQueryMock.mockClear();
 
       // Delete by slug
       const bySlug = await fastify.inject({
@@ -135,7 +132,7 @@ describe('test delete api', () => {
         url: '/posts/slug/my-post',
       });
       expect(bySlug.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "slug" = $1;',
         ['my-post'],
       );
@@ -145,6 +142,21 @@ describe('test delete api', () => {
   });
 
   describe('edge cases', () => {
+    test('should return 404 when the delete API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel, {
+        'model.users.id.delete': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 404 when model has no deletable fields', async () => {
       const fastify = await createTestApp(pgConfig, noDeletableFieldsModel);
 
@@ -177,7 +189,26 @@ describe('test delete api', () => {
   describe('error handling', () => {
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, singleDeletableModel);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // DELETE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      expect(response.statusCode).toBe(500);
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // DELETE
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
 
       const response = await fastify.inject({
         method: 'DELETE',
@@ -191,7 +222,7 @@ describe('test delete api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs->delete->users': {
+      'model.users.id.delete': {
         authorization: true,
       },
     };
@@ -262,14 +293,11 @@ describe('test delete api', () => {
     });
 
     test('should handle api-key auth (security schema check)', async () => {
-      const apiKeyAuth: AuthConfig = {
-        enableAuth: true,
-        authEngine: 'api-key',
-        authModel: {
-          modelName: 'users',
-          idColumn: 'id',
-          usernameColumn: 'email',
-          passwordColumn: 'password',
+      const apiKeyAuth: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {key: 'test-key'},
         },
       };
 
@@ -287,6 +315,40 @@ describe('test delete api', () => {
       });
 
       expect(response.statusCode).toBe(401);
+      await fastify.close();
+    });
+
+    test('should skip auth check when authentication.enabled is false', async () => {
+      const disabledAuth: AuthenticationConfig = {
+        enabled: false,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      };
+
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        apisConfig,
+        undefined,
+        disabledAuth,
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      // Should succeed because authentication is disabled, auth check is skipped
+      expect(response.statusCode).toBe(204);
       await fastify.close();
     });
   });

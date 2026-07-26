@@ -17,6 +17,7 @@ module.exports = {
     '',
     '^@/validators(/.*)?$',
     '^@/utils(/.*)?$',
+    '^@/constants(/.*)?$',
     '',
     '^@tests(/.*)?$',
     '',

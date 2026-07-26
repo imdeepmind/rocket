@@ -1,75 +1,195 @@
-import {AppConfig} from '@/interfaces/config';
+import {
+  ApiKeyProviderConfig,
+  AppConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
+
+function isUpAuthConfig(
+  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
+): config is UpAuthProviderConfig {
+  return config !== undefined && 'userModel' in config;
+}
+
+function isApiKeyConfig(
+  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
+): config is ApiKeyProviderConfig {
+  return config !== undefined && 'key' in config;
+}
 
 function validateAuthConstraints(config: AppConfig): string[] {
   const errors: string[] = [];
 
-  // if authModel is api-key, then apiKey is required
-  if (config.auth?.authEngine === 'api-key' && !config.auth?.apiKey) {
-    errors.push('/auth/apiKey: apiKey is required when authEngine is api-key');
+  const authentication = config.authentication;
+
+  if (!authentication) {
+    return errors;
   }
 
-  // if authModel is api-key, then authModel should not be present
-  if (config.auth?.authEngine === 'api-key' && config.auth?.authModel) {
-    errors.push(
-      '/auth/authModel: authModel should not be present when authEngine is api-key',
-    );
+  const providerType = authentication.provider?.type;
+  const providerConfig = authentication.provider?.config;
+
+  if (!providerConfig) {
+    errors.push('/authentication/provider/config: provider config is required');
+    return errors;
   }
 
-  // if authModel is up-auth, then authModel is required
-  if (config.auth?.authEngine === 'up-auth' && !config.auth?.authModel) {
-    errors.push(
-      '/auth/authModel: authModel is required when authEngine is up-auth',
-    );
-  }
+  if (providerType === 'api-key') {
+    const apiConfig = providerConfig as ApiKeyProviderConfig;
 
-  // if authModel is up-auth, then apiKey should not be present
-  if (config.auth?.authEngine === 'up-auth' && config.auth?.apiKey) {
-    errors.push(
-      '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
-    );
-  }
-
-  // check if authModel.modelName exists in models
-  if (config.auth?.authEngine === 'up-auth' && config.auth?.authModel) {
-    if (
-      config.auth?.authModel.modelName &&
-      !config.models.some(m => m.name === config.auth?.authModel.modelName)
-    ) {
-      errors.push('/auth/authModel/modelName: model does not exist');
-    }
-
-    // check if authModel.idColumn exists in models
-    if (
-      config.auth?.authModel.idColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.idColumn),
-      )
-    ) {
-      errors.push('/auth/authModel/idColumn: field does not exist in model');
-    }
-
-    // check if authModel.usernameColumn exists in models
-    if (
-      config.auth?.authModel.usernameColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.usernameColumn),
-      )
-    ) {
+    if (!apiConfig.key) {
       errors.push(
-        '/auth/authModel/usernameColumn: field does not exist in model',
+        '/authentication/provider/config/key: key is required when provider type is api-key',
       );
     }
 
-    // check if authModel.passwordColumn exists in models
-    if (
-      config.auth?.authModel.passwordColumn &&
-      !config.models.some(m =>
-        m.fields.some(f => f.name === config.auth?.authModel.passwordColumn),
-      )
-    ) {
+    if (isUpAuthConfig(providerConfig)) {
       errors.push(
-        '/auth/authModel/passwordColumn: field does not exist in model',
+        '/authentication/provider/config/userModel: userModel should not be present when provider type is api-key',
       );
+    }
+
+    if ((providerConfig as UpAuthProviderConfig)?.jwtSecret) {
+      errors.push(
+        '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
+      );
+    }
+  }
+
+  if (providerType === 'up-auth') {
+    const upConfig = providerConfig as UpAuthProviderConfig;
+
+    if (!upConfig.userModel) {
+      errors.push(
+        '/authentication/provider/config/userModel: userModel is required when provider type is up-auth',
+      );
+    }
+
+    if (!upConfig.jwtSecret) {
+      errors.push(
+        '/authentication/provider/config/jwtSecret: jwtSecret is required when provider type is up-auth',
+      );
+    }
+
+    if (upConfig.mfaRequired) {
+      if (!config.infrastructure?.cache) {
+        errors.push(
+          '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
+        );
+      }
+      if (!config.integrations?.email) {
+        errors.push(
+          '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
+        );
+      }
+    }
+
+    if (upConfig.userModel?.isVerifiedField && !config.integrations?.email) {
+      errors.push(
+        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
+      );
+    }
+
+    if (isApiKeyConfig(providerConfig)) {
+      errors.push(
+        '/authentication/provider/config/key: key should not be present when provider type is up-auth',
+      );
+    }
+
+    if (upConfig.userModel) {
+      const targetModel = upConfig.userModel.model
+        ? config.data.models[upConfig.userModel.model]
+        : undefined;
+
+      if (upConfig.userModel.model && !targetModel) {
+        errors.push(
+          '/authentication/provider/config/userModel/model: model does not exist',
+        );
+      }
+
+      if (
+        upConfig.userModel.idField &&
+        typeof upConfig.userModel.idField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/idField: must be a string',
+        );
+      }
+
+      if (
+        upConfig.userModel.usernameField &&
+        typeof upConfig.userModel.usernameField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/usernameField: must be a string',
+        );
+      }
+
+      if (
+        upConfig.userModel.passwordField &&
+        typeof upConfig.userModel.passwordField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/passwordField: must be a string',
+        );
+      }
+
+      if (
+        upConfig.userModel.isVerifiedField &&
+        typeof upConfig.userModel.isVerifiedField !== 'string'
+      ) {
+        errors.push(
+          '/authentication/provider/config/userModel/isVerifiedField: must be a string',
+        );
+      }
+
+      if (targetModel) {
+        if (
+          typeof upConfig.userModel.idField === 'string' &&
+          !(upConfig.userModel.idField in targetModel.fields)
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/idField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.usernameField === 'string' &&
+          !(upConfig.userModel.usernameField in targetModel.fields)
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.passwordField === 'string' &&
+          !(upConfig.userModel.passwordField in targetModel.fields)
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/passwordField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.isVerifiedField === 'string' &&
+          !(upConfig.userModel.isVerifiedField in targetModel.fields)
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
+          );
+        }
+
+        if (
+          typeof upConfig.userModel.isVerifiedField === 'string' &&
+          upConfig.userModel.isVerifiedField in targetModel.fields &&
+          targetModel.fields[upConfig.userModel.isVerifiedField]?.type !==
+            'boolean'
+        ) {
+          errors.push(
+            '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
+          );
+        }
+      }
     }
   }
 

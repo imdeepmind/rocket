@@ -1,216 +1,218 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 
 import {
   ApisConfig,
   AppConfig,
-  CustomQueryConfig,
+  CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
+import {ajv} from '@/validators/config/schema';
+import validateAuthConstraints from '@/validators/config/validate-auth';
+import * as entityModule from '@/validators/entity';
 
 const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
     engine: 'sqlite',
     connection: {
-      urlOrPath: './test.db',
+      url: './test.db',
     },
   };
 };
 
-const getDefaultModelConfig = (): ModelConfig[] => {
-  return [
-    {
-      name: 'users',
-      fields: [
-        {
-          name: 'id',
-          type: 'integer',
-          primaryKey: true,
-          unique: true,
-          nullable: false,
-        },
-        {
-          name: 'name',
-          type: 'string',
-        },
-        {
-          name: 'is_active',
-          type: 'boolean',
-        },
-        {
-          name: 'updated_at',
-          type: 'datetime',
-        },
-      ],
+const getDefaultModelConfig = (): Record<string, ModelConfig> => {
+  return {
+    users: {
+      fields: {
+        id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
+        name: {type: 'string'},
+        is_active: {type: 'boolean'},
+        updated_at: {type: 'datetime'},
+      },
     },
-    {
-      name: 'posts',
-      fields: [
-        {
-          name: 'title',
+    posts: {
+      fields: {
+        title: {
           type: 'string',
           nullable: false,
-          supportedOperations: ['searchable', 'sortable'],
-          supportedAggregation: ['count'],
+          apis: ['search'],
+          query: ['sort'],
+          aggregations: ['count'],
         },
-        {
-          name: 'body',
-          type: 'text',
-          nullable: true,
-        },
-        {
-          name: 'user_id',
+        body: {type: 'text', nullable: true},
+        user_id: {
           type: 'integer',
           nullable: false,
-          supportedOperations: ['equal', 'oneOf'],
-          supportedAggregation: ['count'],
+          query: ['eq', 'in'],
+          aggregations: ['count'],
         },
-        {
-          name: 'created_at',
-          type: 'datetime',
-          supportedOperations: ['lessThan', 'greaterThan', 'sortable'],
-        },
-      ],
+        created_at: {type: 'datetime', query: ['lt', 'gt', 'sort']},
+      },
     },
-  ];
+  };
 };
 
 const validBaseConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
-  swagger: {
-    enabled: true,
-    basePath: '/api',
-    info: {
-      title: 'Test API',
-      description: 'Test API description for testing',
-      version: '1.0.0',
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/api',
+      info: {
+        title: 'Test API',
+        description: 'Test API description for testing',
+        version: '1.0.0',
+      },
     },
   },
-  database: getDefaultDatabaseConfig(),
-  models: getDefaultModelConfig(),
+  infrastructure: {database: getDefaultDatabaseConfig()},
+  data: {models: getDefaultModelConfig()},
 };
 
-describe('validateInvalidSwaggerConfig', () => {
+describe('validateInvalidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as invalid',
       patch: {enabled: 'wrong'},
-      expected: '/swagger/enabled must be boolean',
+      expected: '/docs/openapi/enabled must be boolean',
     },
     {
       name: 'enabled as undefined',
       patch: {enabled: undefined},
-      expected: "/swagger must have required property 'enabled'",
+      expected: "/docs/openapi must have required property 'enabled'",
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'wrong'},
+      name: 'invalid path',
+      patch: {path: 'wrong'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'invalid base path',
-      patch: {basePath: 'api/docs'},
+      name: 'invalid path missing leading slash',
+      patch: {path: 'api/docs'},
       expected:
-        '/swagger/basePath must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
+        '/docs/openapi/path must match pattern "^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$"',
     },
     {
-      name: 'swagger title undefined',
-      patch: {info: {title: undefined}},
-      expected: "/swagger/info must have required property 'title'",
+      name: 'openapi title undefined',
+      patch: {info: {title: undefined, version: '1.0.0'}},
+      expected: "/docs/openapi/info must have required property 'title'",
     },
     {
-      name: 'swagger title too small',
-      patch: {info: {title: '1234'}},
-      expected: '/swagger/info/title must NOT have fewer than 5 characters',
-    },
-    {
-      name: 'swagger description too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, description: '1234'},
-      },
+      name: 'openapi title too small',
+      patch: {info: {title: '1234', version: '1.0.0'}},
       expected:
-        '/swagger/info/description must NOT have fewer than 25 characters',
+        '/docs/openapi/info/title must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi description too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
+          description: '',
+        },
+      },
+      expected:
+        '/docs/openapi/info/description must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi version missing',
+      patch: {info: {title: validBaseConfig.docs.openapi.info.title}},
+      expected: "/docs/openapi/info must have required property 'version'",
+    },
+    {
+      name: 'openapi termsOfService not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '1234',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger termsOfService not valid url',
+      name: 'openapi termsOfService not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: '/api/base',
         },
       },
-      expected: '/swagger/info/termsOfService must match format "uri"',
+      expected: '/docs/openapi/info/termsOfService must match format "uri"',
     },
     {
-      name: 'swagger contact name too small',
+      name: 'openapi contact name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234'},
         },
       },
       expected:
-        '/swagger/info/contact/name must NOT have fewer than 5 characters',
+        '/docs/openapi/info/contact/name must NOT have fewer than 5 characters',
     },
     {
-      name: 'swagger contact url is not valid url',
+      name: 'openapi contact url is not valid url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/contact/url must match format "uri"',
+      expected: '/docs/openapi/info/contact/url must match format "uri"',
     },
     {
-      name: 'swagger contact email is not valid email',
+      name: 'openapi contact email is not valid email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: '1234', email: '1234'},
         },
       },
-      expected: '/swagger/info/contact/email must match format "email"',
+      expected: '/docs/openapi/info/contact/email must match format "email"',
     },
     {
-      name: 'swagger contact license name too small',
-      patch: {
-        info: {title: validBaseConfig.swagger.info.title, license: {name: ''}},
-      },
-      expected:
-        '/swagger/info/license/name must NOT have fewer than 1 characters',
-    },
-    {
-      name: 'swagger contact license uri is not valid url',
+      name: 'openapi license name too small',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
+          license: {name: ''},
+        },
+      },
+      expected:
+        '/docs/openapi/info/license/name must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'openapi license uri is not valid url',
+      patch: {
+        info: {
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: '/api/base'},
         },
       },
-      expected: '/swagger/info/license/url must match format "uri"',
+      expected: '/docs/openapi/info/license/url must match format "uri"',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 
@@ -218,9 +220,19 @@ describe('validateInvalidSwaggerConfig', () => {
       expected,
     );
   });
+
+  it('should throw when openapi property is missing from docs', () => {
+    const config = {
+      ...validBaseConfig,
+      docs: {} as typeof validBaseConfig.docs,
+    };
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "/docs must have required property 'openapi'",
+    );
+  });
 });
 
-describe('validateValidSwaggerConfig', () => {
+describe('validateValidDocsConfig', () => {
   it.each([
     {
       name: 'enabled as true',
@@ -231,54 +243,59 @@ describe('validateValidSwaggerConfig', () => {
       patch: {enabled: false},
     },
     {
-      name: 'valid base path',
-      patch: {basePath: '/api/docs'},
+      name: 'valid path',
+      patch: {path: '/api/docs'},
     },
     {
-      name: 'swagger title',
-      patch: {info: {title: 'Valid docs title'}},
+      name: 'openapi title',
+      patch: {info: {title: 'Valid docs title', version: '1.0.0'}},
     },
     {
-      name: 'swagger description',
+      name: 'openapi description',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           description: 'This is 25 chars long valid api description',
         },
       },
     },
     {
-      name: 'swagger termsOfService',
+      name: 'openapi termsOfService',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           termsOfService: 'https://imdeepmind.com/terms',
         },
       },
     },
     {
-      name: 'swagger contact name',
+      name: 'openapi contact name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee'},
         },
       },
     },
     {
-      name: 'swagger contact url',
+      name: 'openapi contact url',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {name: 'Abhishek Chatterjee', url: 'https://imdeepmind.com'},
         },
       },
     },
     {
-      name: 'swagger contact email',
+      name: 'openapi contact email',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           contact: {
             name: 'Abhishek Chatterjee',
             email: 'abhishek@imdeepmind.com',
@@ -287,29 +304,33 @@ describe('validateValidSwaggerConfig', () => {
       },
     },
     {
-      name: 'swagger contact license name',
+      name: 'openapi license name',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT'},
         },
       },
     },
     {
-      name: 'swagger contact license uri',
+      name: 'openapi license uri',
       patch: {
         info: {
-          title: validBaseConfig.swagger.info.title,
+          title: validBaseConfig.docs.openapi.info.title,
+          version: '1.0.0',
           license: {name: 'MIT', url: 'https://opensource.org/licenses/MIT'},
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      swagger: {
-        ...validBaseConfig.swagger,
-        ...patch,
+      docs: {
+        openapi: {
+          ...validBaseConfig.docs.openapi,
+          ...patch,
+        } as typeof validBaseConfig.docs.openapi,
       },
     };
 
@@ -321,43 +342,45 @@ describe('validateInvalidDatabaseConfig', () => {
   it.each([
     {
       name: 'engine as invalid',
-      patch: {engine: 'wrong', connection: {urlOrPath: './database.db'}},
-      expected: '/database/engine must be equal to constant',
+      patch: {engine: 'wrong', connection: {url: './database.db'}},
+      expected: '/infrastructure/database/engine must be equal to constant',
     },
     {
       name: 'engine as undefined',
-      patch: {engine: undefined, connection: {urlOrPath: './database.db'}},
-      expected: "/database must have required property 'engine'",
+      patch: {engine: undefined, connection: {url: './database.db'}},
+      expected: "/infrastructure/database must have required property 'engine'",
     },
     {
-      name: 'connection.urlOrPath as empty string',
-      patch: {engine: 'pg', connection: {urlOrPath: ''}},
+      name: 'connection.url as empty string',
+      patch: {engine: 'postgres', connection: {url: ''}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
-      name: 'connection.urlOrPath wrong pg connection string',
-      patch: {engine: 'pg', connection: {urlOrPath: './database.db'}},
+      name: 'connection.url wrong pg connection string',
+      patch: {engine: 'postgres', connection: {url: './database.db'}},
       expected:
-        '/database/connection/urlOrPath must match pattern "^postgres(ql)?:\\/\\/"',
+        '/infrastructure/database/connection/url must match pattern "^postgres(ql)?:\\/\\/"',
     },
     {
-      name: 'connection.urlOrPath wrong sqlite connection string',
+      name: 'connection.url wrong sqlite connection string',
       patch: {
         engine: 'sqlite',
         connection: {
-          urlOrPath: '.postgres://devuser:devpassword@db:5432/rocketdb',
+          url: '.postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
       expected:
-        '/database/connection/urlOrPath must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
+        '/infrastructure/database/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        database: {
+          ...validBaseConfig.infrastructure.database,
+          ...patch,
+        },
       },
     };
 
@@ -370,24 +393,26 @@ describe('validateInvalidDatabaseConfig', () => {
 describe('validateValidDatabaseConfig', () => {
   it.each([
     {
-      name: 'engine as pg',
+      name: 'engine as postgres',
       patch: {
-        engine: 'pg',
+        engine: 'postgres',
         connection: {
-          urlOrPath: 'postgres://devuser:devpassword@db:5432/rocketdb',
+          url: 'postgres://devuser:devpassword@db:5432/rocketdb',
         },
       },
     },
     {
       name: 'engine as sqlite',
-      patch: {engine: 'sqlite', connection: {urlOrPath: './database.db'}},
+      patch: {engine: 'sqlite', connection: {url: './database.db'}},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      database: {
-        ...validBaseConfig.database,
-        ...patch,
+      infrastructure: {
+        database: {
+          ...validBaseConfig.infrastructure.database,
+          ...patch,
+        },
       },
     };
 
@@ -397,721 +422,433 @@ describe('validateValidDatabaseConfig', () => {
 
 describe('validateInvalidModelFieldsConfig', () => {
   it.each([
-    // ============== invalid name tests ==============
-    {
-      name: 'invalid name',
-      patch: {name: '132234asd'},
-      expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid name',
-      patch: {name: 'sad asdas'},
-      expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'name as undefined',
-      patch: {name: undefined},
-      expected: "/models/0 must have required property 'name'",
-    },
     // ============== end of invalid name tests ===============
     // ============== invalid fields tests ==============
     {
       name: 'empty field',
-      patch: {name: 'test', fields: []},
-      expected: '/models/0/fields must NOT have fewer than 1 items',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: '132234asd'}]},
+      patch: {fields: {}},
       expected:
-        'Entity name "132234asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: 'sad asdas'}]},
-      expected:
-        'Entity name "sad asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'invalid field.name',
-      patch: {name: 'test', fields: [{name: undefined}]},
-      expected: "/models/0/fields/0 must have required property 'name'",
+        '/data/models/test/fields must NOT have fewer than 1 properties',
     },
     {
       name: 'invalid field.type',
-      patch: {name: 'test', fields: [{name: 'test', type: undefined}]},
-      expected: "/models/0/fields/0 must have required property 'type'",
+      patch: {fields: {test: {type: undefined}}},
+      expected:
+        "/data/models/test/fields/test must have required property 'type'",
     },
     {
       name: 'invalid field.type',
-      patch: {name: 'test', fields: [{name: 'test', type: 'invalid'}]},
+      patch: {fields: {test: {type: 'invalid'}}},
       expected:
-        '/models/0/fields/0/type must be equal to one of the allowed values',
+        '/data/models/test/fields/test/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'integer', primaryKey: 'invalid'}],
+        fields: {test: {type: 'integer', primaryKey: 'invalid'}},
       },
-      expected: '/models/0/fields/0/primaryKey must be boolean',
+      expected: '/data/models/test/fields/test/primaryKey must be boolean',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'boolean', primaryKey: true}],
+        fields: {test: {type: 'boolean', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found boolean)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found boolean)',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', primaryKey: true}],
+        fields: {test: {type: 'text', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found text)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found text)',
     },
     {
       name: 'invalid field.primaryKey',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'datetime', primaryKey: true}],
+        fields: {test: {type: 'datetime', primaryKey: true}},
       },
       expected:
-        '/models/0/fields/0: primaryKey field must be of type integer or string (found datetime)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found datetime)',
     },
     {
       name: 'invalid field.unique',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', unique: 'invalid'}],
+        fields: {test: {type: 'string', unique: 'invalid'}},
       },
-      expected: '/models/0/fields/0/unique must be boolean',
+      expected: '/data/models/test/fields/test/unique must be boolean',
     },
     {
-      name: 'field.unique=False and primaryKey=True',
+      name: 'invalid field.autoIncrement',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', primaryKey: true, unique: false},
-        ],
+        fields: {test: {type: 'integer', autoIncrement: 'invalid'}},
       },
-      expected: '/models/0/fields/0: primaryKey field must have unique=true',
+      expected: '/data/models/test/fields/test/autoIncrement must be boolean',
+    },
+    {
+      name: 'autoIncrement on non-primaryKey field',
+      patch: {
+        fields: {test: {type: 'integer', autoIncrement: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: autoIncrement is only allowed on primaryKey fields',
+    },
+    {
+      name: 'autoIncrement on non-integer primaryKey',
+      patch: {
+        fields: {test: {type: 'string', primaryKey: true, autoIncrement: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: autoIncrement is only allowed on integer primaryKey fields',
     },
     {
       name: 'invalid field.nullable',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', nullable: 'invalid'}],
+        fields: {test: {type: 'string', nullable: 'invalid'}},
       },
-      expected: '/models/0/fields/0/nullable must be boolean',
+      expected: '/data/models/test/fields/test/nullable must be boolean',
     },
     {
-      name: 'field.nullable=False and primaryKey=True',
+      name: 'field.apis is not array',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            primaryKey: true,
-            unique: true,
-            nullable: true,
-          },
-        ],
+        fields: {test: {type: 'string', apis: 'invalid'}},
       },
-      expected: '/models/0/fields/0: primaryKey field must have nullable=false',
+      expected: '/data/models/test/fields/test/apis must be array',
     },
     {
-      name: 'field.supportedOperations is not array',
+      name: 'field.query is not array',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: 'invalid'},
-        ],
+        fields: {test: {type: 'string', query: 'invalid'}},
       },
-      expected: '/models/0/fields/0/supportedOperations must be array',
+      expected: '/data/models/test/fields/test/query must be array',
     },
     {
-      name: 'field.supportedOperations contains invalid value',
+      name: 'field.apis contains invalid value',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['invalid']},
-        ],
+        fields: {test: {type: 'string', apis: ['invalid']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "invalid" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=integer',
+      name: 'field.query contains invalid value',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'integer', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'string', query: ['invalid']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "integer"',
+        '/data/models/test/fields/test/query/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=integer',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'integer', apis: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "integer"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=decimal',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            supportedOperations: ['lessThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'decimal', apis: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "decimal"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.apis contains invalid value for type=date',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'date', apis: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "string"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "date"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=string',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'string',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'string', query: ['lt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "string"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'string', query: ['lte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['sortable']},
-        ],
+        fields: {test: {type: 'string', query: ['gt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'string', query: ['gte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'boolean', apis: ['search']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'boolean', query: ['sort']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'boolean',
-            supportedOperations: ['lessThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'boolean', apis: ['edit']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "edit" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.apis contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'boolean', apis: ['delete']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/apis: "delete" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'boolean',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'boolean', query: ['lt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['oneOf']},
-        ],
+        fields: {test: {type: 'boolean', query: ['lte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "lte" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=boolean',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'boolean', query: ['gt']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "boolean"',
+        '/data/models/test/fields/test/query: "gt" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.query contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'boolean', query: ['gte']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+        '/data/models/test/fields/test/query: "gte" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations is not array',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['sortable']},
-        ],
+        fields: {test: {type: 'string', aggregations: 'invalid'}},
+      },
+      expected: '/data/models/test/fields/test/aggregations must be array',
+    },
+    {
+      name: 'field.aggregations contains invalid value',
+      patch: {
+        fields: {test: {type: 'string', aggregations: ['invalid']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "sortable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations/0 must be equal to one of the allowed values',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=integer',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'integer', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "integer"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=decimal',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'decimal', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "decimal"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=date',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['lessThan']},
-        ],
+        fields: {test: {type: 'date', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThan" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "date"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['lessThanEqual']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "lessThanEqual" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['greaterThan']},
-        ],
+        fields: {test: {type: 'string', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThan" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'test',
-            type: 'text',
-            supportedOperations: ['greaterThanEqual'],
-          },
-        ],
+        fields: {test: {type: 'string', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "greaterThanEqual" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedOperations: ['equal']}],
+        fields: {test: {type: 'string', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "equal" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "string"',
     },
-
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=string',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedOperations: ['oneOf']}],
+        fields: {test: {type: 'string', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "oneOf" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "string"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['searchable']},
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "searchable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['editable']},
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "editable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=boolean',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['deletable']},
-        ],
+        fields: {test: {type: 'boolean', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "deletable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "boolean"',
     },
     {
-      name: 'field.supportedOperations contains invalid value for type=text',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedOperations: ['indexable']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['avg']}},
       },
       expected:
-        '/models/0/fields/0/supportedOperations: "indexable" is not allowed for type "text"',
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation is not array',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: 'invalid'},
-        ],
-      },
-      expected: '/models/0/fields/0/supportedAggregation must be array',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['invalid']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['max']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "invalid" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "max" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=integer',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'integer', supportedAggregation: ['frequency']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['min']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "integer"',
+        '/data/models/test/fields/test/aggregations: "min" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=string',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['mean']},
-        ],
+        fields: {test: {type: 'text', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=string',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['max']}],
+        fields: {test: {type: 'text', aggregations: ['count']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "count" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=string',
+      name: 'field.aggregations contains invalid value for type=text',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['min']}],
+        fields: {test: {type: 'text', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "text"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=string',
+      name: 'field.aggregations contains invalid value for type=datetime',
       patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'string', supportedAggregation: ['sum']}],
+        fields: {test: {type: 'datetime', aggregations: ['sum']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "sum" is not allowed for type "datetime"',
     },
     {
-      name: 'field.supportedAggregation contains invalid value for type=string',
+      name: 'field.aggregations contains invalid value for type=datetime',
       patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'string', supportedAggregation: ['frequency']},
-        ],
+        fields: {test: {type: 'datetime', aggregations: ['frequency']}},
       },
       expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "string"',
+        '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['mean']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['max']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['min']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=boolean',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'boolean', supportedAggregation: ['sum']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "boolean"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['mean']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "mean" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['max']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "max" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['min']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "min" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['sum']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [{name: 'test', type: 'text', supportedAggregation: ['count']}],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "count" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=text',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'text', supportedAggregation: ['frequency']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "text"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=datetime',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'datetime', supportedAggregation: ['sum']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "sum" is not allowed for type "datetime"',
-    },
-    {
-      name: 'field.supportedAggregation contains invalid value for type=datetime',
-      patch: {
-        name: 'test',
-        fields: [
-          {name: 'test', type: 'datetime', supportedAggregation: ['frequency']},
-        ],
-      },
-      expected:
-        '/models/0/fields/0/supportedAggregation: "frequency" is not allowed for type "datetime"',
-    },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: {
+            fields: {test: {type: 'string'}},
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1120,152 +857,114 @@ describe('validateValidModelFieldsConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
+        fields: {
+          id: {
             type: 'integer',
             primaryKey: true,
             unique: true,
             nullable: false,
           },
-        ],
-      },
-    },
-    {
-      name: 'valid model',
-      patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
-            type: 'integer',
-            primaryKey: true,
-            unique: true,
-            nullable: false,
-            supportedOperations: ['indexable', 'sortable'],
-          },
-        ],
-      },
-    },
-    {
-      name: 'valid model',
-      patch: {
-        name: 'test',
-        fields: [
-          {
-            name: 'id',
-            type: 'integer',
-            primaryKey: true,
-            unique: true,
-            nullable: false,
-            supportedOperations: ['indexable', 'sortable'],
-            supportedAggregation: ['mean', 'max', 'min', 'count', 'sum'],
-          },
-        ],
-      },
-    },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
-      ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
         },
-      ],
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        fields: {
+          id: {
+            type: 'integer',
+            primaryKey: true,
+            unique: true,
+            nullable: false,
+            apis: ['index'],
+            query: ['sort'],
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model',
+      patch: {
+        fields: {
+          id: {
+            type: 'integer',
+            primaryKey: true,
+            unique: true,
+            nullable: false,
+            apis: ['index'],
+            query: ['sort'],
+            aggregations: ['avg', 'max', 'min', 'count', 'sum'],
+          },
+        },
+      },
+    },
+  ])('Scenario: $name . should return the same config', ({patch}) => {
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: patch as unknown as ModelConfig,
+        },
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
 describe('validateInvalidModelIndexesConfig', () => {
   it.each([
     {
-      name: 'index.name is not string',
+      name: 'index.fields is not array',
       patch: {
-        indexes: [{name: 123, columns: ['id']}],
+        indexes: {test_index: {fields: 'test'}},
       },
-      expected: '/models/0/indexes/0/name must be string',
+      expected: '/data/models/test/indexes/test_index/fields must be array',
     },
     {
-      name: 'index.name starts with number',
+      name: 'index.field is pointing to wrong field',
       patch: {
-        indexes: [{name: '12121asdas', columns: ['id']}],
+        indexes: {test_index: {fields: ['age']}},
       },
       expected:
-        'Entity name "12121asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        '/data/models/test/indexes/test_index/fields: field "age" does not exist in model fields',
     },
     {
-      name: 'index.name contains space',
+      name: 'index.field is empty',
       patch: {
-        indexes: [{name: 'cat dog', columns: ['id']}],
+        indexes: {test_index: {fields: ['']}},
       },
       expected:
-        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'index.name is duplicate',
-      patch: {
-        indexes: [
-          {name: 'valid_index', columns: ['id']},
-          {name: 'valid_index', columns: ['id']},
-        ],
-      },
-      expected: '/models/0/indexes/1: duplicate index name "valid_index"',
-    },
-    {
-      name: 'index.column is pointing to wrong field',
-      patch: {
-        indexes: [{name: 'valid_index', columns: ['age']}],
-      },
-      expected:
-        '/models/0/indexes/0/columns: column "age" does not exist in fields',
-    },
-    {
-      name: 'index.column is empty',
-      patch: {
-        indexes: [{name: 'valid_index', columns: ['']}],
-      },
-      expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'index.column is not array',
-      patch: {
-        indexes: [{name: 'valid_index', columns: 'test'}],
-      },
-      expected: '/models/0/indexes/0/columns must be array',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
       name: 'index.unique is not boolean',
       patch: {
-        indexes: [{name: 'valid_index', columns: ['id'], unique: 'test'}],
+        indexes: {test_index: {fields: ['id'], unique: 'test'}},
       },
-      expected: '/models/0/indexes/0/unique must be boolean',
+      expected: '/data/models/test/indexes/test_index/unique must be boolean',
     },
     {
       name: 'index.unique is not boolean',
       patch: {
-        indexes: [{name: 'valid_index', columns: ['id'], unique: 123}],
+        indexes: {test_index: {fields: ['id'], unique: 123}},
       },
-      expected: '/models/0/indexes/0/unique must be boolean',
+      expected: '/data/models/test/indexes/test_index/unique must be boolean',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: {
+            fields: {test: {type: 'string'}},
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1274,47 +973,44 @@ describe('validateValidModelIndexesConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        indexes: [
-          {
-            name: 'valid_index',
-            columns: ['id'],
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
+        indexes: {
+          valid_index: {
+            fields: ['id'],
             unique: true,
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
       patch: {
-        name: 'test',
-        indexes: [
-          {
-            name: 'valid_index',
-            columns: ['id', 'name'],
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
+        indexes: {
+          valid_index: {
+            fields: ['id', 'name'],
             unique: false,
           },
-        ],
+        },
       },
     },
     {
       name: 'not passing index',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}, name: {type: 'string'}},
       },
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+      data: {
+        models: {
+          test: patch as unknown as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
@@ -1323,15 +1019,15 @@ describe('validateInvalidModelValidationConfig', () => {
     {
       name: 'validation.type is not object',
       patch: {
-        name: 'test',
+        fields: {test: {type: 'string'}},
         validation: 13,
       },
-      expected: '/models/0/validation must be object',
+      expected: '/data/models/test/validation must be object',
     },
     {
       name: 'validation property column does not exist',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['id'],
@@ -1342,12 +1038,12 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/properties/age: field does not exist in model',
+        '/data/models/test/validation/properties/age: field does not exist in model',
     },
     {
       name: 'validation required is not array',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}, age: {type: 'integer'}},
         validation: {
           type: 'object',
           required: 'wrong type',
@@ -1357,12 +1053,12 @@ describe('validateInvalidModelValidationConfig', () => {
           },
         },
       },
-      expected: '/models/0/validation/required: must be an array',
+      expected: '/data/models/test/validation/required: must be an array',
     },
     {
       name: 'validation required is not array',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['wrong type'],
@@ -1373,12 +1069,12 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/required/0: field "wrong type" does not exist in model',
+        '/data/models/test/validation/required/0: field "wrong type" does not exist in model',
     },
     {
       name: 'validation property column data type does not match',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}},
         validation: {
           type: 'object',
           required: ['id'],
@@ -1388,22 +1084,36 @@ describe('validateInvalidModelValidationConfig', () => {
         },
       },
       expected:
-        '/models/0/validation/properties/id: type mismatch (model=integer, schema=string)',
+        '/data/models/test/validation/properties/id: type mismatch (model=integer, schema=string)',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const config = {
-      ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+    {
+      name: 'date field with mismatched schema type',
+      patch: {
+        fields: {eventDate: {type: 'date'}},
+        validation: {
+          type: 'object',
+          required: ['eventDate'],
+          properties: {
+            eventDate: {type: 'string'},
+          },
         },
-      ],
+      },
+      expected:
+        '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
+    },
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: {
+            ...(patch as Record<string, unknown>),
+          } as unknown as ModelConfig,
+        },
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1412,7 +1122,12 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
+        fields: {
+          id: {type: 'integer'},
+          name: {type: 'string'},
+          is_active: {type: 'boolean'},
+          updated_at: {type: 'datetime'},
+        },
         validation: {
           type: 'object',
           required: ['id'],
@@ -1428,7 +1143,12 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'valid model',
       patch: {
-        name: 'test',
+        fields: {
+          id: {type: 'integer'},
+          name: {type: 'string'},
+          is_active: {type: 'boolean'},
+          updated_at: {type: 'datetime'},
+        },
         validation: {
           type: 'object',
           required: ['id'],
@@ -1444,374 +1164,390 @@ describe('validateValidModelValidationConfig', () => {
     {
       name: 'not passing validation',
       patch: {
-        name: 'test',
+        fields: {id: {type: 'integer'}},
       },
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const config = {
-      ...validBaseConfig,
-      models: [
-        {
-          ...validBaseConfig.models[0],
-          ...patch,
+    {
+      name: 'valid model with decimal and date fields',
+      patch: {
+        fields: {
+          id: {type: 'integer'},
+          price: {type: 'decimal'},
+          eventDate: {type: 'date'},
         },
-      ],
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {type: 'integer'},
+            price: {type: 'number'},
+            eventDate: {type: 'date'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model without validation required',
+      patch: {
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: {type: 'integer'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with validation but no properties',
+      patch: {
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+        },
+      },
+    },
+    {
+      name: 'valid model with boolean schema property',
+      patch: {
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: true,
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with schema property without type',
+      patch: {
+        fields: {id: {type: 'integer'}},
+        validation: {
+          type: 'object',
+          properties: {
+            id: {minimum: 1},
+          },
+        },
+      },
+    },
+  ])('Scenario: $name . should return the same config', ({patch}) => {
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: patch as unknown as ModelConfig,
+        },
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
 describe('validateInvalidModelForeignKeyConfig', () => {
   it.each([
     {
-      name: 'foreignKey.name is not string',
+      name: 'foreignKey.type is missing',
       patch: {
-        foreignKeys: [
-          {
-            name: 123,
-            columns: ['id'],
-            referenceTable: 'test',
-            referenceColumns: ['id'],
+        relations: {
+          fk_rel: {
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/name must be string',
-    },
-    {
-      name: 'foreignKey.name is empty string',
-      patch: {
-        foreignKeys: [
-          {
-            name: '',
-            columns: ['id'],
-            referenceTable: 'test',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        "/data/models/fk_test/relations/fk_rel must have required property 'type'",
     },
     {
-      name: 'foreignKey.name is empty string',
+      name: 'foreignKey.localField is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['does_not_exist'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_rel: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 123 as unknown as string,
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/columns: column "does_not_exist" does not exist in model "posts"',
+        '/data/models/fk_test/relations/fk_rel/localField must be string',
     },
     {
-      name: 'foreignKey.name is duplicate',
+      name: 'foreignKey.localField does not exist',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'does_not_exist',
+            foreignField: 'id',
           },
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/1: duplicate foreign key name "fk_id_id"',
+        '/data/models/fk_test/relations/fk_id_id/localField: field "does_not_exist" does not exist in model "fk_test"',
     },
     {
-      name: 'foreignKey.columns is not array',
+      name: 'foreignKey.fields is not array',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: 'id',
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'id',
+            foreignField: ['id'] as unknown as string,
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/columns must be array',
-    },
-    {
-      name: 'foreignKey.columns is empty array',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: [],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/columns must NOT have fewer than 1 items',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: [123],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/columns/0 must be string',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['1321asdas'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'foreignKey.columns contains non-string',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['cat dog'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'foreignKey.columns contains duplicate items',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id', 'id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
-          },
-        ],
-      },
-      expected:
-        '/models/2/foreignKeys/0/columns must NOT have duplicate items (items ## 1 and 0 are identical)',
+        '/data/models/fk_test/relations/fk_id_id/foreignField must be string',
     },
     {
       name: 'foreignKey.referenceTable is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 123,
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 123,
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
-      expected: '/models/2/foreignKeys/0/referenceTable must be string',
+      expected: '/data/models/fk_test/relations/fk_id_id/model must be string',
     },
     {
       name: 'foreignKey.referenceTable is empty string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: '',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: '',
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        'Entity name "" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
+        'Entity name "" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
-      name: 'foreignKey.referenceTable is empty string',
+      name: 'foreignKey.referenceTable references non-existent model',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'does_not_exist',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'does_not_exist',
+            localField: 'id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: referenceTable "does_not_exist" does not exist',
+        '/data/models/fk_test/relations/fk_id_id/model: model "does_not_exist" does not exist',
     },
     {
-      name: 'foreignKey.referenceColumns is not array',
+      name: 'foreignKey.foreignField is not string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: 'id',
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'id',
+            foreignField: 123 as unknown as string,
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/referenceColumns must be array',
-    },
-    {
-      name: 'foreignKey.referenceColumns is empty array',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: [],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns must NOT have fewer than 1 items',
+        '/data/models/fk_test/relations/fk_id_id/foreignField must be string',
     },
     {
-      name: 'foreignKey.referenceColumns contains non-string',
+      name: 'foreignKey.fields is empty array',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: [123],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: '',
+            foreignField: 'id',
           },
-        ],
-      },
-      expected: '/models/2/foreignKeys/0/referenceColumns/0 must be string',
-    },
-    {
-      name: 'foreignKey.referenceColumns contains non-existent column',
-      patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['does_not_exist'],
-          },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns: column "does_not_exist" does not exist in table "users"',
+        '/data/models/fk_test/relations/fk_id_id/localField must NOT have fewer than 1 characters',
     },
     {
-      name: 'foreignKey.referenceColumns contains duplicate items',
+      name: 'foreignKey.localField array passed as string',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id', 'id'],
+        relations: {
+          fk_test_a: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: [] as unknown as string,
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/referenceColumns must NOT have duplicate items (items ## 1 and 0 are identical)',
+        '/data/models/fk_test/relations/fk_test_a/localField must be string',
     },
     {
-      name: 'foreignKey.onUpdate is not one of allowed values',
+      name: 'foreignKey.localField invalid entity name starting with digit',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id', 'title'],
+        relations: {
+          fk_test_b: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: '1321asdas',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
+        'Entity name "1321asdas" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
     },
     {
-      name: 'foreignKey.onUpdate is not one of allowed values',
+      name: 'foreignKey.localField invalid entity name with spaces',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id', 'name'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_c: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'cat dog',
+            foreignField: 'id',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0: columns and referenceColumns must have same length',
+        'Entity name "cat dog" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores',
+    },
+    {
+      name: 'foreignKey.foreignField does not exist in referenced model',
+      patch: {
+        relations: {
+          fk_test_d: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'nonexistent',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_d/foreignField: field "nonexistent" does not exist in model "users"',
+    },
+    {
+      name: 'foreignKey.foreignField is not string',
+      patch: {
+        relations: {
+          fk_test_e: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 123 as unknown as string,
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_e/foreignField must be string',
+    },
+    {
+      name: 'foreignKey.foreignField is empty string',
+      patch: {
+        relations: {
+          fk_test_f: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: '',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_f/foreignField must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'foreignKey.model does not exist',
+      patch: {
+        relations: {
+          fk_test_g: {
+            type: 'belongsTo',
+            model: 'nonexistent_model',
+            localField: 'user_id',
+            foreignField: 'id',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_g/model: model "nonexistent_model" does not exist',
+    },
+    {
+      name: 'foreignKey.type is invalid enum value',
+      patch: {
+        relations: {
+          fk_test_h: {
+            type: 'hasMany',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
+          },
+        },
+      },
+      expected:
+        '/data/models/fk_test/relations/fk_test_h/type must be equal to one of the allowed values',
     },
     {
       name: 'foreignKey.onDelete is not one of allowed values',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_i: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
             onDelete: 'INVALID',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/onDelete must be equal to one of the allowed values',
+        '/data/models/fk_test/relations/fk_test_i/onDelete must be equal to one of the allowed values',
     },
     {
       name: 'foreignKey.onUpdate is not one of allowed values',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_test_j: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
             onUpdate: 'INVALID',
           },
-        ],
+        },
       },
       expected:
-        '/models/2/foreignKeys/0/onUpdate must be equal to one of the allowed values',
+        '/data/models/fk_test/relations/fk_test_j/onUpdate must be equal to one of the allowed values',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
-    const fkTable = validBaseConfig.models[1];
-    const config = {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
+    const fkTable = Object.values(validBaseConfig.data.models)[1];
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        ...validBaseConfig.models,
-        {
-          ...fkTable,
-          ...patch,
+      data: {
+        models: {
+          ...validBaseConfig.data.models,
+          fk_test: {
+            ...fkTable,
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(() => validateConfig(config)).toThrow(expected);
   });
 });
 
@@ -1820,36 +1556,36 @@ describe('validateValidModelForeignKeyConfig', () => {
     {
       name: 'valid model',
       patch: {
-        foreignKeys: [
-          {
-            name: 'fk_id_id',
-            columns: ['user_id'],
-            referenceTable: 'users',
-            referenceColumns: ['id'],
+        relations: {
+          fk_id_id: {
+            type: 'belongsTo',
+            model: 'users',
+            localField: 'user_id',
+            foreignField: 'id',
           },
-        ],
+        },
       },
     },
     {
       name: 'valid model',
-      patch: {
-        foreignKeys: [],
-      },
+      patch: {},
     },
-  ])('Scenario: $name -> should return the same config', ({patch}) => {
-    const fkTable = validBaseConfig.models[1];
-    const config = {
+  ])('Scenario: $name . should return the same config', ({patch}) => {
+    const fkTable = Object.values(validBaseConfig.data.models)[1];
+    const config: AppConfig = {
       ...validBaseConfig,
-      models: [
-        ...validBaseConfig.models,
-        {
-          ...fkTable,
-          ...patch,
+      data: {
+        models: {
+          ...validBaseConfig.data.models,
+          fk_test: {
+            ...fkTable,
+            ...(patch as Record<string, unknown>),
+          } as ModelConfig,
         },
-      ],
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    expect(validateConfig(config)).toEqual(config);
   });
 });
 
@@ -1873,7 +1609,7 @@ describe('validateInvalidApplicationConfig', () => {
       expected:
         '/application/logLevel must be equal to one of the allowed values',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       application: {
@@ -1899,14 +1635,14 @@ describe('validateInvalidApplicationConfig', () => {
 
 describe('validateValidApplicationConfig', () => {
   it.each([
-    {name: 'logLevel trace', patch: {logLevel: 'trace'}},
-    {name: 'logLevel debug', patch: {logLevel: 'debug'}},
-    {name: 'logLevel info', patch: {logLevel: 'info'}},
-    {name: 'logLevel warn', patch: {logLevel: 'warn'}},
-    {name: 'logLevel error', patch: {logLevel: 'error'}},
-    {name: 'logLevel fatal', patch: {logLevel: 'fatal'}},
-    {name: 'logLevel silent', patch: {logLevel: 'silent'}},
-  ])('Scenario: $name -> should return', ({patch}) => {
+    {name: 'logLevel trace', patch: {name: 'Test App', logLevel: 'trace'}},
+    {name: 'logLevel debug', patch: {name: 'Test App', logLevel: 'debug'}},
+    {name: 'logLevel info', patch: {name: 'Test App', logLevel: 'info'}},
+    {name: 'logLevel warn', patch: {name: 'Test App', logLevel: 'warn'}},
+    {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
+    {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
+    {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
+  ])('Scenario: $name . should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
       application: patch as AppConfig['application'],
@@ -1918,298 +1654,324 @@ describe('validateValidApplicationConfig', () => {
   });
 });
 
-describe('validateInvalidApisConfig', () => {
+describe('validateInvalidCustomEndpointsConfig', () => {
   it.each([
-    {
-      name: 'name as invalid',
-      patch: {
-        customQueries: [
-          {name: '123_asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/0/name Entity name "123_asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'name as invalid',
-      patch: {
-        customQueries: [
-          {name: 'asd&*asd', method: 'GET', path: '/test', query: 'SELECT 1;'},
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/0/name Entity name "asd&*asd" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores',
-    },
-    {
-      name: 'name as duplicate',
-      patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test',
-            query: 'SELECT 1;',
-          },
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test-different',
-            query: 'SELECT 1;',
-          },
-        ],
-      },
-      expected:
-        '/customAPIs/customQueries/1/name: name must be unique and non-empty',
-    },
     {
       name: 'method as invalid',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'OPTIONS',
+        customEndpoints: {
+          test: {
+            method: 'OPTIONS' as const,
             path: '/test',
-            query: 'SELECT 1;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/method must be equal to one of the allowed values',
+        '/customEndpoints/test/method must be equal to one of the allowed values',
     },
     {
       name: 'path without slash',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: 'test',
-            query: 'SELECT 1;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
     },
     {
-      name: 'path with space and uppercase',
+      name: 'path with space',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
-            path: '/test-api asdas',
-            query: 'SELECT 1;',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test api',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/path must match pattern "^\\/[a-z_\\-\\/]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
     },
     {
-      name: 'empty query',
+      name: 'empty description',
       patch: {
-        customQueries: [
-          {name: 'sample_query', method: 'GET', path: '/test', query: ''},
-        ],
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: '',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
+          },
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query must NOT have fewer than 1 characters',
+        '/customEndpoints/test/description must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'empty handler.sql',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: ''},
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql must NOT have fewer than 1 characters',
     },
     {
       name: 'DDL query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'CREATE TABLE x (id INTEGER);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'CREATE TABLE x (id INTEGER);'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: DDL queries are not allowed',
+        '/customEndpoints/test/handler/sql: DDL queries are not allowed',
     },
     {
       name: 'GET method with DML query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'INSERT INTO x (id) VALUES (1);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'INSERT INTO x (id) VALUES (1);'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: only DQL queries are allowed for GET method',
+        '/customEndpoints/test/handler/sql: only DQL queries are allowed for GET method',
     },
     {
       name: 'POST method with invalid SQL starting word',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'RANDOM COMMAND;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'RANDOM COMMAND;'},
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: only DQL and DML queries are allowed',
+        '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
       name: 'GET method with body magic variables (@@)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: body magic variables (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body magic variables (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@first name:string@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@first name:string@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE country = &&country space:string&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE country = &&country space:string&&;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: mixed magic variable delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: mixed magic variable delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@id@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@id@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: unclosed magic variable delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed magic variable delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid magic variable format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@name:varchar@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@name:varchar@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid magic variable type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
       patch: {
-        customQueries: [
-          {
-            name: 'update_users',
-            method: 'POST',
+        customEndpoints: {
+          test: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'UPDATE users SET name = @@name@@;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'UPDATE users SET name = @@name@@;',
+            },
           },
-        ],
+        },
       },
       expected:
-        '/customAPIs/customQueries/0/query: missing data type for magic variable "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for magic variable "name" in body (@@) parameter',
     },
     {
       name: 'invalid webhook url',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'invalid',
@@ -2221,47 +1983,54 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/customEndpoints.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
-                data: 'query',
+                data: 'query' as unknown as string[],
                 triggerOnRequest: true,
               },
             ],
           },
         },
       },
-      expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must be array',
+      expected: '/apis/customEndpoints.test/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2273,21 +2042,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/customEndpoints.test/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2299,21 +2072,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/customEndpoints.test/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2325,21 +2102,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/customEndpoints.test/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2352,21 +2133,25 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        '/apis/customAPIs->customQueries->sample_query/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/customEndpoints.test/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+            },
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2379,15 +2164,32 @@ describe('validateInvalidApisConfig', () => {
         },
       },
       expected:
-        'apis/customAPIs->customQueries->sample_query/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
-  ])('Scenario: $name -> should throw: "$expected"', ({patch, expected}) => {
+    {
+      name: 'custom endpoint with invalid validation schema',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {type: 123},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/validation: /type must be equal to one of the allowed values',
+    },
+  ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: {
-        customQueries: patchObj.customQueries as CustomQueryConfig[],
-      },
+      customEndpoints: patchObj.customEndpoints as Record<
+        string,
+        CustomEndpointConfig
+      >,
       apis: patchObj.apis as ApisConfig,
     };
 
@@ -2397,102 +2199,124 @@ describe('validateInvalidApisConfig', () => {
   });
 });
 
-describe('validateValidApisConfig', () => {
+describe('validateValidCustomEndpointsConfig', () => {
   it.each([
     {
       name: 'valid GET query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
       },
     },
     {
       name: 'valid POST insert query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          sample_query: {
+            method: 'POST' as const,
             path: '/test',
-            query: 'INSERT INTO users (name) VALUES (1);',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'INSERT INTO users (name) VALUES (1);'},
           },
-        ],
+        },
       },
     },
     {
       name: 'valid WITH query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'WITH cte AS (SELECT 1) SELECT * FROM cte;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid variables in POST query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'POST',
+        customEndpoints: {
+          sample_query: {
+            method: 'POST' as const,
             path: '/test',
-            query:
-              'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+            description: 'test',
+            validation: {
+              type: 'object',
+              required: ['id'],
+            },
+            handler: {
+              type: 'sql',
+              sql: 'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid variables in GET query',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+            description: 'test',
+            validation: {
+              type: 'object',
+              required: ['id'],
+            },
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid magic variable with hyphen and underscore',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query:
-              'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+            },
           },
-        ],
+        },
       },
     },
     {
       name: 'valid webhook with triggerOnRequest',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2507,16 +2331,17 @@ describe('validateValidApisConfig', () => {
     {
       name: 'valid webhook with triggerOnResponse',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2531,16 +2356,17 @@ describe('validateValidApisConfig', () => {
     {
       name: 'a valid webhook with both triggerOnRequest and triggerOnResponse',
       patch: {
-        customQueries: [
-          {
-            name: 'sample_query',
-            method: 'GET',
+        customEndpoints: {
+          sample_query: {
+            method: 'GET' as const,
             path: '/test',
-            query: 'SELECT * FROM users;',
+            description: 'test',
+            validation: {},
+            handler: {type: 'sql', sql: 'SELECT * FROM users;'},
           },
-        ],
+        },
         apis: {
-          'customAPIs->customQueries->sample_query': {
+          'customEndpoints.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2553,13 +2379,14 @@ describe('validateValidApisConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
       ...validBaseConfig,
-      customAPIs: {
-        customQueries: patchObj.customQueries as CustomQueryConfig[],
-      },
+      customEndpoints: patchObj.customEndpoints as Record<
+        string,
+        CustomEndpointConfig
+      >,
       apis: patchObj.apis as ApisConfig,
     };
 
@@ -2578,7 +2405,6 @@ describe('validateRateLimitConfig', () => {
           enabled: 'asdasdas',
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/enabled must be boolean',
@@ -2586,14 +2412,14 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'max as negative integer',
       patch: {
-        rateLimit: {enabled: true, max: -5, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: -5, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
     {
       name: 'max as zero',
       patch: {
-        rateLimit: {enabled: true, max: 0, timeWindow: '15m', useRedis: false},
+        rateLimit: {enabled: true, max: 0, timeWindow: '15m'},
       },
       expected: '/application/rateLimit/max must be >= 1',
     },
@@ -2604,7 +2430,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 'sadfg',
           timeWindow: '15m',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/max must be integer',
@@ -2612,7 +2437,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no unit)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: '15', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: '15'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
     },
@@ -2623,7 +2448,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15x',
-          useRedis: false,
         },
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
@@ -2631,21 +2455,9 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'timeWindow with invalid format (no number)',
       patch: {
-        rateLimit: {enabled: true, max: 100, timeWindow: 'm', useRedis: false},
+        rateLimit: {enabled: true, max: 100, timeWindow: 'm'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
-    },
-    {
-      name: 'useRedis as string instead of boolean',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-          useRedis: 'asdasdassadas',
-        },
-      },
-      expected: '/application/rateLimit/useRedis must be boolean',
     },
     {
       name: 'missing enabled property',
@@ -2653,7 +2465,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'enabled'",
@@ -2664,7 +2475,6 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           timeWindow: '15m',
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected: "/application/rateLimit must have required property 'max'",
@@ -2675,24 +2485,12 @@ describe('validateRateLimitConfig', () => {
         rateLimit: {
           enabled: true,
           max: 100,
-          useRedis: false,
         } as unknown as typeof validBaseConfig.application,
       },
       expected:
         "/application/rateLimit must have required property 'timeWindow'",
     },
-    {
-      name: 'missing useRedis property',
-      patch: {
-        rateLimit: {
-          enabled: true,
-          max: 100,
-          timeWindow: '15m',
-        } as unknown as typeof validBaseConfig.application,
-      },
-      expected: "/application/rateLimit must have required property 'useRedis'",
-    },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       application: {
@@ -2710,7 +2508,7 @@ describe('validateRateLimitConfig', () => {
     {
       name: 'valid rate limit with seconds',
       patch: {
-        rateLimit: {enabled: true, max: 50, timeWindow: '30s', useRedis: false},
+        rateLimit: {enabled: true, max: 50, timeWindow: '30s'},
       },
     },
     {
@@ -2720,14 +2518,13 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
     {
       name: 'valid rate limit with hours',
       patch: {
-        rateLimit: {enabled: true, max: 1000, timeWindow: '1h', useRedis: true},
+        rateLimit: {enabled: true, max: 1000, timeWindow: '1h'},
       },
     },
     {
@@ -2737,7 +2534,6 @@ describe('validateRateLimitConfig', () => {
           enabled: true,
           max: 10000,
           timeWindow: '7d',
-          useRedis: true,
         },
       },
     },
@@ -2748,23 +2544,25 @@ describe('validateRateLimitConfig', () => {
           enabled: false,
           max: 100,
           timeWindow: '15m',
-          useRedis: false,
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       application: {
         ...validBaseConfig.application,
         ...patch,
       },
-      cache_db: {
-        engine: 'redis',
-        connection: {
-          uri: 'redis://localhost:6379',
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: {
+          engine: 'redis',
+          connection: {
+            url: 'redis://localhost:6379',
+          },
+          timeout: 5000,
         },
-        timeout: 5000,
       },
     };
 
@@ -2778,58 +2576,66 @@ describe('validateCacheDbConfig', () => {
   it.each([
     {
       name: 'engine as invalid value',
-      patch: {engine: 'memcached', connection: {uri: 'redis://localhost:6379'}},
-      expected: '/cache_db/engine must be equal to one of the allowed values',
+      patch: {engine: 'memcached', connection: {url: 'redis://localhost:6379'}},
+      expected:
+        '/infrastructure/cache/engine must be equal to one of the allowed values',
     },
     {
-      name: 'connection uri with invalid format (http)',
-      patch: {engine: 'redis', connection: {uri: 'http://localhost:6379'}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url with invalid format (http)',
+      patch: {engine: 'redis', connection: {url: 'http://localhost:6379'}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
-      name: 'connection uri without protocol',
-      patch: {engine: 'redis', connection: {uri: 'localhost:6379'}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url without protocol',
+      patch: {engine: 'redis', connection: {url: 'localhost:6379'}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
-      name: 'connection uri empty string',
-      patch: {engine: 'redis', connection: {uri: ''}},
-      expected: '/cache_db/connection/uri must match pattern "^redis:\\/\\/"',
+      name: 'connection url empty string',
+      patch: {engine: 'redis', connection: {url: ''}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^redis:\\/\\/"',
     },
     {
       name: 'timeout as negative integer',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: -100,
       },
-      expected: '/cache_db/timeout must be >= 1',
+      expected: '/infrastructure/cache/timeout must be >= 1',
     },
     {
       name: 'timeout as zero',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: 0,
       },
-      expected: '/cache_db/timeout must be >= 1',
+      expected: '/infrastructure/cache/timeout must be >= 1',
     },
     {
       name: 'missing required engine',
       patch: {
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
       } as unknown as typeof validBaseConfig,
-      expected: "/cache_db must have required property 'engine'",
+      expected: "/infrastructure/cache must have required property 'engine'",
     },
     {
       name: 'missing required connection',
       patch: {engine: 'redis'} as unknown as typeof validBaseConfig,
-      expected: "/cache_db must have required property 'connection'",
+      expected:
+        "/infrastructure/cache must have required property 'connection'",
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: patch as unknown as typeof validBaseConfig.infrastructure.cache,
+      },
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -2839,45 +2645,48 @@ describe('validateCacheDbConfig', () => {
 
   it.each([
     {
-      name: 'valid cache_db with redis localhost',
-      patch: {engine: 'redis', connection: {uri: 'redis://localhost:6379'}},
+      name: 'valid cache with redis localhost',
+      patch: {engine: 'redis', connection: {url: 'redis://localhost:6379'}},
     },
     {
-      name: 'valid cache_db with redis and timeout',
+      name: 'valid cache with redis and timeout',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://localhost:6379'},
+        connection: {url: 'redis://localhost:6379'},
         timeout: 5000,
       },
     },
     {
-      name: 'valid cache_db with redis remote host',
+      name: 'valid cache with redis remote host',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://redis.example.com:6379'},
+        connection: {url: 'redis://redis.example.com:6379'},
       },
     },
     {
-      name: 'valid cache_db with redis and password',
+      name: 'valid cache with redis and password',
       patch: {
         engine: 'redis',
-        connection: {uri: 'redis://:mypassword@localhost:6379'},
+        connection: {url: 'redis://:mypassword@localhost:6379'},
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      cache_db: patch as unknown as typeof validBaseConfig.cache_db,
+      infrastructure: {
+        ...validBaseConfig.infrastructure,
+        cache: patch as unknown as typeof validBaseConfig.infrastructure.cache,
+      },
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 });
 
-// ----- Optional Cache DB Config Tests -----
+// ----- Optional Cache Config Tests -----
 
-describe('validateCacheDbOptional', () => {
-  it('cache_db is completely optional and config should validate', () => {
+describe('validateCacheOptional', () => {
+  it('cache is completely optional and config should validate', () => {
     const config = {
       ...validBaseConfig,
     };
@@ -2885,10 +2694,11 @@ describe('validateCacheDbOptional', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 
-  it('config without cache_db and without rateLimit should validate', () => {
+  it('config without cache and without rateLimit should validate', () => {
     const config = {
       ...validBaseConfig,
       application: {
+        name: 'Test App',
         logLevel: 'info',
       },
     };
@@ -2897,24 +2707,25 @@ describe('validateCacheDbOptional', () => {
   });
 });
 
-// ----- Optional ModelAPIs Config Tests -----
-describe('validateInvalidModelAPIsConfig', () => {
+// ----- Optional model Config Tests -----
+describe('validateInvalidmodelConfig', () => {
   it.each([
     {
-      name: 'invalid webhook for modelAPis',
+      name: 'invalid webhook for model',
       patch: {
-        'modelAPIs->aggregate->users': 'invalid',
+        'aggregate.users.id.getAggregation': 'invalid',
       },
-      expected: '/apis/modelAPIs->aggregate->users must be object',
+      expected: '/apis/aggregate.users.id.getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregate.users.id.getAggregation': {
           webhooks: 'invalid',
         },
       },
-      expected: '/apis/modelAPIs->aggregate->users/webhooks must be array',
+      expected:
+        '/apis/aggregate.users.id.getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -2923,7 +2734,7 @@ describe('validateInvalidModelAPIsConfig', () => {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: true,
               triggerOnResponse: true,
             },
@@ -2933,13 +2744,13 @@ describe('validateInvalidModelAPIsConfig', () => {
       expected: 'apis/invalid_key: invalid key format',
     },
     {
-      name: 'invalid data resp cannot be used when triggerOnRequest is true',
+      name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregate.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: true,
               triggerOnResponse: true,
             },
@@ -2947,9 +2758,39 @@ describe('validateInvalidModelAPIsConfig', () => {
         },
       },
       expected:
-        'apis/modelAPIs->aggregate->users/webhooks/0: data resp cannot be used when triggerOnRequest is true',
+        'apis/aggregate.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    {
+      name: 'custom endpoint key not found',
+      patch: {
+        'customEndpoints.nonexistent': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.nonexistent: custom endpoint not found',
+    },
+    {
+      name: 'custom endpoint key invalid format',
+      patch: {
+        'customEndpoints.test.extra': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.test.extra: invalid key format',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: patch,
@@ -2961,76 +2802,76 @@ describe('validateInvalidModelAPIsConfig', () => {
   });
 });
 
-describe('validateValidModelAPIsConfig', () => {
+describe('validateValidmodelConfig', () => {
   it.each([
     {
-      name: 'valid modelAPIs',
+      name: 'valid model',
       patch: {
-        'modelAPIs->aggregate->users': {
+        'aggregate.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->delete->users': {
+        'model.users.id.delete': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->edit->users': {
+        'model.users.id.edit': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->getAll->users': {
+        'model.users.all.getAll': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->index->users': {
+        'model.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->insert->users': {
+        'model.users.all.insert': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
           ],
         },
-        'modelAPIs->search->users': {
+        'model.users.id.search': {
           webhooks: [
             {
               url: 'https://google.com',
-              data: ['query', 'body', 'params', 'resp'],
+              data: ['query', 'body', 'params', 'response'],
               triggerOnRequest: false,
               triggerOnResponse: true,
             },
@@ -3038,7 +2879,7 @@ describe('validateValidModelAPIsConfig', () => {
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: patch,
@@ -3048,166 +2889,567 @@ describe('validateValidModelAPIsConfig', () => {
   });
 });
 
-describe('validateInvalidModelAPIsConfig', () => {
+describe('validateInvalidAuthConfig', () => {
   it.each([
     {
-      name: 'invalid value for enableAuth',
+      name: 'invalid value for enabled',
       patch: {
-        auth: {
-          enableAuth: 'true',
-          authEngine: 'api-key',
-          apiKey: 'xxx',
-        },
-      },
-      expected: '/auth/enableAuth must be boolean',
-    },
-    {
-      name: 'invalid authEngine',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'invalid',
-          apiKey: 'xxx',
-        },
-      },
-      expected: '/auth/authEngine must be equal to one of the allowed values',
-    },
-    {
-      name: 'providing authModel when authEngine is api-key',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
+        authentication: {
+          enabled: 'true',
+          provider: {
+            type: 'api-key',
+            config: {key: 'xxx'},
           },
-          apiKey: 'xxx',
+        },
+      },
+      expected: '/authentication/enabled must be boolean',
+    },
+    {
+      name: 'invalid provider type',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'invalid',
+            config: {key: 'xxx'},
+          },
         },
       },
       expected:
-        '/auth/authModel: authModel should not be present when authEngine is api-key',
+        '/authentication/provider/type must be equal to one of the allowed values',
     },
     {
-      name: 'not providing apiKey when authEngine is api-key',
+      name: 'missing provider config',
       patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-        },
-      },
-      expected: '/auth/apiKey: apiKey is required when authEngine is api-key',
-    },
-    {
-      name: 'invalid authModel',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: 'invalid',
-        },
-      },
-      expected: '/auth/authModel must be object',
-    },
-    {
-      name: 'invalid authModel.modelName',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'invalid',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
           },
         },
       },
-      expected: '/auth/authModel/modelName: model does not exist',
+      expected: "/authentication/provider must have required property 'config'",
     },
     {
-      name: 'invalid authModel.idColumn',
+      name: 'providing userModel when provider type is api-key',
       patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'invalid',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              key: 'xxx',
+            },
           },
-        },
-      },
-      expected: '/auth/authModel/idColumn: field does not exist in model',
-    },
-    {
-      name: 'invalid authModel.usernameColumn',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'invalid',
-            passwordColumn: 'name',
-          },
-        },
-      },
-      expected: '/auth/authModel/usernameColumn: field does not exist in model',
-    },
-    {
-      name: 'invalid authModel.passwordColumn',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'invalid',
-          },
-        },
-      },
-      expected: '/auth/authModel/passwordColumn: field does not exist in model',
-    },
-    {
-      name: 'providing apiKey when authEngine is up-auth',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'invalid',
-            passwordColumn: 'name',
-          },
-          apiKey: 'xxx',
         },
       },
       expected:
-        '/auth/apiKey: apiKey should not be present when authEngine is up-auth',
+        '/authentication/provider/config/userModel: userModel should not be present when provider type is api-key',
     },
     {
-      name: 'not providing authModel when authEngine is up-auth',
+      name: 'not providing key when provider type is api-key',
       patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
+            config: {},
+          },
         },
       },
       expected:
-        '/auth/authModel: authModel is required when authEngine is up-auth',
+        '/authentication/provider/config/key: key is required when provider type is api-key',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+    {
+      name: 'not providing userModel when provider type is up-auth',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {},
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel: userModel is required when provider type is up-auth',
+    },
+    {
+      name: 'invalid userModel.model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'does-not-exist',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/model: model does not exist',
+    },
+    {
+      name: 'invalid userModel.idField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'invalid',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/idField: field does not exist in model',
+    },
+    {
+      name: 'invalid userModel.usernameField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'invalid',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+    },
+    {
+      name: 'invalid userModel.passwordField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'invalid',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/passwordField: field does not exist in model',
+    },
+    {
+      name: 'idField exists in a different model, not the specified model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'user_id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/idField: field does not exist in model',
+    },
+    {
+      name: 'usernameField exists in a different model, not the specified model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'posts',
+                idField: 'user_id',
+                usernameField: 'name',
+                passwordField: 'body',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/usernameField: field does not exist in model',
+    },
+    {
+      name: 'providing key when provider type is up-auth',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'invalid',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              key: 'xxx',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/key: key should not be present when provider type is up-auth',
+    },
+    {
+      name: 'not providing jwtSecret when provider type is up-auth',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'invalid',
+                passwordField: 'name',
+              },
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/jwtSecret: jwtSecret is required when provider type is up-auth',
+    },
+    {
+      name: 'providing jwtSecret when provider type is api-key',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
+            config: {
+              key: 'xxx',
+              jwtSecret: 'this-key-should-not-be-here-in-api-key-config',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
+    },
+    {
+      name: 'jwtSecret too short',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'too-short',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/jwtSecret must NOT have fewer than 32 characters',
+    },
+    {
+      name: 'invalid tokenExpiration pattern',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              tokenExpiration: '2x',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/tokenExpiration must match pattern',
+    },
+    {
+      name: 'non-string idField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 123,
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/idField must be string',
+    },
+    {
+      name: 'non-string usernameField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: false,
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/usernameField must be string',
+    },
+    {
+      name: 'non-string passwordField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 789,
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/passwordField must be string',
+    },
+    {
+      name: 'mfaRequired not boolean',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: 'yes',
+            },
+          },
+        },
+      },
+      expected: '/authentication/provider/config/mfaRequired must be boolean',
+    },
+    {
+      name: 'mfaRequired true but no cache configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
+    },
+    {
+      name: 'mfaRequired true but no communicate configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
+    },
+    {
+      name: 'non-string isVerifiedField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 123,
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField must be string',
+    },
+    {
+      name: 'isVerifiedField field does not exist in model',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'nonexistent',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
+    },
+    {
+      name: 'isVerifiedField field is not boolean type',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'posts',
+                idField: 'user_id',
+                usernameField: 'title',
+                passwordField: 'body',
+                isVerifiedField: 'title',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
+    },
+    {
+      name: 'isVerifiedField set but no integrations.email configured',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      expected:
+        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+      authentication: patch.authentication as unknown as NonNullable<
+        typeof validBaseConfig.authentication
+      >,
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
@@ -3216,40 +3458,355 @@ describe('validateInvalidModelAPIsConfig', () => {
   });
 });
 
-describe('validateValidModelAPIsConfig', () => {
+describe('validateValidAuthConfig', () => {
   it.each([
     {
-      name: 'valid auth config',
+      name: 'valid api-key auth config',
       patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-          apiKey: 'xxx',
-        },
-      },
-    },
-    {
-      name: 'valid auth config',
-      patch: {
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'name',
-            passwordColumn: 'name',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'api-key',
+            config: {key: 'xxx'},
           },
         },
       },
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+    {
+      name: 'valid up-auth auth config',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid up-auth auth config with tokenExpiration',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              tokenExpiration: '2h',
+            },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid up-auth auth config with mfaRequired false',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: false,
+            },
+          },
+        },
+      },
+    },
+    {
+      name: 'valid up-auth auth config with mfaRequired true',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      extra: {
+        cache: {
+          engine: 'redis' as const,
+          connection: {url: 'redis://localhost:6379'},
+        },
+        integrations: {email: {provider: 'dummy' as const}},
+      },
+    },
+    {
+      name: 'valid up-auth auth config with isVerifiedField',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+            },
+          },
+        },
+      },
+      extra: {
+        integrations: {email: {provider: 'dummy' as const}},
+      },
+    },
+  ])('Scenario: $name . should return', ({patch, extra}) => {
+    const base = {...validBaseConfig};
+    if (extra) {
+      base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      base.integrations = extra.integrations;
+    }
     const config = {
-      ...validBaseConfig,
-      auth: patch.auth as unknown as typeof validBaseConfig.auth,
+      ...base,
+      authentication: patch.authentication as unknown as NonNullable<
+        typeof validBaseConfig.authentication
+      >,
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateAuthConstraints directly (bypass AJV)', () => {
+  it('should catch missing providerConfig', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: undefined as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config: provider config is required',
+    );
+  });
+
+  it('should catch non-string idField', () => {
+    const config = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
+        },
+      },
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 123,
+              usernameField: 'name',
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/idField: must be a string',
+    );
+  });
+
+  it('should catch non-string usernameField', () => {
+    const config = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
+        },
+      },
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 456,
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/usernameField: must be a string',
+    );
+  });
+
+  it('should catch non-string passwordField', () => {
+    const config = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
+        },
+      },
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 789,
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/passwordField: must be a string',
+    );
+  });
+
+  it('should catch non-string isVerifiedField', () => {
+    const config = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
+        },
+      },
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 'name',
+              isVerifiedField: 123,
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toContain(
+      '/authentication/provider/config/userModel/isVerifiedField: must be a string',
+    );
+  });
+
+  it('should handle falsy model name in userModel', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: '',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toHaveLength(0);
   });
 });
 
@@ -3258,34 +3815,34 @@ describe('validateInvalidSspConfig', () => {
   it.each([
     {
       name: 'invalid ssp config param type',
-      patch: {ssp: [{paramType: 'invalid', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'invalid', name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param type',
-      patch: {ssp: [{paramType: 132, paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 132, name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramType must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param name',
-      patch: {ssp: [{paramType: 'body', paramName: 123, value: '1'}]},
+      patch: {serverParams: [{type: 'body', name: 123, value: '1'}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/paramName must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/name must be string',
     },
     {
       name: 'invalid ssp config param value',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: null}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: null}]},
       expected:
-        '/apis/customAPIs->customQueries->sample_query/ssp/0/value must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/value must be string',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'customAPIs->customQueries->sample_query': {
-          ssp: patch.ssp,
+        'customAPIs.customQueries.all.sample_query': {
+          serverParams: patch.serverParams,
         },
       },
     };
@@ -3301,30 +3858,30 @@ describe('validateValidSspConfig', () => {
   it.each([
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: 1}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: 1}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'body', paramName: 'id', value: true}]},
+      patch: {serverParams: [{type: 'body', name: 'id', value: true}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'query', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'query', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {ssp: [{paramType: 'path', paramName: 'id', value: '1'}]},
+      patch: {serverParams: [{type: 'path', name: 'id', value: '1'}]},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->getAll->posts': {
-          ssp: patch.ssp,
+        'model.posts.all.getAll': {
+          serverParams: patch.serverParams,
         },
       },
     };
@@ -3339,18 +3896,18 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+      expected: 'model.posts.all.getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'modelAPIs->getAll->posts/authorization must be boolean',
+      expected: 'model.posts.all.getAll/authorization must be boolean',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs->getAll->posts': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3362,25 +3919,26 @@ describe('validateInvalidAuthorizationConfig', () => {
   });
 });
 
-// authorization is enabled when authentication is disabled
 describe('validateInvalidAuthorizationConfig', () => {
   it.each([
     {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/modelAPIs->getAll->posts/authorization: authorization is only allowed when auth is enabled',
+        'apis/model.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
     },
-  ])('Scenario: $name -> should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      auth: {
-        enableAuth: false,
-        authEngine: 'api-key',
-        apiKey: '1234',
+      authentication: {
+        enabled: false,
+        provider: {
+          type: 'api-key',
+          config: {key: '1234'},
+        },
       },
       apis: {
-        'modelAPIs->getAll->posts': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3392,7 +3950,6 @@ describe('validateInvalidAuthorizationConfig', () => {
   });
 });
 
-// check valid authorization configs
 describe('validateValidAuthorizationConfig', () => {
   it.each([
     {
@@ -3403,21 +3960,229 @@ describe('validateValidAuthorizationConfig', () => {
       name: 'valid authorization config',
       patch: {authorization: false},
     },
-  ])('Scenario: $name -> should return', ({patch}) => {
+  ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
-      auth: {
-        enableAuth: true,
-        authEngine: 'api-key',
-        apiKey: '1234',
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'api-key',
+          config: {key: '1234'},
+        },
       },
       apis: {
-        'modelAPIs->getAll->posts': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// check integrations configs validation
+describe('validateIntegrationsConfig', () => {
+  it('should pass when integrations config is valid', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'dummy',
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when email config is missing required provider', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {},
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'provider'",
+    );
+  });
+
+  it('should throw when email config has invalid provider enum value', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'invalid-provider',
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must be equal to one of the allowed values',
+    );
+  });
+
+  it('should throw when email config has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'dummy',
+          extraProperty: true,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+
+  it('should throw when integrations config itself has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'dummy',
+        },
+        extraProperty: true,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+});
+
+describe('validateCustomEndpointsConfig', () => {
+  it('should pass when validation property is omitted', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should pass when validation includes path parameters in required', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {
+            type: 'object',
+            required: ['id'],
+            properties: {
+              id: {type: 'integer'},
+            },
+          },
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when endpoint validation is not a valid JSON schema', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {
+            type: 'invalid-type',
+          },
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      '/customEndpoints/testEndpoint/validation:',
+    );
+  });
+
+  it('should use fallback message when ajv.errors is null after failed validation', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {type: 'invalid'},
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    const spy = vi.spyOn(ajv, 'validateSchema').mockReturnValue(false);
+    ajv.errors = null;
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      '/customEndpoints/testEndpoint/validation: invalid JSON schema',
+    );
+
+    spy.mockRestore();
+  });
+});
+
+describe('validateSchemaKeyword', () => {
+  it('should use fallback message when validateEntityName throws non-Error', () => {
+    const spy = vi
+      .spyOn(entityModule, 'validateEntityName')
+      .mockImplementation(() => {
+        throw {};
+      });
+
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: {
+            fields: {testField: {type: 'string'}},
+            indexes: {
+              test_index: {
+                fields: ['invalid-name'],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'Entity name is invalid',
+    );
+
+    spy.mockRestore();
   });
 });

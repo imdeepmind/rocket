@@ -1,198 +1,223 @@
 {
     "application": {
+        "name": "Rocket OSS",
         "logLevel": "debug",
         "rateLimit": {
             "enabled": true,
             "max": 1000,
-            "timeWindow": "15m",
-            "useRedis": true
+            "timeWindow": "15m"
         }
     },
-    "swagger": {
-        "enabled": true,
-        "basePath": "/api/docs",
-        "info": {
-            "title": "Rocket OSS",
-            "description": "This is the sample description",
-            "version": "v1.5.0",
-            "termsOfService": "https://example.com/terms",
-            "contact": {
-                "name": "John Doe",
-                "url": "https://example.com",
-                "email": "email@email.com"
-            },
-            "license": {
-                "name": "MIT",
-                "url": "https://opensource.org/licenses/MIT"
+    "docs": {
+        "openapi": {
+            "enabled": true,
+            "path": "/api/docs",
+            "info": {
+                "title": "Rocket OSS",
+                "description": "This is the sample description",
+                "version": "v1.5.0",
+                "termsOfService": "https://example.com/terms",
+                "contact": {
+                    "name": "John Doe",
+                    "url": "https://example.com",
+                    "email": "email@email.com"
+                },
+                "license": {
+                    "name": "MIT",
+                    "url": "https://opensource.org/licenses/MIT"
+                }
             }
         }
     },
-    "database": {
-        "engine": "pg",
-        "connection": {
-            "urlOrPath": "env:DB"
+    "infrastructure": {
+        "database": {
+            "engine": "sqlite",
+            "connection": {
+                "url": "./database.db"
+            },
+            "timeout": 10000
         },
-        "dbTimeout": 10000
-    },
-    "cache_db": {
-        "engine": "redis",
-        "connection": {
-            "uri": "redis://localhost:6379"
-        },
-        "timeout": 
-        5000
-    },
-    "auth": {
-        "enableAuth": true,
-        "authEngine": "up-auth",
-        "authModel": {
-            "modelName": "users",
-            "idColumn": "id",
-            "usernameColumn": "email",
-            "passwordColumn": "password"
+        "cache": {
+            "engine": "redis",
+            "connection": {
+                "url": "redis://localhost:6379"
+            },
+            "timeout": 5000
         }
     },
-    "models": [
-        {
-            "name": "users",
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
-                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
+    "authentication": {
+        "enabled": true,
+        "provider": {
+            "type": "up-auth",
+            "config": {
+                "userModel": {
+                    "model": "users",
+                    "idField": "id",
+                    "usernameField": "email",
+                    "passwordField": "password",
+                    "isVerifiedField": "isActive"
                 },
-                {
-                    "name": "email",
-                    "type": "string",
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
-                    "supportedAggregation": ["count"]
+                "jwtSecret": "your-super-secret-key-must-be-long-enough",
+                "mfaRequired": true
+            }
+        }
+    },
+    "integrations": {
+        "email": {
+            "provider": "dummy"
+        }
+    },
+    "data": {
+        "models": {
+            "users": {
+                "timestamps": true,
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "apis": ["edit", "delete"],
+                        "query": ["gte"],
+                        "aggregations": ["count", "avg", "max", "min", "sum"]
+                    },
+                    "email": {
+                        "type": "string",
+                        "unique": true,
+                        "nullable": false,
+                        "apis": ["search", "index"],
+                        "query": ["eq", "sort"],
+                        "aggregations": ["count"]
+                    },
+                    "password": {
+                        "type": "string",
+                        "unique": false,
+                        "nullable": false
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true,
+                        "apis": ["search", "index"],
+                        "query": ["sort"]
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "default": true,
+                        "query": ["eq"]
+                    }
                 },
-                {
-                    "name": "password",
-                    "type": "string",
-                    "unique": false,
-                    "nullable": false
-                },
-                {
-                    "name": "name",
-                    "type": "string",
-                    "nullable": true,
-                    "supportedOperations": ["searchable", "sortable", "indexable"]
-                },
-                {
-                    "name": "is_active",
-                    "type": "boolean",
-                    "default": true,
-                    "supportedOperations": ["equal"]
+                "indexes": {
+                    "email_unique": {
+                        "fields": ["email"],
+                        "unique": true
+                    },
+                    "name_active": {
+                        "fields": ["name", "isActive"],
+                        "unique": false
+                    }
                 }
-            ],
-            "indexes": [
-                {
-                    "name": "users_email_idx",
-                    "columns": ["email"],
-                    "unique": true
+            },
+            "posts": {
+                "validation": {
+                    "type": "object",
+                    "required": ["title", "userId"],
+                    "properties": {
+                        "title": { "type": "string", "minLength": 5 },
+                        "body": { "type": "string" },
+                        "userId": { "type": "integer", "minimum": 1 }
+                    }
                 },
-                {
-                    "name": "users_name_is_active_idx",
-                    "columns": ["name", "is_active"],
-                    "unique": false
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "apis": ["edit", "delete"]
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": false,
+                        "apis": ["search"],
+                        "query": ["sort"]
+                    },
+                    "body": {
+                        "type": "text",
+                        "nullable": true
+                    },
+                    "userId": {
+                        "type": "integer",
+                        "nullable": false,
+                        "query": ["eq", "in"],
+                        "aggregations": ["count"]
+                    },
+                    "createdAt": {
+                        "type": "datetime",
+                        "query": ["lt", "gt", "sort"]
+                    },
+                    "decimalNumber": {
+                        "type": "decimal",
+                        "query": ["lt", "gt", "sort"],
+                        "aggregations": ["count", "avg", "sum", "min", "max"]
+                    }
+                },
+                "indexes": {
+                    "user_idx": {
+                        "fields": ["userId"],
+                        "unique": false
+                    }
+                },
+                "relations": {
+                    "author": {
+                        "type": "belongsTo",
+                        "model": "users",
+                        "localField": "userId",
+                        "foreignField": "id",
+                        "onDelete": "cascade",
+                        "onUpdate": "cascade"
+                    }
                 }
-            ]
-        },
-        {
-            "name": "posts",
+            }
+        }
+    },
+    "customEndpoints": {
+        "getUserById": {
+            "method": "POST",
+            "path": "/users-by-id",
+            "description": "Returns a user by ID.",
             "validation": {
                 "type": "object",
-                "required": ["title", "user_id"],
+                "required": ["id"],
                 "properties": {
-                    "title": { "type": "string", "minLength": 5 },
-                    "body": { "type": "string" },
-                    "user_id": { "type": "integer", "minimum": 1 }
+                    "id": {
+                        "type": "integer",
+                        "minimum": 5
+                    }
                 }
             },
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable"]
-                },
-                {
-                    "name": "title",
-                    "type": "string",
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "sortable"]
-                },
-                {
-                    "name": "body",
-                    "type": "text",
-                    "nullable": true
-                },
-                {
-                    "name": "user_id",
-                    "type": "integer",
-                    "nullable": false,
-                    "supportedOperations": ["equal", "oneOf"],
-                    "supportedAggregation": ["count"]
-                },
-                {
-                    "name": "created_at",
-                    "type": "datetime",
-                    "supportedOperations": ["lessThan", "greaterThan", "sortable"]
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "posts_user_id_idx",
-                    "columns": ["user_id"],
-                    "unique": false
-                }
-            ],
-            "foreignKeys": [
-                {
-                    "name": "fk_posts_user_id",
-                    "columns": ["user_id"],
-                    "referenceTable": "users",
-                    "referenceColumns": ["id"],
-                    "onDelete": "CASCADE",
-                    "onUpdate": "CASCADE"
-                }
-            ]
-        }
-    ],
-    "customAPIs": {
-        "customQueries": [
-            {
-                "name": "get_user_by_id",
-                "method": "POST",
-                "path": "/test-api-asdas_asdas",
-                "query": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+            "handler": {
+                "type": "sql",
+                "sql": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
             }
-        ]
+        }
     },
     "apis": {
-        "aggregate->users->get_aggregation": {
+        "aggregate.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
-                    "data": ["query", "body", "params", "resp"],
+                    "data": ["query", "body", "params", "response"],
                     "triggerOnRequest": false,
                     "triggerOnResponse": true
                 }
             ],
             "authorization": true,
-            "ssp": [
+            "serverParams": [
                 {
-                    "paramType": "query",
-                    "paramName": "operations",
+                    "type": "query",
+                    "name": "operations",
                     "value": "[userEmail]"
                 }
             ]

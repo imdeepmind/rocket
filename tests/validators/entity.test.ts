@@ -51,10 +51,6 @@ describe('Entity Name Validator', () => {
         reason: 'must start with a letter or underscore',
       },
       {
-        name: 'Users',
-        reason: 'contain only lowercase letters',
-      },
-      {
         name: 'user profile',
         reason: 'contain only ... hyphens and underscores',
       },
@@ -80,7 +76,7 @@ describe('Entity Name Validator', () => {
       'should throw an error for invalid format "$name"',
       ({name}) => {
         expect(() => validateEntityName(name)).toThrow(
-          `Entity name "${name}" is not valid, must start with a letter or underscore and contain only lowercase letters, numbers, hyphens and underscores`,
+          `Entity name "${name}" is not valid, must start with a letter or underscore and contain only letters, numbers, hyphens and underscores`,
         );
       },
     );

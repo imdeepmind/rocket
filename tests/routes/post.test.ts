@@ -1,18 +1,22 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthConfig, ModelConfig} from '@/interfaces/config';
+import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
 
-const upAuthConfig: AuthConfig = {
-  enableAuth: true,
-  authEngine: 'up-auth',
-  authModel: {
-    modelName: 'users',
-    idColumn: 'id',
-    usernameColumn: 'email',
-    passwordColumn: 'password',
+const upAuthConfig: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+    },
   },
 };
 
@@ -20,6 +24,7 @@ describe('test post api', () => {
   beforeEach(() => {
     // Clear mock state between tests so call assertions are isolated
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('happy path', () => {
@@ -61,8 +66,7 @@ describe('test post api', () => {
         payload: {name: 'Alice', email: 'alice@example.com'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
         ['Alice', 'alice@example.com'],
       );
@@ -86,7 +90,7 @@ describe('test post api', () => {
       });
 
       // Only model-defined fields should appear in the query
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
         ['Bob', 'bob@example.com'],
       );
@@ -97,13 +101,12 @@ describe('test post api', () => {
 
   describe('validation', () => {
     test('should return 400 when required fields are missing', async () => {
-      const modelsWithRequired: ModelConfig[] = [
-        {
-          name: 'products',
-          fields: [
-            {name: 'id', type: 'integer', primaryKey: true},
-            {name: 'title', type: 'string'},
-          ],
+      const modelsWithRequired: Record<string, ModelConfig> = {
+        products: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            title: {type: 'string'},
+          },
           // Provide an explicit validation schema that marks fields as required
           validation: {
             type: 'object',
@@ -114,7 +117,7 @@ describe('test post api', () => {
             required: ['id', 'title'],
           },
         },
-      ];
+      };
 
       const fastify = await createTestApp(pgConfig, modelsWithRequired);
 
@@ -131,10 +134,9 @@ describe('test post api', () => {
     });
 
     test('should return 400 when body is invalid JSON type', async () => {
-      const modelsWithRequired: ModelConfig[] = [
-        {
-          name: 'items',
-          fields: [{name: 'count', type: 'integer'}],
+      const modelsWithRequired: Record<string, ModelConfig> = {
+        items: {
+          fields: {count: {type: 'integer'}},
           validation: {
             type: 'object',
             properties: {
@@ -143,7 +145,7 @@ describe('test post api', () => {
             required: ['count'],
           },
         },
-      ];
+      };
 
       const fastify = await createTestApp(pgConfig, modelsWithRequired);
 
@@ -161,9 +163,46 @@ describe('test post api', () => {
   });
 
   describe('error handling', () => {
+    test('should return 404 when the post API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels, {
+        'model.users.all.insert': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, mockModels);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
 
       const response = await fastify.inject({
         method: 'POST',
@@ -196,7 +235,7 @@ describe('test post api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs->insert->users': {
+      'model.users.all.insert': {
         authorization: true,
       },
     };

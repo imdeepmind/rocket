@@ -38,8 +38,9 @@ ajv.addKeyword({
 const applicationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['logLevel'],
+  required: ['logLevel', 'name'],
   properties: {
+    name: {type: 'string', minLength: 1},
     logLevel: {
       type: 'string',
       enum: ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'],
@@ -47,7 +48,7 @@ const applicationSchema = {
     rateLimit: {
       type: 'object',
       additionalProperties: false,
-      required: ['enabled', 'max', 'timeWindow', 'useRedis'],
+      required: ['enabled', 'max', 'timeWindow'],
       properties: {
         enabled: {type: 'boolean'},
         max: {type: 'integer', minimum: 1},
@@ -55,47 +56,53 @@ const applicationSchema = {
           type: 'string',
           pattern: '^\\d+[smhd]$',
         },
-        useRedis: {type: 'boolean'},
       },
     },
   },
 };
 
-const swaggerSchema = {
+const docsSchema = {
   type: 'object',
-  required: ['enabled', 'basePath', 'info'],
   additionalProperties: false,
+  required: ['openapi'],
   properties: {
-    enabled: {type: 'boolean'},
-    basePath: {
-      type: 'string',
-      pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
-    },
-    info: {
+    openapi: {
       type: 'object',
-      required: ['title'],
+      required: ['enabled', 'path', 'info'],
       additionalProperties: false,
       properties: {
-        title: {type: 'string', minLength: 5},
-        description: {type: 'string', minLength: 25},
-        version: {type: 'string'},
-        termsOfService: {type: 'string', format: 'uri'},
-        contact: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            name: {type: 'string', minLength: 5},
-            url: {type: 'string', format: 'uri'},
-            email: {type: 'string', format: 'email'},
-          },
+        enabled: {type: 'boolean'},
+        path: {
+          type: 'string',
+          pattern: '^\\/([A-Za-z0-9-_]+\\/)*[A-Za-z0-9-_]*$',
         },
-        license: {
+        info: {
           type: 'object',
-          required: ['name'],
+          required: ['title', 'version'],
           additionalProperties: false,
           properties: {
-            name: {type: 'string', minLength: 1},
-            url: {type: 'string', format: 'uri'},
+            title: {type: 'string', minLength: 5},
+            description: {type: 'string', minLength: 1},
+            version: {type: 'string'},
+            termsOfService: {type: 'string', format: 'uri'},
+            contact: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 5},
+                url: {type: 'string', format: 'uri'},
+                email: {type: 'string', format: 'email'},
+              },
+            },
+            license: {
+              type: 'object',
+              required: ['name'],
+              additionalProperties: false,
+              properties: {
+                name: {type: 'string', minLength: 1},
+                url: {type: 'string', format: 'uri'},
+              },
+            },
           },
         },
       },
@@ -107,16 +114,16 @@ const databaseSchema = {
   type: 'object',
   required: ['engine', 'connection'],
   properties: {
-    engine: {type: 'string', enum: ['sqlite', 'pg']},
+    engine: {type: 'string', enum: ['sqlite', 'postgres']},
     connection: {
       type: 'object',
-      required: ['urlOrPath'],
+      required: ['url'],
       additionalProperties: false,
       properties: {
-        urlOrPath: {type: 'string'},
+        url: {type: 'string'},
       },
     },
-    dbTimeout: {type: 'integer', default: 10000, minimum: 1},
+    timeout: {type: 'integer', default: 10000, minimum: 1},
   },
   oneOf: [
     {
@@ -126,7 +133,7 @@ const databaseSchema = {
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: {
+            url: {
               type: 'string',
               pattern:
                 '^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$',
@@ -138,11 +145,11 @@ const databaseSchema = {
     {
       type: 'object',
       properties: {
-        engine: {const: 'pg'},
+        engine: {const: 'postgres'},
         connection: {
           type: 'object',
           properties: {
-            urlOrPath: {
+            url: {
               type: 'string',
               pattern: '^postgres(ql)?:\\/\\/',
             },
@@ -162,42 +169,70 @@ const cacheDbSchema = {
     engine: {type: 'string', enum: ['redis']},
     connection: {
       type: 'object',
-      required: ['uri'],
+      required: ['url'],
       additionalProperties: false,
       properties: {
-        uri: {type: 'string', pattern: '^redis:\\/\\/'},
+        url: {type: 'string', pattern: '^redis:\\/\\/'},
       },
     },
     timeout: {type: 'integer', default: 10000, minimum: 1},
   },
 };
 
+const infrastructureSchema = {
+  type: 'object',
+  required: ['database'],
+  additionalProperties: false,
+  properties: {
+    database: databaseSchema,
+    cache: cacheDbSchema,
+  },
+};
+
 const fieldSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'type'],
+  required: ['type'],
   properties: {
-    name: {
-      type: 'string',
-      minLength: 1,
-      isEntityName: true,
-    },
     type: {
       type: 'string',
-      enum: ['integer', 'string', 'boolean', 'text', 'datetime'],
+      enum: [
+        'integer',
+        'string',
+        'boolean',
+        'text',
+        'datetime',
+        'decimal',
+        'date',
+      ],
     },
     primaryKey: {type: 'boolean', default: false},
+    autoIncrement: {type: 'boolean', default: false},
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
-    supportedOperations: {
+    apis: {
       type: 'array',
-      items: {type: 'string'},
+      items: {
+        type: 'string',
+        enum: ['search', 'index', 'edit', 'delete'],
+      },
       uniqueItems: true,
     },
-    supportedAggregation: {
+    query: {
       type: 'array',
-      items: {type: 'string'},
+      items: {
+        type: 'string',
+        enum: ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'not_in', 'sort'],
+      },
+      uniqueItems: true,
+    },
+    aggregations: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['count', 'avg', 'sum', 'min', 'max', 'frequency'],
+      },
       uniqueItems: true,
     },
   },
@@ -206,14 +241,9 @@ const fieldSchema = {
 const indexSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'columns'],
+  required: ['fields'],
   properties: {
-    name: {
-      type: 'string',
-      minLength: 1,
-      isEntityName: true,
-    },
-    columns: {
+    fields: {
       type: 'array',
       minItems: 1,
       items: {
@@ -229,66 +259,61 @@ const indexSchema = {
   },
 };
 
-const foreignKeySchema = {
+const relationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'columns', 'referenceTable', 'referenceColumns'],
+  required: ['type', 'model', 'localField', 'foreignField'],
   properties: {
-    name: {
+    type: {
+      type: 'string',
+      enum: ['belongsTo'],
+    },
+    model: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
     },
-    columns: {
-      type: 'array',
-      minItems: 1,
-      items: {type: 'string', isEntityName: true},
-      uniqueItems: true,
-    },
-    referenceTable: {
+    localField: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
     },
-    referenceColumns: {
-      type: 'array',
-      minItems: 1,
-      items: {type: 'string', isEntityName: true},
-      uniqueItems: true,
+    foreignField: {
+      type: 'string',
+      minLength: 1,
+      isEntityName: true,
     },
     onDelete: {
       type: 'string',
-      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+      enum: ['cascade', 'set null', 'set default', 'restrict', 'no action'],
     },
     onUpdate: {
       type: 'string',
-      enum: ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'],
+      enum: ['cascade', 'set null', 'set default', 'restrict', 'no action'],
     },
   },
 };
 
 const modelSchema = {
   type: 'object',
-  required: ['name', 'fields'],
+  required: ['fields'],
   additionalProperties: false,
   properties: {
-    name: {
-      type: 'string',
-      isEntityName: true,
-      minLength: 1,
+    timestamps: {
+      type: 'boolean',
     },
     fields: {
-      type: 'array',
-      minItems: 1,
-      items: fieldSchema,
+      type: 'object',
+      minProperties: 1,
+      additionalProperties: fieldSchema,
     },
     indexes: {
-      type: 'array',
-      items: indexSchema,
+      type: 'object',
+      additionalProperties: indexSchema,
     },
-    foreignKeys: {
-      type: 'array',
-      items: foreignKeySchema,
+    relations: {
+      type: 'object',
+      additionalProperties: relationSchema,
     },
     validation: {
       type: 'object',
@@ -310,7 +335,7 @@ const webhookSchema = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['query', 'body', 'params', 'resp'],
+        enum: ['query', 'body', 'params', 'response'],
       },
       minItems: 1,
     },
@@ -325,41 +350,56 @@ const webhookSchema = {
   },
 };
 
-const customQuerySchema = {
+const customEndpointHandlerSchema = {
   type: 'object',
-  required: ['name', 'method', 'path', 'query'],
+  required: ['type', 'sql'],
   additionalProperties: false,
   properties: {
-    name: {
+    type: {
       type: 'string',
-      minLength: 1,
-      isEntityName: true,
+      enum: ['sql'],
     },
-    method: {
-      type: 'string',
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    },
-    path: {
-      type: 'string',
-      pattern: '^\\/[a-z_\\-\\/]+$',
-    },
-    query: {
+    sql: {
       type: 'string',
       minLength: 1,
     },
   },
 };
 
-const sspSchema = {
+const customEndpointSchema = {
   type: 'object',
-  required: ['paramType', 'paramName', 'value'],
+  required: ['method', 'path', 'description', 'handler'],
   additionalProperties: false,
   properties: {
-    paramType: {
+    method: {
+      type: 'string',
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    },
+    path: {
+      type: 'string',
+      pattern: '^\\/[a-zA-Z0-9_-]+$',
+    },
+    description: {
+      type: 'string',
+      minLength: 1,
+    },
+    validation: {
+      type: 'object',
+    },
+    handler: customEndpointHandlerSchema,
+  },
+};
+
+const serverParamSchema = {
+  type: 'object',
+  required: ['type', 'name', 'value'],
+  additionalProperties: false,
+  properties: {
+    type: {
       type: 'string',
       enum: ['path', 'query', 'body'],
     },
-    paramName: {
+    name: {
       type: 'string',
       minLength: 1,
       isEntityName: true,
@@ -373,17 +413,20 @@ const sspSchema = {
 const apisSchema = {
   type: 'object',
   patternProperties: {
-    '^[A-Za-z0-9-_>]+$': {
+    '^[A-Za-z0-9-_.]+$': {
       type: 'object',
       properties: {
+        enabled: {
+          type: 'boolean',
+        },
         webhooks: {
           type: 'array',
           items: webhookSchema,
           minItems: 1,
         },
-        ssp: {
+        serverParams: {
           type: 'array',
-          items: sspSchema,
+          items: serverParamSchema,
           minItems: 1,
         },
         authorization: {
@@ -396,81 +439,133 @@ const apisSchema = {
   additionalProperties: false,
 };
 
-const customAPIsSchema = {
+const customEndpointsSchema = {
+  type: 'object',
+  minProperties: 1,
+  additionalProperties: customEndpointSchema,
+};
+
+const userModelSchema = {
   type: 'object',
   additionalProperties: false,
+  required: ['model', 'idField', 'usernameField', 'passwordField'],
   properties: {
-    customQueries: {
-      type: 'array',
-      items: customQuerySchema,
+    model: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    idField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    usernameField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    passwordField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+    isVerifiedField: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
     },
   },
 };
 
-const authSchema = {
+const authenticationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['enableAuth', 'authEngine'],
+  required: ['enabled', 'provider'],
   properties: {
-    enableAuth: {
+    enabled: {
       type: 'boolean',
     },
-    authEngine: {
-      type: 'string',
-      enum: ['api-key', 'up-auth'],
-    },
-    authModel: {
+    provider: {
       type: 'object',
       additionalProperties: false,
-      required: ['modelName', 'idColumn', 'usernameColumn', 'passwordColumn'],
+      required: ['type', 'config'],
       properties: {
-        modelName: {
+        type: {
           type: 'string',
-          isEntityName: true,
-          minLength: 1,
+          enum: ['api-key', 'up-auth'],
         },
-        idColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
-        },
-        usernameColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
-        },
-        passwordColumn: {
-          type: 'string',
-          isEntityName: true,
-          minLength: 1,
+        config: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            userModel: userModelSchema,
+            jwtSecret: {
+              type: 'string',
+              minLength: 32,
+            },
+            tokenExpiration: {
+              type: 'string',
+              pattern: '^\\d+[smhd]$',
+            },
+            mfaRequired: {
+              type: 'boolean',
+            },
+            key: {
+              type: 'string',
+              minLength: 1,
+            },
+          },
         },
       },
     },
-    apiKey: {
+  },
+};
+
+const emailSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['provider'],
+  properties: {
+    provider: {
       type: 'string',
-      minLength: 1,
-      nullable: true,
+      enum: ['dummy'],
     },
+  },
+};
+
+const integrationsSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    email: emailSchema,
   },
 };
 
 const schema = {
   type: 'object',
-  required: ['application', 'swagger', 'database', 'models'],
+  required: ['application', 'docs', 'infrastructure', 'data'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,
-    swagger: swaggerSchema,
-    database: databaseSchema,
-    models: {
-      type: 'array',
-      minItems: 1,
-      items: modelSchema,
+    docs: docsSchema,
+    infrastructure: infrastructureSchema,
+    data: {
+      type: 'object',
+      required: ['models'],
+      additionalProperties: false,
+      properties: {
+        models: {
+          type: 'object',
+          minProperties: 1,
+          additionalProperties: modelSchema,
+        },
+      },
     },
     apis: apisSchema,
-    cache_db: cacheDbSchema,
-    customAPIs: customAPIsSchema,
-    auth: authSchema,
+    customEndpoints: customEndpointsSchema,
+    authentication: authenticationSchema,
+    integrations: integrationsSchema,
   },
 };
 

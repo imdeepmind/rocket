@@ -5,6 +5,7 @@ import {AppConfig} from '@/interfaces/config';
 export interface RouteInfo {
   method: string;
   url: string;
+  apiIdentifier?: string;
 }
 
 const ROCKET_ASCII = `
@@ -99,16 +100,16 @@ export function showWelcomeScreen(
   console.log(coloredRocket);
 
   console.log('\n');
-  console.log('  ' + chalk.bold.bgWhite.black(' ROCKET API FRAMEWORK '));
+  console.log('  ' + chalk.bold.bgWhite.black(` ${config.application.name} `));
   console.log('  ' + chalk.dim('🚀 Lift off your development with ease'));
   console.log('\n');
 
-  const swaggerUrl = config.swagger.enabled
-    ? `http://0.0.0.0:${port}${config.swagger.basePath}`
+  const swaggerUrl = config.docs.openapi.enabled
+    ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
     : chalk.gray('Disabled');
 
-  const cacheDbStatus = config.cache_db
-    ? chalk.magenta(config.cache_db.engine.toUpperCase())
+  const cacheDbStatus = config.infrastructure.cache
+    ? chalk.magenta(config.infrastructure.cache.engine.toUpperCase())
     : chalk.gray('Disabled');
 
   const rateLimit = config.application.rateLimit;
@@ -125,34 +126,39 @@ export function showWelcomeScreen(
   console.log(
     '  ' +
       chalk.white('Database:    ') +
-      chalk.magenta(config.database.engine.toUpperCase()),
+      chalk.magenta(config.infrastructure.database.engine.toUpperCase()),
   );
   console.log('  ' + chalk.white('Cache DB:    ') + cacheDbStatus);
   console.log('  ' + chalk.white('Rate Limit:  ') + rateLimitStatus);
   console.log(
-    '  ' + chalk.white('Models:      ') + chalk.magenta(config.models.length),
+    '  ' +
+      chalk.white('Models:      ') +
+      chalk.magenta(Object.keys(config.data.models).length),
   );
   console.log('  ' + chalk.gray('─────────────────────────────────────────'));
 
   // Log models
   console.log('\n  ' + chalk.cyan('Models:'));
-  config.models.forEach((model, index) => {
+  Object.entries(config.data.models).forEach(([modelName, model], index) => {
     const color = MODEL_COLORS[index % MODEL_COLORS.length];
     console.log(
       '  ' +
         chalk.white('• ') +
-        color(model.name.padEnd(15)) +
-        chalk.gray(` (${model.fields.length} fields)`),
+        color(modelName.padEnd(15)) +
+        chalk.gray(` (${Object.keys(model.fields).length} fields)`),
     );
   });
 
   // Log routes
   console.log('\n  ' + chalk.cyan('Routes:'));
   // Filter routes
+  const swaggerPath = config.docs.openapi.enabled
+    ? config.docs.openapi.path
+    : null;
   const filteredRoutes = routes.filter(route => {
     const isHead = route.method.toUpperCase().split('/').includes('HEAD');
-    const isStatic = route.url.includes('/static');
-    return !isHead && !isStatic;
+    const isSwagger = swaggerPath !== null && route.url.startsWith(swaggerPath);
+    return !isHead && !isSwagger;
   });
 
   const sortedRoutes = [...filteredRoutes].sort((a, b) =>
@@ -172,7 +178,17 @@ export function showWelcomeScreen(
       Math.max(0, maxMethodLength - route.method.length),
     );
 
-    console.log('  ' + coloredMethod + padding + chalk.white(`  ${route.url}`));
+    const identifier = route.apiIdentifier
+      ? chalk.gray(`  [${route.apiIdentifier}]`)
+      : '';
+
+    console.log(
+      '  ' +
+        coloredMethod +
+        padding +
+        chalk.white(`  ${route.url}`) +
+        identifier,
+    );
   });
 
   console.log('\n  ' + chalk.gray('─────────────────────────────────────────'));

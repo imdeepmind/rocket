@@ -7,6 +7,10 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
+import cachePlugin from '@/plugin/cache';
+import communicatePlugin from '@/plugin/communicate';
+import otpPlugin from '@/plugin/otp';
+import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
 import {registerRoutes} from '@/routes/index';
@@ -63,23 +67,31 @@ vi.mock('@/utils/welcome', () => ({
 
 const mockConfig: AppConfig = {
   application: {
+    name: 'Test App',
     logLevel: 'info',
   },
-  database: {
-    engine: 'sqlite',
-    connection: {urlOrPath: ':memory:'},
-  },
-  swagger: {
-    enabled: true,
-    basePath: '/docs',
-    info: {title: 'Test', description: 'Test API', version: '1.0'},
-  },
-  models: [
-    {
-      name: 'users',
-      fields: [{name: 'id', type: 'integer', primaryKey: true}],
+  infrastructure: {
+    database: {
+      engine: 'sqlite',
+      connection: {url: ':memory:'},
     },
-  ],
+  },
+  docs: {
+    openapi: {
+      enabled: true,
+      path: '/docs',
+      info: {title: 'Test', description: 'Test API', version: '1.0'},
+    },
+  },
+  data: {
+    models: {
+      users: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+        },
+      },
+    },
+  },
 };
 
 type MockedApp = FastifyInstance & {
@@ -148,7 +160,7 @@ describe('Server', () => {
     const fastifyMock = vi.mocked(Fastify);
     const customConfig: AppConfig = {
       ...mockConfig,
-      application: {logLevel: 'warn'},
+      application: {name: 'Test App', logLevel: 'warn'},
     };
 
     await startServer(customConfig, 3000, 'prod');
@@ -214,7 +226,7 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(4);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
     expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
@@ -228,15 +240,20 @@ describe('Server', () => {
   it('should not register swagger if disabled', async () => {
     const disabledSwaggerConfig = {
       ...mockConfig,
-      swagger: {...mockConfig.swagger, enabled: false},
+      docs: {
+        openapi: {...mockConfig.docs.openapi, enabled: false},
+      },
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(2);
+    expect(mockApp.register).toHaveBeenCalledTimes(5);
   });
 
   it('should not register routes if models are missing/empty', async () => {
-    const noModelsConfig = {...mockConfig, models: []} as unknown as AppConfig;
+    const noModelsConfig = {
+      ...mockConfig,
+      data: {models: {}},
+    } as unknown as AppConfig;
     await startServer(noModelsConfig, 3000, 'prod');
 
     expect(registerRoutes).toHaveBeenCalledWith(
@@ -335,6 +352,23 @@ describe('Server', () => {
       expect(mockReply.status).toHaveBeenCalledWith(422);
     });
 
+    it('should send err.body directly when present', () => {
+      const err = createError('Business error', undefined, 422);
+      (err as unknown as Record<string, unknown>).body = {
+        code: 422,
+        message: 'Business error',
+        data: null,
+      };
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(422);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        code: 422,
+        message: 'Business error',
+        data: null,
+      });
+    });
+
     it('should pass validation errors in metadata payload', () => {
       // Create a mock validation error block conforming to fastify's validation structure
       const validationPayload = [
@@ -372,47 +406,16 @@ describe('Server', () => {
   });
 
   describe('Redis and Rate Limit Configuration', () => {
-    it('should register redis plugin when cache_db is configured', async () => {
-      const configWithRedis: AppConfig = {
-        ...mockConfig,
-        cache_db: {
-          engine: 'redis',
-          connection: {uri: 'redis://localhost:6379'},
-          timeout: 5000,
-        },
-      };
-
-      const registerMock = mockApp.register;
-      await startServer(configWithRedis, 3000, 'dev');
-
-      // Verify redis plugin was registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeDefined();
-    });
-
-    it('should not register redis plugin when cache_db is not configured', async () => {
-      const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
-
-      // Verify redis plugin was not registered
-      const redisRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {engine?: string})?.engine === 'redis',
-      );
-      expect(redisRegistration).toBeUndefined();
-    });
-
     it('should register rate-limit plugin when rateLimit is configured', async () => {
       const configWithRateLimit: AppConfig = {
         ...mockConfig,
         application: {
+          name: 'Test App',
           logLevel: 'info',
           rateLimit: {
             enabled: true,
             max: 100,
             timeWindow: '15m',
-            useRedis: false,
           },
         },
       };
@@ -420,9 +423,8 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(configWithRateLimit, 3000, 'dev');
 
-      // Verify rate-limit plugin was registered
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
       expect(rateLimitRegistration).toBeDefined();
     });
@@ -431,54 +433,22 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(mockConfig, 3000, 'dev');
 
-      // Verify rate-limit plugin was not registered
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) => (call[1] as {rateLimit?: boolean})?.rateLimit,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
       expect(rateLimitRegistration).toBeUndefined();
-    });
-
-    it('should pass redis client to rate-limit when both cache_db and rateLimit with useRedis are configured', async () => {
-      const configWithBoth: AppConfig = {
-        ...mockConfig,
-        cache_db: {
-          engine: 'redis',
-          connection: {uri: 'redis://localhost:6379'},
-          timeout: 5000,
-        },
-        application: {
-          logLevel: 'info',
-          rateLimit: {
-            enabled: true,
-            max: 100,
-            timeWindow: '15m',
-            useRedis: true,
-          },
-        },
-      };
-
-      const registerMock = mockApp.register;
-      await startServer(configWithBoth, 3000, 'dev');
-
-      // Verify rate-limit registration includes redis option
-      const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) =>
-          (call[1] as {rateLimit?: {useRedis?: boolean}})?.rateLimit
-            ?.useRedis === true,
-      );
-      expect(rateLimitRegistration).toBeDefined();
     });
 
     it('should disable rate-limit when enabled is false', async () => {
       const configWithDisabledRateLimit: AppConfig = {
         ...mockConfig,
         application: {
+          name: 'Test App',
           logLevel: 'info',
           rateLimit: {
             enabled: false,
             max: 100,
             timeWindow: '15m',
-            useRedis: false,
           },
         },
       };
@@ -486,13 +456,10 @@ describe('Server', () => {
       const registerMock = mockApp.register;
       await startServer(configWithDisabledRateLimit, 3000, 'dev');
 
-      // Verify rate-limit plugin was still registered but with enabled: false
       const rateLimitRegistration = registerMock.mock.calls.find(
-        (call: unknown[]) =>
-          (call[1] as {rateLimit?: {enabled?: boolean}})?.rateLimit?.enabled ===
-          false,
+        (call: unknown[]) => call[0] === rateLimitPlugin,
       );
-      expect(rateLimitRegistration).toBeDefined();
+      expect(rateLimitRegistration).toBeUndefined();
     });
   });
 
@@ -500,14 +467,18 @@ describe('Server', () => {
     it('should register auth plugin when auth is configured', async () => {
       const configWithAuth: AppConfig = {
         ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
           },
         },
       };
@@ -521,56 +492,105 @@ describe('Server', () => {
       );
     });
 
-    it('should include bearerAuth in swagger components when up-auth is enabled', async () => {
-      const configWithUpAuth: AppConfig = {
+    it('should register otp plugin when auth is up-auth with mfaRequired', async () => {
+      const configWithMfa: AppConfig = {
         ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'up-auth',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
           },
         },
       };
 
-      await startServer(configWithUpAuth, 3000, 'dev');
+      const registerMock = mockApp.register;
+      await startServer(configWithMfa, 3000, 'dev');
 
-      const swaggerRegistration = mockApp.register.mock.calls.find(
-        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
-      );
-      expect(swaggerRegistration).toBeDefined();
-      expect(
-        swaggerRegistration![1].openapi.components.securitySchemes,
-      ).toHaveProperty('bearerAuth');
+      expect(registerMock).toHaveBeenCalledWith(otpPlugin);
+    });
+  });
+
+  describe('Integrations Configuration', () => {
+    it('should register communicate plugin when integrations.email is configured', async () => {
+      const configWithIntegrations: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithIntegrations, 3000, 'dev');
+
+      expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
     });
 
-    it('should include apiKeyAuth in swagger components when api-key is enabled', async () => {
-      const configWithApiKey: AppConfig = {
+    it('should not register communicate plugin when integrations.email is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      // Assert that none of the registered calls are the communicatePlugin
+      const communicatePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === communicatePlugin,
+      );
+      expect(communicatePluginCall).toBeUndefined();
+    });
+  });
+
+  describe('Cache Configuration', () => {
+    it('should register cache plugin when cache is configured', async () => {
+      const configWithCache: AppConfig = {
         ...mockConfig,
-        auth: {
-          enableAuth: true,
-          authEngine: 'api-key',
-          authModel: {
-            modelName: 'users',
-            idColumn: 'id',
-            usernameColumn: 'email',
-            passwordColumn: 'password',
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
           },
         },
       };
 
-      await startServer(configWithApiKey, 3000, 'dev');
+      const registerMock = mockApp.register;
+      await startServer(configWithCache, 3000, 'dev');
 
-      const swaggerRegistration = mockApp.register.mock.calls.find(
-        (call: Array<{openapi: unknown}>) => call[1]?.openapi,
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
       );
-      expect(swaggerRegistration).toBeDefined();
-      expect(
-        swaggerRegistration![1].openapi.components.securitySchemes,
-      ).toHaveProperty('apiKeyAuth');
+      expect(cachePluginCall).toBeDefined();
+    });
+
+    it('should register cache plugin even when cache is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      const cachePluginCall = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === cachePlugin,
+      );
+      expect(cachePluginCall).toBeDefined();
     });
   });
 });
