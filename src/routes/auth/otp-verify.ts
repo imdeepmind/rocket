@@ -4,13 +4,14 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 function registerOtpVerifyBase(
   app: FastifyInstance,
   config: AppConfig,
   path: string,
-  action: 'login' | 'registration',
+  action: 'login' | 'registration' | 'forgot-password',
 ): void {
   const {authentication} = config;
   const {models} = config.data;
@@ -35,8 +36,6 @@ function registerOtpVerifyBase(
     model,
     action,
   );
-
-  const isRegistration = action === 'registration';
 
   app.post(
     path,
@@ -80,7 +79,7 @@ function registerOtpVerifyBase(
           .send(app.buildResponse(401, 'User not found', null));
       }
 
-      if (isRegistration) {
+      if (action === 'registration') {
         const isVerifiedField = upConfig.userModel.isVerifiedField;
         if (isVerifiedField) {
           const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
@@ -90,6 +89,27 @@ function registerOtpVerifyBase(
         return reply
           .status(200)
           .send(app.buildResponse(200, 'OTP verification successful', null));
+      }
+
+      if (action === 'forgot-password') {
+        const newPassword = (request.body as Record<string, string>)
+          .newPassword;
+        if (!newPassword) {
+          return reply
+            .status(400)
+            .send(app.buildResponse(400, 'newPassword is required', null));
+        }
+
+        const {passwordField} = upConfig.userModel;
+        const hashedPassword = await hash(String(newPassword));
+        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${usernameField}" = $2;`;
+        await app.db.query(updateQuery, [hashedPassword, String(username)]);
+
+        return reply.status(200).send(
+          app.buildResponse(200, 'OTP verification successful', {
+            success: true,
+          }),
+        );
       }
 
       const user = res.rows[0] as Record<string, unknown>;
@@ -134,18 +154,30 @@ export function registerRegistrationOtpVerifyRoute(
 function generateSchema(
   usernameField: string,
   model: string,
-  action: 'login' | 'registration',
+  action: 'login' | 'registration' | 'forgot-password',
 ) {
+  const isForgotPassword = action === 'forgot-password';
+
   const bodySchema = {
     type: 'object',
-    required: ['ulid', 'otp', usernameField],
+    required: isForgotPassword
+      ? ['ulid', 'otp', usernameField, 'newPassword']
+      : ['ulid', 'otp', usernameField],
     properties: {
       ulid: {
         type: 'string',
-        description: 'The ULID from the login/register response',
+        description: 'The ULID from the OTP send response',
       },
       otp: {type: 'string', description: 'The OTP sent to the user email'},
       [usernameField]: {type: 'string', description: 'The user identifier'},
+      ...(isForgotPassword
+        ? {
+            newPassword: {
+              type: 'string',
+              description: 'The new password to set',
+            },
+          }
+        : {}),
     },
     additionalProperties: false,
   };
@@ -158,11 +190,18 @@ function generateSchema(
             accessToken: {type: 'string', description: 'JWT access token'},
           },
         }
-      : {
-          type: 'object',
-          properties: {},
-          nullable: true,
-        };
+      : action === 'forgot-password'
+        ? {
+            type: 'object',
+            properties: {
+              success: {type: 'boolean'},
+            },
+          }
+        : {
+            type: 'object',
+            properties: {},
+            nullable: true,
+          };
 
   const responseSchema = getResponseStructureSchema([200], dataSchema);
 
@@ -174,4 +213,16 @@ function generateSchema(
     response: responseSchema,
   };
   return schema;
+}
+
+export function registerForgotPasswordOtpVerifyRoute(
+  app: FastifyInstance,
+  config: AppConfig,
+): void {
+  registerOtpVerifyBase(
+    app,
+    config,
+    '/auth/forgot-password/verify/otp',
+    'forgot-password',
+  );
 }
