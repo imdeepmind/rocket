@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
 
 const upAuthConfig: AuthenticationConfig = {
@@ -24,6 +24,7 @@ describe('test post api', () => {
   beforeEach(() => {
     // Clear mock state between tests so call assertions are isolated
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('happy path', () => {
@@ -65,8 +66,7 @@ describe('test post api', () => {
         payload: {name: 'Alice', email: 'alice@example.com'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
         ['Alice', 'alice@example.com'],
       );
@@ -90,7 +90,7 @@ describe('test post api', () => {
       });
 
       // Only model-defined fields should appear in the query
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
         ['Bob', 'bob@example.com'],
       );
@@ -181,7 +181,10 @@ describe('test post api', () => {
 
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, mockModels);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
 
       const response = await fastify.inject({
         method: 'POST',

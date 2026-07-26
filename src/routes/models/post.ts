@@ -12,14 +12,6 @@ import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register POST routes for creating records (table-level).
- *
- * For each model that has fields, creates:
- *   POST /{model}/
- *
- * Body: all fields as optional properties for creating a new record.
- */
 export function registerPostRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -72,18 +64,28 @@ export function registerPostRoutes(
           .join(', ');
         const query = `INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders});`;
 
-        const res = await app.db.query(query, values);
+        let tx;
+        try {
+          tx = await app.db.beginTransaction();
+          const res = await tx.query(query, values);
+          await tx.commit();
 
-        return reply
-          .status(201)
-          .send(
-            app.buildResponse(
-              201,
-              `Successfully added the new entry to the ${tableName} table`,
-              body,
-              res,
-            ),
-          );
+          return reply
+            .status(201)
+            .send(
+              app.buildResponse(
+                201,
+                `Successfully added the new entry to the ${tableName} table`,
+                body,
+                res,
+              ),
+            );
+        } catch (err) {
+          if (tx) await tx.rollback().catch(() => {});
+          throw err;
+        } finally {
+          tx?.release();
+        }
       },
     );
   }

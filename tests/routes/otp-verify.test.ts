@@ -23,7 +23,7 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -130,6 +130,7 @@ async function createOtpApp(
 describe('POST /auth/login/verify/otp', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -190,12 +191,16 @@ describe('POST /auth/login/verify/otp', () => {
         await app.otp.sendOTPForVerification('alice@example.com');
       const ulid = typeof sendResponse === 'string' ? sendResponse : '';
 
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
-        ],
-        rowCount: 1,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
@@ -287,8 +292,10 @@ describe('POST /auth/login/verify/otp', () => {
       // Mock bcrypt.compare so OTP verification succeeds
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
-      // Mock DB: no user found
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      // Mock transaction: BEGIN, SELECT (no user), ROLLBACK
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // SELECT (empty)
 
       const response = await app.inject({
         method: 'POST',
@@ -306,6 +313,7 @@ describe('POST /auth/login/verify/otp', () => {
 describe('POST /auth/registration/verify/otp', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -336,13 +344,16 @@ describe('POST /auth/registration/verify/otp', () => {
         await app.otp.sendOTPForVerification('alice@example.com');
       const ulid = typeof sendResponse === 'string' ? sendResponse : '';
 
-      // Mock SELECT + UPDATE queries
-      pgQueryMock
+      // Mock transaction: BEGIN, SELECT, UPDATE, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockResolvedValueOnce({
+          // SELECT
           rows: [{id: 1, email: 'alice@example.com', is_active: false}],
           rowCount: 1,
         })
-        .mockResolvedValueOnce({rows: [], rowCount: 1});
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
@@ -360,7 +371,7 @@ describe('POST /auth/registration/verify/otp', () => {
       expect(body.data).toBeNull();
 
       // Verify the UPDATE query was executed
-      const updateCall = pgQueryMock.mock.calls.find(call => {
+      const updateCall = pgClientQueryMock.mock.calls.find(call => {
         const [query] = call;
         return (
           typeof query === 'string' && (query as string).includes('UPDATE')
@@ -395,10 +406,15 @@ describe('POST /auth/registration/verify/otp', () => {
         await app.otp.sendOTPForVerification('alice@example.com');
       const ulid = typeof sendResponse === 'string' ? sendResponse : '';
 
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [{id: 1, email: 'alice@example.com', password: 'hashed'}],
-        rowCount: 1,
-      });
+      // Mock transaction: BEGIN, SELECT, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [{id: 1, email: 'alice@example.com', password: 'hashed'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
@@ -414,7 +430,7 @@ describe('POST /auth/registration/verify/otp', () => {
       expect(body.data).toBeNull();
 
       // No UPDATE query should have been executed
-      const updateCall = pgQueryMock.mock.calls.find(call => {
+      const updateCall = pgClientQueryMock.mock.calls.find(call => {
         const [query] = call;
         return (
           typeof query === 'string' && (query as string).includes('UPDATE')
@@ -466,6 +482,7 @@ describe('POST /auth/registration/verify/otp', () => {
 describe('POST /auth/forgot-password/verify/otp', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -501,13 +518,16 @@ describe('POST /auth/forgot-password/verify/otp', () => {
         await app.otp.sendOTPForVerification('alice@example.com');
       const ulid = typeof sendResponse === 'string' ? sendResponse : '';
 
-      // Mock SELECT + UPDATE queries
-      pgQueryMock
+      // Mock transaction: BEGIN, SELECT, UPDATE, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockResolvedValueOnce({
+          // SELECT
           rows: [{id: 1, email: 'alice@example.com', password: 'old_hashed'}],
           rowCount: 1,
         })
-        .mockResolvedValueOnce({rows: [], rowCount: 1});
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       vi.spyOn(bcrypt, 'hash').mockResolvedValue(
@@ -531,7 +551,7 @@ describe('POST /auth/forgot-password/verify/otp', () => {
       expect(body.data.success).toBe(true);
 
       // Verify the UPDATE query was executed
-      const updateCall = pgQueryMock.mock.calls.find(call => {
+      const updateCall = pgClientQueryMock.mock.calls.find(call => {
         const [query] = call;
         return (
           typeof query === 'string' && (query as string).includes('UPDATE')

@@ -11,14 +11,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register DELETE routes for deletable fields.
- *
- * For each model, for each field with 'delete' in apis, creates:
- *   DELETE /{model}/{columnName}/:value
- *
- * Path params: the column value identifying the record to delete.
- */
 export function registerDeleteRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -72,7 +64,17 @@ export function registerDeleteRoutes(
 
           const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
 
-          await app.db.query(query, [value]);
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
+            await tx.query(query, [value]);
+            await tx.commit();
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
+          }
 
           return reply.status(204).send();
         },

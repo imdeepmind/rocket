@@ -13,18 +13,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register SEARCH routes for searchable fields.
- *
- * For each model, for each field with 'search' in apis, creates:
- *   GET /{model}/search/{columnName}
- *
- * Query params:
- *   - {columnName}_search (required) — the search pattern
- *   - Other filter params based on the model's operations
- *   - orderBy, orderDir — sorting
- *   - page, limit — pagination
- */
 export function registerSearchRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -95,44 +83,57 @@ export function registerSearchRoutes(
           query += ` WHERE ${whereClauses.join(' AND ')}`;
 
           const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
-          const countRes = await app.db.query<{total: number | string}>(
-            countQuery,
-            values,
-          );
-          const total = Number(countRes.rows[0]?.total || 0);
 
-          if (queryParams.orderBy) {
-            query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
-          }
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
 
-          const page = Math.max(Number(queryParams.page) || 1, 1);
-          const limit = Math.min(
-            Math.max(Number(queryParams.limit) || 20, 10),
-            100,
-          );
-          const offset = (page - 1) * limit;
+            const countRes = await tx.query<{total: number | string}>(
+              countQuery,
+              values,
+            );
+            const total = Number(countRes.rows[0]?.total || 0);
 
-          query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-          values.push(limit, offset);
+            if (queryParams.orderBy) {
+              query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+            }
 
-          const res = await app.db.query(query, values);
+            const page = Math.max(Number(queryParams.page) || 1, 1);
+            const limit = Math.min(
+              Math.max(Number(queryParams.limit) || 20, 10),
+              100,
+            );
+            const offset = (page - 1) * limit;
 
-          return reply.status(200).send(
-            app.buildResponse(
-              200,
-              `Successfully searched records from the ${tableName} table`,
-              {
-                data: res.rows || [],
-                pagination: {
-                  page,
-                  limit,
-                  total,
-                  totalPages: Math.ceil(total / limit),
+            query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+            values.push(limit, offset);
+
+            const res = await tx.query(query, values);
+
+            await tx.commit();
+
+            return reply.status(200).send(
+              app.buildResponse(
+                200,
+                `Successfully searched records from the ${tableName} table`,
+                {
+                  data: res.rows || [],
+                  pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                  },
                 },
-              },
-              res,
-            ),
-          );
+                res,
+              ),
+            );
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
+          }
         },
       );
     }

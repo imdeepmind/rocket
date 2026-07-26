@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const upAuthConfig: AuthenticationConfig = {
@@ -77,14 +77,15 @@ const validatedEditModel: Record<string, ModelConfig> = {
 describe('test edit api', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('PATCH partial updates', () => {
     test('should return 200 on successful PATCH update', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [],
-        rowCount: 1,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -117,8 +118,7 @@ describe('test edit api', () => {
         },
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgClientQueryMock.mock.calls[1];
       // Note: order of keys is not guaranteed by Object.keys, but usually preserved
       expect(callArgs[0]).toMatch(
         /UPDATE "users" SET ".*" = \$1, ".*" = \$2 WHERE "id" = \$3/,
@@ -156,7 +156,7 @@ describe('test edit api', () => {
       });
 
       // The update query should only set "name"
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "users" SET "name" = $1 WHERE "id" = $2',
         ['Alice', 1],
       );
@@ -167,7 +167,10 @@ describe('test edit api', () => {
 
   describe('PUT complete updates', () => {
     test('should return 200 on successful PUT update with all required fields', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -224,7 +227,10 @@ describe('test edit api', () => {
     test('should allow partial custom validation for PATCH (required removed)', async () => {
       const fastify = await createTestApp(pgConfig, validatedEditModel);
 
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const response = await fastify.inject({
         method: 'PATCH',
@@ -252,7 +258,7 @@ describe('test edit api', () => {
         },
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" < $3',
         ['Urgent Pending Task', 'pending', 10],
       );
@@ -269,7 +275,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" <= $3',
         ['Update', 'pending', 5],
       );
@@ -286,7 +292,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" > $3',
         ['Update', 'pending', 1],
       );
@@ -303,7 +309,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" >= $3',
         ['Update', 'pending', 2],
       );
@@ -323,7 +329,7 @@ describe('test edit api', () => {
       });
 
       // Query should not include page, limit, or order stuff in WHERE
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2',
         ['Ignored Params Task', 'pending'],
       );
@@ -340,7 +346,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" != $3',
         ['Update', 'pending', 10],
       );
@@ -357,7 +363,7 @@ describe('test edit api', () => {
         payload: {title: 'Update'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" NOT IN ($3, $4, $5)',
         ['Update', 'pending', 1, 2, 3],
       );
@@ -376,7 +382,7 @@ describe('test edit api', () => {
         },
       });
 
-      const callArgs = pgQueryMock.mock.calls[0];
+      const callArgs = pgClientQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain(
         'WHERE "status" = $2 AND "title" = $3 AND "id" IN ($4, $5, $6)',
       );
@@ -387,7 +393,10 @@ describe('test edit api', () => {
 
   describe('error handling / edge cases', () => {
     test('should return 404 when PATCH updates zero rows (record not found)', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -406,7 +415,10 @@ describe('test edit api', () => {
     });
 
     test('should return 404 when PUT updates zero rows (record not found)', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -425,7 +437,10 @@ describe('test edit api', () => {
     });
 
     test('should return 200 when PATCH updates a record successfully', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
@@ -538,7 +553,10 @@ describe('test edit api', () => {
     });
 
     test('should return 200 when auth is enabled and valid token is provided (PATCH)', async () => {
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(
         pgConfig,

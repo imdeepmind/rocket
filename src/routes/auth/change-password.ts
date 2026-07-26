@@ -54,38 +54,53 @@ export function registerChangePasswordRoute(
           );
       }
 
-      const query = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
-      const res = await app.db.query(query, [userId]);
+      const selectQuery = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
 
-      if (res.rows.length === 0) {
-        return reply
-          .status(404)
-          .send(app.buildResponse(404, 'User not found', null));
+      let tx;
+      try {
+        tx = await app.db.beginTransaction();
+
+        const res = await tx.query(selectQuery, [userId]);
+
+        if (res.rows.length === 0) {
+          throw Object.assign(new Error('User not found'), {
+            statusCode: 404,
+            body: app.buildResponse(404, 'User not found', null),
+          });
+        }
+
+        const user = res.rows[0] as Record<string, unknown>;
+        const currentHashedPassword = user[passwordField] as string;
+
+        const isMatch = await compare(
+          String(existingPassword),
+          currentHashedPassword,
+        );
+        if (!isMatch) {
+          throw Object.assign(new Error('Invalid existing password'), {
+            statusCode: 401,
+            body: app.buildResponse(401, 'Invalid existing password', null),
+          });
+        }
+
+        const newHashedPassword = await hash(String(newPassword));
+
+        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${idField}" = $2;`;
+        await tx.query(updateQuery, [newHashedPassword, userId]);
+
+        await tx.commit();
+
+        return reply.status(200).send(
+          app.buildResponse(200, 'Password changed successfully', {
+            success: true,
+          }),
+        );
+      } catch (err) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw err;
+      } finally {
+        tx?.release();
       }
-
-      const user = res.rows[0] as Record<string, unknown>;
-      const currentHashedPassword = user[passwordField] as string;
-
-      const isMatch = await compare(
-        String(existingPassword),
-        currentHashedPassword,
-      );
-      if (!isMatch) {
-        return reply
-          .status(401)
-          .send(app.buildResponse(401, 'Invalid existing password', null));
-      }
-
-      const newHashedPassword = await hash(String(newPassword));
-
-      const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${idField}" = $2;`;
-      await app.db.query(updateQuery, [newHashedPassword, userId]);
-
-      return reply.status(200).send(
-        app.buildResponse(200, 'Password changed successfully', {
-          success: true,
-        }),
-      );
     },
   );
 }

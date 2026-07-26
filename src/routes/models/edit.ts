@@ -13,17 +13,6 @@ import {AppConfig, ModelBody} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register EDIT routes for editable fields.
- *
- * For each model, for each field with 'edit' in apis, creates:
- *   PATCH /{model}/{columnName}/:value (partial update)
- *   PUT /{model}/{columnName}/:value (complete update)
- *
- * Path params: the column value identifying the record to edit.
- * Body: all other fields as properties for updating.
- * Filters: if the field is not unique, filter params are available.
- */
 export function registerEditRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -167,31 +156,42 @@ export function registerEditRoutes(
 
         const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
-        const res = await app.db.query(query, values);
-        const affected = res.changes;
+        let tx;
+        try {
+          tx = await app.db.beginTransaction();
+          const res = await tx.query(query, values);
+          await tx.commit();
 
-        if (affected !== undefined && affected === 0) {
+          const affected = res.changes;
+
+          if (affected !== undefined && affected === 0) {
+            return reply
+              .status(404)
+              .send(
+                app.buildResponse(
+                  404,
+                  `No ${tableName} record found matching the given criteria`,
+                  null,
+                ),
+              );
+          }
+
           return reply
-            .status(404)
+            .status(200)
             .send(
               app.buildResponse(
-                404,
-                `No ${tableName} record found matching the given criteria`,
-                null,
+                200,
+                `Successfully updated records in the ${tableName} table`,
+                body,
+                res,
               ),
             );
+        } catch (err) {
+          if (tx) await tx.rollback().catch(() => {});
+          throw err;
+        } finally {
+          tx?.release();
         }
-
-        return reply
-          .status(200)
-          .send(
-            app.buildResponse(
-              200,
-              `Successfully updated records in the ${tableName} table`,
-              body,
-              res,
-            ),
-          );
       };
 
       app.patch(

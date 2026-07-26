@@ -17,7 +17,7 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -101,8 +101,9 @@ async function createAuthApp(
 describe('POST /auth/register', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     // Default DB response: empty result set
-    pgQueryMock.mockResolvedValue({rows: [], rowCount: 0});
+    pgClientQueryMock.mockResolvedValue({rows: [], rowCount: 0});
   });
 
   // -------------------------------------------------------------------------
@@ -240,8 +241,10 @@ describe('POST /auth/register', () => {
         payload: {email: 'carol@example.com', password: 'plaintext'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const [, queryValues] = pgQueryMock.mock.calls[0] as [string, string[]];
+      expect(pgClientQueryMock).toHaveBeenCalled();
+      const [, queryValues] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, string[]];
 
       // The stored password should be a bcrypt hash, not the plain text
       const storedPassword = queryValues[1]; // password is the 2nd value (after email)
@@ -260,8 +263,9 @@ describe('POST /auth/register', () => {
         payload: {email: 'dave@example.com', password: 'secret'},
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Table name must be the authModel.modelName
       expect(query).toContain('INSERT INTO "users"');
@@ -286,7 +290,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query, values] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query, values] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       expect(query).toContain('"name"');
       // "Eve" should appear in the values (name is the last value)
@@ -315,7 +321,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Unknown fields must not appear in the query
       expect(query).not.toContain('unknownField');
@@ -337,7 +345,9 @@ describe('POST /auth/register', () => {
         },
       });
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
 
       // Primary key "id" must be stripped
       expect(query).not.toContain('"id"');
@@ -417,7 +427,10 @@ describe('POST /auth/register', () => {
   describe('error handling', () => {
     test('should return 500 when the database query throws', async () => {
       const app = await createAuthApp(upAuthConfig);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
 
       const response = await app.inject({
         method: 'POST',
@@ -437,7 +450,10 @@ describe('POST /auth/register', () => {
       const constraintError = Object.assign(new Error('unique violation'), {
         code: '23505',
       });
-      pgQueryMock.mockRejectedValueOnce(constraintError);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(constraintError) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
 
       const response = await app.inject({
         method: 'POST',
@@ -501,7 +517,9 @@ describe('POST /auth/register', () => {
       expect(body.data).not.toHaveProperty('secret');
       expect(body.data).toMatchObject({username: 'judy'});
 
-      const [query] = pgQueryMock.mock.calls[0] as [string, unknown[]];
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
       expect(query).toContain('INSERT INTO "accounts"');
 
       await app.close();
@@ -654,7 +672,7 @@ describe('POST /auth/register', () => {
       expect(response.statusCode).toBe(201);
 
       // Verify the INSERT query includes is_active = false
-      const insertCall = pgQueryMock.mock.calls.find(call => {
+      const insertCall = pgClientQueryMock.mock.calls.find(call => {
         const [query] = call;
         return (
           typeof query === 'string' && (query as string).includes('INSERT')

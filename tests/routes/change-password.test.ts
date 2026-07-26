@@ -15,7 +15,7 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -97,6 +97,7 @@ async function createAuthApp(
 describe('POST /auth/change-password', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -155,19 +156,18 @@ describe('POST /auth/change-password', () => {
 
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: user exists for select query
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
-        ],
-        rowCount: 1,
-      });
-
-      // Mock DB: update query success
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [],
-        rowCount: 1,
-      });
+      // Mock transaction: BEGIN, SELECT (user exists), UPDATE, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       // Mock bcrypt: password matches
       const compareSpy = vi
@@ -202,15 +202,13 @@ describe('POST /auth/change-password', () => {
       );
       expect(hashSpy).toHaveBeenCalledWith('new_password', 10);
 
-      // Select query check
-      expect(pgQueryMock).toHaveBeenNthCalledWith(
-        1,
+      // Select query check (inside transaction)
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" = $1 LIMIT 1;',
         [1],
       );
-      // Update query check
-      expect(pgQueryMock).toHaveBeenNthCalledWith(
-        2,
+      // Update query check (inside transaction)
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'UPDATE "users" SET "password" = $1 WHERE "id" = $2;',
         ['new_hashed_password', 1],
       );
@@ -279,8 +277,10 @@ describe('POST /auth/change-password', () => {
       const app = await createAuthApp(upAuthConfig);
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: no user
-      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      // Mock transaction: BEGIN, SELECT (no user), ROLLBACK
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // SELECT (empty)
 
       const response = await app.inject({
         method: 'POST',
@@ -300,13 +300,16 @@ describe('POST /auth/change-password', () => {
       const app = await createAuthApp(upAuthConfig);
       const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
 
-      // Mock DB: user exists
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
-        ],
-        rowCount: 1,
-      });
+      // Mock transaction: BEGIN, SELECT (user exists), ROLLBACK
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        });
 
       // Mock bcrypt: password mismatch
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);

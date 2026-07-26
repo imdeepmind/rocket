@@ -2,6 +2,14 @@ import {vi} from 'vitest';
 
 export const pgQueryMock = vi.fn().mockResolvedValue({rows: [], rowCount: 0});
 export const pgEndMock = vi.fn().mockResolvedValue(undefined);
+export const pgClientQueryMock = vi
+  .fn()
+  .mockResolvedValue({rows: [], rowCount: 0});
+export const pgClientReleaseMock = vi.fn();
+export const pgConnectMock = vi.fn().mockResolvedValue({
+  query: pgClientQueryMock,
+  release: pgClientReleaseMock,
+});
 
 export const sqliteAllMock = vi.fn().mockReturnValue([]);
 export const sqliteRunMock = vi.fn().mockReturnValue({changes: 0});
@@ -10,3 +18,4 @@ export const sqlitePrepareMock = vi.fn().mockReturnValue({
   run: sqliteRunMock,
 });
 export const sqliteCloseMock = vi.fn();
+export const sqliteExecMock = vi.fn();

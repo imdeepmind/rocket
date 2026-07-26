@@ -9,7 +9,7 @@ export interface CLIOptions {
   migrate: boolean;
 }
 
-export {DatabaseQuery} from './database';
+export {DatabaseQuery, TransactionClient} from './database';
 
 export interface StructuredResponse<T = unknown, R = unknown> {
   code: number;

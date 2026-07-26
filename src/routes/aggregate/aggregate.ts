@@ -10,15 +10,6 @@ import {Aggregation, AppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register AGGREGATE routes for fields with aggregations.
- *
- * For each model, for each field with non-empty aggregations, creates:
- *   GET /{model}/aggregation/{columnName}
- *
- * Query params:
- *   - operations (string) — comma-separated list of aggregation operations to perform
- */
 export function registerAggregateRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -110,40 +101,52 @@ export function registerAggregateRoutes(
           if (requestedOps.includes('count'))
             sqlAggs.push(`COUNT("${fieldName}") AS count`);
 
-          if (sqlAggs.length > 0) {
-            const res = await app.db.query<Record<string, unknown>>(
-              `SELECT ${sqlAggs.join(', ')} FROM "${modelName}"`,
-            );
-            if (res.rows.length > 0) {
-              const row = res.rows[0];
-              if (requestedOps.includes('avg')) result.avg = row.avg;
-              if (requestedOps.includes('max')) result.max = row.max;
-              if (requestedOps.includes('min')) result.min = row.min;
-              if (requestedOps.includes('sum')) result.sum = row.sum;
-              if (requestedOps.includes('count')) result.count = row.count;
-            }
-          }
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
 
-          if (requestedOps.includes('frequency')) {
-            const freqRes = await app.db.query<Record<string, unknown>>(
-              `SELECT "${fieldName}" as val, COUNT(*) as c FROM "${modelName}" GROUP BY "${fieldName}"`,
-            );
-            const freq: Record<string, number> = {};
-            for (const row of freqRes.rows) {
-              freq[String(row.val)] = Number(row.c);
+            if (sqlAggs.length > 0) {
+              const res = await tx.query<Record<string, unknown>>(
+                `SELECT ${sqlAggs.join(', ')} FROM "${modelName}"`,
+              );
+              if (res.rows.length > 0) {
+                const row = res.rows[0];
+                if (requestedOps.includes('avg')) result.avg = row.avg;
+                if (requestedOps.includes('max')) result.max = row.max;
+                if (requestedOps.includes('min')) result.min = row.min;
+                if (requestedOps.includes('sum')) result.sum = row.sum;
+                if (requestedOps.includes('count')) result.count = row.count;
+              }
             }
-            result.frequency = freq;
-          }
 
-          return reply
-            .status(200)
-            .send(
-              app.buildResponse(
-                200,
-                `Successfully aggregated data for ${fieldName} in ${modelName}`,
-                result,
-              ),
-            );
+            if (requestedOps.includes('frequency')) {
+              const freqRes = await tx.query<Record<string, unknown>>(
+                `SELECT "${fieldName}" as val, COUNT(*) as c FROM "${modelName}" GROUP BY "${fieldName}"`,
+              );
+              const freq: Record<string, number> = {};
+              for (const row of freqRes.rows) {
+                freq[String(row.val)] = Number(row.c);
+              }
+              result.frequency = freq;
+            }
+
+            await tx.commit();
+
+            return reply
+              .status(200)
+              .send(
+                app.buildResponse(
+                  200,
+                  `Successfully aggregated data for ${fieldName} in ${modelName}`,
+                  result,
+                ),
+              );
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
+          }
         },
       );
     }

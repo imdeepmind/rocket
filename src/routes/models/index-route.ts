@@ -14,15 +14,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register INDEX routes for indexed fields.
- *
- * For each model, for each field with primaryKey, unique, or 'index' in apis, creates:
- *   GET /{model}/{columnName}/:value
- *
- * Includes filter query params based on the model's operations,
- * as well as sorting and pagination, ONLY if the field is not unique.
- */
 export function registerIndexRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -97,63 +88,75 @@ export function registerIndexRoutes(
 
           query += ` WHERE ${whereClauses.join(' AND ')}`;
 
-          let total = 0;
-          if (!isUnique) {
-            const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
-            const countRes = await app.db.query<{total: number | string}>(
-              countQuery,
-              values,
-            );
-            total = Number(countRes.rows[0]?.total || 0);
-          }
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
 
-          let page = 1;
-          let limit = 20;
-
-          if (!isUnique) {
-            if (queryParams.orderBy) {
-              query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+            let total = 0;
+            if (!isUnique) {
+              const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
+              const countRes = await tx.query<{total: number | string}>(
+                countQuery,
+                values,
+              );
+              total = Number(countRes.rows[0]?.total || 0);
             }
 
-            page = Math.max(Number(queryParams.page) || 1, 1);
-            limit = Math.min(
-              Math.max(Number(queryParams.limit) || 20, 10),
-              100,
-            );
-            const offset = (page - 1) * limit;
+            let page = 1;
+            let limit = 20;
 
-            query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-            values.push(limit, offset);
-          } else {
-            query += ` LIMIT $${paramIndex++};`;
-            values.push(1);
-          }
+            if (!isUnique) {
+              if (queryParams.orderBy) {
+                query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+              }
 
-          const res = await app.db.query(query, values);
+              page = Math.max(Number(queryParams.page) || 1, 1);
+              limit = Math.min(
+                Math.max(Number(queryParams.limit) || 20, 10),
+                100,
+              );
+              const offset = (page - 1) * limit;
 
-          const responsePayload: Record<string, unknown> = {
-            data: isUnique ? res.rows[0] || null : res.rows || [],
-          };
+              query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+              values.push(limit, offset);
+            } else {
+              query += ` LIMIT $${paramIndex++};`;
+              values.push(1);
+            }
 
-          if (!isUnique) {
-            responsePayload.pagination = {
-              page,
-              limit,
-              total,
-              totalPages: Math.ceil(total / limit),
+            const res = await tx.query(query, values);
+
+            await tx.commit();
+
+            const responsePayload: Record<string, unknown> = {
+              data: isUnique ? res.rows[0] || null : res.rows || [],
             };
-          }
 
-          return reply
-            .status(200)
-            .send(
-              app.buildResponse(
-                200,
-                `Successfully retrieved records from the ${tableName} table`,
-                responsePayload,
-                res,
-              ),
-            );
+            if (!isUnique) {
+              responsePayload.pagination = {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+              };
+            }
+
+            return reply
+              .status(200)
+              .send(
+                app.buildResponse(
+                  200,
+                  `Successfully retrieved records from the ${tableName} table`,
+                  responsePayload,
+                  res,
+                ),
+              );
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
+          }
         },
       );
     }

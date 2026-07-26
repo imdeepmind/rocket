@@ -352,6 +352,23 @@ describe('Server', () => {
       expect(mockReply.status).toHaveBeenCalledWith(422);
     });
 
+    it('should send err.body directly when present', () => {
+      const err = createError('Business error', undefined, 422);
+      (err as unknown as Record<string, unknown>).body = {
+        code: 422,
+        message: 'Business error',
+        data: null,
+      };
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(422);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        code: 422,
+        message: 'Business error',
+        data: null,
+      });
+    });
+
     it('should pass validation errors in metadata payload', () => {
       // Create a mock validation error block conforming to fastify's validation structure
       const validationPayload = [

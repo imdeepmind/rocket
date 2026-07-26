@@ -1,9 +1,11 @@
 import {vi} from 'vitest';
 
 import {
+  pgConnectMock,
   pgEndMock,
   pgQueryMock,
   sqliteCloseMock,
+  sqliteExecMock,
   sqlitePrepareMock,
 } from '@tests/helpers/db-mocks';
 
@@ -15,6 +17,7 @@ vi.mock('pg', () => {
       return {
         query: pgQueryMock,
         end: pgEndMock,
+        connect: pgConnectMock,
       };
     }),
   };
@@ -28,6 +31,7 @@ vi.mock('better-sqlite3', () => {
       return {
         prepare: sqlitePrepareMock,
         close: sqliteCloseMock,
+        exec: sqliteExecMock,
       };
     }),
   };

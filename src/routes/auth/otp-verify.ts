@@ -68,66 +68,85 @@ function registerOtpVerifyBase(
           .send(app.buildResponse(401, 'Invalid or expired OTP', null));
       }
 
-      const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
-      const res = await app.db.query(query, [String(username)]);
+      const selectQuery = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
 
-      if (res.rows.length === 0) {
-        return reply
-          .status(401)
-          .send(app.buildResponse(401, 'User not found', null));
-      }
+      let tx;
+      try {
+        tx = await app.db.beginTransaction();
 
-      if (action === 'registration') {
-        const isVerifiedField = upConfig.userModel.isVerifiedField;
-        if (isVerifiedField) {
-          const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
-          await app.db.query(updateQuery, [String(username)]);
+        const res = await tx.query(selectQuery, [String(username)]);
+
+        if (res.rows.length === 0) {
+          throw Object.assign(new Error('User not found'), {
+            statusCode: 401,
+            body: app.buildResponse(401, 'User not found', null),
+          });
         }
 
-        return reply
-          .status(200)
-          .send(app.buildResponse(200, 'OTP verification successful', null));
-      }
+        if (action === 'registration') {
+          const isVerifiedField = upConfig.userModel.isVerifiedField;
+          if (isVerifiedField) {
+            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
+            await tx.query(updateQuery, [String(username)]);
+          }
 
-      if (action === 'forgot-password') {
-        const newPassword = (request.body as Record<string, string>)
-          .newPassword;
-        /* c8 ignore start */
-        if (!newPassword) {
+          await tx.commit();
+
           return reply
-            .status(400)
-            .send(app.buildResponse(400, 'newPassword is required', null));
+            .status(200)
+            .send(app.buildResponse(200, 'OTP verification successful', null));
         }
-        /* c8 ignore stop */
 
-        const {passwordField} = upConfig.userModel;
-        const hashedPassword = await hash(String(newPassword));
-        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${usernameField}" = $2;`;
-        await app.db.query(updateQuery, [hashedPassword, String(username)]);
+        if (action === 'forgot-password') {
+          const newPassword = (request.body as Record<string, string>)
+            .newPassword;
+          /* c8 ignore start */
+          if (!newPassword) {
+            throw Object.assign(new Error('newPassword is required'), {
+              statusCode: 400,
+              body: app.buildResponse(400, 'newPassword is required', null),
+            });
+          }
+          /* c8 ignore stop */
+
+          const {passwordField} = upConfig.userModel;
+          const hashedPassword = await hash(String(newPassword));
+          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${usernameField}" = $2;`;
+          await tx.query(updateQuery, [hashedPassword, String(username)]);
+
+          await tx.commit();
+
+          return reply.status(200).send(
+            app.buildResponse(200, 'OTP verification successful', {
+              success: true,
+            }),
+          );
+        }
+
+        const user = res.rows[0] as Record<string, unknown>;
+
+        const payload = {
+          id: user[upConfig.userModel.idField],
+          [usernameField]: user[usernameField],
+        };
+
+        const token = app.jwt.sign(payload, {
+          expiresIn: upConfig.tokenExpiration || '1d',
+        });
+
+        await tx.commit();
 
         return reply.status(200).send(
           app.buildResponse(200, 'OTP verification successful', {
-            success: true,
+            accessToken: token,
           }),
         );
+      } catch (err) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw err;
+      } finally {
+        tx?.release();
       }
-
-      const user = res.rows[0] as Record<string, unknown>;
-
-      const payload = {
-        id: user[upConfig.userModel.idField],
-        [usernameField]: user[usernameField],
-      };
-
-      const token = app.jwt.sign(payload, {
-        expiresIn: upConfig.tokenExpiration || '1d',
-      });
-
-      return reply.status(200).send(
-        app.buildResponse(200, 'OTP verification successful', {
-          accessToken: token,
-        }),
-      );
     },
   );
 }
