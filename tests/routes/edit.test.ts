@@ -40,12 +40,12 @@ const nonUniqueEditModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        query: ['lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['lt', 'lte', 'gt', 'gte', 'in', 'ne', 'not_in'],
       },
       status: {
         type: 'string',
         apis: ['edit'],
-        query: ['eq', 'lt'], // Non-unique identifier
+        query: ['eq', 'lt', 'ne'], // Non-unique identifier
       },
       title: {type: 'string', query: ['eq']},
     },
@@ -167,6 +167,8 @@ describe('test edit api', () => {
 
   describe('PUT complete updates', () => {
     test('should return 200 on successful PUT update with all required fields', async () => {
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+
       const fastify = await createTestApp(pgConfig, defaultEditModel);
 
       const response = await fastify.inject({
@@ -329,6 +331,40 @@ describe('test edit api', () => {
       await fastify.close();
     });
 
+    test('should apply _ne filter alongside path param', async () => {
+      const fastify = await createTestApp(pgConfig, nonUniqueEditModel);
+
+      await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/status/pending?id_ne=10',
+        payload: {title: 'Update'},
+      });
+
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" != $3',
+        ['Update', 'pending', 10],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _not_in filter alongside path param', async () => {
+      const fastify = await createTestApp(pgConfig, nonUniqueEditModel);
+
+      await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/status/pending?id_not_in=1,2,3',
+        payload: {title: 'Update'},
+      });
+
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'UPDATE "tasks" SET "title" = $1 WHERE "status" = $2 AND "id" NOT IN ($3, $4, $5)',
+        ['Update', 'pending', 1, 2, 3],
+      );
+
+      await fastify.close();
+    });
+
     test('should apply multiple filter params (_eq, _in)', async () => {
       const fastify = await createTestApp(pgConfig, nonUniqueEditModel);
 
@@ -350,6 +386,60 @@ describe('test edit api', () => {
   });
 
   describe('error handling / edge cases', () => {
+    test('should return 404 when PATCH updates zero rows (record not found)', async () => {
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/999',
+        payload: {name: 'Nobody'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().message).toBe(
+        'No users record found matching the given criteria',
+      );
+
+      await fastify.close();
+    });
+
+    test('should return 404 when PUT updates zero rows (record not found)', async () => {
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/users/id/999',
+        payload: {name: 'Nobody', email: 'nobody@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().message).toBe(
+        'No users record found matching the given criteria',
+      );
+
+      await fastify.close();
+    });
+
+    test('should return 200 when PATCH updates a record successfully', async () => {
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 1});
+
+      const fastify = await createTestApp(pgConfig, defaultEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/users/id/1',
+        payload: {name: 'Found'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      await fastify.close();
+    });
+
     test('should return 404 when the edit API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, defaultEditModel, {
         'model.users.id.edit': {enabled: false},

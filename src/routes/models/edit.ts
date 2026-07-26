@@ -2,7 +2,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
+  buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
   getResponseStructureSchema,
@@ -47,12 +47,7 @@ export function registerEditRoutes(
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-      const queryProperties: Record<string, object> = {};
-      if (!isUnique) {
-        for (const [fName, f] of Object.entries(model.fields)) {
-          Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-        }
-      }
+      const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
 
       const bodyProperties: Record<string, object> = {};
       const allBodyFieldNames: string[] = [];
@@ -173,6 +168,19 @@ export function registerEditRoutes(
         const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
         const res = await app.db.query(query, values);
+        const affected = res.changes;
+
+        if (affected !== undefined && affected === 0) {
+          return reply
+            .status(404)
+            .send(
+              app.buildResponse(
+                404,
+                `No ${tableName} record found matching the given criteria`,
+                null,
+              ),
+            );
+        }
 
         return reply
           .status(200)

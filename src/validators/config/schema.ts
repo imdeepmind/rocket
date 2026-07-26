@@ -223,7 +223,7 @@ const fieldSchema = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['eq', 'lt', 'lte', 'gt', 'gte', 'in', 'sort'],
+        enum: ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'not_in', 'sort'],
       },
       uniqueItems: true,
     },

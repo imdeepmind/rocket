@@ -19,7 +19,16 @@ export type LogLevel =
   | 'fatal'
   | 'silent';
 export type ApiOperation = 'search' | 'index' | 'edit' | 'delete';
-export type QueryOperation = 'eq' | 'lt' | 'lte' | 'gt' | 'gte' | 'in' | 'sort';
+export type QueryOperation =
+  | 'eq'
+  | 'ne'
+  | 'lt'
+  | 'lte'
+  | 'gt'
+  | 'gte'
+  | 'in'
+  | 'not_in'
+  | 'sort';
 export type Aggregation = 'count' | 'avg' | 'sum' | 'min' | 'max' | 'frequency';
 export type ModelBody = Record<
   string,

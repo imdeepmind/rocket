@@ -63,7 +63,7 @@ describe('test schema helper', () => {
   test('should build filter query properties', () => {
     const field: ModelFieldConfig = {
       type: 'integer',
-      query: ['lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+      query: ['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
     };
     const expectedSchema = {
       age_lt: {
@@ -86,10 +86,19 @@ describe('test schema helper', () => {
         type: 'integer',
         description: 'Filter where age equals this value',
       },
+      age_ne: {
+        type: 'integer',
+        description: 'Filter where age does not equal this value',
+      },
       age_in: {
         type: 'string',
         description:
           'Filter where age is one of the provided comma-separated values',
+      },
+      age_not_in: {
+        type: 'string',
+        description:
+          'Filter where age is not one of the provided comma-separated values',
       },
     };
     expect(buildFilterQueryProperties('age', field)).toEqual(expectedSchema);
@@ -534,33 +543,41 @@ describe('test schema helper', () => {
     const result = applyFilters(
       {
         age_eq: '25',
+        age_ne: '99',
         age_lt: '30',
         age_lte: '30',
         age_gt: '20',
         age_gte: '20',
         age_in: '1,2,3',
+        age_not_in: '10,20,30',
       },
       1,
     );
     expect(result.whereClauses).toEqual([
       '"age" = $1',
-      '"age" < $2',
-      '"age" <= $3',
-      '"age" > $4',
-      '"age" >= $5',
-      '"age" IN ($6, $7, $8)',
+      '"age" != $2',
+      '"age" < $3',
+      '"age" <= $4',
+      '"age" > $5',
+      '"age" >= $6',
+      '"age" IN ($7, $8, $9)',
+      '"age" NOT IN ($10, $11, $12)',
     ]);
     expect(result.values).toEqual([
       '25',
+      '99',
       '30',
       '30',
       '20',
       '20',
-      '1',
-      '2',
-      '3',
+      1,
+      2,
+      3,
+      10,
+      20,
+      30,
     ]);
-    expect(result.nextParamIndex).toBe(9);
+    expect(result.nextParamIndex).toBe(13);
   });
 
   // test generateJSONValidationSchema with additionalProperties: true

@@ -2,14 +2,12 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
+  buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
-  buildSortQueryProperties,
   generateJSONValidationSchema,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
@@ -138,7 +136,12 @@ export function registerIndexRoutes(
           };
 
           if (!isUnique) {
-            responsePayload.pagination = {page, limit, total};
+            responsePayload.pagination = {
+              page,
+              limit,
+              total,
+              totalPages: Math.ceil(total / limit),
+            };
           }
 
           return reply
@@ -168,20 +171,7 @@ function generateSchema(
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
 
-  const queryProperties: Record<string, object> = {};
-
-  if (!isUnique) {
-    for (const [fName, f] of Object.entries(model.fields)) {
-      Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-    }
-
-    const sortableFields = Object.entries(model.fields)
-      .filter(([, f]) => f.query?.includes('sort'))
-      .map(([fName]) => fName);
-    Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-    Object.assign(queryProperties, paginationQueryProperties);
-  }
+  const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
 
   const responseSchemaProperties: Record<string, object> = {
     data: isUnique
@@ -196,6 +186,7 @@ function generateSchema(
         page: {type: 'integer'},
         limit: {type: 'integer'},
         total: {type: 'integer'},
+        totalPages: {type: 'integer'},
       },
     };
   }

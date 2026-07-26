@@ -11,12 +11,12 @@ const getAllModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in', 'ne', 'not_in'],
       },
       name: {
         type: 'string',
         apis: ['search'],
-        query: ['sort', 'eq'],
+        query: ['sort', 'eq', 'ne'],
       },
       email: {
         type: 'string',
@@ -73,6 +73,7 @@ describe('test get-all api', () => {
         page: 1,
         limit: 20,
         total: 2,
+        totalPages: 1,
       });
 
       await fastify.close();
@@ -167,6 +168,7 @@ describe('test get-all api', () => {
         page: 3,
         limit: 15,
         total: 0,
+        totalPages: 0,
       });
 
       await fastify.close();
@@ -246,7 +248,36 @@ describe('test get-all api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
-        ['1', '2', '3', 20, 0],
+        [1, 2, 3, 20, 0],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _ne filter in WHERE clause', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      await fastify.inject({method: 'GET', url: '/users/?name_ne=Alice'});
+
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "users" WHERE "name" != $1 LIMIT $2 OFFSET $3;',
+        ['Alice', 20, 0],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _not_in filter in WHERE clause', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      await fastify.inject({
+        method: 'GET',
+        url: '/users/?id_not_in=1,2,3',
+      });
+
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "users" WHERE "id" NOT IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
+        [1, 2, 3, 20, 0],
       );
 
       await fastify.close();

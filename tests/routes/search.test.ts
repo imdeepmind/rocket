@@ -12,14 +12,14 @@ const searchableModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        query: ['eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['eq', 'lt', 'gt', 'lte', 'gte', 'in', 'ne', 'not_in'],
       },
       name: {
         type: 'string',
         apis: ['search'],
-        query: ['sort', 'eq'],
+        query: ['sort', 'eq', 'ne'],
       },
-      email: {type: 'string', query: ['eq']},
+      email: {type: 'string', query: ['eq', 'ne']},
     },
   },
 };
@@ -172,6 +172,7 @@ describe('test search api', () => {
         page: 1,
         limit: 20,
         total: 0,
+        totalPages: 0,
       });
 
       await fastify.close();
@@ -223,6 +224,7 @@ describe('test search api', () => {
         page: 3,
         limit: 10,
         total: 0,
+        totalPages: 0,
       });
 
       await fastify.close();
@@ -230,6 +232,20 @@ describe('test search api', () => {
   });
 
   describe('filtering', () => {
+    test('should combine LIKE with a _ne filter', async () => {
+      const fastify = await createTestApp(pgConfig, searchableModel);
+
+      await fastify.inject({
+        method: 'GET',
+        url: '/users/search/name?name_search=ali&email_ne=bob@example.com',
+      });
+
+      const callArgs = pgQueryMock.mock.calls[1];
+      expect(callArgs[0]).toContain('"email" != $2');
+
+      await fastify.close();
+    });
+
     test('should combine LIKE with an _eq filter', async () => {
       const fastify = await createTestApp(pgConfig, searchableModel);
 
@@ -318,9 +334,26 @@ describe('test search api', () => {
 
       const callArgs = pgQueryMock.mock.calls[1];
       expect(callArgs[0]).toContain('"id" IN ($2, $3, $4)');
-      expect(callArgs[1][1]).toBe('1');
-      expect(callArgs[1][2]).toBe('2');
-      expect(callArgs[1][3]).toBe('3');
+      expect(callArgs[1][1]).toBe(1);
+      expect(callArgs[1][2]).toBe(2);
+      expect(callArgs[1][3]).toBe(3);
+
+      await fastify.close();
+    });
+
+    test('should apply _not_in filter alongside LIKE', async () => {
+      const fastify = await createTestApp(pgConfig, searchableModel);
+
+      await fastify.inject({
+        method: 'GET',
+        url: '/users/search/name?name_search=al&id_not_in=10,20,30',
+      });
+
+      const callArgs = pgQueryMock.mock.calls[1];
+      expect(callArgs[0]).toContain('"id" NOT IN ($2, $3, $4)');
+      expect(callArgs[1][1]).toBe(10);
+      expect(callArgs[1][2]).toBe(20);
+      expect(callArgs[1][3]).toBe(30);
 
       await fastify.close();
     });

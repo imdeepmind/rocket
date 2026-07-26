@@ -3,11 +3,12 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   AppConfig,
   DataType,
-  JsonSchemaObject,
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
 } from '@/interfaces/config';
+
+import {normalizeSchemaForAjv} from '@/utils/schema';
 
 /**
  * Map config DataType to JSON Schema type definition for Swagger.
@@ -77,6 +78,29 @@ export function buildSortQueryProperties(
 }
 
 /**
+ * Build all query parameter schema properties for a model:
+ * filter params, sort params, and pagination params.
+ */
+export function buildAllQueryProperties(
+  model: ModelConfig,
+): Record<string, object> {
+  const properties: Record<string, object> = {};
+
+  for (const [fName, f] of Object.entries(model.fields)) {
+    Object.assign(properties, buildFilterQueryProperties(fName, f));
+  }
+
+  const sortableFields = Object.entries(model.fields)
+    .filter(([, f]) => f.query?.includes('sort'))
+    .map(([fName]) => fName);
+  Object.assign(properties, buildSortQueryProperties(sortableFields));
+
+  Object.assign(properties, paginationQueryProperties);
+
+  return properties;
+}
+
+/**
  * Build filter query parameter schema properties for a field
  * based on its query operations (lt, lte, gt, gte, eq, in, etc.).
  */
@@ -130,30 +154,21 @@ export function buildFilterQueryProperties(
     };
   }
 
-  return properties;
-}
-
-/**
- * Normalize the schema for AJV by converting custom types to standard ones.
- */
-function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
-  const normalized = JSON.parse(JSON.stringify(schema));
-  if (normalized.properties && typeof normalized.properties === 'object') {
-    Object.keys(normalized.properties).forEach(key => {
-      const prop = (normalized.properties as Record<string, JsonSchemaObject>)[
-        key
-      ];
-      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
-        prop.type = 'string';
-        prop.format = 'date-time';
-      }
-      if (prop && prop.type === 'date') {
-        prop.type = 'string';
-        prop.format = 'date';
-      }
-    });
+  if (ops.includes('ne')) {
+    properties[`${fieldName}_ne`] = {
+      ...jsonType,
+      description: `Filter where ${fieldName} does not equal this value`,
+    };
   }
-  return normalized;
+
+  if (ops.includes('not_in')) {
+    properties[`${fieldName}_not_in`] = {
+      type: 'string',
+      description: `Filter where ${fieldName} is not one of the provided comma-separated values`,
+    };
+  }
+
+  return properties;
 }
 
 /**
@@ -345,6 +360,16 @@ export function buildPreValidation(
 }
 
 /**
+ * Try to parse a string as a number; return the original if it fails.
+ */
+function tryParseNumber(value: string): string | number {
+  const trimmed = value.trim();
+  if (trimmed === '') return value;
+  const n = Number(trimmed);
+  return Number.isNaN(n) ? value : n;
+}
+
+/**
  * Common signal and pagination keys to ignore when applying filters.
  */
 export const filterIgnoreKeys = [
@@ -392,11 +417,21 @@ export function applyFilters(
     } else if (key.endsWith('_gte')) {
       whereClauses.push(`"${key.replace('_gte', '')}" >= $${paramIndex++}`);
       values.push(queryParams[key]);
+    } else if (key.endsWith('_not_in')) {
+      const notInValues = String(queryParams[key]).split(',');
+      const notInParams = notInValues.map(() => `$${paramIndex++}`).join(', ');
+      whereClauses.push(
+        `"${key.replace('_not_in', '')}" NOT IN (${notInParams})`,
+      );
+      values.push(...notInValues.map(tryParseNumber));
     } else if (key.endsWith('_in')) {
       const inValues = String(queryParams[key]).split(',');
       const inParams = inValues.map(() => `$${paramIndex++}`).join(', ');
       whereClauses.push(`"${key.replace('_in', '')}" IN (${inParams})`);
-      values.push(...inValues);
+      values.push(...inValues.map(tryParseNumber));
+    } else if (key.endsWith('_ne')) {
+      whereClauses.push(`"${key.replace('_ne', '')}" != $${paramIndex++}`);
+      values.push(queryParams[key]);
     }
   }
 

@@ -2,13 +2,11 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
+  buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
-  buildSortQueryProperties,
   generateJSONValidationSchema,
   getResponseStructureSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig} from '@/interfaces/config';
@@ -115,7 +113,12 @@ export function registerGetAllRoutes(
             `Successfully retrieved records from the ${tableName} table`,
             {
               data: res.rows || [],
-              pagination: {page, limit, total},
+              pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+              },
             },
             res,
           ),
@@ -130,18 +133,7 @@ function generateSchema(
   config: AppConfig,
   authorization: boolean,
 ) {
-  const queryProperties: Record<string, object> = {};
-
-  for (const [fName, f] of Object.entries(model.fields)) {
-    Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-  }
-
-  const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.query?.includes('sort'))
-    .map(([fName]) => fName);
-  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-  Object.assign(queryProperties, paginationQueryProperties);
+  const queryProperties = buildAllQueryProperties(model);
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
@@ -167,6 +159,7 @@ function generateSchema(
               page: {type: 'integer'},
               limit: {type: 'integer'},
               total: {type: 'integer'},
+              totalPages: {type: 'integer'},
             },
           },
         },

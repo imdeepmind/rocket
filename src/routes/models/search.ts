@@ -2,13 +2,11 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
+  buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
-  buildSortQueryProperties,
   generateJSONValidationSchema,
   getResponseStructureSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
@@ -125,7 +123,12 @@ export function registerSearchRoutes(
               `Successfully searched records from the ${tableName} table`,
               {
                 data: res.rows || [],
-                pagination: {page, limit, total},
+                pagination: {
+                  page,
+                  limit,
+                  total,
+                  totalPages: Math.ceil(total / limit),
+                },
               },
               res,
             ),
@@ -149,18 +152,8 @@ function generateSchema(
       type: 'string',
       description: `Search pattern to match against ${fieldName}`,
     },
+    ...buildAllQueryProperties(model),
   };
-
-  for (const [fName, f] of Object.entries(model.fields)) {
-    Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-  }
-
-  const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.query?.includes('sort'))
-    .map(([fName]) => fName);
-  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-  Object.assign(queryProperties, paginationQueryProperties);
 
   const schema: Record<string, unknown> = {
     summary: `Search ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
@@ -187,6 +180,7 @@ function generateSchema(
               page: {type: 'integer'},
               limit: {type: 'integer'},
               total: {type: 'integer'},
+              totalPages: {type: 'integer'},
             },
           },
         },

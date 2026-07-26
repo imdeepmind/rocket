@@ -33,7 +33,7 @@ const indexableFieldModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'gt', 'lte', 'gte', 'in', 'ne'],
       },
       category: {
         type: 'string',
@@ -258,6 +258,7 @@ describe('test index-route api', () => {
         page: 2,
         limit: 15,
         total: 0,
+        totalPages: 0,
       });
 
       await fastify.close();
@@ -372,6 +373,22 @@ describe('test index-route api', () => {
       await fastify.close();
     });
 
+    test('should apply _ne filter alongside path param', async () => {
+      const fastify = await createTestApp(pgConfig, indexableFieldModel);
+
+      await fastify.inject({
+        method: 'GET',
+        url: '/posts/category/tech?id_ne=99',
+      });
+
+      expect(pgQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" != $2 LIMIT $3 OFFSET $4;',
+        ['tech', 99, 20, 0],
+      );
+
+      await fastify.close();
+    });
+
     test('should apply _lte filter alongside path param', async () => {
       const fastify = await createTestApp(pgConfig, indexableFieldModel);
 
@@ -430,7 +447,7 @@ describe('test index-route api', () => {
 
       expect(pgQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "posts" WHERE "category" = $1 AND "id" IN ($2, $3, $4) LIMIT $5 OFFSET $6;',
-        ['tech', '1', '2', '3', 20, 0],
+        ['tech', 1, 2, 3, 20, 0],
       );
 
       await fastify.close();
