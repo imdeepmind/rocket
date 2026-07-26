@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 
 import {
   ApisConfig,
@@ -9,7 +9,9 @@ import {
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
+import {ajv} from '@/validators/config/schema';
 import validateAuthConstraints from '@/validators/config/validate-auth';
+import * as entityModule from '@/validators/entity';
 
 const getDefaultDatabaseConfig = (): DatabaseConfig => {
   return {
@@ -2164,6 +2166,22 @@ describe('validateInvalidCustomEndpointsConfig', () => {
       expected:
         'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
+    {
+      name: 'custom endpoint with invalid validation schema',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {type: 123},
+            handler: {type: 'sql', sql: 'SELECT 1;'},
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/validation: /type must be equal to one of the allowed values',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const patchObj = patch as Record<string, unknown>;
     const config = {
@@ -2741,6 +2759,36 @@ describe('validateInvalidModelAPIsConfig', () => {
       },
       expected:
         'apis/aggregateAPIs.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+    },
+    {
+      name: 'custom endpoint key not found',
+      patch: {
+        'customEndpoints.nonexistent': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.nonexistent: custom endpoint not found',
+    },
+    {
+      name: 'custom endpoint key invalid format',
+      patch: {
+        'customEndpoints.test.extra': {
+          webhooks: [
+            {
+              url: 'https://example.com',
+              data: ['query'],
+              triggerOnRequest: true,
+            },
+          ],
+        },
+      },
+      expected: 'apis/customEndpoints.test.extra: invalid key format',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3733,6 +3781,33 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
       '/authentication/provider/config/userModel/isVerifiedField: must be a string',
     );
   });
+
+  it('should handle falsy model name in userModel', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: '',
+              idField: 'id',
+              usernameField: 'name',
+              passwordField: 'name',
+            },
+            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          } as unknown as NonNullable<
+            NonNullable<typeof validBaseConfig.authentication>['provider']
+          >['config'],
+        },
+      },
+    };
+    const errors = validateAuthConstraints(
+      config as unknown as import('@/interfaces/config').AppConfig,
+    );
+    expect(errors).toHaveLength(0);
+  });
 });
 
 // check invalid ssp configs
@@ -4050,5 +4125,64 @@ describe('validateCustomEndpointsConfig', () => {
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
       '/customEndpoints/testEndpoint/validation:',
     );
+  });
+
+  it('should use fallback message when ajv.errors is null after failed validation', () => {
+    const config = {
+      ...validBaseConfig,
+      customEndpoints: {
+        testEndpoint: {
+          method: 'GET',
+          path: '/test-path',
+          description: 'Test endpoint description',
+          validation: {type: 'invalid'},
+          handler: {
+            type: 'sql',
+            sql: 'SELECT * FROM users;',
+          },
+        },
+      },
+    };
+
+    const spy = vi.spyOn(ajv, 'validateSchema').mockReturnValue(false);
+    ajv.errors = null;
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      '/customEndpoints/testEndpoint/validation: invalid JSON schema',
+    );
+
+    spy.mockRestore();
+  });
+});
+
+describe('validateSchemaKeyword', () => {
+  it('should use fallback message when validateEntityName throws non-Error', () => {
+    const spy = vi
+      .spyOn(entityModule, 'validateEntityName')
+      .mockImplementation(() => {
+        throw {};
+      });
+
+    const config: AppConfig = {
+      ...validBaseConfig,
+      data: {
+        models: {
+          test: {
+            fields: {testField: {type: 'string'}},
+            indexes: {
+              test_index: {
+                fields: ['invalid-name'],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'Entity name is invalid',
+    );
+
+    spy.mockRestore();
   });
 });
