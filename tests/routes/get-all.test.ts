@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const getAllModel: Record<string, ModelConfig> = {
@@ -11,12 +11,12 @@ const getAllModel: Record<string, ModelConfig> = {
       id: {
         type: 'integer',
         primaryKey: true,
-        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in'],
+        query: ['sort', 'eq', 'lt', 'lte', 'gt', 'gte', 'in', 'ne', 'not_in'],
       },
       name: {
         type: 'string',
         apis: ['search'],
-        query: ['sort', 'eq'],
+        query: ['sort', 'eq', 'ne'],
       },
       email: {
         type: 'string',
@@ -43,20 +43,23 @@ const upAuthConfig: AuthenticationConfig = {
 
 describe('test get-all api', () => {
   beforeEach(() => {
+    pgClientQueryMock.mockClear();
     pgQueryMock.mockClear();
   });
 
   describe('happy path', () => {
     test('should return 200 with data and pagination', async () => {
-      pgQueryMock
-        .mockResolvedValueOnce({rows: [{total: 2}]})
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 2}]}) // COUNT
         .mockResolvedValueOnce({
           rows: [
             {id: 1, name: 'Alice', email: 'alice@example.com'},
             {id: 2, name: 'Bob', email: 'bob@example.com'},
           ],
           rowCount: 2,
-        });
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, getAllModel);
 
@@ -73,6 +76,7 @@ describe('test get-all api', () => {
         page: 1,
         limit: 20,
         total: 2,
+        totalPages: 1,
       });
 
       await fastify.close();
@@ -83,8 +87,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/'});
 
-      expect(pgQueryMock).toHaveBeenCalledTimes(2);
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -93,9 +96,11 @@ describe('test get-all api', () => {
     });
 
     test('should return empty data array when no rows are found', async () => {
-      pgQueryMock
-        .mockResolvedValueOnce({rows: [{total: 0}]})
-        .mockResolvedValueOnce({rows: [], rowCount: 0});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 0}]}) // COUNT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, getAllModel);
 
@@ -134,7 +139,7 @@ describe('test get-all api', () => {
         url: '/users/?page=2&limit=10',
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [10, 10], // page 2, limit 10 = offset 10
       );
@@ -147,7 +152,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?page=0'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -167,6 +172,7 @@ describe('test get-all api', () => {
         page: 3,
         limit: 15,
         total: 0,
+        totalPages: 0,
       });
 
       await fastify.close();
@@ -179,7 +185,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?name_eq=Alice'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "name" = $1 LIMIT $2 OFFSET $3;',
         ['Alice', 20, 0],
       );
@@ -192,7 +198,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?id_lt=10'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" < $1 LIMIT $2 OFFSET $3;',
         [10, 20, 0],
       );
@@ -205,7 +211,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?id_lte=100'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" <= $1 LIMIT $2 OFFSET $3;',
         [100, 20, 0],
       );
@@ -218,7 +224,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?id_gt=5'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" > $1 LIMIT $2 OFFSET $3;',
         [5, 20, 0],
       );
@@ -231,7 +237,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?id_gte=1'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" >= $1 LIMIT $2 OFFSET $3;',
         [1, 20, 0],
       );
@@ -244,9 +250,38 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?id_in=1,2,3'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" WHERE "id" IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
-        ['1', '2', '3', 20, 0],
+        [1, 2, 3, 20, 0],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _ne filter in WHERE clause', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      await fastify.inject({method: 'GET', url: '/users/?name_ne=Alice'});
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "users" WHERE "name" != $1 LIMIT $2 OFFSET $3;',
+        ['Alice', 20, 0],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply _not_in filter in WHERE clause', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      await fastify.inject({
+        method: 'GET',
+        url: '/users/?id_not_in=1,2,3',
+      });
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "users" WHERE "id" NOT IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
+        [1, 2, 3, 20, 0],
       );
 
       await fastify.close();
@@ -260,7 +295,7 @@ describe('test get-all api', () => {
         url: '/users/?name_eq=Bob&id_gt=10',
       });
 
-      const callArgs = pgQueryMock.mock.calls[1];
+      const callArgs = pgClientQueryMock.mock.calls[2];
       expect(callArgs[0]).toContain('"name" = $1');
       expect(callArgs[0]).toContain('"id" > $2');
       expect(callArgs[0]).toContain('AND');
@@ -277,7 +312,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?orderBy=name'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" ORDER BY "name" ASC LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -293,7 +328,7 @@ describe('test get-all api', () => {
         url: '/users/?orderBy=id&orderDir=desc',
       });
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" ORDER BY "id" DESC LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -306,7 +341,7 @@ describe('test get-all api', () => {
 
       await fastify.inject({method: 'GET', url: '/users/?orderDir=desc'});
 
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -316,9 +351,24 @@ describe('test get-all api', () => {
   });
 
   describe('error handling', () => {
-    test('should return 500 when database query throws', async () => {
+    test('should return 404 when the get-all API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel, {
+        'model.users.all.getAll': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
+    test('should return 500 when database query throws before BEGIN', async () => {
       const fastify = await createTestApp(pgConfig, getAllModel);
-      pgQueryMock.mockRejectedValueOnce(new Error('Database error'));
+      pgClientQueryMock.mockRejectedValueOnce(new Error('Database error'));
 
       const response = await fastify.inject({
         method: 'GET',
@@ -326,6 +376,57 @@ describe('test get-all api', () => {
       });
 
       expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when count query fails after BEGIN', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Count failed')) // COUNT fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after count query error', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Count failed')) // COUNT fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+  });
+
+  describe('limit edge cases', () => {
+    test('should reject limit=0 with 400 due to minimum constraint', async () => {
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/users/?limit=0',
+      });
+
+      expect(response.statusCode).toBe(400);
 
       await fastify.close();
     });
@@ -349,9 +450,11 @@ describe('test get-all api', () => {
       const emptyModel: Record<string, ModelConfig> = {
         tags: {fields: {id: {type: 'integer'}}},
       };
-      pgQueryMock
-        .mockResolvedValueOnce({rows: [{total: 1}]})
-        .mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1}) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, emptyModel);
 
@@ -363,13 +466,30 @@ describe('test get-all api', () => {
       await fastify.close();
     });
 
+    test('should fallback to empty array when SELECT query returns no rows property', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 0}]}) // COUNT
+        .mockResolvedValueOnce({}) // SELECT (no rows property)
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, getAllModel);
+
+      const response = await fastify.inject({method: 'GET', url: '/users/'});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([]);
+
+      await fastify.close();
+    });
+
     test('should ignore unknown query params that do not match filter patterns', async () => {
       const fastify = await createTestApp(pgConfig, getAllModel);
 
       await fastify.inject({method: 'GET', url: '/users/?foo=bar'});
 
       // Should not have a WHERE clause for foo
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
@@ -380,7 +500,7 @@ describe('test get-all api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs.users.all.getAll': {
+      'model.users.all.getAll': {
         authorization: true,
       },
     };
@@ -404,12 +524,14 @@ describe('test get-all api', () => {
     });
 
     test('should return 200 when auth is enabled and valid token is provided', async () => {
-      pgQueryMock
-        .mockResolvedValueOnce({rows: [{total: 1}]})
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
         .mockResolvedValueOnce({
           rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
           rowCount: 1,
-        });
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(
         pgConfig,

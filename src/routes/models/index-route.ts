@@ -2,27 +2,18 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
-  buildSortQueryProperties,
+  buildAllQueryProperties,
+  buildPreValidation,
+  buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register INDEX routes for indexed fields.
- *
- * For each model, for each field with primaryKey, unique, or 'index' in apis, creates:
- *   GET /{model}/{columnName}/:value
- *
- * Includes filter query params based on the model's operations,
- * as well as sorting and pagination, ONLY if the field is not unique.
- */
 export function registerIndexRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -35,7 +26,7 @@ export function registerIndexRoutes(
     });
 
     for (const [fieldName, field] of indexFields) {
-      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.index`;
+      const apiIdentifier = `model.${modelName}.${fieldName}.index`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -61,24 +52,7 @@ export function registerIndexRoutes(
         {
           schema,
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
@@ -112,62 +86,77 @@ export function registerIndexRoutes(
             paramIndex = nextParamIndex;
           }
 
-          if (whereClauses.length > 0) {
-            query += ` WHERE ${whereClauses.join(' AND ')}`;
-          }
+          query += ` WHERE ${whereClauses.join(' AND ')}`;
 
-          let total = 0;
-          if (!isUnique) {
-            const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
-            const countRes = await app.db.query<{total: number | string}>(
-              countQuery,
-              values,
-            );
-            total = Number(countRes.rows[0]?.total || 0);
-          }
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
 
-          let page = 1;
-          let limit = 20;
-
-          if (!isUnique) {
-            if (queryParams.orderBy) {
-              query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+            let total = 0;
+            if (!isUnique) {
+              const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
+              const countRes = await tx.query<{total: number | string}>(
+                countQuery,
+                values,
+              );
+              total = Number(countRes.rows[0]?.total || 0);
             }
 
-            page = Math.max(Number(queryParams.page) || 1, 1);
-            limit = Math.min(
-              Math.max(Number(queryParams.limit) || 20, 10),
-              100,
-            );
-            const offset = (page - 1) * limit;
+            let page = 1;
+            let limit = 20;
 
-            query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-            values.push(limit, offset);
-          } else {
-            query += ` LIMIT $${paramIndex++};`;
-            values.push(1);
+            if (!isUnique) {
+              if (queryParams.orderBy) {
+                query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+              }
+
+              page = Math.max(Number(queryParams.page) || 1, 1);
+              limit = Math.min(
+                Math.max(Number(queryParams.limit) || 20, 10),
+                100,
+              );
+              const offset = (page - 1) * limit;
+
+              query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+              values.push(limit, offset);
+            } else {
+              query += ` LIMIT $${paramIndex++};`;
+              values.push(1);
+            }
+
+            const res = await tx.query(query, values);
+
+            await tx.commit();
+
+            const responsePayload: Record<string, unknown> = {
+              data: isUnique ? res.rows[0] || null : res.rows || [],
+            };
+
+            if (!isUnique) {
+              responsePayload.pagination = {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+              };
+            }
+
+            return reply
+              .status(200)
+              .send(
+                app.buildResponse(
+                  200,
+                  `Successfully retrieved records from the ${tableName} table`,
+                  responsePayload,
+                  res,
+                ),
+              );
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
           }
-
-          const res = await app.db.query(query, values);
-
-          const responsePayload: Record<string, unknown> = {
-            data: isUnique ? res.rows[0] || null : res.rows || [],
-          };
-
-          if (!isUnique) {
-            responsePayload.pagination = {page, limit, total};
-          }
-
-          return reply
-            .status(200)
-            .send(
-              app.buildResponse(
-                200,
-                `Successfully retrieved records from the ${tableName} table`,
-                responsePayload,
-                res,
-              ),
-            );
         },
       );
     }
@@ -185,20 +174,7 @@ function generateSchema(
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
 
-  const queryProperties: Record<string, object> = {};
-
-  if (!isUnique) {
-    for (const [fName, f] of Object.entries(model.fields)) {
-      Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-    }
-
-    const sortableFields = Object.entries(model.fields)
-      .filter(([, f]) => f.query?.includes('sort'))
-      .map(([fName]) => fName);
-    Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-    Object.assign(queryProperties, paginationQueryProperties);
-  }
+  const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
 
   const responseSchemaProperties: Record<string, object> = {
     data: isUnique
@@ -213,6 +189,7 @@ function generateSchema(
         page: {type: 'integer'},
         limit: {type: 'integer'},
         total: {type: 'integer'},
+        totalPages: {type: 'integer'},
       },
     };
   }
@@ -249,23 +226,7 @@ function generateSchema(
     };
   }
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;

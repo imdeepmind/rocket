@@ -8,10 +8,13 @@ import {DatabaseConfig} from '@/interfaces/config';
 import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 
 import {
+  pgClientQueryMock,
+  pgClientReleaseMock,
   pgEndMock,
   pgQueryMock,
   sqliteAllMock,
   sqliteCloseMock,
+  sqliteExecMock,
   sqlitePrepareMock,
   sqliteRunMock,
 } from '../helpers/db-mocks';
@@ -166,6 +169,79 @@ describe('database plugin', () => {
 
       await fastify.close();
     });
+
+    test('beginTransaction commits on success', async () => {
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES ($1)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
+      expect(pgClientQueryMock).toHaveBeenNthCalledWith(1, 'BEGIN');
+      expect(pgClientQueryMock).toHaveBeenNthCalledWith(
+        2,
+        'INSERT INTO test (name) VALUES ($1)',
+        ['test'],
+      );
+      expect(pgClientQueryMock).toHaveBeenNthCalledWith(3, 'COMMIT');
+      expect(pgClientReleaseMock).toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('beginTransaction handles missing rowCount in non-SELECT query', async () => {
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: null}) // INSERT with null rowCount
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES ($1)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
+
+      await fastify.close();
+    });
+
+    test('beginTransaction rolls back on error', async () => {
+      const fastify = buildApp(pgConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      pgClientQueryMock.mockClear();
+
+      const tx = await fastify.db.beginTransaction();
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // SELECT
+        .mockRejectedValueOnce(new Error('insert failed')); // INSERT
+      try {
+        await tx.query('SELECT 1');
+        await tx.query('INSERT INTO fail VALUES (1)');
+        await tx.commit();
+      } catch {
+        await tx.rollback();
+      }
+      tx.release();
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith('ROLLBACK');
+      expect(pgClientQueryMock).not.toHaveBeenCalledWith('COMMIT');
+
+      await fastify.close();
+    });
   });
 
   describe('sqlite engine', () => {
@@ -314,6 +390,72 @@ describe('database plugin', () => {
       await expect(fastify.db.query('SELECT * FROM invalid')).rejects.toThrow(
         'Database Error',
       );
+      await fastify.close();
+    });
+
+    test('beginTransaction commits on success', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES (?)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
+      expect(sqliteExecMock).toHaveBeenNthCalledWith(1, 'BEGIN');
+      expect(sqlitePrepareMock).toHaveBeenCalledWith(
+        'INSERT INTO test (name) VALUES (?)',
+      );
+      expect(sqliteExecMock).toHaveBeenNthCalledWith(2, 'COMMIT');
+
+      await fastify.close();
+    });
+
+    test('beginTransaction handles missing changes in non-SELECT query', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteRunMock.mockReturnValueOnce({changes: undefined});
+
+      const tx = await fastify.db.beginTransaction();
+      const result = await tx.query('INSERT INTO test (name) VALUES (?)', [
+        'test',
+      ]);
+      await tx.commit();
+      tx.release();
+
+      expect(result).toEqual({changes: 0, rows: []});
+
+      await fastify.close();
+    });
+
+    test('beginTransaction rolls back on error', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock.mockClear();
+
+      const tx = await fastify.db.beginTransaction();
+      sqliteAllMock.mockImplementationOnce(() => {
+        throw new Error('query failed');
+      });
+      try {
+        await tx.query('SELECT * FROM fail');
+        await tx.commit();
+      } catch {
+        await tx.rollback();
+      }
+      tx.release();
+
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
+      expect(sqliteExecMock).not.toHaveBeenCalledWith('COMMIT');
+
       await fastify.close();
     });
   });

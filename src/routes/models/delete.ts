@@ -1,6 +1,8 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  buildPreValidation,
+  buildSecurityArray,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
@@ -9,14 +11,6 @@ import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register DELETE routes for deletable fields.
- *
- * For each model, for each field with 'delete' in apis, creates:
- *   DELETE /{model}/{columnName}/:value
- *
- * Path params: the column value identifying the record to delete.
- */
 export function registerDeleteRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -29,7 +23,7 @@ export function registerDeleteRoutes(
     );
 
     for (const [fieldName, field] of deletableFields) {
-      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.delete`;
+      const apiIdentifier = `model.${modelName}.${fieldName}.delete`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -51,24 +45,7 @@ export function registerDeleteRoutes(
         {
           schema,
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
@@ -87,7 +64,17 @@ export function registerDeleteRoutes(
 
           const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
 
-          await app.db.query(query, [value]);
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
+            await tx.query(query, [value]);
+            await tx.commit();
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
+          }
 
           return reply.status(204).send();
         },
@@ -124,23 +111,7 @@ function generateSchema(
     response: getResponseStructureSchema([204], {}),
   };
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;

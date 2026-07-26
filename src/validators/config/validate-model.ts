@@ -6,6 +6,8 @@ import {
   JsonSchemaProperty,
 } from '@/interfaces/config';
 
+import {normalizeSchemaForAjv} from '@/utils/schema';
+
 const ALLOWED_APIS: Record<string, string[]> = {
   integer: ['edit', 'delete', 'index'],
   decimal: ['edit', 'delete', 'index'],
@@ -17,13 +19,13 @@ const ALLOWED_APIS: Record<string, string[]> = {
 };
 
 const ALLOWED_QUERY: Record<string, string[]> = {
-  integer: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
-  decimal: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
-  string: ['sort', 'eq', 'in'],
-  boolean: ['eq'],
+  integer: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
+  decimal: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
+  string: ['sort', 'eq', 'ne', 'in', 'not_in'],
+  boolean: ['eq', 'ne'],
   text: [],
-  datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
-  date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'in'],
+  datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
+  date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -55,26 +57,6 @@ function mapModelTypeToJsonSchema(type: string): string {
     default:
       return 'string';
   }
-}
-
-function normalizeSchemaForAjv(schema: JsonSchemaObject): JsonSchemaObject {
-  const normalized = JSON.parse(JSON.stringify(schema));
-  if (normalized.properties) {
-    Object.keys(normalized.properties).forEach(key => {
-      const prop = (
-        normalized.properties as Record<string, JsonSchemaProperty>
-      )[key];
-      if (prop && (prop.type === 'datetime' || prop.type === 'date-time')) {
-        prop.type = 'string';
-        prop.format = 'date-time';
-      }
-      if (prop && prop.type === 'date') {
-        prop.type = 'string';
-        prop.format = 'date';
-      }
-    });
-  }
-  return normalized;
 }
 
 function validateFieldConstraints(config: AppConfig): string[] {

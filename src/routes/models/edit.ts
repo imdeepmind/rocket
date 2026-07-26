@@ -2,7 +2,9 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
+  buildAllQueryProperties,
+  buildPreValidation,
+  buildSecurityArray,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
 } from '@/routes/schema-helpers';
@@ -11,17 +13,6 @@ import {AppConfig, ModelBody} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register EDIT routes for editable fields.
- *
- * For each model, for each field with 'edit' in apis, creates:
- *   PATCH /{model}/{columnName}/:value (partial update)
- *   PUT /{model}/{columnName}/:value (complete update)
- *
- * Path params: the column value identifying the record to edit.
- * Body: all other fields as properties for updating.
- * Filters: if the field is not unique, filter params are available.
- */
 export function registerEditRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -34,7 +25,7 @@ export function registerEditRoutes(
     );
 
     for (const [fieldName, field] of editableFields) {
-      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.edit`;
+      const apiIdentifier = `model.${modelName}.${fieldName}.edit`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -45,12 +36,7 @@ export function registerEditRoutes(
       const isUnique = field.primaryKey || field.unique;
       const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-      const queryProperties: Record<string, object> = {};
-      if (!isUnique) {
-        for (const [fName, f] of Object.entries(model.fields)) {
-          Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-        }
-      }
+      const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
 
       const bodyProperties: Record<string, object> = {};
       const allBodyFieldNames: string[] = [];
@@ -108,23 +94,7 @@ export function registerEditRoutes(
           response: getResponseStructureSchema([200], responseDataSchema),
         };
 
-        const security: Array<{[key: string]: string[]}> = [];
-
-        if (
-          config.authentication?.enabled &&
-          config.authentication?.provider.type === 'up-auth' &&
-          authorization
-        ) {
-          security.push({bearerAuth: []});
-        }
-
-        if (
-          config.authentication?.enabled &&
-          config.authentication?.provider.type === 'api-key' &&
-          authorization
-        ) {
-          security.push({apiKeyAuth: []});
-        }
+        const security = buildSecurityArray(config, authorization);
 
         if (security.length > 0) {
           schema.security = security;
@@ -186,18 +156,42 @@ export function registerEditRoutes(
 
         const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
-        const res = await app.db.query(query, values);
+        let tx;
+        try {
+          tx = await app.db.beginTransaction();
+          const res = await tx.query(query, values);
+          await tx.commit();
 
-        return reply
-          .status(200)
-          .send(
-            app.buildResponse(
-              200,
-              `Successfully updated records in the ${tableName} table`,
-              body,
-              res,
-            ),
-          );
+          const affected = res.changes;
+
+          if (affected !== undefined && affected === 0) {
+            return reply
+              .status(404)
+              .send(
+                app.buildResponse(
+                  404,
+                  `No ${tableName} record found matching the given criteria`,
+                  null,
+                ),
+              );
+          }
+
+          return reply
+            .status(200)
+            .send(
+              app.buildResponse(
+                200,
+                `Successfully updated records in the ${tableName} table`,
+                body,
+                res,
+              ),
+            );
+        } catch (err) {
+          if (tx) await tx.rollback().catch(() => {});
+          throw err;
+        } finally {
+          tx?.release();
+        }
       };
 
       app.patch(
@@ -205,24 +199,7 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PATCH'),
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
@@ -238,24 +215,7 @@ export function registerEditRoutes(
         {
           schema: buildRouteSchema('PUT'),
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },

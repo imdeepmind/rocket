@@ -2707,11 +2707,11 @@ describe('validateCacheOptional', () => {
   });
 });
 
-// ----- Optional ModelAPIs Config Tests -----
-describe('validateInvalidModelAPIsConfig', () => {
+// ----- Optional model Config Tests -----
+describe('validateInvalidmodelConfig', () => {
   it.each([
     {
-      name: 'invalid webhook for modelAPis',
+      name: 'invalid webhook for model',
       patch: {
         'aggregate.users.id.getAggregation': 'invalid',
       },
@@ -2802,10 +2802,10 @@ describe('validateInvalidModelAPIsConfig', () => {
   });
 });
 
-describe('validateValidModelAPIsConfig', () => {
+describe('validateValidmodelConfig', () => {
   it.each([
     {
-      name: 'valid modelAPIs',
+      name: 'valid model',
       patch: {
         'aggregate.users.id.getAggregation': {
           webhooks: [
@@ -2817,7 +2817,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.id.delete': {
+        'model.users.id.delete': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2827,7 +2827,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.id.edit': {
+        'model.users.id.edit': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2837,7 +2837,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.all.getAll': {
+        'model.users.all.getAll': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2847,7 +2847,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.id.index': {
+        'model.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2857,7 +2857,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.all.insert': {
+        'model.users.all.insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2867,7 +2867,7 @@ describe('validateValidModelAPIsConfig', () => {
             },
           ],
         },
-        'modelAPIs.users.id.search': {
+        'model.users.id.search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3880,7 +3880,7 @@ describe('validateValidSspConfig', () => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs.posts.all.getAll': {
+        'model.posts.all.getAll': {
           serverParams: patch.serverParams,
         },
       },
@@ -3896,18 +3896,18 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'modelAPIs.posts.all.getAll/authorization must be boolean',
+      expected: 'model.posts.all.getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'modelAPIs.posts.all.getAll/authorization must be boolean',
+      expected: 'model.posts.all.getAll/authorization must be boolean',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'modelAPIs.posts.all.getAll': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3925,7 +3925,7 @@ describe('validateInvalidAuthorizationConfig', () => {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/modelAPIs.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
+        'apis/model.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3938,7 +3938,7 @@ describe('validateInvalidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'modelAPIs.posts.all.getAll': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3971,7 +3971,7 @@ describe('validateValidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'modelAPIs.posts.all.getAll': {
+        'model.posts.all.getAll': {
           authorization: patch.authorization,
         },
       },

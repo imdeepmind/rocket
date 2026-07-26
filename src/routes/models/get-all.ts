@@ -2,28 +2,17 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
-  buildSortQueryProperties,
+  buildAllQueryProperties,
+  buildPreValidation,
+  buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register GET_ALL routes for listing records (table-level).
- *
- * For each model that has fields, creates:
- *   GET /{model}/
- *
- * Query params:
- *   - Filter params for ALL fields based on their query operations
- *   - orderBy / orderDir for sortable fields
- *   - page / limit for pagination
- */
 export function registerGetAllRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -31,7 +20,7 @@ export function registerGetAllRoutes(
   const {models} = config.data;
 
   for (const [modelName, model] of Object.entries(models)) {
-    const apiIdentifier = `modelAPIs.${modelName}.all.getAll`;
+    const apiIdentifier = `model.${modelName}.all.getAll`;
 
     if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -52,24 +41,7 @@ export function registerGetAllRoutes(
       {
         schema,
         config: {apiIdentifier},
-        preValidation: async (request, reply) => {
-          if (config.authentication?.enabled && authorization) {
-            try {
-              await request.authenticate();
-            } catch {
-              return reply
-                .status(401)
-                .send(
-                  app.buildResponse(
-                    401,
-                    'Invalid or expired authentication token',
-                    null,
-                  ),
-                );
-            }
-          }
-          app.enforceSSP(request);
-        },
+        preValidation: buildPreValidation(app, config, authorization),
         preHandler: async request => {
           await app.callWebhook('request', request, null);
         },
@@ -78,7 +50,6 @@ export function registerGetAllRoutes(
         },
       },
       async (request: FastifyRequest, reply: FastifyReply) => {
-        console.log(request.user);
         const queryParams = request.query as Record<string, unknown>;
         const tableName = modelName;
 
@@ -103,39 +74,57 @@ export function registerGetAllRoutes(
         }
 
         const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
-        const countRes = await app.db.query<{total: number | string}>(
-          countQuery,
-          filterValues,
-        );
-        const total = Number(countRes.rows[0]?.total || 0);
 
-        if (queryParams.orderBy) {
-          query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+        let tx;
+        try {
+          tx = await app.db.beginTransaction();
+
+          const countRes = await tx.query<{total: number | string}>(
+            countQuery,
+            filterValues,
+          );
+          const total = Number(countRes.rows[0]?.total || 0);
+
+          if (queryParams.orderBy) {
+            query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+          }
+
+          const page = Math.max(Number(queryParams.page) || 1, 1);
+          const limit = Math.min(
+            Math.max(Number(queryParams.limit) || 20, 10),
+            100,
+          );
+          const offset = (page - 1) * limit;
+
+          query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+          values.push(limit, offset);
+
+          const res = await tx.query(query, values);
+
+          await tx.commit();
+
+          return reply.status(200).send(
+            app.buildResponse(
+              200,
+              `Successfully retrieved records from the ${tableName} table`,
+              {
+                data: res.rows || [],
+                pagination: {
+                  page,
+                  limit,
+                  total,
+                  totalPages: Math.ceil(total / limit),
+                },
+              },
+              res,
+            ),
+          );
+        } catch (err) {
+          if (tx) await tx.rollback().catch(() => {});
+          throw err;
+        } finally {
+          tx?.release();
         }
-
-        const page = Math.max(Number(queryParams.page) || 1, 1);
-        const limit = Math.min(
-          Math.max(Number(queryParams.limit) || 20, 10),
-          100,
-        );
-        const offset = (page - 1) * limit;
-
-        query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-        values.push(limit, offset);
-
-        const res = await app.db.query(query, values);
-
-        return reply.status(200).send(
-          app.buildResponse(
-            200,
-            `Successfully retrieved records from the ${tableName} table`,
-            {
-              data: res.rows || [],
-              pagination: {page, limit, total},
-            },
-            res,
-          ),
-        );
       },
     );
   }
@@ -146,18 +135,7 @@ function generateSchema(
   config: AppConfig,
   authorization: boolean,
 ) {
-  const queryProperties: Record<string, object> = {};
-
-  for (const [fName, f] of Object.entries(model.fields)) {
-    Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-  }
-
-  const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.query?.includes('sort'))
-    .map(([fName]) => fName);
-  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-  Object.assign(queryProperties, paginationQueryProperties);
+  const queryProperties = buildAllQueryProperties(model);
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
@@ -183,6 +161,7 @@ function generateSchema(
               page: {type: 'integer'},
               limit: {type: 'integer'},
               total: {type: 'integer'},
+              totalPages: {type: 'integer'},
             },
           },
         },
@@ -191,23 +170,7 @@ function generateSchema(
     ),
   };
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;

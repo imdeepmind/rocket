@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const singleDeletableModel: Record<string, ModelConfig> = {
@@ -60,6 +60,7 @@ describe('test delete api', () => {
   beforeEach(() => {
     // Clear mock state between tests so call assertions are isolated
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('happy path', () => {
@@ -73,8 +74,7 @@ describe('test delete api', () => {
 
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "users" WHERE "id" = $1;',
         [42],
       );
@@ -99,8 +99,7 @@ describe('test delete api', () => {
 
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "slug" = $1;',
         ['hello-world'],
       );
@@ -120,12 +119,12 @@ describe('test delete api', () => {
         url: '/posts/id/10',
       });
       expect(byId.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "id" = $1;',
         [10],
       );
 
-      pgQueryMock.mockClear();
+      pgClientQueryMock.mockClear();
 
       // Delete by slug
       const bySlug = await fastify.inject({
@@ -133,7 +132,7 @@ describe('test delete api', () => {
         url: '/posts/slug/my-post',
       });
       expect(bySlug.statusCode).toBe(204);
-      expect(pgQueryMock).toHaveBeenLastCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
         'DELETE FROM "posts" WHERE "slug" = $1;',
         ['my-post'],
       );
@@ -143,6 +142,21 @@ describe('test delete api', () => {
   });
 
   describe('edge cases', () => {
+    test('should return 404 when the delete API is disabled via config', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel, {
+        'model.users.id.delete': {enabled: false},
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+      await fastify.close();
+    });
+
     test('should return 404 when model has no deletable fields', async () => {
       const fastify = await createTestApp(pgConfig, noDeletableFieldsModel);
 
@@ -175,7 +189,26 @@ describe('test delete api', () => {
   describe('error handling', () => {
     test('should return 500 when database query throws', async () => {
       const fastify = await createTestApp(pgConfig, singleDeletableModel);
-      pgQueryMock.mockRejectedValueOnce(new Error('DB connection lost'));
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // DELETE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/users/id/1',
+      });
+
+      expect(response.statusCode).toBe(500);
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully', async () => {
+      const fastify = await createTestApp(pgConfig, singleDeletableModel);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(new Error('DB connection lost')) // DELETE
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
 
       const response = await fastify.inject({
         method: 'DELETE',
@@ -189,7 +222,7 @@ describe('test delete api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'modelAPIs.users.id.delete': {
+      'model.users.id.delete': {
         authorization: true,
       },
     };

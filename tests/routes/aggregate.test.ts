@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgQueryMock} from '@tests/helpers/db-mocks';
+import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
 const aggregateModel: Record<string, ModelConfig> = {
@@ -40,14 +40,17 @@ const upAuthConfig: AuthenticationConfig = {
 describe('test aggregate api', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
+    pgClientQueryMock.mockClear();
   });
 
   describe('happy path', () => {
     test('should return 200 with all numeric aggregations', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [{avg: 50, max: 100, min: 10, sum: 500, count: 10}],
-        rowCount: 1,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{avg: 50, max: 100, min: 10, sum: 500, count: 10}],
+        }) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, aggregateModel);
 
@@ -75,8 +78,9 @@ describe('test aggregate api', () => {
         url: '/sales/aggregation/amount?operations=max,min',
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledTimes(3);
+      expect(pgClientQueryMock).toHaveBeenNthCalledWith(
+        2,
         'SELECT MAX("amount") AS max, MIN("amount") AS min FROM "sales"',
         [],
       );
@@ -85,13 +89,15 @@ describe('test aggregate api', () => {
     });
 
     test('should return 200 with frequency aggregation', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {val: 'electronics', c: '5'},
-          {val: 'books', c: '12'},
-        ],
-        rowCount: 2,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {val: 'electronics', c: '5'},
+            {val: 'books', c: '12'},
+          ],
+        }) // frequency query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, aggregateModel);
 
@@ -117,8 +123,9 @@ describe('test aggregate api', () => {
         url: '/sales/aggregation/category?operations=frequency',
       });
 
-      expect(pgQueryMock).toHaveBeenCalledOnce();
-      expect(pgQueryMock).toHaveBeenCalledWith(
+      expect(pgClientQueryMock).toHaveBeenCalledTimes(3);
+      expect(pgClientQueryMock).toHaveBeenNthCalledWith(
+        2,
         'SELECT "category" as val, COUNT(*) as c FROM "sales" GROUP BY "category"',
         [],
       );
@@ -141,19 +148,16 @@ describe('test aggregate api', () => {
         },
       };
 
-      // First call: numeric aggregation
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [{avg: 85}],
-        rowCount: 1,
-      });
-      // Second call: frequency aggregation
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {val: 80, c: 2},
-          {val: 90, c: 1},
-        ],
-        rowCount: 2,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{avg: 85}]}) // numeric aggregation
+        .mockResolvedValueOnce({
+          rows: [
+            {val: 80, c: 2},
+            {val: 90, c: 1},
+          ],
+        }) // frequency aggregation
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, combinedModel);
 
@@ -268,10 +272,10 @@ describe('test aggregate api', () => {
     });
 
     test('should handle empty result sets gracefully for numeric aggregation', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [],
-        rowCount: 0,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(pgConfig, aggregateModel);
 
@@ -282,6 +286,59 @@ describe('test aggregate api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data).toEqual({});
+
+      await fastify.close();
+    });
+  });
+
+  describe('error handling during database operations', () => {
+    test('should return 500 when aggregation query fails after BEGIN', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Query failed')) // aggregation query fails
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK succeeds
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should handle rollback failure gracefully after query error', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN succeeds
+        .mockRejectedValueOnce(new Error('Query failed')) // aggregation query fails
+        .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when BEGIN itself fails', async () => {
+      pgClientQueryMock.mockRejectedValueOnce(new Error('BEGIN failed')); // BEGIN fails
+
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(response.statusCode).toBe(500);
 
       await fastify.close();
     });
@@ -313,10 +370,10 @@ describe('test aggregate api', () => {
     });
 
     test('should return 200 when auth is enabled and valid token is provided', async () => {
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [{count: 10}],
-        rowCount: 1,
-      });
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{count: 10}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
 
       const fastify = await createTestApp(
         pgConfig,

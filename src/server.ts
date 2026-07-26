@@ -145,6 +145,14 @@ export async function startServer(
     ) => {
       req.log.error(err);
 
+      const errRecord = err as unknown as Record<string, unknown>;
+      if (errRecord.body) {
+        reply
+          .status((errRecord.statusCode as number) || 500)
+          .send(errRecord.body);
+        return;
+      }
+
       // Default from Fastify or fallback
       let statusCode: number = err.statusCode || 500;
 

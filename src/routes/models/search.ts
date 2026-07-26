@@ -2,29 +2,17 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
   applyFilters,
-  buildFilterQueryProperties,
-  buildSortQueryProperties,
+  buildAllQueryProperties,
+  buildPreValidation,
+  buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
-  paginationQueryProperties,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-/**
- * Register SEARCH routes for searchable fields.
- *
- * For each model, for each field with 'search' in apis, creates:
- *   GET /{model}/search/{columnName}
- *
- * Query params:
- *   - {columnName}_search (required) — the search pattern
- *   - Other filter params based on the model's operations
- *   - orderBy, orderDir — sorting
- *   - page, limit — pagination
- */
 export function registerSearchRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -37,7 +25,7 @@ export function registerSearchRoutes(
     );
 
     for (const [fieldName, field] of searchableFields) {
-      const apiIdentifier = `modelAPIs.${modelName}.${fieldName}.search`;
+      const apiIdentifier = `model.${modelName}.${fieldName}.search`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 
@@ -60,24 +48,7 @@ export function registerSearchRoutes(
         {
           schema,
           config: {apiIdentifier},
-          preValidation: async (request, reply) => {
-            if (config.authentication?.enabled && authorization) {
-              try {
-                await request.authenticate();
-              } catch {
-                return reply
-                  .status(401)
-                  .send(
-                    app.buildResponse(
-                      401,
-                      'Invalid or expired authentication token',
-                      null,
-                    ),
-                  );
-              }
-            }
-            app.enforceSSP(request);
-          },
+          preValidation: buildPreValidation(app, config, authorization),
           preHandler: async request => {
             await app.callWebhook('request', request, null);
           },
@@ -109,44 +80,60 @@ export function registerSearchRoutes(
           values.push(...filterValues);
           paramIndex = nextParamIndex;
 
-          if (whereClauses.length > 0) {
-            query += ` WHERE ${whereClauses.join(' AND ')}`;
+          query += ` WHERE ${whereClauses.join(' AND ')}`;
+
+          const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
+
+          let tx;
+          try {
+            tx = await app.db.beginTransaction();
+
+            const countRes = await tx.query<{total: number | string}>(
+              countQuery,
+              values,
+            );
+            const total = Number(countRes.rows[0]?.total || 0);
+
+            if (queryParams.orderBy) {
+              query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+            }
+
+            const page = Math.max(Number(queryParams.page) || 1, 1);
+            const limit = Math.min(
+              Math.max(Number(queryParams.limit) || 20, 10),
+              100,
+            );
+            const offset = (page - 1) * limit;
+
+            query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+            values.push(limit, offset);
+
+            const res = await tx.query(query, values);
+
+            await tx.commit();
+
+            return reply.status(200).send(
+              app.buildResponse(
+                200,
+                `Successfully searched records from the ${tableName} table`,
+                {
+                  data: res.rows || [],
+                  pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                  },
+                },
+                res,
+              ),
+            );
+          } catch (err) {
+            if (tx) await tx.rollback().catch(() => {});
+            throw err;
+          } finally {
+            tx?.release();
           }
-
-          const countQuery = `SELECT COUNT(*) as total FROM "${tableName}"${whereClauses.length > 0 ? ` WHERE ${whereClauses.join(' AND ')}` : ''}`;
-          const countRes = await app.db.query<{total: number | string}>(
-            countQuery,
-            values,
-          );
-          const total = Number(countRes.rows[0]?.total || 0);
-
-          if (queryParams.orderBy) {
-            query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
-          }
-
-          const page = Math.max(Number(queryParams.page) || 1, 1);
-          const limit = Math.min(
-            Math.max(Number(queryParams.limit) || 20, 10),
-            100,
-          );
-          const offset = (page - 1) * limit;
-
-          query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-          values.push(limit, offset);
-
-          const res = await app.db.query(query, values);
-
-          return reply.status(200).send(
-            app.buildResponse(
-              200,
-              `Successfully searched records from the ${tableName} table`,
-              {
-                data: res.rows || [],
-                pagination: {page, limit, total},
-              },
-              res,
-            ),
-          );
         },
       );
     }
@@ -166,18 +153,8 @@ function generateSchema(
       type: 'string',
       description: `Search pattern to match against ${fieldName}`,
     },
+    ...buildAllQueryProperties(model),
   };
-
-  for (const [fName, f] of Object.entries(model.fields)) {
-    Object.assign(queryProperties, buildFilterQueryProperties(fName, f));
-  }
-
-  const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.query?.includes('sort'))
-    .map(([fName]) => fName);
-  Object.assign(queryProperties, buildSortQueryProperties(sortableFields));
-
-  Object.assign(queryProperties, paginationQueryProperties);
 
   const schema: Record<string, unknown> = {
     summary: `Search ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
@@ -204,6 +181,7 @@ function generateSchema(
               page: {type: 'integer'},
               limit: {type: 'integer'},
               total: {type: 'integer'},
+              totalPages: {type: 'integer'},
             },
           },
         },
@@ -212,23 +190,7 @@ function generateSchema(
     ),
   };
 
-  const security: Array<{[key: string]: string[]}> = [];
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
-  }
-
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
-    authorization
-  ) {
-    security.push({apiKeyAuth: []});
-  }
+  const security = buildSecurityArray(config, authorization);
 
   if (security.length > 0) {
     schema.security = security;
