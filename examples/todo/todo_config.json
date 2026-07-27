@@ -23,9 +23,30 @@
     "database": {
       "engine": "sqlite",
       "connection": {
-        "url": "./database.db"
+        "url": "/Users/imdeepmind/Desktop/WorkspaceV2/rocket/examples/todo/database.db"
       },
       "timeout": 10000
+    }
+  },
+  "authentication": {
+    "enabled": true,
+    "provider": {
+      "type": "up-auth",
+      "config": {
+        "userModel": {
+          "model": "users",
+          "idField": "id",
+          "usernameField": "email",
+          "passwordField": "password",
+          "isVerifiedField": "isVerified"
+        },
+        "jwtSecret": "your-super-secret-key-must-be-long-enough"
+      }
+    }
+  },
+  "integrations": {
+    "email": {
+      "provider": "dummy"
     }
   },
   "data": {
@@ -102,6 +123,15 @@
           }
         }
       }
+    }
+  },
+  "apis": {
+    "model.todos.all.insert": {
+      "serverParams": [{
+        "type": "body",
+        "name": "authorId",
+        "value": "[userId]"
+      }]
     }
   }
 }
