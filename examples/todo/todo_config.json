@@ -1,150 +1,107 @@
 {
-    "application": {
-        "logLevel": "debug",
-        "rateLimit": {
-            "enabled": true,
-            "max": 1000,
-            "timeWindow": "15m",
-            "useRedis": false
-        }
-    },
-    "swagger": {
-        "enabled": true,
-        "basePath": "/api/docs",
-        "info": {
-            "title": "TODO app with authentication",
-            "description": "Example todo application with authentication using Rocket OSS",
-            "version": "v1.0.0",
-            "contact": {
-                "name": "Abhishek Chatterjee",
-                "url": "https://imdeepmind.com",
-                "email": "abhishek@imdeepmind.com"
-            },
-            "license": {
-                "name": "MIT",
-                "url": "https://opensource.org/licenses/MIT"
-            }
-        }
-    },
+  "application": {
+    "name": "Example TODO Application",
+    "logLevel": "debug",
+    "rateLimit": {
+      "enabled": true,
+      "max": 60,
+      "timeWindow": "1m"
+    }
+  },
+  "docs": {
+    "openapi": {
+      "enabled": true,
+      "path": "/api/docs",
+      "info": {
+        "title": "Example TODO Application",
+        "description": "An example TODO application with authentication to show Rocket's capability",
+        "version": "v1.0.0"
+      }
+    }
+  },
+  "infrastructure": {
     "database": {
-        "engine": "pg",
-        "connection": {
-            "urlOrPath": "env:DB"
-        },
-        "dbTimeout": 10000
-    },
-    "models": [
-        {
-            "name": "users",
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
-                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
-                },
-                {
-                    "name": "email",
-                    "type": "string",
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "equal", "sortable", "indexable"],
-                    "supportedAggregation": ["count"]
-                },
-                {
-                    "name": "password",
-                    "type": "string",
-                    "unique": false,
-                    "nullable": false
-                },
-                {
-                    "name": "name",
-                    "type": "string",
-                    "nullable": true,
-                    "supportedOperations": ["searchable", "sortable", "indexable"]
-                },
-                {
-                    "name": "is_active",
-                    "type": "boolean",
-                    "default": true,
-                    "supportedOperations": ["equal"]
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "users_email_idx",
-                    "columns": ["email"],
-                    "unique": true
-                },
-                {
-                    "name": "users_name_is_active_idx",
-                    "columns": ["name", "is_active"],
-                    "unique": false
-                }
-            ]
-        },
-        {
-            "name": "todos",
-            "fields": [
-                {
-                    "name": "id",
-                    "type": "integer",
-                    "primaryKey": true,
-                    "unique": true,
-                    "nullable": false,
-                    "supportedOperations": ["editable", "deletable", "greaterThanEqual"],
-                    "supportedAggregation": ["count", "mean", "max", "min", "sum"]
-                },
-                {
-                    "name": "title",
-                    "type": "string",
-                    "nullable": false,
-                    "supportedOperations": ["searchable", "sortable"]
-                },
-                {
-                    "name": "body",
-                    "type": "text",
-                    "nullable": true
-                },
-                {
-                    "name": "user_id",
-                    "type": "integer",
-                    "nullable": false,
-                    "supportedOperations": ["equal", "oneOf"],
-                    "supportedAggregation": ["count"]
-                },
-                {
-                    "name": "status",
-                    "type": "string",
-                    "default": "pending",
-                    "supportedOperations": ["equal", "oneOf"]
-                },
-                {
-                    "name": "created_at",
-                    "type": "datetime",
-                    "supportedOperations": ["lessThan", "greaterThan", "sortable"]
-                }
-            ],
-            "indexes": [
-                {
-                    "name": "todos_user_id_idx",
-                    "columns": ["user_id"],
-                    "unique": false
-                }
-            ],
-            "foreignKeys": [
-                {
-                    "name": "fk_todos_user_id",
-                    "columns": ["user_id"],
-                    "referenceTable": "users",
-                    "referenceColumns": ["id"],
-                    "onDelete": "CASCADE",
-                    "onUpdate": "CASCADE"
-                }
-            ]
+      "engine": "sqlite",
+      "connection": {
+        "url": "./database.db"
+      },
+      "timeout": 10000
+    }
+  },
+  "data": {
+    "models": {
+      "users": {
+        "timestamps": true,
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true,
+            "apis": ["edit", "delete", "index"]
+          },
+          "name": {
+            "type": "string",
+            "nullable": false,
+            "apis": ["search"],
+            "query": ["sort"]
+          },
+          "email": {
+            "type": "string",
+            "nullable": false,
+            "unique": true,
+            "apis": ["search"],
+            "query": ["sort"]
+          },
+          "password": {
+            "type": "string",
+            "nullable": false
+          },
+          "isVerified": {
+            "type": "boolean",
+            "default": true,
+            "query": ["eq"]
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true,
+            "query": ["eq"]
+          }
         }
-    ]
+      },
+      "todos": {
+        "timestamps": true,
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true,
+            "apis": ["edit", "delete", "index"]
+          },
+          "title": {
+            "type": "string",
+            "nullable": false,
+            "apis": ["search"],
+            "query": ["sort"]
+          },
+          "description": {
+            "type": "text"
+          },
+          "authorId": {
+            "type": "integer",
+            "nullable": false
+          }
+        },
+        "relations": {
+          "todoAuthor": {
+            "type": "belongsTo",
+            "model": "users",
+            "localField": "authorId",
+            "foreignField": "id",
+            "onDelete": "cascade",
+            "onUpdate": "cascade"
+          }
+        }
+      }
+    }
+  }
 }
