@@ -21,6 +21,7 @@ import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {registerMeRoute} from '@/routes/auth/me';
 import {
   registerForgotPasswordOtpVerifyRoute,
   registerLoginOtpVerifyRoute,
@@ -138,6 +139,7 @@ export async function startServer(
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
+    registerMeRoute(app, config);
 
     if (config.integrations?.email) {
       registerForgotPasswordRoute(app, config);

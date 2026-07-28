@@ -16,6 +16,7 @@ import {startServer} from '@/server';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {registerMeRoute} from '@/routes/auth/me';
 import {
   registerForgotPasswordOtpVerifyRoute,
   registerLoginOtpVerifyRoute,
@@ -97,6 +98,10 @@ vi.mock('@/routes/auth/resend-otp', () => ({
   registerForgotPasswordResendOtpRoute: vi.fn(),
   registerLoginResendOtpRoute: vi.fn(),
   registerRegistrationResendOtpRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/me', () => ({
+  registerMeRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -608,6 +613,7 @@ describe('Server', () => {
       expect(registerLoginResendOtpRoute).toHaveBeenCalled();
       expect(registerRegistrationResendOtpRoute).toHaveBeenCalled();
       expect(registerForgotPasswordResendOtpRoute).toHaveBeenCalled();
+      expect(registerMeRoute).toHaveBeenCalled();
     });
 
     it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
