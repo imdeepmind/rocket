@@ -15,6 +15,7 @@ import {startServer} from '@/server';
 
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
+import {registerEditMeRoute} from '@/routes/auth/edit-me';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerMeRoute} from '@/routes/auth/me';
@@ -107,6 +108,10 @@ vi.mock('@/routes/auth/me', () => ({
 
 vi.mock('@/routes/auth/delete-me', () => ({
   registerDeleteMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/edit-me', () => ({
+  registerEditMeRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -620,6 +625,7 @@ describe('Server', () => {
       expect(registerForgotPasswordResendOtpRoute).toHaveBeenCalled();
       expect(registerMeRoute).toHaveBeenCalled();
       expect(registerDeleteMeRoute).toHaveBeenCalled();
+      expect(registerEditMeRoute).toHaveBeenCalled();
     });
 
     it('should not register registration OTP verify route when isVerifiedField is not set', async () => {

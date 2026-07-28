@@ -20,6 +20,7 @@ import webhookPlugin from '@/plugin/webhook';
 import {registerRoutes} from '@/routes';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
+import {registerEditMeRoute} from '@/routes/auth/edit-me';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerMeRoute} from '@/routes/auth/me';
@@ -142,6 +143,7 @@ export async function startServer(
     registerChangePasswordRoute(app, config);
     registerMeRoute(app, config);
     registerDeleteMeRoute(app, config);
+    registerEditMeRoute(app, config);
 
     if (config.integrations?.email) {
       registerForgotPasswordRoute(app, config);
