@@ -29,7 +29,7 @@ import {
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
 import {Mode} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 import {RouteInfo} from '@/utils/welcome';
@@ -127,13 +127,25 @@ export async function startServer(
     config.authentication?.enabled &&
     config.authentication?.provider?.type === 'up-auth'
   ) {
+    const upConfig = config.authentication.provider
+      .config as UpAuthProviderConfig;
+
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
-    registerForgotPasswordRoute(app, config);
-    registerLoginOtpVerifyRoute(app, config);
-    registerRegistrationOtpVerifyRoute(app, config);
-    registerForgotPasswordOtpVerifyRoute(app, config);
+
+    if (config.integrations?.email) {
+      registerForgotPasswordRoute(app, config);
+      registerForgotPasswordOtpVerifyRoute(app, config);
+    }
+
+    if (upConfig.mfaRequired) {
+      registerLoginOtpVerifyRoute(app, config);
+    }
+
+    if (upConfig.userModel.isVerifiedField) {
+      registerRegistrationOtpVerifyRoute(app, config);
+    }
   }
 
   // Global error handler
