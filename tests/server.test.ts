@@ -14,6 +14,7 @@ import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
+import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
 import {registerMeRoute} from '@/routes/auth/me';
@@ -102,6 +103,10 @@ vi.mock('@/routes/auth/resend-otp', () => ({
 
 vi.mock('@/routes/auth/me', () => ({
   registerMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/delete-me', () => ({
+  registerDeleteMeRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -614,6 +619,7 @@ describe('Server', () => {
       expect(registerRegistrationResendOtpRoute).toHaveBeenCalled();
       expect(registerForgotPasswordResendOtpRoute).toHaveBeenCalled();
       expect(registerMeRoute).toHaveBeenCalled();
+      expect(registerDeleteMeRoute).toHaveBeenCalled();
     });
 
     it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
