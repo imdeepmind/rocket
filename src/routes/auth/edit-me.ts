@@ -24,7 +24,8 @@ export function registerEditMeRoute(
   const authConfig = (
     config.authentication!.provider.config as UpAuthProviderConfig
   ).userModel;
-  const {model, idField, usernameField, passwordField} = authConfig;
+  const {model, idField, usernameField, passwordField, isVerifiedField} =
+    authConfig;
 
   const authModelConfig = models[model];
 
@@ -40,6 +41,7 @@ export function registerEditMeRoute(
     idField,
     usernameField,
     passwordField,
+    isVerifiedField,
   );
 
   app.patch(
@@ -63,7 +65,11 @@ export function registerEditMeRoute(
 
       const body = request.body as ModelBody;
 
-      const protectedFields = new Set([idField, usernameField, passwordField]);
+      const protectedFields = new Set(
+        [idField, usernameField, passwordField, isVerifiedField].filter(
+          Boolean,
+        ),
+      );
       const editableKeys = Object.keys(body).filter(
         k => !protectedFields.has(k),
       );
@@ -134,8 +140,11 @@ function generateSchema(
   idField: string,
   usernameField: string,
   passwordField: string,
+  isVerifiedField?: string,
 ) {
-  const protectedFields = new Set([idField, usernameField, passwordField]);
+  const protectedFields = new Set(
+    [idField, usernameField, passwordField, isVerifiedField].filter(Boolean),
+  );
 
   const bodyProperties: Record<string, object> = {};
   for (const [fieldName, field] of Object.entries(authModelConfig.fields)) {
@@ -160,7 +169,7 @@ function generateSchema(
 
   const schema: Record<string, unknown> = {
     summary: `Edit authenticated user profile for ${capitalizeFirstLetter(model)}`,
-    description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${usernameField}, or ${passwordField}.`,
+    description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${usernameField}, ${passwordField}, or ${isVerifiedField}.`,
     tags: [capitalizeFirstLetter(model), 'Auth', 'Profile'],
     body: bodySchema,
     response: responseSchema,
