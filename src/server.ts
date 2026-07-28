@@ -27,6 +27,11 @@ import {
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
+import {
+  registerForgotPasswordResendOtpRoute,
+  registerLoginResendOtpRoute,
+  registerRegistrationResendOtpRoute,
+} from '@/routes/auth/resend-otp';
 
 import {Mode} from '@/interfaces';
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
@@ -137,14 +142,17 @@ export async function startServer(
     if (config.integrations?.email) {
       registerForgotPasswordRoute(app, config);
       registerForgotPasswordOtpVerifyRoute(app, config);
+      registerForgotPasswordResendOtpRoute(app, config);
     }
 
     if (upConfig.mfaRequired) {
       registerLoginOtpVerifyRoute(app, config);
+      registerLoginResendOtpRoute(app, config);
     }
 
     if (upConfig.userModel.isVerifiedField) {
       registerRegistrationOtpVerifyRoute(app, config);
+      registerRegistrationResendOtpRoute(app, config);
     }
   }
 

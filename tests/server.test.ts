@@ -22,6 +22,11 @@ import {
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
+import {
+  registerForgotPasswordResendOtpRoute,
+  registerLoginResendOtpRoute,
+  registerRegistrationResendOtpRoute,
+} from '@/routes/auth/resend-otp';
 import {registerRoutes} from '@/routes/index';
 
 import {Mode} from '@/interfaces';
@@ -86,6 +91,12 @@ vi.mock('@/routes/auth/otp-verify', () => ({
   registerForgotPasswordOtpVerifyRoute: vi.fn(),
   registerLoginOtpVerifyRoute: vi.fn(),
   registerRegistrationOtpVerifyRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/resend-otp', () => ({
+  registerForgotPasswordResendOtpRoute: vi.fn(),
+  registerLoginResendOtpRoute: vi.fn(),
+  registerRegistrationResendOtpRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -594,6 +605,9 @@ describe('Server', () => {
       expect(registerLoginOtpVerifyRoute).toHaveBeenCalled();
       expect(registerRegistrationOtpVerifyRoute).toHaveBeenCalled();
       expect(registerForgotPasswordOtpVerifyRoute).toHaveBeenCalled();
+      expect(registerLoginResendOtpRoute).toHaveBeenCalled();
+      expect(registerRegistrationResendOtpRoute).toHaveBeenCalled();
+      expect(registerForgotPasswordResendOtpRoute).toHaveBeenCalled();
     });
 
     it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
@@ -625,6 +639,7 @@ describe('Server', () => {
       await startServer(configWithoutVerified, 3000, 'dev');
 
       expect(registerRegistrationOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerRegistrationResendOtpRoute).not.toHaveBeenCalled();
     });
 
     it('should not register login OTP verify route when mfa is not required', async () => {
@@ -655,6 +670,7 @@ describe('Server', () => {
       await startServer(configWithoutMfa, 3000, 'dev');
 
       expect(registerLoginOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerLoginResendOtpRoute).not.toHaveBeenCalled();
     });
 
     it('should not register forgot-password routes when email is not configured', async () => {
@@ -682,6 +698,7 @@ describe('Server', () => {
 
       expect(registerForgotPasswordRoute).not.toHaveBeenCalled();
       expect(registerForgotPasswordOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerForgotPasswordResendOtpRoute).not.toHaveBeenCalled();
     });
   });
 
