@@ -7,6 +7,7 @@ import {
   buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
+  shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
@@ -27,7 +28,7 @@ export function registerSearchRoutes(
     for (const [fieldName, field] of searchableFields) {
       const apiIdentifier = `model.${modelName}.${fieldName}.search`;
 
-      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+      if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

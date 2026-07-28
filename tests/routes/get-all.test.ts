@@ -501,6 +501,7 @@ describe('test get-all api', () => {
   describe('authentication', () => {
     const apisConfig = {
       'model.users.all.getAll': {
+        enabled: true,
         authorization: true,
       },
     };

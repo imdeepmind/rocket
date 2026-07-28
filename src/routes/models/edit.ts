@@ -7,6 +7,7 @@ import {
   buildSecurityArray,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
+  shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelBody} from '@/interfaces/config';
@@ -27,7 +28,7 @@ export function registerEditRoutes(
     for (const [fieldName, field] of editableFields) {
       const apiIdentifier = `model.${modelName}.${fieldName}.edit`;
 
-      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+      if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

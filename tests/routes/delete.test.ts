@@ -223,6 +223,7 @@ describe('test delete api', () => {
   describe('authentication', () => {
     const apisConfig = {
       'model.users.id.delete': {
+        enabled: true,
         authorization: true,
       },
     };

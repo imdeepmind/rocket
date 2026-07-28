@@ -585,6 +585,7 @@ describe('test edit api', () => {
   describe('authentication', () => {
     const apisConfig = {
       'model.users.id.edit': {
+        enabled: true,
         authorization: true,
       },
     };
