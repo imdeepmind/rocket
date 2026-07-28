@@ -18,6 +18,7 @@ import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
+import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
 import {registerEditMeRoute} from '@/routes/auth/edit-me';
@@ -159,6 +160,7 @@ export async function startServer(
     if (upConfig.userModel.isVerifiedField) {
       registerRegistrationOtpVerifyRoute(app, config);
       registerRegistrationResendOtpRoute(app, config);
+      registerEmailChangeRoute(app, config);
     }
   }
 

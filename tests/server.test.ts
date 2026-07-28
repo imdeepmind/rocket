@@ -13,6 +13,7 @@ import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
+import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
 import {registerEditMeRoute} from '@/routes/auth/edit-me';
@@ -112,6 +113,10 @@ vi.mock('@/routes/auth/delete-me', () => ({
 
 vi.mock('@/routes/auth/edit-me', () => ({
   registerEditMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/change-email', () => ({
+  registerEmailChangeRoute: vi.fn(),
 }));
 
 vi.mock('@/utils/welcome', () => ({
@@ -626,6 +631,7 @@ describe('Server', () => {
       expect(registerMeRoute).toHaveBeenCalled();
       expect(registerDeleteMeRoute).toHaveBeenCalled();
       expect(registerEditMeRoute).toHaveBeenCalled();
+      expect(registerEmailChangeRoute).toHaveBeenCalled();
     });
 
     it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
@@ -658,6 +664,7 @@ describe('Server', () => {
 
       expect(registerRegistrationOtpVerifyRoute).not.toHaveBeenCalled();
       expect(registerRegistrationResendOtpRoute).not.toHaveBeenCalled();
+      expect(registerEmailChangeRoute).not.toHaveBeenCalled();
     });
 
     it('should not register login OTP verify route when mfa is not required', async () => {
