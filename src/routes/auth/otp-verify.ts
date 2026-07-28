@@ -11,7 +11,7 @@ function registerOtpVerifyBase(
   app: FastifyInstance,
   config: AppConfig,
   path: string,
-  action: 'login' | 'registration' | 'forgot-password',
+  action: 'login' | 'register' | 'forgot-password',
 ): void {
   const {models} = config.data;
 
@@ -83,7 +83,7 @@ function registerOtpVerifyBase(
           });
         }
 
-        if (action === 'registration') {
+        if (action === 'register') {
           const isVerifiedField = upConfig.userModel.isVerifiedField;
           if (isVerifiedField) {
             const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
@@ -162,18 +162,13 @@ export function registerRegistrationOtpVerifyRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  registerOtpVerifyBase(
-    app,
-    config,
-    '/auth/registration/verify/otp',
-    'registration',
-  );
+  registerOtpVerifyBase(app, config, '/auth/register/verify/otp', 'register');
 }
 
 function generateSchema(
   usernameField: string,
   model: string,
-  action: 'login' | 'registration' | 'forgot-password',
+  action: 'login' | 'register' | 'forgot-password',
 ) {
   const isForgotPassword = action === 'forgot-password';
 
