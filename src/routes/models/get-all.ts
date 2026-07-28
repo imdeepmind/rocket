@@ -7,6 +7,7 @@ import {
   buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
+  shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig} from '@/interfaces/config';
@@ -22,7 +23,7 @@ export function registerGetAllRoutes(
   for (const [modelName, model] of Object.entries(models)) {
     const apiIdentifier = `model.${modelName}.all.getAll`;
 
-    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+    if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??

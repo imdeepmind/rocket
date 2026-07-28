@@ -5,6 +5,7 @@ import {
   buildSecurityArray,
   generateJSONValidationSchema,
   getResponseStructureSchema,
+  shouldApiBeEnabled,
   stripAdditionalPostFields,
 } from '@/routes/schema-helpers';
 
@@ -21,7 +22,7 @@ export function registerPostRoutes(
   for (const [modelName, model] of Object.entries(models)) {
     const apiIdentifier = `model.${modelName}.all.insert`;
 
-    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+    if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
     const authorization =
       config.apis?.[apiIdentifier]?.authorization ??

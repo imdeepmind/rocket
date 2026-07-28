@@ -590,6 +590,7 @@ describe('test search api', () => {
   describe('authentication', () => {
     const apisConfig = {
       'model.users.name.search': {
+        enabled: true,
         authorization: true,
       },
     };

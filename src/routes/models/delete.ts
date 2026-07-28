@@ -5,6 +5,7 @@ import {
   buildSecurityArray,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
+  shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
@@ -25,7 +26,7 @@ export function registerDeleteRoutes(
     for (const [fieldName, field] of deletableFields) {
       const apiIdentifier = `model.${modelName}.${fieldName}.delete`;
 
-      if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+      if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
       const authorization =
         config.apis?.[apiIdentifier]?.authorization ??

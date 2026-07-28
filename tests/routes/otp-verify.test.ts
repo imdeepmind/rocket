@@ -334,7 +334,7 @@ describe('POST /auth/login/verify/otp', () => {
   });
 });
 
-describe('POST /auth/registration/verify/otp', () => {
+describe('POST /auth/register/verify/otp', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
     pgClientQueryMock.mockClear();
@@ -351,7 +351,7 @@ describe('POST /auth/registration/verify/otp', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/registration/verify/otp',
+        url: '/auth/register/verify/otp',
         payload: {ulid: 'test-ulid', otp: '123456', email: 'test@example.com'},
       });
 
@@ -383,7 +383,7 @@ describe('POST /auth/registration/verify/otp', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/registration/verify/otp',
+        url: '/auth/register/verify/otp',
         payload: {ulid, otp: '000000', email: 'alice@example.com'},
       });
 
@@ -444,7 +444,7 @@ describe('POST /auth/registration/verify/otp', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/registration/verify/otp',
+        url: '/auth/register/verify/otp',
         payload: {ulid, otp: '000000', email: 'alice@example.com'},
       });
 
@@ -475,7 +475,7 @@ describe('POST /auth/registration/verify/otp', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/registration/verify/otp',
+        url: '/auth/register/verify/otp',
         payload: {
           ulid: 'wrong-ulid',
           otp: '000000',
@@ -493,7 +493,7 @@ describe('POST /auth/registration/verify/otp', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/registration/verify/otp',
+        url: '/auth/register/verify/otp',
         payload: {ulid: 'test-ulid'},
       });
 

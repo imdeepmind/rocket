@@ -6,6 +6,7 @@ import {
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
+  UpAuthProviderConfig,
 } from '@/interfaces/config';
 
 import {normalizeSchemaForAjv} from '@/utils/schema';
@@ -239,6 +240,26 @@ export function stripAdditionalPostFields(
   }
 
   return filtered;
+}
+
+export function shouldApiBeEnabled(
+  config: AppConfig,
+  apiIdentifier: string,
+  modelName: string,
+): boolean {
+  const authModel =
+    config.authentication?.provider?.type === 'up-auth'
+      ? (config.authentication.provider.config as UpAuthProviderConfig)
+          .userModel.model
+      : null;
+
+  const apiEnabled = config.apis?.[apiIdentifier]?.enabled;
+
+  if (apiEnabled === false) return false;
+
+  if (modelName === authModel) return apiEnabled === true;
+
+  return true;
 }
 
 export const getResponseStructureSchema = (

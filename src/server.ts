@@ -18,18 +18,27 @@ import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
 import {registerRoutes} from '@/routes';
+import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
+import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
+import {registerEditMeRoute} from '@/routes/auth/edit-me';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {registerMeRoute} from '@/routes/auth/me';
 import {
   registerForgotPasswordOtpVerifyRoute,
   registerLoginOtpVerifyRoute,
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
+import {
+  registerForgotPasswordResendOtpRoute,
+  registerLoginResendOtpRoute,
+  registerRegistrationResendOtpRoute,
+} from '@/routes/auth/resend-otp';
 
 import {Mode} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
 import {RouteInfo} from '@/utils/welcome';
@@ -127,13 +136,32 @@ export async function startServer(
     config.authentication?.enabled &&
     config.authentication?.provider?.type === 'up-auth'
   ) {
+    const upConfig = config.authentication.provider
+      .config as UpAuthProviderConfig;
+
     registerRegistrationRoute(app, config);
     registerLoginRoute(app, config);
     registerChangePasswordRoute(app, config);
-    registerForgotPasswordRoute(app, config);
-    registerLoginOtpVerifyRoute(app, config);
-    registerRegistrationOtpVerifyRoute(app, config);
-    registerForgotPasswordOtpVerifyRoute(app, config);
+    registerMeRoute(app, config);
+    registerDeleteMeRoute(app, config);
+    registerEditMeRoute(app, config);
+
+    if (config.integrations?.email) {
+      registerForgotPasswordRoute(app, config);
+      registerForgotPasswordOtpVerifyRoute(app, config);
+      registerForgotPasswordResendOtpRoute(app, config);
+    }
+
+    if (upConfig.mfaRequired) {
+      registerLoginOtpVerifyRoute(app, config);
+      registerLoginResendOtpRoute(app, config);
+    }
+
+    if (upConfig.userModel.isVerifiedField) {
+      registerRegistrationOtpVerifyRoute(app, config);
+      registerRegistrationResendOtpRoute(app, config);
+      registerEmailChangeRoute(app, config);
+    }
   }
 
   // Global error handler
