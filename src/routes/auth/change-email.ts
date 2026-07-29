@@ -7,7 +7,11 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEmailChangeRoute(
@@ -15,6 +19,8 @@ export function registerEmailChangeRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -24,14 +30,70 @@ export function registerEmailChangeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.emailChange`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.emailChange`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerEmailChangeEndpoint(
+    app,
+    config,
+    model,
+    idField,
+    usernameField,
+    isVerifiedField,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'emailChange',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'emailChange',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerEmailChangeEndpoint(
+      app,
+      config,
+      model,
+      idField,
+      usernameField,
+      isVerifiedField,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerEmailChangeEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  idField: string,
+  usernameField: string,
+  isVerifiedField: string | undefined,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(usernameField, model);
 
+  const path = `/${variant}/auth/user/email`;
+
   app.patch(
-    '/auth/user/email',
+    path,
     {
       schema,
       config: {apiIdentifier},

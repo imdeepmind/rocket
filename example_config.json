@@ -2,7 +2,7 @@
     "application": {
         "name": "Rocket OSS",
         "logLevel": "debug",
-        "dangerouslyOverrideDefaultVariant": "default",
+        "dangerouslyOverrideDefaultVariant": "test",
         "rateLimit": {
             "enabled": true,
             "max": 1000,
@@ -205,12 +205,12 @@
         }
     },
     "apiVariants": {
-        "aggregate.users.id.getAggregation": {
+        "aggregate.test.users.id.getAggregation": {
             "variants": ["admin"]
         }
     },
     "apis": {
-        "aggregate.default.users.id.getAggregation": {
+        "aggregate.admin.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
@@ -224,7 +224,7 @@
                 {
                     "type": "query",
                     "name": "operations",
-                    "value": "[userEmail]"
+                    "value": "min"
                 }
             ]
         }

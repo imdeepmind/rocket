@@ -71,6 +71,7 @@ async function createChangeEmailApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -86,6 +87,7 @@ async function createChangeEmailApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
 
@@ -141,7 +143,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         payload: {email: 'new@example.com'},
       });
 
@@ -154,7 +156,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         payload: {email: 'new@example.com'},
       });
 
@@ -175,7 +177,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         payload: {email: 'new@example.com'},
       });
 
@@ -191,7 +193,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         payload: {email: 'new@example.com'},
       });
 
@@ -207,7 +209,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {
           authorization: 'Bearer invalidtoken',
         },
@@ -228,7 +230,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -269,7 +271,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -341,7 +343,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -377,7 +379,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -401,7 +403,7 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {authorization: `Bearer ${token}`},
         payload: {email: 'new@example.com'},
       });
@@ -419,12 +421,62 @@ describe('PATCH /auth/user/email', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/email',
+        url: '/v1/auth/user/email',
         headers: {authorization: `Bearer ${token}`},
         payload: {email: 'new@example.com'},
       });
 
       expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const app = await createChangeEmailApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'auth.v1.users.unknown.emailChange': {
+            variants: ['admin'],
+          },
+        },
+      );
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{id: 1, email: 'admin@example.com', password: 'hashed'}],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/admin/auth/user/email',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {email: 'new@example.com'},
+      });
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createChangeEmailApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        {'auth.admin.users.unknown.emailChange': {enabled: false}},
+        {'auth.v1.users.unknown.emailChange': {variants: ['admin']}},
+      );
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/admin/auth/user/email',
+      });
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

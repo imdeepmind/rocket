@@ -66,6 +66,7 @@ async function createAuthApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -81,6 +82,7 @@ async function createAuthApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -166,7 +168,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'test@example.com', password: 'password'},
       });
 
@@ -179,7 +181,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'test@example.com', password: 'password'},
       });
 
@@ -195,7 +197,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'test@example.com', password: 'password'},
       });
 
@@ -224,7 +226,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
       });
 
@@ -274,7 +276,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
       });
 
@@ -313,7 +315,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
       });
 
@@ -365,7 +367,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
       });
 
@@ -409,7 +411,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'wrong'},
       });
 
@@ -429,7 +431,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'nonexistent@example.com', password: 'any'},
       });
 
@@ -454,7 +456,7 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com', password: 'wrong_password'},
       });
 
@@ -470,11 +472,69 @@ describe('POST /auth/login', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: {email: 'alice@example.com'}, // missing password
       });
 
       expect(response.statusCode).toBe(400);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register admin variant endpoint when apiVariants is configured', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        {
+          'auth.v1.users.unknown.login': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register admin variant when disabled in apis config', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        {
+          'auth.admin.users.unknown.login': {enabled: false},
+        },
+        {
+          'auth.v1.users.unknown.login': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

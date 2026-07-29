@@ -33,7 +33,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {
           name: 'Test User',
           email: 'test@example.com',
@@ -62,7 +62,7 @@ describe('test post api', () => {
 
       await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {name: 'Alice', email: 'alice@example.com'},
       });
 
@@ -79,7 +79,7 @@ describe('test post api', () => {
 
       await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {
           name: 'Bob',
           email: 'bob@example.com',
@@ -123,7 +123,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/products/',
+        url: '/v1/products/',
         payload: {id: 1}, // missing 'title'
       });
 
@@ -151,7 +151,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/items/',
+        url: '/v1/items/',
         payload: {count: 'not-a-number'}, // should be integer
       });
 
@@ -175,7 +175,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/orders/',
+        url: '/v1/orders/',
         payload: {id: 1, status: 'shipped'},
       });
 
@@ -199,7 +199,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/orders/',
+        url: '/v1/orders/',
         payload: {id: 1, status: 'cancelled'}, // not in the enum values
       });
 
@@ -218,7 +218,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {name: 'Test', email: 'test@example.com'},
       });
 
@@ -236,7 +236,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {name: 'Test', email: 'test@example.com'},
       });
 
@@ -254,7 +254,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {name: 'Test', email: 'test@example.com'},
       });
 
@@ -270,7 +270,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/nonexistent/',
+        url: '/v1/nonexistent/',
         payload: {},
       });
 
@@ -300,7 +300,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         payload: {name: 'Test', email: 'test@example.com'},
       });
 
@@ -321,7 +321,7 @@ describe('test post api', () => {
 
       const response = await fastify.inject({
         method: 'POST',
-        url: '/users/',
+        url: '/v1/users/',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -329,6 +329,71 @@ describe('test post api', () => {
       });
 
       expect(response.statusCode).toBe(201);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], changes: 0}) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        mockModels,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'model.v1.users.unknown.insert': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/admin/users/',
+        payload: {name: 'Test User', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toEqual({
+        name: 'Test User',
+        email: 'test@example.com',
+      });
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        mockModels,
+        {
+          'model.admin.users.unknown.insert': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'model.v1.users.unknown.insert': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/admin/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

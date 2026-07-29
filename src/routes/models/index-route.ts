@@ -13,7 +13,11 @@ import {
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerIndexRoutes(
@@ -21,6 +25,8 @@ export function registerIndexRoutes(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const indexFields = Object.entries(model.fields).filter(([, f]) => {
@@ -28,141 +34,197 @@ export function registerIndexRoutes(
     });
 
     for (const [fieldName, field] of indexFields) {
-      const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.index`;
+      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.index`;
 
-      if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
+      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
+        continue;
 
-      const authorization =
-        config.apis?.[apiIdentifier]?.authorization ??
+      const defaultAuthorization =
+        config.apis?.[defaultApiIdentifier]?.authorization ??
         config.authentication?.enabled ??
         false;
-      const {
-        schema,
-        isUnique,
-      }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
-        generateSchema(
+
+      registerIndexEndpoint(
+        app,
+        config,
+        modelName,
+        fieldName,
+        field,
+        model,
+        defaultVariant,
+        defaultApiIdentifier,
+        defaultAuthorization,
+      );
+
+      const baseIdentifier = buildApiIdentifier(
+        'model',
+        defaultVariant,
+        modelName,
+        fieldName,
+        'index',
+      );
+      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+      for (const variant of additionalVariants) {
+        const variantApiIdentifier = buildApiIdentifier(
+          'model',
+          variant,
+          modelName,
+          fieldName,
+          'index',
+        );
+
+        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+        const variantAuthorization =
+          config.apis?.[variantApiIdentifier]?.authorization ??
+          config.authentication?.enabled ??
+          false;
+
+        registerIndexEndpoint(
+          app,
+          config,
+          modelName,
           fieldName,
           field,
           model,
-          modelName,
-          config,
-          authorization,
+          variant,
+          variantApiIdentifier,
+          variantAuthorization,
         );
-
-      app.get(
-        `/${modelName}/${fieldName}/:${fieldName}`,
-        {
-          schema,
-          config: {apiIdentifier},
-          preValidation: buildPreValidation(app, config, authorization),
-          preHandler: async request => {
-            await app.callWebhook('request', request, null);
-          },
-          onSend: async (request, _, payload) => {
-            await app.callWebhook('response', request, payload);
-          },
-        },
-        async (request: FastifyRequest, reply: FastifyReply) => {
-          const queryParams = request.query as Record<string, unknown>;
-          const params = request.params as Record<string, unknown>;
-          const tableName = modelName;
-
-          let query = `SELECT * FROM "${tableName}"`;
-          const values: unknown[] = [];
-          let paramIndex = 1;
-
-          const whereClauses: string[] = [];
-
-          whereClauses.push(`"${fieldName}" = $${paramIndex++}`);
-          values.push(params[fieldName]);
-
-          if (!isUnique) {
-            const {
-              whereClauses: filterClauses,
-              values: filterValues,
-              nextParamIndex,
-            } = applyFilters(queryParams, paramIndex);
-
-            whereClauses.push(...filterClauses);
-            values.push(...filterValues);
-            paramIndex = nextParamIndex;
-          }
-
-          query += ` WHERE ${whereClauses.join(' AND ')}`;
-
-          let tx;
-          try {
-            tx = await app.db.beginTransaction();
-
-            let total = 0;
-            if (!isUnique) {
-              const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
-              const countRes = await tx.query<{total: number | string}>(
-                countQuery,
-                values,
-              );
-              total = Number(countRes.rows[0]?.total || 0);
-            }
-
-            let page = 1;
-            let limit = 20;
-
-            if (!isUnique) {
-              if (queryParams.orderBy) {
-                query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
-              }
-
-              page = Math.max(Number(queryParams.page) || 1, 1);
-              limit = Math.min(
-                Math.max(Number(queryParams.limit) || 20, 10),
-                100,
-              );
-              const offset = (page - 1) * limit;
-
-              query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-              values.push(limit, offset);
-            } else {
-              query += ` LIMIT $${paramIndex++};`;
-              values.push(1);
-            }
-
-            const res = await tx.query(query, values);
-
-            await tx.commit();
-
-            const responsePayload: Record<string, unknown> = {
-              data: isUnique ? res.rows[0] || null : res.rows || [],
-            };
-
-            if (!isUnique) {
-              responsePayload.pagination = {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-              };
-            }
-
-            return reply
-              .status(200)
-              .send(
-                app.buildResponse(
-                  200,
-                  `Successfully retrieved records from the ${tableName} table`,
-                  responsePayload,
-                  res,
-                ),
-              );
-          } catch (err) {
-            if (tx) await tx.rollback().catch(() => {});
-            throw err;
-          } finally {
-            tx?.release();
-          }
-        },
-      );
+      }
     }
   }
+}
+
+function registerIndexEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  modelName: string,
+  fieldName: string,
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  variant: string,
+  apiIdentifier: string,
+  authorization: boolean,
+): void {
+  const {
+    schema,
+    isUnique,
+  }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
+    generateSchema(fieldName, field, model, modelName, config, authorization);
+
+  const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
+
+  app.get(
+    path,
+    {
+      schema,
+      config: {apiIdentifier},
+      preValidation: buildPreValidation(app, config, authorization),
+      preHandler: async request => {
+        await app.callWebhook('request', request, null);
+      },
+      onSend: async (request, _, payload) => {
+        await app.callWebhook('response', request, payload);
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const queryParams = request.query as Record<string, unknown>;
+      const params = request.params as Record<string, unknown>;
+      const tableName = modelName;
+
+      let query = `SELECT * FROM "${tableName}"`;
+      const values: unknown[] = [];
+      let paramIndex = 1;
+
+      const whereClauses: string[] = [];
+
+      whereClauses.push(`"${fieldName}" = $${paramIndex++}`);
+      values.push(params[fieldName]);
+
+      if (!isUnique) {
+        const {
+          whereClauses: filterClauses,
+          values: filterValues,
+          nextParamIndex,
+        } = applyFilters(queryParams, paramIndex);
+
+        whereClauses.push(...filterClauses);
+        values.push(...filterValues);
+        paramIndex = nextParamIndex;
+      }
+
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+
+      let tx;
+      try {
+        tx = await app.db.beginTransaction();
+
+        let total = 0;
+        if (!isUnique) {
+          const countQuery = `SELECT COUNT(*) as total FROM "${tableName}" WHERE ${whereClauses.join(' AND ')}`;
+          const countRes = await tx.query<{total: number | string}>(
+            countQuery,
+            values,
+          );
+          total = Number(countRes.rows[0]?.total || 0);
+        }
+
+        let page = 1;
+        let limit = 20;
+
+        if (!isUnique) {
+          if (queryParams.orderBy) {
+            query += ` ORDER BY "${queryParams.orderBy}" ${queryParams.orderDir === 'desc' ? 'DESC' : 'ASC'}`;
+          }
+
+          page = Math.max(Number(queryParams.page) || 1, 1);
+          limit = Math.min(Math.max(Number(queryParams.limit) || 20, 10), 100);
+          const offset = (page - 1) * limit;
+
+          query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+          values.push(limit, offset);
+        } else {
+          query += ` LIMIT $${paramIndex++};`;
+          values.push(1);
+        }
+
+        const res = await tx.query(query, values);
+
+        await tx.commit();
+
+        const responsePayload: Record<string, unknown> = {
+          data: isUnique ? res.rows[0] || null : res.rows || [],
+        };
+
+        if (!isUnique) {
+          responsePayload.pagination = {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          };
+        }
+
+        return reply
+          .status(200)
+          .send(
+            app.buildResponse(
+              200,
+              `Successfully retrieved records from the ${tableName} table`,
+              responsePayload,
+              res,
+            ),
+          );
+      } catch (err) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw err;
+      } finally {
+        tx?.release();
+      }
+    },
+  );
 }
 
 function generateSchema(

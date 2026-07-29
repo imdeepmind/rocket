@@ -13,7 +13,11 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditMeRoute(
@@ -21,6 +25,8 @@ export function registerEditMeRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const authConfig = (
     config.authentication!.provider.config as UpAuthProviderConfig
@@ -32,10 +38,70 @@ export function registerEditMeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.editMe`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.editMe`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerEditMeEndpoint(
+    app,
+    config,
+    model,
+    authModelConfig,
+    idField,
+    usernameField,
+    passwordField,
+    isVerifiedField,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'editMe',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'editMe',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerEditMeEndpoint(
+      app,
+      config,
+      model,
+      authModelConfig,
+      idField,
+      usernameField,
+      passwordField,
+      isVerifiedField,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerEditMeEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  authModelConfig: ModelConfig,
+  idField: string,
+  usernameField: string,
+  passwordField: string,
+  isVerifiedField: string | undefined,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     model,
@@ -45,8 +111,10 @@ export function registerEditMeRoute(
     isVerifiedField,
   );
 
+  const path = `/${variant}/auth/user/me`;
+
   app.patch(
-    '/auth/user/me',
+    path,
     {
       schema,
       config: {apiIdentifier},

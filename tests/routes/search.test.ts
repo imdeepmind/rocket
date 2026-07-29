@@ -88,7 +88,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=alice',
+        url: '/v1/users/search/name?name_search=alice',
       });
 
       expect(response.statusCode).toBe(200);
@@ -104,7 +104,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=Alice',
+        url: '/v1/users/search/name?name_search=Alice',
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledTimes(4);
@@ -121,7 +121,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=zzznomatch',
+        url: '/v1/users/search/name?name_search=zzznomatch',
       });
 
       expect(response.statusCode).toBe(200);
@@ -141,7 +141,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(200);
@@ -155,7 +155,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.json().message).toBe(
@@ -170,7 +170,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.json().data.pagination).toEqual({
@@ -190,7 +190,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&page=2&limit=15',
+        url: '/v1/users/search/name?name_search=al&page=2&limit=15',
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
@@ -206,7 +206,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&page=0&limit=10',
+        url: '/v1/users/search/name?name_search=al&page=0&limit=10',
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
@@ -222,7 +222,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=bob&page=3&limit=10',
+        url: '/v1/users/search/name?name_search=bob&page=3&limit=10',
       });
 
       expect(response.json().data.pagination).toEqual({
@@ -242,7 +242,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=ali&email_ne=bob@example.com',
+        url: '/v1/users/search/name?name_search=ali&email_ne=bob@example.com',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -256,7 +256,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=ali&email_eq=alice@example.com',
+        url: '/v1/users/search/name?name_search=ali&email_eq=alice@example.com',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -274,7 +274,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_lt=100',
+        url: '/v1/users/search/name?name_search=al&id_lt=100',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -289,7 +289,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_gt=0',
+        url: '/v1/users/search/name?name_search=al&id_gt=0',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -304,7 +304,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_gte=1',
+        url: '/v1/users/search/name?name_search=al&id_gte=1',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -319,7 +319,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_lte=50',
+        url: '/v1/users/search/name?name_search=al&id_lte=50',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -334,7 +334,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_in=1,2,3',
+        url: '/v1/users/search/name?name_search=al&id_in=1,2,3',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -351,7 +351,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&id_not_in=10,20,30',
+        url: '/v1/users/search/name?name_search=al&id_not_in=10,20,30',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -370,7 +370,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&orderBy=name',
+        url: '/v1/users/search/name?name_search=al&orderBy=name',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -384,7 +384,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al&orderBy=name&orderDir=desc',
+        url: '/v1/users/search/name?name_search=al&orderBy=name&orderDir=desc',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -398,7 +398,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=al',
+        url: '/v1/users/search/name?name_search=al',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -415,7 +415,7 @@ describe('test search api', () => {
       // Search by title
       const byTitle = await fastify.inject({
         method: 'GET',
-        url: '/products/search/title?title_search=rocket',
+        url: '/v1/products/search/title?title_search=rocket',
       });
       expect(byTitle.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -430,7 +430,7 @@ describe('test search api', () => {
       // Search by description
       const byDescription = await fastify.inject({
         method: 'GET',
-        url: '/products/search/description?description_search=rocket&title_search=ignored',
+        url: '/v1/products/search/description?description_search=rocket&title_search=ignored',
       });
       expect(byDescription.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -451,7 +451,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(404);
@@ -465,7 +465,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(500);
@@ -483,7 +483,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(500);
@@ -501,7 +501,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(500);
@@ -516,7 +516,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test&limit=0',
+        url: '/v1/users/search/name?name_search=test&limit=0',
       });
 
       expect(response.statusCode).toBe(400);
@@ -531,7 +531,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/logs/search/message?message_search=error',
+        url: '/v1/logs/search/message?message_search=error',
       });
 
       expect(response.statusCode).toBe(404);
@@ -545,7 +545,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/nonexistent/search/name?name_search=test',
+        url: '/v1/nonexistent/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(404);
@@ -559,7 +559,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=',
+        url: '/v1/users/search/name?name_search=',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -574,7 +574,7 @@ describe('test search api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=alice&name_contains=foo',
+        url: '/v1/users/search/name?name_search=alice&name_contains=foo',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -606,7 +606,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=test',
+        url: '/v1/users/search/name?name_search=test',
       });
 
       expect(response.statusCode).toBe(401);
@@ -635,7 +635,7 @@ describe('test search api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/search/name?name_search=alice',
+        url: '/v1/users/search/name?name_search=alice',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -643,6 +643,72 @@ describe('test search api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data).toHaveLength(1);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        searchableModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'model.v1.users.name.search': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/users/search/name?name_search=alice',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([
+        {id: 1, name: 'Alice', email: 'alice@example.com'},
+      ]);
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        searchableModel,
+        {
+          'model.admin.users.name.search': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'model.v1.users.name.search': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/users/search/name?name_search=alice',
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

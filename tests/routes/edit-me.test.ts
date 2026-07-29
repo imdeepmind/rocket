@@ -63,6 +63,7 @@ async function createEditMeApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -78,6 +79,7 @@ async function createEditMeApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -112,7 +114,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         payload: {name: 'New Name'},
       });
 
@@ -125,7 +127,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         payload: {name: 'New Name'},
       });
 
@@ -141,7 +143,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         payload: {name: 'New Name'},
       });
 
@@ -157,7 +159,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         payload: {name: 'New Name'},
       });
 
@@ -173,7 +175,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: 'Bearer invalidtoken',
         },
@@ -194,7 +196,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -234,7 +236,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -271,7 +273,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -295,7 +297,7 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -319,12 +321,69 @@ describe('PATCH /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {authorization: `Bearer ${token}`},
         payload: {name: 'Alice'},
       });
 
       expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const app = await createEditMeApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'auth.v1.users.unknown.editMe': {
+            variants: ['admin'],
+          },
+        },
+      );
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'admin@example.com',
+              password: 'hashed',
+              name: 'Admin',
+              avatar: null,
+            },
+          ],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/admin/auth/user/me',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {name: 'New Name'},
+      });
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createEditMeApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        {'auth.admin.users.unknown.editMe': {enabled: false}},
+        {'auth.v1.users.unknown.editMe': {variants: ['admin']}},
+      );
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/admin/auth/user/me',
+      });
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

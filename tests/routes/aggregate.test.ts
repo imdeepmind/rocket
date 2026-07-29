@@ -56,7 +56,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=avg,max,min,sum,count',
+        url: '/v1/sales/aggregation/amount?operations=avg,max,min,sum,count',
       });
 
       expect(response.statusCode).toBe(200);
@@ -75,7 +75,7 @@ describe('test aggregate api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=max,min',
+        url: '/v1/sales/aggregation/amount?operations=max,min',
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledTimes(3);
@@ -103,7 +103,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/category?operations=frequency',
+        url: '/v1/sales/aggregation/category?operations=frequency',
       });
 
       expect(response.statusCode).toBe(200);
@@ -120,7 +120,7 @@ describe('test aggregate api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/category?operations=frequency',
+        url: '/v1/sales/aggregation/category?operations=frequency',
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledTimes(3);
@@ -163,7 +163,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/stats/aggregation/score?operations=avg,frequency',
+        url: '/v1/stats/aggregation/score?operations=avg,frequency',
       });
 
       expect(response.statusCode).toBe(200);
@@ -182,7 +182,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount', // missing query param
+        url: '/v1/sales/aggregation/amount', // missing query param
       });
 
       expect(response.statusCode).toBe(400);
@@ -195,7 +195,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=',
+        url: '/v1/sales/aggregation/amount?operations=',
       });
 
       expect(response.statusCode).toBe(400);
@@ -211,7 +211,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=sum,frequency',
+        url: '/v1/sales/aggregation/amount?operations=sum,frequency',
       });
 
       expect(response.statusCode).toBe(400);
@@ -229,7 +229,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/date?operations=count',
+        url: '/v1/sales/aggregation/date?operations=count',
       });
 
       expect(response.statusCode).toBe(404);
@@ -242,7 +242,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/nonexistent/aggregation/id?operations=count',
+        url: '/v1/nonexistent/aggregation/id?operations=count',
       });
 
       expect(response.statusCode).toBe(404);
@@ -263,7 +263,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=count',
+        url: '/v1/sales/aggregation/amount?operations=count',
       });
 
       expect(response.statusCode).toBe(404);
@@ -281,7 +281,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=sum',
+        url: '/v1/sales/aggregation/amount?operations=sum',
       });
 
       expect(response.statusCode).toBe(200);
@@ -302,7 +302,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=sum',
+        url: '/v1/sales/aggregation/amount?operations=sum',
       });
 
       expect(response.statusCode).toBe(500);
@@ -320,7 +320,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=sum',
+        url: '/v1/sales/aggregation/amount?operations=sum',
       });
 
       expect(response.statusCode).toBe(500);
@@ -335,7 +335,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=sum',
+        url: '/v1/sales/aggregation/amount?operations=sum',
       });
 
       expect(response.statusCode).toBe(500);
@@ -362,7 +362,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=count',
+        url: '/v1/sales/aggregation/amount?operations=count',
       });
 
       expect(response.statusCode).toBe(401);
@@ -387,7 +387,7 @@ describe('test aggregate api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/sales/aggregation/amount?operations=count',
+        url: '/v1/sales/aggregation/amount?operations=count',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -395,6 +395,272 @@ describe('test aggregate api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.count).toBe(10);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{count: 5}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      // Test that the admin variant endpoint is accessible
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=count',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.count).toBe(5);
+
+      await fastify.close();
+    });
+
+    test('should register both default and variant endpoints', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      // Test default endpoint (with v1 prefix)
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{sum: 100}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const defaultResponse = await fastify.inject({
+        method: 'GET',
+        url: '/v1/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(defaultResponse.statusCode).toBe(200);
+      expect(defaultResponse.json().data.sum).toBe(100);
+
+      // Test variant endpoint
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{sum: 200}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const variantResponse = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=sum',
+      });
+
+      expect(variantResponse.statusCode).toBe(200);
+      expect(variantResponse.json().data.sum).toBe(200);
+
+      await fastify.close();
+    });
+
+    test('should register multiple variant endpoints', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin', 'public'],
+          },
+        },
+      );
+
+      // Test admin variant
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{avg: 75}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const adminResponse = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=avg',
+      });
+
+      expect(adminResponse.statusCode).toBe(200);
+      expect(adminResponse.json().data.avg).toBe(75);
+
+      // Test public variant
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{avg: 65}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const publicResponse = await fastify.inject({
+        method: 'GET',
+        url: '/public/sales/aggregation/amount?operations=avg',
+      });
+
+      expect(publicResponse.statusCode).toBe(200);
+      expect(publicResponse.json().data.avg).toBe(65);
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        {
+          'aggregate.admin.sales.amount.getAggregation': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=count',
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      await fastify.close();
+    });
+
+    test('should respect variant-specific authorization settings', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            authorization: false,
+          },
+          'aggregate.admin.sales.amount.getAggregation': {
+            authorization: true,
+          },
+        },
+        undefined,
+        upAuthConfig,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      // Default endpoint should work without auth
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{count: 10}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const defaultResponse = await fastify.inject({
+        method: 'GET',
+        url: '/v1/sales/aggregation/amount?operations=count',
+      });
+
+      expect(defaultResponse.statusCode).toBe(200);
+
+      // Admin variant should require auth
+      const variantResponseNoAuth = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=count',
+      });
+
+      expect(variantResponseNoAuth.statusCode).toBe(401);
+
+      // Admin variant with valid token should work
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{count: 15}]}) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = fastify.jwt.sign({id: 1, email: 'admin@example.com'});
+
+      const variantResponseWithAuth = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=count',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(variantResponseWithAuth.statusCode).toBe(200);
+      expect(variantResponseWithAuth.json().data.count).toBe(15);
+
+      await fastify.close();
+    });
+
+    test('should work with frequency aggregation on variant endpoints', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {val: 'electronics', c: '8'},
+            {val: 'furniture', c: '3'},
+          ],
+        }) // frequency query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.category.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/category?operations=frequency',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.frequency).toEqual({
+        electronics: 8,
+        furniture: 3,
+      });
+
+      await fastify.close();
+    });
+
+    test('should not register variant when apiVariants config is empty', async () => {
+      const fastify = await createTestApp(pgConfig, aggregateModel);
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=count',
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

@@ -10,7 +10,11 @@ import {
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteRoutes(
@@ -18,6 +22,8 @@ export function registerDeleteRoutes(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const deletableFields = Object.entries(model.fields).filter(([, f]) =>
@@ -25,64 +31,127 @@ export function registerDeleteRoutes(
     );
 
     for (const [fieldName, field] of deletableFields) {
-      const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.delete`;
+      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.delete`;
 
-      if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
+      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
+        continue;
 
-      const authorization =
-        config.apis?.[apiIdentifier]?.authorization ??
+      const defaultAuthorization =
+        config.apis?.[defaultApiIdentifier]?.authorization ??
         config.authentication?.enabled ??
         false;
-      const schema: Record<string, unknown> = generateSchema(
+
+      registerDeleteEndpoint(
+        app,
+        config,
+        modelName,
         fieldName,
         field,
         model,
+        defaultVariant,
+        defaultApiIdentifier,
+        defaultAuthorization,
+      );
+
+      const baseIdentifier = buildApiIdentifier(
+        'model',
+        defaultVariant,
         modelName,
-        config,
-        authorization,
+        fieldName,
+        'delete',
       );
+      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      app.delete(
-        `/${modelName}/${fieldName}/:${fieldName}`,
-        {
-          schema,
-          config: {apiIdentifier},
-          preValidation: buildPreValidation(app, config, authorization),
-          preHandler: async request => {
-            await app.callWebhook('request', request, null);
-          },
-          onSend: async (request, _, payload) => {
-            await app.callWebhook('response', request, payload);
-          },
-        },
-        async (request: FastifyRequest, reply: FastifyReply) => {
-          const {[fieldName]: value} = request.params as Record<
-            string,
-            unknown
-          >;
+      for (const variant of additionalVariants) {
+        const variantApiIdentifier = buildApiIdentifier(
+          'model',
+          variant,
+          modelName,
+          fieldName,
+          'delete',
+        );
 
-          const tableName = modelName;
-          const columnName = fieldName;
+        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-          const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
+        const variantAuthorization =
+          config.apis?.[variantApiIdentifier]?.authorization ??
+          config.authentication?.enabled ??
+          false;
 
-          let tx;
-          try {
-            tx = await app.db.beginTransaction();
-            await tx.query(query, [value]);
-            await tx.commit();
-          } catch (err) {
-            if (tx) await tx.rollback().catch(() => {});
-            throw err;
-          } finally {
-            tx?.release();
-          }
-
-          return reply.status(204).send();
-        },
-      );
+        registerDeleteEndpoint(
+          app,
+          config,
+          modelName,
+          fieldName,
+          field,
+          model,
+          variant,
+          variantApiIdentifier,
+          variantAuthorization,
+        );
+      }
     }
   }
+}
+
+function registerDeleteEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  modelName: string,
+  fieldName: string,
+  field: ModelFieldConfig,
+  model: ModelConfig,
+  variant: string,
+  apiIdentifier: string,
+  authorization: boolean,
+): void {
+  const schema: Record<string, unknown> = generateSchema(
+    fieldName,
+    field,
+    model,
+    modelName,
+    config,
+    authorization,
+  );
+
+  const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
+
+  app.delete(
+    path,
+    {
+      schema,
+      config: {apiIdentifier},
+      preValidation: buildPreValidation(app, config, authorization),
+      preHandler: async request => {
+        await app.callWebhook('request', request, null);
+      },
+      onSend: async (request, _, payload) => {
+        await app.callWebhook('response', request, payload);
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const {[fieldName]: value} = request.params as Record<string, unknown>;
+
+      const tableName = modelName;
+      const columnName = fieldName;
+
+      const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
+
+      let tx;
+      try {
+        tx = await app.db.beginTransaction();
+        await tx.query(query, [value]);
+        await tx.commit();
+      } catch (err) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw err;
+      } finally {
+        tx?.release();
+      }
+
+      return reply.status(204).send();
+    },
+  );
 }
 
 function generateSchema(

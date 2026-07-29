@@ -4,7 +4,11 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerForgotPasswordRoute(
@@ -12,6 +16,8 @@ export function registerForgotPasswordRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, usernameField} = (
     config.authentication!.provider.config as UpAuthProviderConfig
@@ -21,14 +27,64 @@ export function registerForgotPasswordRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.forgotPassword`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.forgotPassword`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerForgotPasswordEndpoint(
+    app,
+    config,
+    model,
+    usernameField,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'forgotPassword',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'forgotPassword',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerForgotPasswordEndpoint(
+      app,
+      config,
+      model,
+      usernameField,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerForgotPasswordEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  usernameField: string,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(usernameField, model);
 
+  const path = `/${variant}/auth/forgot-password`;
+
   app.post(
-    '/auth/forgot-password',
+    path,
     {
       schema,
       config: {apiIdentifier},

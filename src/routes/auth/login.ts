@@ -4,7 +4,11 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -13,6 +17,8 @@ export function registerLoginRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -22,10 +28,64 @@ export function registerLoginRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.login`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.login`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerLoginEndpoint(
+    app,
+    config,
+    model,
+    usernameField,
+    passwordField,
+    upConfig,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'login',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'login',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerLoginEndpoint(
+      app,
+      config,
+      model,
+      usernameField,
+      passwordField,
+      upConfig,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerLoginEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  usernameField: string,
+  passwordField: string,
+  upConfig: UpAuthProviderConfig,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     passwordField,
@@ -33,8 +93,10 @@ export function registerLoginRoute(
     upConfig.mfaRequired ?? false,
   );
 
+  const path = `/${variant}/auth/login`;
+
   app.post(
-    '/auth/login',
+    path,
     {
       schema,
       config: {apiIdentifier},

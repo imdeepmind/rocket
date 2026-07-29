@@ -91,7 +91,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {
           name: 'Bob',
         },
@@ -111,7 +111,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/5',
+        url: '/v1/users/id/5',
         payload: {
           email: 'bob@example.com',
           name: 'Bob',
@@ -134,7 +134,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {},
       });
 
@@ -148,7 +148,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {
           id: 999, // User trying to edit the ID
           name: 'Alice',
@@ -176,7 +176,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {
           name: 'Charlie',
           email: 'charlie@example.com',
@@ -193,7 +193,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {
           name: 'Charlie',
           // email is missing, but required for PUT
@@ -212,7 +212,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/posts/id/1',
+        url: '/v1/posts/id/1',
         payload: {
           title: 'Title',
           // content is missing, validation requires both
@@ -234,7 +234,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/posts/id/1',
+        url: '/v1/posts/id/1',
         payload: {
           title: 'Only Title', // content is missing, but PATCH removes required array
         },
@@ -273,7 +273,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/tasks/id/1',
+        url: '/v1/tasks/id/1',
         payload: {status: 'in_progress'},
       });
 
@@ -287,7 +287,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/tasks/id/1',
+        url: '/v1/tasks/id/1',
         payload: {status: 'cancelled'},
       });
 
@@ -307,7 +307,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/id/1',
+        url: '/v1/tasks/id/1',
         payload: {status: 'done'},
       });
 
@@ -321,7 +321,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/id/1',
+        url: '/v1/tasks/id/1',
         payload: {status: 'unknown_status'},
       });
 
@@ -338,7 +338,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_lt=10', // editing tasks with status pending AND id < 10
+        url: '/v1/tasks/status/pending?id_lt=10', // editing tasks with status pending AND id < 10
         payload: {
           title: 'Urgent Pending Task',
         },
@@ -357,7 +357,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_lte=5',
+        url: '/v1/tasks/status/pending?id_lte=5',
         payload: {title: 'Update'},
       });
 
@@ -374,7 +374,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_gt=1',
+        url: '/v1/tasks/status/pending?id_gt=1',
         payload: {title: 'Update'},
       });
 
@@ -391,7 +391,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_gte=2',
+        url: '/v1/tasks/status/pending?id_gte=2',
         payload: {title: 'Update'},
       });
 
@@ -408,7 +408,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?page=1&limit=10&orderBy=id&orderDir=asc',
+        url: '/v1/tasks/status/pending?page=1&limit=10&orderBy=id&orderDir=asc',
         payload: {
           title: 'Ignored Params Task',
         },
@@ -428,7 +428,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_ne=10',
+        url: '/v1/tasks/status/pending?id_ne=10',
         payload: {title: 'Update'},
       });
 
@@ -445,7 +445,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?id_not_in=1,2,3',
+        url: '/v1/tasks/status/pending?id_not_in=1,2,3',
         payload: {title: 'Update'},
       });
 
@@ -462,7 +462,7 @@ describe('test edit api', () => {
 
       await fastify.inject({
         method: 'PATCH',
-        url: '/tasks/status/pending?title_eq=foo&id_in=1,2,3',
+        url: '/v1/tasks/status/pending?title_eq=foo&id_in=1,2,3',
         payload: {
           title: 'Bulk updated foo',
         },
@@ -488,7 +488,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/999',
+        url: '/v1/users/id/999',
         payload: {name: 'Nobody'},
       });
 
@@ -510,7 +510,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/users/id/999',
+        url: '/v1/users/id/999',
         payload: {name: 'Nobody', email: 'nobody@example.com'},
       });
 
@@ -532,7 +532,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Found'},
       });
 
@@ -548,7 +548,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob'},
       });
 
@@ -562,7 +562,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {
           unknownField: 'value',
         },
@@ -581,7 +581,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/name/Alice', // name is not editable identifying field
+        url: '/v1/users/name/Alice', // name is not editable identifying field
         payload: {
           email: 'alice@example.com',
         },
@@ -604,7 +604,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob'},
       });
 
@@ -623,7 +623,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob'},
       });
 
@@ -642,7 +642,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob', email: 'bob@example.com'},
       });
 
@@ -658,7 +658,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob'},
       });
 
@@ -687,7 +687,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob'},
       });
 
@@ -706,7 +706,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PUT',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         payload: {name: 'Bob', email: 'bob@example.com'},
       });
 
@@ -732,7 +732,7 @@ describe('test edit api', () => {
 
       const response = await fastify.inject({
         method: 'PATCH',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -740,6 +740,68 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        defaultEditModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.edit': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/admin/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Bob'});
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        defaultEditModel,
+        {
+          'model.admin.users.id.edit': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.edit': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/admin/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

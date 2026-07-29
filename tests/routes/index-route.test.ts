@@ -112,7 +112,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
       });
 
       expect(response.statusCode).toBe(200);
@@ -128,7 +128,7 @@ describe('test index-route api', () => {
     test('should build correct SQL with LIMIT 1 for primaryKey field', async () => {
       const fastify = await createTestApp(pgConfig, uniqueFieldModel);
 
-      await fastify.inject({method: 'GET', url: '/users/id/5'});
+      await fastify.inject({method: 'GET', url: '/v1/users/id/5'});
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
@@ -149,7 +149,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/999',
+        url: '/v1/users/id/999',
       });
 
       expect(response.statusCode).toBe(200);
@@ -163,7 +163,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.json().data).not.toHaveProperty('pagination');
@@ -184,7 +184,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/email/bob@example.com',
+        url: '/v1/users/email/bob@example.com',
       });
 
       expect(response.statusCode).toBe(200);
@@ -202,7 +202,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.json().message).toBe(
@@ -231,7 +231,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech',
+        url: '/v1/posts/category/tech',
       });
 
       expect(response.statusCode).toBe(200);
@@ -248,7 +248,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech',
+        url: '/v1/posts/category/tech',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -265,7 +265,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?page=2&limit=15',
+        url: '/v1/posts/category/tech?page=2&limit=15',
       });
 
       expect(response.json().data.pagination).toEqual({
@@ -283,7 +283,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?page=3&limit=10',
+        url: '/v1/posts/category/tech?page=3&limit=10',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -300,7 +300,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?title_eq=Post+A',
+        url: '/v1/posts/category/tech?title_eq=Post+A',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -316,7 +316,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?orderBy=title',
+        url: '/v1/posts/category/tech?orderBy=title',
       });
 
       expect(response.statusCode).toBe(200);
@@ -331,7 +331,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?orderBy=category&orderDir=desc',
+        url: '/v1/posts/category/tech?orderBy=category&orderDir=desc',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -345,7 +345,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/nonexistent',
+        url: '/v1/posts/category/nonexistent',
       });
 
       expect(response.statusCode).toBe(200);
@@ -365,7 +365,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech',
+        url: '/v1/posts/category/tech',
       });
 
       expect(response.statusCode).toBe(200);
@@ -379,7 +379,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_lt=100',
+        url: '/v1/posts/category/tech?id_lt=100',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -396,7 +396,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_ne=99',
+        url: '/v1/posts/category/tech?id_ne=99',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -413,7 +413,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_lte=50',
+        url: '/v1/posts/category/tech?id_lte=50',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -430,7 +430,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_gt=10',
+        url: '/v1/posts/category/tech?id_gt=10',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -447,7 +447,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_gte=1',
+        url: '/v1/posts/category/tech?id_gte=1',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -464,7 +464,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_in=1,2,3',
+        url: '/v1/posts/category/tech?id_in=1,2,3',
       });
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -481,7 +481,7 @@ describe('test index-route api', () => {
 
       await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech?id_gt=10&title_eq=Hello',
+        url: '/v1/posts/category/tech?id_gt=10&title_eq=Hello',
       });
 
       const callArgs = pgClientQueryMock.mock.calls[2];
@@ -500,7 +500,10 @@ describe('test index-route api', () => {
       const fastify = await createTestApp(pgConfig, mixedFieldModel);
 
       // unique route: /articles/id/:id
-      const byId = await fastify.inject({method: 'GET', url: '/articles/id/1'});
+      const byId = await fastify.inject({
+        method: 'GET',
+        url: '/v1/articles/id/1',
+      });
       expect(byId.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
@@ -513,7 +516,7 @@ describe('test index-route api', () => {
       // unique route: /articles/slug/:slug
       const bySlug = await fastify.inject({
         method: 'GET',
-        url: '/articles/slug/my-article',
+        url: '/v1/articles/slug/my-article',
       });
       expect(bySlug.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -527,7 +530,7 @@ describe('test index-route api', () => {
       // indexable route: /articles/tag/:tag
       const byTag = await fastify.inject({
         method: 'GET',
-        url: '/articles/tag/news',
+        url: '/v1/articles/tag/news',
       });
       expect(byTag.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
@@ -548,7 +551,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
       });
 
       expect(response.statusCode).toBe(404);
@@ -564,7 +567,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.statusCode).toBe(500);
@@ -580,7 +583,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech',
+        url: '/v1/posts/category/tech',
       });
 
       expect(response.statusCode).toBe(500);
@@ -598,7 +601,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/posts/category/tech',
+        url: '/v1/posts/category/tech',
       });
 
       expect(response.statusCode).toBe(500);
@@ -613,7 +616,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/logs/message/hello',
+        url: '/v1/logs/message/hello',
       });
 
       expect(response.statusCode).toBe(404);
@@ -627,7 +630,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/nonexistent/id/1',
+        url: '/v1/nonexistent/id/1',
       });
 
       expect(response.statusCode).toBe(404);
@@ -656,7 +659,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
       });
 
       expect(response.statusCode).toBe(401);
@@ -684,7 +687,7 @@ describe('test index-route api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -692,6 +695,73 @@ describe('test index-route api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data.id).toBe(42);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{id: 42, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        uniqueFieldModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.index': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual({
+        id: 42,
+        name: 'Alice',
+        email: 'alice@example.com',
+      });
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        uniqueFieldModel,
+        {
+          'model.admin.users.id.index': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.index': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

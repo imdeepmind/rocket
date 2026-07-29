@@ -7,7 +7,11 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteMeRoute(
@@ -15,6 +19,8 @@ export function registerDeleteMeRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, idField} = (
     config.authentication!.provider.config as UpAuthProviderConfig
@@ -24,14 +30,64 @@ export function registerDeleteMeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.deleteMe`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.deleteMe`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerDeleteMeEndpoint(
+    app,
+    config,
+    model,
+    idField,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'deleteMe',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'deleteMe',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerDeleteMeEndpoint(
+      app,
+      config,
+      model,
+      idField,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerDeleteMeEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  idField: string,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(model);
 
+  const path = `/${variant}/auth/user/me`;
+
   app.delete(
-    '/auth/user/me',
+    path,
     {
       schema,
       config: {apiIdentifier},

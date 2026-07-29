@@ -13,7 +13,11 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -22,6 +26,8 @@ export function registerRegistrationRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -33,10 +39,70 @@ export function registerRegistrationRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.registration`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.registration`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerRegistrationEndpoint(
+    app,
+    config,
+    model,
+    authModelConfig,
+    passwordField,
+    isVerifiedField,
+    requiresOtp,
+    upConfig,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'registration',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'registration',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerRegistrationEndpoint(
+      app,
+      config,
+      model,
+      authModelConfig,
+      passwordField,
+      isVerifiedField,
+      requiresOtp,
+      upConfig,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerRegistrationEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  authModelConfig: ModelConfig,
+  passwordField: string,
+  isVerifiedField: string | undefined,
+  requiresOtp: boolean,
+  upConfig: UpAuthProviderConfig,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     passwordField,
@@ -45,8 +111,10 @@ export function registerRegistrationRoute(
     isVerifiedField,
   );
 
+  const path = `/${variant}/auth/register`;
+
   app.post(
-    '/auth/register',
+    path,
     {
       schema,
       config: {apiIdentifier},

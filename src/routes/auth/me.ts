@@ -8,11 +8,17 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
-import {getVariantSegment} from '@/utils/config';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, idField} = (
     config.authentication!.provider.config as UpAuthProviderConfig
@@ -22,14 +28,64 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.me`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.me`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  registerMeEndpoint(
+    app,
+    config,
+    model,
+    idField,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'me',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'me',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerMeEndpoint(
+      app,
+      config,
+      model,
+      idField,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerMeEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  idField: string,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(model, config);
 
+  const path = `/${variant}/auth/user/me`;
+
   app.get(
-    '/auth/user/me',
+    path,
     {
       schema,
       config: {apiIdentifier},
