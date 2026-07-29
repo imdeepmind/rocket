@@ -169,7 +169,7 @@ describe('PATCH /auth/user/email', () => {
         authModels,
         pgConfig,
         {
-          'auth.users.all.emailChange': {enabled: false},
+          'auth.v1.users.unknown.emailChange': {enabled: false},
         },
       );
 

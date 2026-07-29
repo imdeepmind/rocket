@@ -13,6 +13,7 @@ import {
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerIndexRoutes(
@@ -27,7 +28,7 @@ export function registerIndexRoutes(
     });
 
     for (const [fieldName, field] of indexFields) {
-      const apiIdentifier = `model.${modelName}.${fieldName}.index`;
+      const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.index`;
 
       if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 

@@ -131,7 +131,7 @@ describe('GET /auth/user/me', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createMeApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.me': {enabled: false},
+        'auth.v1.users.unknown.me': {enabled: false},
       });
 
       const response = await app.inject({

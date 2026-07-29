@@ -543,7 +543,7 @@ describe('test edit api', () => {
 
     test('should return 404 when the edit API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, defaultEditModel, {
-        'model.users.id.edit': {enabled: false},
+        'model.v1.users.id.edit': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -670,7 +670,7 @@ describe('test edit api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.id.edit': {
+      'model.v1.users.id.edit': {
         enabled: true,
         authorization: true,
       },

@@ -353,7 +353,7 @@ describe('test get-all api', () => {
   describe('error handling', () => {
     test('should return 404 when the get-all API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, getAllModel, {
-        'model.users.all.getAll': {enabled: false},
+        'model.v1.users.unknown.getAll': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -500,7 +500,7 @@ describe('test get-all api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.all.getAll': {
+      'model.v1.users.unknown.getAll': {
         enabled: true,
         authorization: true,
       },

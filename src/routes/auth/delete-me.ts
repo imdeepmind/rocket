@@ -7,6 +7,7 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteMeRoute(
@@ -23,7 +24,7 @@ export function registerDeleteMeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.deleteMe`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.deleteMe`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

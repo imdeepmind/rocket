@@ -65,7 +65,7 @@ const pgConfig: DatabaseConfig = {
 
 async function createResendOtpApp(
   authentication: AuthenticationConfig,
-  action: 'login' | 'register' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
@@ -124,7 +124,7 @@ async function createResendOtpApp(
   return app;
 }
 
-function getPath(action: 'login' | 'register' | 'forgot-password'): string {
+function getPath(action: 'login' | 'register' | 'forgotPassword'): string {
   if (action === 'login') return '/auth/login/resend/otp';
   if (action === 'register') return '/auth/register/resend/otp';
   return '/auth/forgot-password/resend/otp';
@@ -134,10 +134,10 @@ function getPath(action: 'login' | 'register' | 'forgot-password'): string {
 // Tests
 // ---------------------------------------------------------------------------
 
-const actions: Array<'login' | 'register' | 'forgot-password'> = [
+const actions: Array<'login' | 'register' | 'forgotPassword'> = [
   'login',
   'register',
-  'forgot-password',
+  'forgotPassword',
 ];
 
 for (const action of actions) {
@@ -183,7 +183,13 @@ for (const action of actions) {
       });
 
       test('should NOT register the route when the API is disabled via apis config', async () => {
-        const apiKey = `auth.users.all.resend-otp-${action}`;
+        const actionSuffix =
+          action === 'login'
+            ? 'Login'
+            : action === 'register'
+              ? 'Register'
+              : 'ForgotPassword';
+        const apiKey = `auth.v1.users.unknown.resendOtp${actionSuffix}`;
         const app = await createResendOtpApp(
           upAuthConfig,
           action,

@@ -34,8 +34,8 @@ function validateApisConstraints(config: AppConfig): string[] {
   for (const key of keys) {
     const parts = key.split('.');
 
-    if (parts[0] === 'customEndpoints') {
-      if (parts.length === 2) {
+    if (parts[0] === 'custom') {
+      if (parts.length === 5) {
         const endpointConfig = getAPIFromUniqueIdentifier(config, key);
 
         if (!endpointConfig) {
@@ -46,7 +46,7 @@ function validateApisConstraints(config: AppConfig): string[] {
         errors.push(`apis/${key}: invalid key format`);
         continue;
       }
-    } else if (parts.length !== 4) {
+    } else if (parts.length !== 5) {
       errors.push(`apis/${key}: invalid key format`);
       continue;
     }

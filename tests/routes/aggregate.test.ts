@@ -252,7 +252,7 @@ describe('test aggregate api', () => {
 
     test('should return 404 when the API is disabled in config', async () => {
       const disabledApiConfig = {
-        'aggregate.sales.amount.getAggregation': {enabled: false},
+        'aggregate.v1.sales.amount.getAggregation': {enabled: false},
       };
 
       const fastify = await createTestApp(
@@ -346,7 +346,7 @@ describe('test aggregate api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'aggregate.sales.amount.getAggregation': {
+      'aggregate.v1.sales.amount.getAggregation': {
         authorization: true,
       },
     };

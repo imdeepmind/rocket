@@ -7,6 +7,7 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEmailChangeRoute(
@@ -23,7 +24,7 @@ export function registerEmailChangeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.emailChange`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.emailChange`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

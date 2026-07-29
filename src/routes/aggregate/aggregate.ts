@@ -8,6 +8,7 @@ import {
 
 import {Aggregation, AppConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerAggregateRoutes(
@@ -22,7 +23,7 @@ export function registerAggregateRoutes(
     );
 
     for (const [fieldName, field] of aggregatableFields) {
-      const apiIdentifier = `aggregate.${modelName}.${fieldName}.getAggregation`;
+      const apiIdentifier = `aggregate${getVariantSegment(config)}.${modelName}.${fieldName}.getAggregation`;
 
       if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 

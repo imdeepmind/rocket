@@ -13,6 +13,7 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditMeRoute(
@@ -31,7 +32,7 @@ export function registerEditMeRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.editMe`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.editMe`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

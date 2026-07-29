@@ -2,7 +2,7 @@
     "application": {
         "name": "Rocket OSS",
         "logLevel": "debug",
-        "dangerouslyOverrideDefaultVariant": "v1",
+        "dangerouslyOverrideDefaultVariant": "default",
         "rateLimit": {
             "enabled": true,
             "max": 1000,
@@ -210,7 +210,7 @@
         }
     },
     "apis": {
-        "aggregate.users.id.getAggregation": {
+        "aggregate.default.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",

@@ -213,7 +213,7 @@ describe('test post api', () => {
   describe('error handling', () => {
     test('should return 404 when the post API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, mockModels, {
-        'model.users.all.insert': {enabled: false},
+        'model.v1.users.unknown.insert': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -283,7 +283,7 @@ describe('test post api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.all.insert': {
+      'model.v1.users.unknown.insert': {
         enabled: true,
         authorization: true,
       },

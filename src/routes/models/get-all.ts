@@ -12,6 +12,7 @@ import {
 
 import {AppConfig, ModelConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerGetAllRoutes(
@@ -21,7 +22,7 @@ export function registerGetAllRoutes(
   const {models} = config.data;
 
   for (const [modelName, model] of Object.entries(models)) {
-    const apiIdentifier = `model.${modelName}.all.getAll`;
+    const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.unknown.getAll`;
 
     if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 

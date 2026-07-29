@@ -132,7 +132,7 @@ describe('DELETE /auth/user/me', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createDeleteMeApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.deleteMe': {enabled: false},
+        'auth.v1.users.unknown.deleteMe': {enabled: false},
       });
 
       const response = await app.inject({

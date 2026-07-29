@@ -136,7 +136,7 @@ describe('PATCH /auth/user/me', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createEditMeApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.editMe': {enabled: false},
+        'auth.v1.users.unknown.editMe': {enabled: false},
       });
 
       const response = await app.inject({

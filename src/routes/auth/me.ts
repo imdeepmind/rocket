@@ -8,6 +8,7 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
@@ -21,7 +22,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.me`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.me`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

@@ -4,13 +4,14 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 function registerResendOtpBase(
   app: FastifyInstance,
   config: AppConfig,
   path: string,
-  action: 'login' | 'register' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
 ): void {
   const {models} = config.data;
 
@@ -22,7 +23,7 @@ function registerResendOtpBase(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.resend-otp-${action}`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.resendOtp${capitalizeFirstLetter(action)}`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 
@@ -97,7 +98,7 @@ export function registerForgotPasswordResendOtpRoute(
     app,
     config,
     '/auth/forgot-password/resend/otp',
-    'forgot-password',
+    'forgotPassword',
   );
 }
 

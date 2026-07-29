@@ -4,6 +4,7 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerForgotPasswordRoute(
@@ -20,7 +21,7 @@ export function registerForgotPasswordRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.forgotPassword`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.forgotPassword`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

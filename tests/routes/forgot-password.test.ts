@@ -157,7 +157,7 @@ describe('POST /auth/forgot-password', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.forgotPassword': {enabled: false},
+        'auth.v1.users.unknown.forgotPassword': {enabled: false},
       });
 
       const response = await app.inject({

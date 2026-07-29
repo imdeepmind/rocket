@@ -45,15 +45,19 @@ export function resolveEnvVars<T>(config: T): T {
   return config;
 }
 
+export function getVariantSegment(config: AppConfig): string {
+  return `.${config.application.dangerouslyOverrideDefaultVariant ?? 'v1'}`;
+}
+
 export function getAPIFromUniqueIdentifier(
   config: AppConfig,
   identifier: string,
 ): CustomEndpointConfig | null {
   const parts = identifier.split('.');
 
-  if (parts[0] === 'customEndpoints') {
-    if (parts.length === 2) {
-      return config?.customEndpoints?.[parts[1]] ?? null;
+  if (parts[0] === 'custom') {
+    if (parts.length === 5) {
+      return config?.customEndpoints?.[parts[4]] ?? null;
     }
   }
 

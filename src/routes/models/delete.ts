@@ -10,6 +10,7 @@ import {
 
 import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteRoutes(
@@ -24,7 +25,7 @@ export function registerDeleteRoutes(
     );
 
     for (const [fieldName, field] of deletableFields) {
-      const apiIdentifier = `model.${modelName}.${fieldName}.delete`;
+      const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.delete`;
 
       if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 

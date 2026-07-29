@@ -7,6 +7,7 @@ import {
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -24,7 +25,7 @@ export function registerChangePasswordRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.changePassword`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.changePassword`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

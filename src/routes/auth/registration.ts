@@ -13,6 +13,7 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -32,7 +33,7 @@ export function registerRegistrationRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.registration`;
+  const apiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.registration`;
 
   if (config.apis?.[apiIdentifier]?.enabled === false) return;
 

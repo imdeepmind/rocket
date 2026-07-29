@@ -543,7 +543,7 @@ describe('test index-route api', () => {
   describe('error handling', () => {
     test('should return 404 when the index API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, uniqueFieldModel, {
-        'model.users.id.index': {enabled: false},
+        'model.v1.users.id.index': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -639,7 +639,7 @@ describe('test index-route api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.id.index': {
+      'model.v1.users.id.index': {
         enabled: true,
         authorization: true,
       },

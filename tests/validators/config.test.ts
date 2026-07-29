@@ -2175,7 +2175,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'invalid',
@@ -2187,7 +2187,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2205,7 +2205,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2216,7 +2216,8 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
       },
-      expected: '/apis/customEndpoints.test/webhooks/0/data must be array',
+      expected:
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2234,7 +2235,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2246,7 +2247,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2264,7 +2265,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2276,7 +2277,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2294,7 +2295,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2306,7 +2307,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2324,7 +2325,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2337,7 +2338,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2355,7 +2356,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2368,7 +2369,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/custom.v1.all.unknown.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
     {
       name: 'custom endpoint with invalid validation schema',
@@ -2520,7 +2521,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2545,7 +2546,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2570,7 +2571,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2882,122 +2883,122 @@ describe('validateApiVariantsConfig', () => {
       name: 'missing variants property',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {} as unknown as {
+          'aggregate.v1.users.id.getAggregation': {} as unknown as {
             variants: string[];
           },
         },
       },
       expected:
-        "/apiVariants/aggregate.users.id.getAggregation must have required property 'variants'",
+        "/apiVariants/aggregate.v1.users.id.getAggregation must have required property 'variants'",
     },
     {
       name: 'variants is a string instead of array',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: 'admin',
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants must be array',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must be array',
     },
     {
       name: 'empty variants array',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: [],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants must NOT have fewer than 1 items',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must NOT have fewer than 1 items',
     },
     {
       name: 'variant name longer than 25 characters',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['abcdefghijklmnopqrstuvwxyz'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must NOT have more than 25 characters',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must NOT have more than 25 characters',
     },
     {
       name: 'variant contains spaces',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['my variant'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must match pattern',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must match pattern',
     },
     {
       name: 'variant contains special characters',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['variant@123'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must match pattern',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must match pattern',
     },
     {
       name: 'variant as boolean instead of string',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: [true],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must be string',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must be string',
     },
     {
       name: 'duplicate variant names',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['admin', 'admin'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants must NOT have duplicate items',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must NOT have duplicate items',
     },
     {
       name: 'empty variant string in array',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: [''],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must NOT have fewer than 1 characters',
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must NOT have fewer than 1 characters',
     },
     {
       name: 'extra unknown property',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['admin'],
             extraField: 'should not be allowed',
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation must NOT have additional properties',
+        '/apiVariants/aggregate.v1.users.id.getAggregation must NOT have additional properties',
     },
     {
       name: 'invalid key pattern (spaces)',
@@ -3026,7 +3027,7 @@ describe('validateApiVariantsConfig', () => {
       name: 'single valid api variant with one variant',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['admin'],
           },
         },
@@ -3036,7 +3037,7 @@ describe('validateApiVariantsConfig', () => {
       name: 'variant with hyphens and underscores',
       patch: {
         apiVariants: {
-          'model.posts.id.index': {
+          'model.v1.posts.id.index': {
             variants: ['experimental_v2'],
           },
         },
@@ -3046,7 +3047,7 @@ describe('validateApiVariantsConfig', () => {
       name: 'max length variant',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['abcdefghijklmnopqrstuvwxy'],
           },
         },
@@ -3056,7 +3057,7 @@ describe('validateApiVariantsConfig', () => {
       name: 'multiple variants per api',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['admin', 'v1', 'beta-2'],
           },
         },
@@ -3066,13 +3067,13 @@ describe('validateApiVariantsConfig', () => {
       name: 'multiple api variants entries',
       patch: {
         apiVariants: {
-          'model.users.id.index': {
+          'model.v1.users.id.index': {
             variants: ['v1'],
           },
-          'aggregate.users.id.getAggregation': {
+          'aggregate.v1.users.id.getAggregation': {
             variants: ['admin'],
           },
-          'model.posts.id.search': {
+          'model.v1.posts.id.search': {
             variants: ['beta-3'],
           },
         },
@@ -3239,19 +3240,19 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid webhook for model',
       patch: {
-        'aggregate.users.id.getAggregation': 'invalid',
+        'aggregate.v1.users.id.getAggregation': 'invalid',
       },
-      expected: '/apis/aggregate.users.id.getAggregation must be object',
+      expected: '/apis/aggregate.v1.users.id.getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: 'invalid',
         },
       },
       expected:
-        '/apis/aggregate.users.id.getAggregation/webhooks must be array',
+        '/apis/aggregate.v1.users.id.getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -3272,7 +3273,7 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3284,12 +3285,12 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/aggregate.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+        'apis/aggregate.v1.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
     {
       name: 'custom endpoint key not found',
       patch: {
-        'customEndpoints.nonexistent': {
+        'custom.v1.all.unknown.nonexistent': {
           webhooks: [
             {
               url: 'https://example.com',
@@ -3299,12 +3300,13 @@ describe('validateInvalidmodelConfig', () => {
           ],
         },
       },
-      expected: 'apis/customEndpoints.nonexistent: custom endpoint not found',
+      expected:
+        'apis/custom.v1.all.unknown.nonexistent: custom endpoint not found',
     },
     {
       name: 'custom endpoint key invalid format',
       patch: {
-        'customEndpoints.test.extra': {
+        'custom.v1.all.unknown.test.extra': {
           webhooks: [
             {
               url: 'https://example.com',
@@ -3314,7 +3316,7 @@ describe('validateInvalidmodelConfig', () => {
           ],
         },
       },
-      expected: 'apis/customEndpoints.test.extra: invalid key format',
+      expected: 'apis/custom.v1.all.unknown.test.extra: invalid key format',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3333,7 +3335,7 @@ describe('validateValidmodelConfig', () => {
     {
       name: 'valid model',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3343,7 +3345,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.delete': {
+        'model.v1.users.id.delete': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3353,7 +3355,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.edit': {
+        'model.v1.users.id.edit': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3363,7 +3365,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.all.getAll': {
+        'model.v1.users.unknown.getAll': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3373,7 +3375,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.index': {
+        'model.v1.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3383,7 +3385,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.all.insert': {
+        'model.v1.users.unknown.insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3393,7 +3395,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.search': {
+        'model.v1.users.id.search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -4406,7 +4408,7 @@ describe('validateValidSspConfig', () => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           serverParams: patch.serverParams,
         },
       },
@@ -4422,18 +4424,20 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'model.posts.all.getAll/authorization must be boolean',
+      expected:
+        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'model.posts.all.getAll/authorization must be boolean',
+      expected:
+        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -4451,7 +4455,7 @@ describe('validateInvalidAuthorizationConfig', () => {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/model.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
+        'apis/model.v1.posts.unknown.getAll/authorization: authorization is only allowed when auth is enabled',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -4464,7 +4468,7 @@ describe('validateInvalidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -4497,7 +4501,7 @@ describe('validateValidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },

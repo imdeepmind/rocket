@@ -85,7 +85,7 @@ describe('Config Utilities', () => {
     it('should return the correct custom endpoint config for a valid identifier', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customEndpoints.get_users',
+        'custom.v1.all.unknown.get_users',
       );
       expect(result).toEqual(mockConfig.customEndpoints?.get_users);
     });
@@ -93,7 +93,7 @@ describe('Config Utilities', () => {
     it('should return null if the first part is not customEndpoints', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'model.users.all.getAll',
+        'model.v1.users.unknown.getAll',
       );
       expect(result).toBeNull();
     });
@@ -101,7 +101,7 @@ describe('Config Utilities', () => {
     it('should return null if the second part is not all', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customEndpoints.somethingElse.get_users',
+        'custom.v1.all.unknown.somethingElse.get_users',
       );
       expect(result).toBeNull();
     });
@@ -109,7 +109,7 @@ describe('Config Utilities', () => {
     it('should return null if the custom endpoint name is not found', () => {
       const result = getAPIFromUniqueIdentifier(
         mockConfig as AppConfig,
-        'customEndpoints.non_existent',
+        'custom.v1.all.unknown.non_existent',
       );
       expect(result).toBeNull();
     });
@@ -117,7 +117,7 @@ describe('Config Utilities', () => {
     it('should return null if customEndpoints is missing in config', () => {
       const result = getAPIFromUniqueIdentifier(
         {} as AppConfig,
-        'customEndpoints.get_users',
+        'custom.v1.all.unknown.get_users',
       );
       expect(result).toBeNull();
     });

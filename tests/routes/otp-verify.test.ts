@@ -168,7 +168,7 @@ describe('POST /auth/login/verify/otp', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createOtpApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.otp-verify-login': {enabled: false},
+        'auth.v1.users.unknown.otpVerifyLogin': {enabled: false},
       });
 
       const response = await app.inject({

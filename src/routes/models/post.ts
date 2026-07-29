@@ -11,6 +11,7 @@ import {
 
 import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerPostRoutes(
@@ -20,7 +21,7 @@ export function registerPostRoutes(
   const {models} = config.data;
 
   for (const [modelName, model] of Object.entries(models)) {
-    const apiIdentifier = `model.${modelName}.all.insert`;
+    const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.unknown.insert`;
 
     if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 

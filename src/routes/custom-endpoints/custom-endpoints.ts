@@ -12,6 +12,8 @@ import {
 
 import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
+
 export function registerCustomEndpointRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -21,7 +23,7 @@ export function registerCustomEndpointRoutes(
   if (!customEndpoints) return;
 
   for (const [name, endpoint] of Object.entries(customEndpoints)) {
-    const apiIdentifier = `customEndpoints.${name}`;
+    const apiIdentifier = `custom${getVariantSegment(config)}.all.unknown.${name}`;
 
     if (config.apis?.[apiIdentifier]?.enabled === false) continue;
 

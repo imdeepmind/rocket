@@ -144,7 +144,7 @@ describe('test delete api', () => {
   describe('edge cases', () => {
     test('should return 404 when the delete API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, singleDeletableModel, {
-        'model.users.id.delete': {enabled: false},
+        'model.v1.users.id.delete': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -222,7 +222,7 @@ describe('test delete api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.id.delete': {
+      'model.v1.users.id.delete': {
         enabled: true,
         authorization: true,
       },

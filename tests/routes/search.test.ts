@@ -446,7 +446,7 @@ describe('test search api', () => {
   describe('error handling', () => {
     test('should return 404 when the search API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, searchableModel, {
-        'model.users.name.search': {enabled: false},
+        'model.v1.users.name.search': {enabled: false},
       });
 
       const response = await fastify.inject({
@@ -589,7 +589,7 @@ describe('test search api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.name.search': {
+      'model.v1.users.name.search': {
         enabled: true,
         authorization: true,
       },

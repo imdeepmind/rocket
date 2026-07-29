@@ -288,7 +288,7 @@ describe('test custom-endpoints api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'customEndpoints.searchUsers': {
+      'custom.v1.all.unknown.searchUsers': {
         authorization: true,
       },
     };
@@ -471,7 +471,7 @@ describe('test custom-endpoints api', () => {
   describe('api config disabled', () => {
     test('should skip endpoint when enabled is false', async () => {
       const apisConfig = {
-        'customEndpoints.searchUsers': {
+        'custom.v1.all.unknown.searchUsers': {
           enabled: false,
         },
       };

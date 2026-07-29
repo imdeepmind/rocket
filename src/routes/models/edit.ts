@@ -12,6 +12,7 @@ import {
 
 import {AppConfig, ModelBody} from '@/interfaces/config';
 
+import {getVariantSegment} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditRoutes(
@@ -26,7 +27,7 @@ export function registerEditRoutes(
     );
 
     for (const [fieldName, field] of editableFields) {
-      const apiIdentifier = `model.${modelName}.${fieldName}.edit`;
+      const apiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.edit`;
 
       if (!shouldApiBeEnabled(config, apiIdentifier, modelName)) continue;
 
