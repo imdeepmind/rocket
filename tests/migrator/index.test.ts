@@ -61,6 +61,7 @@ describe('migrateDatabase', () => {
           createdAt: {type: 'datetime'},
           price: {type: 'decimal'},
           birthDate: {type: 'date'},
+          metadata: {type: 'json'},
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           unknown: {type: 'unknown_type' as any},
         },
@@ -93,6 +94,9 @@ describe('migrateDatabase', () => {
     );
     expect(schemaContent).toContain("price: real('price')");
     expect(schemaContent).toContain("birthDate: text('birthDate')");
+    expect(schemaContent).toContain(
+      "metadata: text('metadata', { mode: 'json' })",
+    );
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain(
       "uniqueIndex('username_idx').on(t.username)",
@@ -128,6 +132,7 @@ describe('migrateDatabase', () => {
           updatedAt: {type: 'datetime'},
           price: {type: 'decimal'},
           birthDate: {type: 'date'},
+          config: {type: 'json'},
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           unknown: {type: 'unknown_type' as any},
         },
@@ -145,7 +150,7 @@ describe('migrateDatabase', () => {
 
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core'",
+      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb } from 'drizzle-orm/pg-core'",
     );
     expect(schemaContent).toContain("export const posts = pgTable('posts'");
     expect(schemaContent).toContain("id: serial('id').primaryKey()");
@@ -156,6 +161,7 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain("updatedAt: timestamp('updatedAt')");
     expect(schemaContent).toContain("price: doublePrecision('price')");
     expect(schemaContent).toContain("birthDate: date('birthDate')");
+    expect(schemaContent).toContain("config: jsonb('config')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain("uniqueIndex('title_idx').on(t.title)");
     expect(schemaContent).toContain("index('body_idx').on(t.body)");

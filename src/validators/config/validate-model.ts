@@ -16,6 +16,7 @@ const ALLOWED_APIS: Record<string, string[]> = {
   text: [],
   datetime: [],
   date: [],
+  json: [],
 };
 
 const ALLOWED_QUERY: Record<string, string[]> = {
@@ -26,6 +27,7 @@ const ALLOWED_QUERY: Record<string, string[]> = {
   text: [],
   datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
   date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
+  json: [],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -36,6 +38,7 @@ const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   text: [],
   datetime: ['avg', 'max', 'min', 'count'],
   date: ['avg', 'max', 'min', 'count'],
+  json: [],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -53,6 +56,8 @@ function mapModelTypeToJsonSchema(type: string): string {
       return 'date-time';
     case 'date':
       return 'date';
+    case 'json':
+      return 'object';
     /* istanbul ignore next */
     default:
       return 'string';

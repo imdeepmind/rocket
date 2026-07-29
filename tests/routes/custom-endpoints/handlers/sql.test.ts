@@ -217,6 +217,7 @@ describe('handleSql', () => {
     const app = mockApp();
     app.db.query = vi.fn().mockResolvedValue({rows: [], changes: 0});
     const reply = mockReply();
+    const jsonData = {foo: 'bar'};
 
     await handleSql(
       app as never,
@@ -229,12 +230,13 @@ describe('handleSql', () => {
           dt: '2023-01-01T00:00:00Z',
           dec: 12.34,
           d: '2023-01-01',
+          j: jsonData,
         },
         query: {},
         body: {},
       } as never,
       reply as never,
-      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$);',
+      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$);',
     );
 
     const values = app.db.query.mock.calls[0][1];
@@ -245,6 +247,7 @@ describe('handleSql', () => {
     expect(values[4]).toBe('2023-01-01T00:00:00Z');
     expect(values[5]).toBe(12.34);
     expect(values[6]).toBe('2023-01-01');
+    expect(values[7]).toBe(jsonData);
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 

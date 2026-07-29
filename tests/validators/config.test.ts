@@ -835,6 +835,30 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
+    {
+      name: 'field.apis contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "json"',
+    },
+    {
+      name: 'field.query contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', query: ['eq']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "eq" is not allowed for type "json"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', aggregations: ['count']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "count" is not allowed for type "json"',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -895,6 +919,15 @@ describe('validateValidModelFieldsConfig', () => {
             query: ['sort'],
             aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          data: {type: 'json'},
         },
       },
     },
@@ -1101,6 +1134,21 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
     },
+    {
+      name: 'json field with mismatched schema type',
+      patch: {
+        fields: {data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['data'],
+          properties: {
+            data: {type: 'string'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/data: type mismatch (model=json, schema=string)',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1227,6 +1275,20 @@ describe('validateValidModelValidationConfig', () => {
           type: 'object',
           properties: {
             id: {minimum: 1},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field and object validation',
+      patch: {
+        fields: {id: {type: 'integer'}, data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {type: 'integer'},
+            data: {type: 'object'},
           },
         },
       },

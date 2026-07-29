@@ -33,6 +33,8 @@ export function mapDataTypeToJsonSchema(type: DataType): {
       return {type: 'string', format: 'date'};
     case 'decimal':
       return {type: 'number'};
+    case 'json':
+      return {type: 'object'};
     default:
       return {type: 'string'};
   }

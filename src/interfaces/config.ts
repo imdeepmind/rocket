@@ -9,7 +9,8 @@ export type DataType =
   | 'text'
   | 'datetime'
   | 'decimal'
-  | 'date';
+  | 'date'
+  | 'json';
 export type LogLevel =
   | 'trace'
   | 'debug'

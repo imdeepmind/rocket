@@ -204,6 +204,7 @@ const fieldSchema = {
         'datetime',
         'decimal',
         'date',
+        'json',
       ],
     },
     primaryKey: {type: 'boolean', default: false},

@@ -75,6 +75,9 @@ function generateSchemaFile(
           case 'date':
             col = `text('${fName}')`;
             break;
+          case 'json':
+            col = `text('${fName}', { mode: 'json' })`;
+            break;
           default:
             col = `text('${fName}')`;
             break;
@@ -116,6 +119,9 @@ function generateSchemaFile(
             break;
           case 'date':
             col = `date('${fName}')`;
+            break;
+          case 'json':
+            col = `jsonb('${fName}')`;
             break;
           default:
             col = `text('${fName}')`;
@@ -171,7 +177,7 @@ ${columns}
 `.trim();
   } else {
     return `
-import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const ${modelName} = pgTable('${modelName}', {
