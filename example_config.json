@@ -2,6 +2,7 @@
     "application": {
         "name": "Rocket OSS",
         "logLevel": "debug",
+        "dangerouslyOverrideDefaultVariant": "v1",
         "rateLimit": {
             "enabled": true,
             "max": 1000,

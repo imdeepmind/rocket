@@ -2774,6 +2774,106 @@ describe('validateRateLimitConfig', () => {
   });
 });
 
+// ----- Variant Config Tests -----
+
+describe('validateVariantConfig', () => {
+  it.each([
+    {
+      name: 'empty string (too short)',
+      patch: {dangerouslyOverrideDefaultVariant: ''},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'string longer than 25 characters',
+      patch: {
+        dangerouslyOverrideDefaultVariant: 'abcdefghijklmnopqrstuvwxyz',
+      },
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must NOT have more than 25 characters',
+    },
+    {
+      name: 'contains spaces',
+      patch: {dangerouslyOverrideDefaultVariant: 'my variant'},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must match pattern',
+    },
+    {
+      name: 'contains special characters',
+      patch: {dangerouslyOverrideDefaultVariant: 'variant@123'},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must match pattern',
+    },
+    {
+      name: 'boolean instead of string',
+      patch: {
+        dangerouslyOverrideDefaultVariant:
+          true as unknown as typeof validBaseConfig.application,
+      },
+      expected: '/application/dangerouslyOverrideDefaultVariant must be string',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'simple variant',
+      patch: {dangerouslyOverrideDefaultVariant: 'v1'},
+    },
+    {
+      name: 'variant with hyphens',
+      patch: {dangerouslyOverrideDefaultVariant: 'experimental-v2'},
+    },
+    {
+      name: 'variant with underscore',
+      patch: {dangerouslyOverrideDefaultVariant: 'test_variant'},
+    },
+    {
+      name: 'max length variant',
+      patch: {
+        dangerouslyOverrideDefaultVariant: 'abcdefghijklmnopqrstuvwxy',
+      },
+    },
+    {
+      name: 'variant with numbers',
+      patch: {dangerouslyOverrideDefaultVariant: 'build-42'},
+    },
+    {
+      name: 'variant with uppercase',
+      patch: {dangerouslyOverrideDefaultVariant: 'Variant-V3'},
+    },
+  ])('Scenario: $name . should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should work without dangerouslyOverrideDefaultVariant (optional)', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
 // ----- Cache DB Config Tests -----
 
 describe('validateCacheDbConfig', () => {

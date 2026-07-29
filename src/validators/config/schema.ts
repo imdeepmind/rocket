@@ -58,6 +58,12 @@ const applicationSchema = {
         },
       },
     },
+    dangerouslyOverrideDefaultVariant: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 25,
+      pattern: '^[a-zA-Z0-9_-]+$',
+    },
   },
 };
 

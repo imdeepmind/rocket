@@ -147,6 +147,7 @@ export interface ApplicationConfig {
   name: string;
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
+  dangerouslyOverrideDefaultVariant?: string;
 }
 
 export interface WebhookConfig {
