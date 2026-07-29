@@ -61,6 +61,7 @@ async function createDeleteMeApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -76,6 +77,7 @@ async function createDeleteMeApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -110,7 +112,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -122,7 +124,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -132,12 +134,12 @@ describe('DELETE /auth/user/me', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createDeleteMeApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.deleteMe': {enabled: false},
+        'auth.v1.users.unknown.deleteMe': {enabled: false},
       });
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -152,7 +154,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(401);
@@ -167,7 +169,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: 'Bearer invalidtoken',
         },
@@ -187,7 +189,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -220,7 +222,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -259,7 +261,7 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -282,11 +284,59 @@ describe('DELETE /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {authorization: `Bearer ${token}`},
       });
 
       expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const app = await createDeleteMeApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'auth.v1.users.unknown.deleteMe': {
+            variants: ['admin'],
+          },
+        },
+      );
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{id: 1, email: 'admin@example.com'}],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // DELETE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/admin/auth/user/me',
+        headers: {authorization: `Bearer ${token}`},
+      });
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createDeleteMeApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        {'auth.admin.users.unknown.deleteMe': {enabled: false}},
+        {'auth.v1.users.unknown.deleteMe': {variants: ['admin']}},
+      );
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/admin/auth/user/me',
+      });
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

@@ -4,15 +4,22 @@ import {getResponseStructureSchema} from '@/routes/schema-helpers';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 function registerResendOtpBase(
   app: FastifyInstance,
   config: AppConfig,
   path: string,
-  action: 'login' | 'register' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -22,18 +29,76 @@ function registerResendOtpBase(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.resend-otp-${action}`;
+  const operation = `resendOtp${capitalizeFirstLetter(action)}`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.${operation}`;
 
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
+
+  registerResendOtpEndpoint(
+    app,
+    config,
+    model,
+    usernameField,
+    action,
+    path,
+    defaultVariant,
+    defaultApiIdentifier,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    operation,
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      operation,
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    registerResendOtpEndpoint(
+      app,
+      config,
+      model,
+      usernameField,
+      action,
+      path,
+      variant,
+      variantApiIdentifier,
+    );
+  }
+}
+
+function registerResendOtpEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  usernameField: string,
+  action: string,
+  path: string,
+  variant: string,
+  apiIdentifier: string,
+): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
   );
 
+  const routePath = `/${variant}${path}`;
+
   app.post(
-    path,
+    routePath,
     {
       schema,
       config: {apiIdentifier},
@@ -97,7 +162,7 @@ export function registerForgotPasswordResendOtpRoute(
     app,
     config,
     '/auth/forgot-password/resend/otp',
-    'forgot-password',
+    'forgotPassword',
   );
 }
 

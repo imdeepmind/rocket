@@ -64,6 +64,7 @@ async function createAuthApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -79,6 +80,7 @@ async function createAuthApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
 
@@ -133,7 +135,7 @@ describe('POST /auth/forgot-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {email: 'test@example.com'},
       });
 
@@ -146,7 +148,7 @@ describe('POST /auth/forgot-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {email: 'test@example.com'},
       });
 
@@ -157,12 +159,12 @@ describe('POST /auth/forgot-password', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.forgotPassword': {enabled: false},
+        'auth.v1.users.unknown.forgotPassword': {enabled: false},
       });
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {email: 'test@example.com'},
       });
 
@@ -186,7 +188,7 @@ describe('POST /auth/forgot-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {email: 'alice@example.com'},
       });
 
@@ -210,7 +212,7 @@ describe('POST /auth/forgot-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {email: 'nonexistent@example.com'},
       });
 
@@ -226,11 +228,69 @@ describe('POST /auth/forgot-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/forgot-password',
+        url: '/v1/auth/forgot-password',
         payload: {},
       });
 
       expect(response.statusCode).toBe(400);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'alice@example.com', password: 'hashed'}],
+        rowCount: 1,
+      });
+
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        {
+          'auth.v1.users.unknown.forgotPassword': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/forgot-password',
+        payload: {email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.requiresMfa).toBe(true);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        {
+          'auth.admin.users.unknown.forgotPassword': {
+            enabled: false,
+          },
+        },
+        {
+          'auth.v1.users.unknown.forgotPassword': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/forgot-password',
+        payload: {email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

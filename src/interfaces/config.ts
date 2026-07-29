@@ -147,6 +147,7 @@ export interface ApplicationConfig {
   name: string;
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
+  dangerouslyOverrideDefaultVariant?: string;
 }
 
 export interface WebhookConfig {
@@ -257,6 +258,10 @@ export interface InfrastructureConfig {
   cache?: CacheDbConfig;
 }
 
+export interface ApiVariantEntry {
+  variants: string[];
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   docs: DocsConfig;
@@ -266,4 +271,5 @@ export interface AppConfig {
   customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
   integrations?: IntegrationsConfig;
+  apiVariants?: Record<string, ApiVariantEntry>;
 }

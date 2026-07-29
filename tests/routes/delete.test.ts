@@ -69,7 +69,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
       });
 
       expect(response.statusCode).toBe(204);
@@ -94,7 +94,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/posts/slug/hello-world',
+        url: '/v1/posts/slug/hello-world',
       });
 
       expect(response.statusCode).toBe(204);
@@ -116,7 +116,7 @@ describe('test delete api', () => {
       // Delete by id
       const byId = await fastify.inject({
         method: 'DELETE',
-        url: '/posts/id/10',
+        url: '/v1/posts/id/10',
       });
       expect(byId.statusCode).toBe(204);
       expect(pgClientQueryMock).toHaveBeenCalledWith(
@@ -129,7 +129,7 @@ describe('test delete api', () => {
       // Delete by slug
       const bySlug = await fastify.inject({
         method: 'DELETE',
-        url: '/posts/slug/my-post',
+        url: '/v1/posts/slug/my-post',
       });
       expect(bySlug.statusCode).toBe(204);
       expect(pgClientQueryMock).toHaveBeenCalledWith(
@@ -144,12 +144,12 @@ describe('test delete api', () => {
   describe('edge cases', () => {
     test('should return 404 when the delete API is disabled via config', async () => {
       const fastify = await createTestApp(pgConfig, singleDeletableModel, {
-        'model.users.id.delete': {enabled: false},
+        'model.v1.users.id.delete': {enabled: false},
       });
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/42',
+        url: '/v1/users/id/42',
       });
 
       expect(response.statusCode).toBe(404);
@@ -162,7 +162,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/logs/id/1',
+        url: '/v1/logs/id/1',
       });
 
       expect(response.statusCode).toBe(404);
@@ -176,7 +176,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/nonexistent/field/1',
+        url: '/v1/nonexistent/field/1',
       });
 
       expect(response.statusCode).toBe(404);
@@ -196,7 +196,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.statusCode).toBe(500);
@@ -212,7 +212,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.statusCode).toBe(500);
@@ -222,7 +222,7 @@ describe('test delete api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'model.users.id.delete': {
+      'model.v1.users.id.delete': {
         enabled: true,
         authorization: true,
       },
@@ -239,7 +239,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.statusCode).toBe(401);
@@ -260,7 +260,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         headers: {
           authorization: 'Bearer invalid-token',
         },
@@ -283,7 +283,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -312,7 +312,7 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       expect(response.statusCode).toBe(401);
@@ -345,11 +345,71 @@ describe('test delete api', () => {
 
       const response = await fastify.inject({
         method: 'DELETE',
-        url: '/users/id/1',
+        url: '/v1/users/id/1',
       });
 
       // Should succeed because authentication is disabled, auth check is skipped
       expect(response.statusCode).toBe(204);
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // DELETE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.delete': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/admin/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.body).toBe('');
+
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        singleDeletableModel,
+        {
+          'model.admin.users.id.delete': {
+            enabled: false,
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'model.v1.users.id.delete': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/admin/users/id/42',
+      });
+
+      expect(response.statusCode).toBe(404);
+
       await fastify.close();
     });
   });

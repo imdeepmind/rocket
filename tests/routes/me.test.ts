@@ -61,6 +61,7 @@ async function createMeApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -76,6 +77,7 @@ async function createMeApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -109,7 +111,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -121,7 +123,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -131,12 +133,12 @@ describe('GET /auth/user/me', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createMeApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.me': {enabled: false},
+        'auth.v1.users.unknown.me': {enabled: false},
       });
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(404);
@@ -151,7 +153,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
       });
 
       expect(response.statusCode).toBe(401);
@@ -166,7 +168,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: 'Bearer invalidtoken',
         },
@@ -186,7 +188,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -216,7 +218,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -244,7 +246,7 @@ describe('GET /auth/user/me', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/auth/user/me',
+        url: '/v1/auth/user/me',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -252,6 +254,65 @@ describe('GET /auth/user/me', () => {
 
       expect(response.statusCode).toBe(404);
       expect(response.json().message).toBe('User not found');
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const app = await createMeApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        {
+          'auth.v1.users.unknown.me': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'admin@example.com', password: 'hash'}],
+        rowCount: 1,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/admin/auth/user/me',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createMeApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        {
+          'auth.admin.users.unknown.me': {
+            enabled: false,
+          },
+        },
+        {
+          'auth.v1.users.unknown.me': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/admin/auth/user/me',
+      });
+
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

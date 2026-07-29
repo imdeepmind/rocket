@@ -12,6 +12,12 @@ import {
 
 import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/utils/config';
+
 export function registerCustomEndpointRoutes(
   app: FastifyInstance,
   config: AppConfig,
@@ -20,51 +26,110 @@ export function registerCustomEndpointRoutes(
 
   if (!customEndpoints) return;
 
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
   for (const [name, endpoint] of Object.entries(customEndpoints)) {
-    const apiIdentifier = `customEndpoints.${name}`;
+    const defaultApiIdentifier = `custom${getVariantSegment(config)}.all.unknown.${name}`;
 
-    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+    if (config.apis?.[defaultApiIdentifier]?.enabled === false) continue;
 
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
+    const defaultAuthorization =
+      config.apis?.[defaultApiIdentifier]?.authorization ??
       config.authentication?.enabled ??
       false;
 
-    const {schema, routePathSuffix} = generateSchema(
+    registerCustomEndpoint(
+      app,
       config,
+      name,
       endpoint,
-      authorization,
+      defaultVariant,
+      defaultApiIdentifier,
+      defaultAuthorization,
     );
-    const routePath = `/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
 
-    app.route({
-      method: endpoint.method,
-      url: routePath,
-      schema,
-      config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
-      preHandler: async request => {
-        await app.callWebhook('request', request, null);
-      },
-      onSend: async (request, _, payload) => {
-        await app.callWebhook('response', request, payload);
-      },
-      handler: async (request: FastifyRequest, reply: FastifyReply) => {
-        if (endpoint.handler.type === 'sql') {
-          return handleSql(app, request, reply, endpoint.handler.sql);
-        }
-        return reply
-          .status(500)
-          .send(
-            app.buildResponse(
-              500,
-              `Handler type "${endpoint.handler.type}" not supported`,
-              null,
-            ),
-          );
-      },
-    });
+    const baseIdentifier = buildApiIdentifier(
+      'custom',
+      defaultVariant,
+      'all',
+      'unknown',
+      name,
+    );
+    const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+    for (const variant of additionalVariants) {
+      const variantApiIdentifier = buildApiIdentifier(
+        'custom',
+        variant,
+        'all',
+        'unknown',
+        name,
+      );
+
+      if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+      const variantAuthorization =
+        config.apis?.[variantApiIdentifier]?.authorization ??
+        config.authentication?.enabled ??
+        false;
+
+      registerCustomEndpoint(
+        app,
+        config,
+        name,
+        endpoint,
+        variant,
+        variantApiIdentifier,
+        variantAuthorization,
+      );
+    }
   }
+}
+
+function registerCustomEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  name: string,
+  endpoint: CustomEndpointConfig,
+  variant: string,
+  apiIdentifier: string,
+  authorization: boolean,
+): void {
+  const {schema, routePathSuffix} = generateSchema(
+    config,
+    endpoint,
+    authorization,
+  );
+  const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
+
+  app.route({
+    method: endpoint.method,
+    url: routePath,
+    schema,
+    config: {apiIdentifier},
+    preValidation: buildPreValidation(app, config, authorization),
+    preHandler: async request => {
+      await app.callWebhook('request', request, null);
+    },
+    onSend: async (request, _, payload) => {
+      await app.callWebhook('response', request, payload);
+    },
+    handler: async (request: FastifyRequest, reply: FastifyReply) => {
+      if (endpoint.handler.type === 'sql') {
+        return handleSql(app, request, reply, endpoint.handler.sql);
+      }
+      return reply
+        .status(500)
+        .send(
+          app.buildResponse(
+            500,
+            `Handler type "${endpoint.handler.type}" not supported`,
+            null,
+          ),
+        );
+    },
+  });
 }
 
 function generateSchema(

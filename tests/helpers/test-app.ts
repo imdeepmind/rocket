@@ -44,6 +44,7 @@ export async function createTestApp(
   apis?: ApisConfig,
   customEndpoints?: Record<string, CustomEndpointConfig>,
   authentication?: AuthenticationConfig,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const appConfig: AppConfig = {
     application: {name: 'Test App', logLevel: 'error'},
@@ -59,6 +60,7 @@ export async function createTestApp(
     apis,
     customEndpoints,
     authentication,
+    apiVariants,
   };
 
   const fastify = Fastify();

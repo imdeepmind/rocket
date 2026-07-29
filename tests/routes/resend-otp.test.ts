@@ -65,10 +65,11 @@ const pgConfig: DatabaseConfig = {
 
 async function createResendOtpApp(
   authentication: AuthenticationConfig,
-  action: 'login' | 'register' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -84,6 +85,7 @@ async function createResendOtpApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
 
@@ -124,20 +126,20 @@ async function createResendOtpApp(
   return app;
 }
 
-function getPath(action: 'login' | 'register' | 'forgot-password'): string {
-  if (action === 'login') return '/auth/login/resend/otp';
-  if (action === 'register') return '/auth/register/resend/otp';
-  return '/auth/forgot-password/resend/otp';
+function getPath(action: 'login' | 'register' | 'forgotPassword'): string {
+  if (action === 'login') return '/v1/auth/login/resend/otp';
+  if (action === 'register') return '/v1/auth/register/resend/otp';
+  return '/v1/auth/forgot-password/resend/otp';
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-const actions: Array<'login' | 'register' | 'forgot-password'> = [
+const actions: Array<'login' | 'register' | 'forgotPassword'> = [
   'login',
   'register',
-  'forgot-password',
+  'forgotPassword',
 ];
 
 for (const action of actions) {
@@ -183,7 +185,13 @@ for (const action of actions) {
       });
 
       test('should NOT register the route when the API is disabled via apis config', async () => {
-        const apiKey = `auth.users.all.resend-otp-${action}`;
+        const actionSuffix =
+          action === 'login'
+            ? 'Login'
+            : action === 'register'
+              ? 'Register'
+              : 'ForgotPassword';
+        const apiKey = `auth.v1.users.unknown.resendOtp${actionSuffix}`;
         const app = await createResendOtpApp(
           upAuthConfig,
           action,
@@ -259,6 +267,68 @@ for (const action of actions) {
         });
 
         expect(response.statusCode).toBe(400);
+        await app.close();
+      });
+    });
+
+    describe('API variants', () => {
+      test('should register additional variant endpoint when apiVariants is configured', async () => {
+        const actionSuffix =
+          action === 'login'
+            ? 'Login'
+            : action === 'register'
+              ? 'Register'
+              : 'ForgotPassword';
+        const apiKey = `auth.v1.users.unknown.resendOtp${actionSuffix}`;
+        const app = await createResendOtpApp(
+          upAuthConfig,
+          action,
+          undefined,
+          undefined,
+          undefined,
+          {
+            [apiKey]: {variants: ['admin']},
+          },
+        );
+        const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+        pgQueryMock.mockResolvedValueOnce({
+          rows: [{id: 1, email: 'admin@example.com'}],
+          rowCount: 1,
+        });
+        const variantPath = path.replace('/v1/', '/admin/');
+        const response = await app.inject({
+          method: 'POST',
+          url: variantPath,
+          headers: {authorization: `Bearer ${token}`},
+          payload: {email: 'admin@example.com'},
+        });
+        expect(response.statusCode).toBe(200);
+        await app.close();
+      });
+
+      test('should not register variant endpoint when disabled in apis config', async () => {
+        const actionSuffix =
+          action === 'login'
+            ? 'Login'
+            : action === 'register'
+              ? 'Register'
+              : 'ForgotPassword';
+        const apiKey = `auth.v1.users.unknown.resendOtp${actionSuffix}`;
+        const adminKey = `auth.admin.users.unknown.resendOtp${actionSuffix}`;
+        const app = await createResendOtpApp(
+          upAuthConfig,
+          action,
+          undefined,
+          undefined,
+          {[adminKey]: {enabled: false}},
+          {[apiKey]: {variants: ['admin']}},
+        );
+        const variantPath = path.replace('/v1/', '/admin/');
+        const response = await app.inject({
+          method: 'POST',
+          url: variantPath,
+        });
+        expect(response.statusCode).toBe(404);
         await app.close();
       });
     });
