@@ -259,8 +259,7 @@ export interface InfrastructureConfig {
 }
 
 export interface ApiVariantEntry {
-  source: string;
-  variant: string;
+  variants: string[];
 }
 
 export interface AppConfig {

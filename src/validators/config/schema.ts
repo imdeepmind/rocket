@@ -563,15 +563,19 @@ const apiVariantsSchema = {
   patternProperties: {
     '^[A-Za-z0-9-_.]+$': {
       type: 'object',
-      required: ['source', 'variant'],
+      required: ['variants'],
       additionalProperties: false,
       properties: {
-        source: {type: 'string', minLength: 1},
-        variant: {
-          type: 'string',
-          minLength: 1,
-          maxLength: 25,
-          pattern: '^[a-zA-Z0-9_-]+$',
+        variants: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 25,
+            pattern: '^[a-zA-Z0-9_-]+$',
+          },
+          uniqueItems: true,
         },
       },
     },

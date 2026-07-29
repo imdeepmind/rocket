@@ -206,8 +206,7 @@
     },
     "apiVariants": {
         "aggregate.users.id.getAggregation": {
-            "source": "aggregate.users.id.getAggregation",
-            "variant": "v1"
+            "variants": ["admin"]
         }
     },
     "apis": {

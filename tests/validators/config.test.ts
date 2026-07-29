@@ -2879,127 +2879,119 @@ describe('validateVariantConfig', () => {
 describe('validateApiVariantsConfig', () => {
   it.each([
     {
-      name: 'missing source property',
+      name: 'missing variants property',
       patch: {
         apiVariants: {
-          'aggregate.users.id.getAggregation': {
-            variant: 'v1',
-          } as unknown as {source: string; variant: string},
-        },
-      },
-      expected:
-        "/apiVariants/aggregate.users.id.getAggregation must have required property 'source'",
-    },
-    {
-      name: 'missing variant property',
-      patch: {
-        apiVariants: {
-          'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-          } as unknown as {source: string; variant: string},
-        },
-      },
-      expected:
-        "/apiVariants/aggregate.users.id.getAggregation must have required property 'variant'",
-    },
-    {
-      name: 'empty source string',
-      patch: {
-        apiVariants: {
-          'aggregate.users.id.getAggregation': {
-            source: '',
-            variant: 'v1',
+          'aggregate.users.id.getAggregation': {} as unknown as {
+            variants: string[];
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/source must NOT have fewer than 1 characters',
+        "/apiVariants/aggregate.users.id.getAggregation must have required property 'variants'",
     },
     {
-      name: 'empty variant string',
+      name: 'variants is a string instead of array',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: '',
+            variants: 'admin',
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variant must NOT have fewer than 1 characters',
+        '/apiVariants/aggregate.users.id.getAggregation/variants must be array',
     },
     {
-      name: 'variant longer than 25 characters',
+      name: 'empty variants array',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'abcdefghijklmnopqrstuvwxyz',
+            variants: [],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variant must NOT have more than 25 characters',
+        '/apiVariants/aggregate.users.id.getAggregation/variants must NOT have fewer than 1 items',
+    },
+    {
+      name: 'variant name longer than 25 characters',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            variants: ['abcdefghijklmnopqrstuvwxyz'],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must NOT have more than 25 characters',
     },
     {
       name: 'variant contains spaces',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'my variant',
+            variants: ['my variant'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variant must match pattern',
+        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must match pattern',
     },
     {
       name: 'variant contains special characters',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'variant@123',
+            variants: ['variant@123'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variant must match pattern',
+        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must match pattern',
     },
     {
       name: 'variant as boolean instead of string',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: true,
+            variants: [true],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/variant must be string',
+        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must be string',
     },
     {
-      name: 'source as boolean instead of string',
+      name: 'duplicate variant names',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: true,
-            variant: 'v1',
+            variants: ['admin', 'admin'],
           },
         },
       },
       expected:
-        '/apiVariants/aggregate.users.id.getAggregation/source must be string',
+        '/apiVariants/aggregate.users.id.getAggregation/variants must NOT have duplicate items',
+    },
+    {
+      name: 'empty variant string in array',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            variants: [''],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variants/0 must NOT have fewer than 1 characters',
     },
     {
       name: 'extra unknown property',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'v1',
+            variants: ['admin'],
             extraField: 'should not be allowed',
           },
         },
@@ -3012,8 +3004,7 @@ describe('validateApiVariantsConfig', () => {
       patch: {
         apiVariants: {
           'invalid key': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'v1',
+            variants: ['admin'],
           },
         },
       },
@@ -3032,12 +3023,11 @@ describe('validateApiVariantsConfig', () => {
 
   it.each([
     {
-      name: 'single valid api variant',
+      name: 'single valid api variant with one variant',
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'v1',
+            variants: ['admin'],
           },
         },
       },
@@ -3047,8 +3037,7 @@ describe('validateApiVariantsConfig', () => {
       patch: {
         apiVariants: {
           'model.posts.id.index': {
-            source: 'model.posts.id.index',
-            variant: 'experimental_v2',
+            variants: ['experimental_v2'],
           },
         },
       },
@@ -3058,27 +3047,33 @@ describe('validateApiVariantsConfig', () => {
       patch: {
         apiVariants: {
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'abcdefghijklmnopqrstuvwxy',
+            variants: ['abcdefghijklmnopqrstuvwxy'],
           },
         },
       },
     },
     {
-      name: 'multiple api variants',
+      name: 'multiple variants per api',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            variants: ['admin', 'v1', 'beta-2'],
+          },
+        },
+      },
+    },
+    {
+      name: 'multiple api variants entries',
       patch: {
         apiVariants: {
           'model.users.id.index': {
-            source: 'model.users.id.index',
-            variant: 'v1',
+            variants: ['v1'],
           },
           'aggregate.users.id.getAggregation': {
-            source: 'aggregate.users.id.getAggregation',
-            variant: 'admin',
+            variants: ['admin'],
           },
           'model.posts.id.search': {
-            source: 'model.posts.id.search',
-            variant: 'beta-3',
+            variants: ['beta-3'],
           },
         },
       },
