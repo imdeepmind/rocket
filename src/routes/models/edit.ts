@@ -46,6 +46,9 @@ export function registerEditRoutes(
         if (otherName === fieldName) continue;
         bodyProperties[otherName] = {
           ...mapDataTypeToJsonSchema(otherField.type),
+          ...(otherField.type === 'enum' && otherField.values
+            ? {enum: otherField.values}
+            : {}),
           description: `Updated value for ${otherName}`,
         };
         allBodyFieldNames.push(otherName);

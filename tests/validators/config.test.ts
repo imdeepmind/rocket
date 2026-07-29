@@ -455,7 +455,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'boolean', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found boolean)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found boolean)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -463,7 +463,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'text', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found text)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found text)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -471,7 +471,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'datetime', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found datetime)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found datetime)',
     },
     {
       name: 'invalid field.unique',
@@ -835,6 +835,118 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
+    {
+      name: 'field.apis contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "json"',
+    },
+    {
+      name: 'field.query contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', query: ['eq']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "eq" is not allowed for type "json"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', aggregations: ['count']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "count" is not allowed for type "json"',
+    },
+    {
+      name: 'enum field without values',
+      patch: {
+        fields: {test: {type: 'enum'}},
+      },
+      expected:
+        '/data/models/test/fields/test: values is required for enum type',
+    },
+    {
+      name: 'enum field with empty values',
+      patch: {
+        fields: {test: {type: 'enum', values: []}},
+      },
+      expected:
+        '/data/models/test/fields/test/values must NOT have fewer than 1 items',
+    },
+    {
+      name: 'field.apis contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.query contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], query: ['sort']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.apis contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.apis contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "ulid"',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -895,6 +1007,42 @@ describe('validateValidModelFieldsConfig', () => {
             query: ['sort'],
             aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          data: {type: 'json'},
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          status: {type: 'enum', values: ['active', 'inactive']},
+        },
+      },
+    },
+    {
+      name: 'valid model with uuid field',
+      patch: {
+        fields: {
+          id: {type: 'uuid', primaryKey: true},
+          ref: {type: 'uuid'},
+        },
+      },
+    },
+    {
+      name: 'valid model with ulid field',
+      patch: {
+        fields: {
+          id: {type: 'ulid', primaryKey: true},
+          code: {type: 'ulid'},
         },
       },
     },
@@ -1101,6 +1249,36 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
     },
+    {
+      name: 'json field with mismatched schema type',
+      patch: {
+        fields: {data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['data'],
+          properties: {
+            data: {type: 'string'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/data: type mismatch (model=json, schema=string)',
+    },
+    {
+      name: 'enum field with mismatched schema type',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          required: ['status'],
+          properties: {
+            status: {type: 'number'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/status: type mismatch (model=enum, schema=number)',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1227,6 +1405,32 @@ describe('validateValidModelValidationConfig', () => {
           type: 'object',
           properties: {
             id: {minimum: 1},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field and object validation',
+      patch: {
+        fields: {id: {type: 'integer'}, data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {type: 'integer'},
+            data: {type: 'object'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field and string validation',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          properties: {
+            status: {type: 'string'},
           },
         },
       },

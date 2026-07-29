@@ -33,6 +33,12 @@ export function mapDataTypeToJsonSchema(type: DataType): {
       return {type: 'string', format: 'date'};
     case 'decimal':
       return {type: 'number'};
+    case 'json':
+      return {type: 'object'};
+    case 'enum':
+    case 'uuid':
+    case 'ulid':
+      return {type: 'string'};
     default:
       return {type: 'string'};
   }
@@ -196,6 +202,7 @@ export function generateJSONValidationSchema(
   for (const [fieldName, field] of fields) {
     bodyProperties[fieldName] = {
       ...mapDataTypeToJsonSchema(field.type),
+      ...(field.type === 'enum' && field.values ? {enum: field.values} : {}),
       description: `Value for ${fieldName}`,
     };
   }

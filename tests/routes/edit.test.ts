@@ -246,6 +246,92 @@ describe('test edit api', () => {
     });
   });
 
+  describe('enum field validation', () => {
+    const enumEditModel: Record<string, ModelConfig> = {
+      tasks: {
+        fields: {
+          id: {
+            type: 'integer',
+            primaryKey: true,
+            apis: ['edit'],
+          },
+          status: {
+            type: 'enum',
+            values: ['pending', 'in_progress', 'done'],
+          },
+        },
+      },
+    };
+
+    test('should accept valid enum value in PUT request', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0})
+        .mockResolvedValueOnce({rows: [], rowCount: 1})
+        .mockResolvedValueOnce({rows: [], rowCount: 0});
+
+      const fastify = await createTestApp(pgConfig, enumEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/tasks/id/1',
+        payload: {status: 'in_progress'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      await fastify.close();
+    });
+
+    test('should reject invalid enum value in PUT request', async () => {
+      const fastify = await createTestApp(pgConfig, enumEditModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/tasks/id/1',
+        payload: {status: 'cancelled'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('should accept valid enum value in PATCH request', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0})
+        .mockResolvedValueOnce({rows: [], rowCount: 1})
+        .mockResolvedValueOnce({rows: [], rowCount: 0});
+
+      const fastify = await createTestApp(pgConfig, enumEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/id/1',
+        payload: {status: 'done'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      await fastify.close();
+    });
+
+    test('should reject invalid enum value in PATCH request', async () => {
+      const fastify = await createTestApp(pgConfig, enumEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/tasks/id/1',
+        payload: {status: 'unknown_status'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+  });
+
   describe('filtering on non-unique edit routes', () => {
     test('should apply query filters to WHERE clause', async () => {
       const fastify = await createTestApp(pgConfig, nonUniqueEditModel);

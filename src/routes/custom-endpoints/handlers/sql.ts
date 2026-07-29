@@ -33,6 +33,10 @@ const cast = (value: unknown, type: DataType): unknown => {
       return String(value);
     case 'decimal':
       return Number(value);
+    case 'json':
+      return value;
+    case 'enum':
+      return String(value);
     default:
       return String(value);
   }

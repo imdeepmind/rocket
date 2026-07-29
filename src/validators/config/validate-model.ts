@@ -16,6 +16,10 @@ const ALLOWED_APIS: Record<string, string[]> = {
   text: [],
   datetime: [],
   date: [],
+  json: [],
+  enum: ['edit', 'delete', 'index'],
+  uuid: ['index', 'edit', 'delete'],
+  ulid: ['index', 'edit', 'delete'],
 };
 
 const ALLOWED_QUERY: Record<string, string[]> = {
@@ -26,6 +30,10 @@ const ALLOWED_QUERY: Record<string, string[]> = {
   text: [],
   datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
   date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
+  json: [],
+  enum: ['eq', 'ne', 'in', 'not_in'],
+  uuid: ['sort', 'eq', 'ne', 'in', 'not_in'],
+  ulid: ['sort', 'eq', 'ne', 'in', 'not_in'],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -36,6 +44,10 @@ const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   text: [],
   datetime: ['avg', 'max', 'min', 'count'],
   date: ['avg', 'max', 'min', 'count'],
+  json: [],
+  enum: ['count', 'frequency'],
+  uuid: ['count'],
+  ulid: ['count'],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -53,6 +65,12 @@ function mapModelTypeToJsonSchema(type: string): string {
       return 'date-time';
     case 'date':
       return 'date';
+    case 'json':
+      return 'object';
+    case 'enum':
+    case 'uuid':
+    case 'ulid':
+      return 'string';
     /* istanbul ignore next */
     default:
       return 'string';
@@ -65,14 +83,26 @@ function validateFieldConstraints(config: AppConfig): string[] {
   Object.entries(config.data.models).forEach(([modelName, model]) => {
     Object.entries(model.fields).forEach(([fieldName, field]) => {
       const path = `/data/models/${modelName}/fields/${fieldName}`;
-      const {type, primaryKey, autoIncrement, apis, query, aggregations} =
-        field;
+      const {
+        type,
+        primaryKey,
+        autoIncrement,
+        apis,
+        query,
+        aggregations,
+        values,
+      } = field;
 
       // Primary key rules
       if (primaryKey) {
-        if (type !== 'integer' && type !== 'string') {
+        if (
+          type !== 'integer' &&
+          type !== 'string' &&
+          type !== 'uuid' &&
+          type !== 'ulid'
+        ) {
           errors.push(
-            `${path}: primaryKey field must be of type integer or string (found ${type})`,
+            `${path}: primaryKey field must be of type integer, string, uuid, or ulid (found ${type})`,
           );
         }
 
@@ -87,6 +117,13 @@ function validateFieldConstraints(config: AppConfig): string[] {
         errors.push(
           `${path}: autoIncrement is only allowed on primaryKey fields`,
         );
+      }
+
+      // Validate enum values
+      if (type === 'enum') {
+        if (!values || values.length === 0) {
+          errors.push(`${path}: values is required for enum type`);
+        }
       }
 
       // Validate apis against allowed list for this type
