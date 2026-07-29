@@ -128,41 +128,46 @@ export async function startServer(
     await migrateDatabase(config);
   }
 
-  // register config-driven routes (models, aggregations, custom queries)
-  registerRoutes(app, config);
+  // register all config-driven routes under /api prefix (swagger excluded)
+  await app.register(
+    async app => {
+      registerRoutes(app, config);
 
-  // register auth routes (only when up-auth is configured and enabled)
-  if (
-    config.authentication?.enabled &&
-    config.authentication?.provider?.type === 'up-auth'
-  ) {
-    const upConfig = config.authentication.provider
-      .config as UpAuthProviderConfig;
+      // register auth routes (only when up-auth is configured and enabled)
+      if (
+        config.authentication?.enabled &&
+        config.authentication?.provider?.type === 'up-auth'
+      ) {
+        const upConfig = config.authentication.provider
+          .config as UpAuthProviderConfig;
 
-    registerRegistrationRoute(app, config);
-    registerLoginRoute(app, config);
-    registerChangePasswordRoute(app, config);
-    registerMeRoute(app, config);
-    registerDeleteMeRoute(app, config);
-    registerEditMeRoute(app, config);
+        registerRegistrationRoute(app, config);
+        registerLoginRoute(app, config);
+        registerChangePasswordRoute(app, config);
+        registerMeRoute(app, config);
+        registerDeleteMeRoute(app, config);
+        registerEditMeRoute(app, config);
 
-    if (config.integrations?.email) {
-      registerForgotPasswordRoute(app, config);
-      registerForgotPasswordOtpVerifyRoute(app, config);
-      registerForgotPasswordResendOtpRoute(app, config);
-    }
+        if (config.integrations?.email) {
+          registerForgotPasswordRoute(app, config);
+          registerForgotPasswordOtpVerifyRoute(app, config);
+          registerForgotPasswordResendOtpRoute(app, config);
+        }
 
-    if (upConfig.mfaRequired) {
-      registerLoginOtpVerifyRoute(app, config);
-      registerLoginResendOtpRoute(app, config);
-    }
+        if (upConfig.mfaRequired) {
+          registerLoginOtpVerifyRoute(app, config);
+          registerLoginResendOtpRoute(app, config);
+        }
 
-    if (upConfig.userModel.isVerifiedField) {
-      registerRegistrationOtpVerifyRoute(app, config);
-      registerRegistrationResendOtpRoute(app, config);
-      registerEmailChangeRoute(app, config);
-    }
-  }
+        if (upConfig.userModel.isVerifiedField) {
+          registerRegistrationOtpVerifyRoute(app, config);
+          registerRegistrationResendOtpRoute(app, config);
+          registerEmailChangeRoute(app, config);
+        }
+      }
+    },
+    {prefix: '/api'},
+  );
 
   // Global error handler
   app.setErrorHandler(

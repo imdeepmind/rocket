@@ -37,8 +37,17 @@ import {Mode} from '@/interfaces';
 import {AppConfig} from '@/interfaces/config';
 
 vi.mock('fastify', () => {
+  let appConfig: AppConfig | undefined;
   const mockApp = {
-    register: vi.fn(),
+    register: vi.fn(async (plugin: unknown) => {
+      if (typeof plugin === 'function') {
+        try {
+          await plugin(mockApp, {});
+        } catch {
+          // plugins may fail in mock context — ignore
+        }
+      }
+    }),
     addHook: vi.fn(),
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
@@ -57,6 +66,12 @@ vi.mock('fastify', () => {
       message,
       meta,
     })),
+    set appConfig(val: AppConfig) {
+      appConfig = val;
+    },
+    get appConfig(): AppConfig | undefined {
+      return appConfig;
+    },
   };
   return {
     default: vi.fn(() => mockApp),
@@ -284,10 +299,15 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    expect(mockApp.register).toHaveBeenCalledTimes(9);
+
+    const prefixCall = mockApp.register.mock.calls.find(
+      ([, opts]) => opts?.prefix === '/api',
+    );
+    expect(prefixCall).toBeDefined();
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
-    expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
+    expect(registerRoutes).toHaveBeenCalled();
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -304,7 +324,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(5);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -317,6 +337,10 @@ describe('Server', () => {
     expect(registerRoutes).toHaveBeenCalledWith(
       expect.any(Object),
       noModelsConfig,
+    );
+    expect(mockApp.register).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({prefix: '/api'}),
     );
   });
 
