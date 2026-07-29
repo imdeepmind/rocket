@@ -63,6 +63,8 @@ describe('migrateDatabase', () => {
           birthDate: {type: 'date'},
           metadata: {type: 'json'},
           status: {type: 'enum', values: ['active', 'inactive']},
+          idUuid: {type: 'uuid'},
+          idUlid: {type: 'ulid'},
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           unknown: {type: 'unknown_type' as any},
         },
@@ -101,6 +103,8 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain(
       'status: text(\'status\', { enum: ["active", "inactive"] })',
     );
+    expect(schemaContent).toContain("idUuid: text('idUuid')");
+    expect(schemaContent).toContain("idUlid: text('idUlid')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain(
       "uniqueIndex('username_idx').on(t.username)",
@@ -138,6 +142,8 @@ describe('migrateDatabase', () => {
           birthDate: {type: 'date'},
           config: {type: 'json'},
           level: {type: 'enum', values: ['low', 'medium', 'high']},
+          idUuid: {type: 'uuid'},
+          idUlid: {type: 'ulid'},
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           unknown: {type: 'unknown_type' as any},
         },
@@ -155,7 +161,7 @@ describe('migrateDatabase', () => {
 
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain(
-      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum } from 'drizzle-orm/pg-core'",
+      "import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum, uuid } from 'drizzle-orm/pg-core'",
     );
     expect(schemaContent).toContain(
       'export const posts_level_enum = pgEnum(\'posts_level_enum\', ["low", "medium", "high"]);',
@@ -171,6 +177,8 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain("birthDate: date('birthDate')");
     expect(schemaContent).toContain("config: jsonb('config')");
     expect(schemaContent).toContain("level: posts_level_enum('level')");
+    expect(schemaContent).toContain("idUuid: uuid('idUuid')");
+    expect(schemaContent).toContain("idUlid: text('idUlid')");
     expect(schemaContent).toContain("unknown: text('unknown')");
     expect(schemaContent).toContain("uniqueIndex('title_idx').on(t.title)");
     expect(schemaContent).toContain("index('body_idx').on(t.body)");

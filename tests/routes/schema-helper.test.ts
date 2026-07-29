@@ -34,6 +34,8 @@ describe('test schema helper', () => {
     {dataType: 'date', expectedSchema: {type: 'string', format: 'date'}},
     {dataType: 'json', expectedSchema: {type: 'object'}},
     {dataType: 'enum', expectedSchema: {type: 'string'}},
+    {dataType: 'uuid', expectedSchema: {type: 'string'}},
+    {dataType: 'ulid', expectedSchema: {type: 'string'}},
     {dataType: 'array', expectedSchema: {type: 'string'}},
     {dataType: 'null', expectedSchema: {type: 'string'}},
   ])('should map $dataType to JSON schema', ({dataType, expectedSchema}) => {

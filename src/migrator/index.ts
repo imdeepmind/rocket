@@ -81,6 +81,10 @@ function generateSchemaFile(
           case 'enum':
             col = `text('${fName}', { enum: [${(f.values as string[]).map(v => JSON.stringify(v)).join(', ')}] })`;
             break;
+          case 'uuid':
+          case 'ulid':
+            col = `text('${fName}')`;
+            break;
           default:
             col = `text('${fName}')`;
             break;
@@ -128,6 +132,12 @@ function generateSchemaFile(
             break;
           case 'enum':
             col = `${modelName}_${fName}_enum('${fName}')`;
+            break;
+          case 'uuid':
+            col = `uuid('${fName}')`;
+            break;
+          case 'ulid':
+            col = `text('${fName}')`;
             break;
           default:
             col = `text('${fName}')`;
@@ -197,7 +207,7 @@ ${columns}
 `.trim();
   } else {
     return `
-import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 ${pgEnumDeclarations}export const ${modelName} = pgTable('${modelName}', {

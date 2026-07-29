@@ -11,7 +11,9 @@ export type DataType =
   | 'decimal'
   | 'date'
   | 'json'
-  | 'enum';
+  | 'enum'
+  | 'uuid'
+  | 'ulid';
 export type LogLevel =
   | 'trace'
   | 'debug'

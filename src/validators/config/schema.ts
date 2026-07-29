@@ -206,6 +206,8 @@ const fieldSchema = {
         'date',
         'json',
         'enum',
+        'uuid',
+        'ulid',
       ],
     },
     primaryKey: {type: 'boolean', default: false},

@@ -18,6 +18,8 @@ const ALLOWED_APIS: Record<string, string[]> = {
   date: [],
   json: [],
   enum: ['edit', 'delete', 'index'],
+  uuid: ['index', 'edit', 'delete'],
+  ulid: ['index', 'edit', 'delete'],
 };
 
 const ALLOWED_QUERY: Record<string, string[]> = {
@@ -30,6 +32,8 @@ const ALLOWED_QUERY: Record<string, string[]> = {
   date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
   json: [],
   enum: ['eq', 'ne', 'in', 'not_in'],
+  uuid: ['sort', 'eq', 'ne', 'in', 'not_in'],
+  ulid: ['sort', 'eq', 'ne', 'in', 'not_in'],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -42,6 +46,8 @@ const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   date: ['avg', 'max', 'min', 'count'],
   json: [],
   enum: ['count', 'frequency'],
+  uuid: ['count'],
+  ulid: ['count'],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -62,6 +68,8 @@ function mapModelTypeToJsonSchema(type: string): string {
     case 'json':
       return 'object';
     case 'enum':
+    case 'uuid':
+    case 'ulid':
       return 'string';
     /* istanbul ignore next */
     default:
@@ -87,9 +95,14 @@ function validateFieldConstraints(config: AppConfig): string[] {
 
       // Primary key rules
       if (primaryKey) {
-        if (type !== 'integer' && type !== 'string') {
+        if (
+          type !== 'integer' &&
+          type !== 'string' &&
+          type !== 'uuid' &&
+          type !== 'ulid'
+        ) {
           errors.push(
-            `${path}: primaryKey field must be of type integer or string (found ${type})`,
+            `${path}: primaryKey field must be of type integer, string, uuid, or ulid (found ${type})`,
           );
         }
 

@@ -36,6 +36,8 @@ export function mapDataTypeToJsonSchema(type: DataType): {
     case 'json':
       return {type: 'object'};
     case 'enum':
+    case 'uuid':
+    case 'ulid':
       return {type: 'string'};
     default:
       return {type: 'string'};

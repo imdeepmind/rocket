@@ -455,7 +455,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'boolean', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found boolean)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found boolean)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -463,7 +463,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'text', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found text)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found text)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -471,7 +471,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'datetime', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found datetime)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found datetime)',
     },
     {
       name: 'invalid field.unique',
@@ -899,6 +899,54 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "enum"',
     },
+    {
+      name: 'field.apis contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.apis contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "ulid"',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -977,6 +1025,24 @@ describe('validateValidModelFieldsConfig', () => {
         fields: {
           id: {type: 'integer', primaryKey: true},
           status: {type: 'enum', values: ['active', 'inactive']},
+        },
+      },
+    },
+    {
+      name: 'valid model with uuid field',
+      patch: {
+        fields: {
+          id: {type: 'uuid', primaryKey: true},
+          ref: {type: 'uuid'},
+        },
+      },
+    },
+    {
+      name: 'valid model with ulid field',
+      patch: {
+        fields: {
+          id: {type: 'ulid', primaryKey: true},
+          code: {type: 'ulid'},
         },
       },
     },
