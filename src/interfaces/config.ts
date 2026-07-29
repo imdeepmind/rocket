@@ -258,6 +258,11 @@ export interface InfrastructureConfig {
   cache?: CacheDbConfig;
 }
 
+export interface ApiVariantEntry {
+  source: string;
+  variant: string;
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   docs: DocsConfig;
@@ -267,4 +272,5 @@ export interface AppConfig {
   customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
   integrations?: IntegrationsConfig;
+  apiVariants?: Record<string, ApiVariantEntry>;
 }

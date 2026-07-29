@@ -558,6 +558,27 @@ const integrationsSchema = {
   },
 };
 
+const apiVariantsSchema = {
+  type: 'object',
+  patternProperties: {
+    '^[A-Za-z0-9-_.]+$': {
+      type: 'object',
+      required: ['source', 'variant'],
+      additionalProperties: false,
+      properties: {
+        source: {type: 'string', minLength: 1},
+        variant: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 25,
+          pattern: '^[a-zA-Z0-9_-]+$',
+        },
+      },
+    },
+  },
+  additionalProperties: false,
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'docs', 'infrastructure', 'data'],
@@ -582,6 +603,7 @@ const schema = {
     customEndpoints: customEndpointsSchema,
     authentication: authenticationSchema,
     integrations: integrationsSchema,
+    apiVariants: apiVariantsSchema,
   },
 };
 

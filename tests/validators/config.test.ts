@@ -2874,6 +2874,233 @@ describe('validateVariantConfig', () => {
   });
 });
 
+// ----- Api Variants Config Tests -----
+
+describe('validateApiVariantsConfig', () => {
+  it.each([
+    {
+      name: 'missing source property',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            variant: 'v1',
+          } as unknown as {source: string; variant: string},
+        },
+      },
+      expected:
+        "/apiVariants/aggregate.users.id.getAggregation must have required property 'source'",
+    },
+    {
+      name: 'missing variant property',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+          } as unknown as {source: string; variant: string},
+        },
+      },
+      expected:
+        "/apiVariants/aggregate.users.id.getAggregation must have required property 'variant'",
+    },
+    {
+      name: 'empty source string',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: '',
+            variant: 'v1',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/source must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'empty variant string',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: '',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variant must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'variant longer than 25 characters',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'abcdefghijklmnopqrstuvwxyz',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variant must NOT have more than 25 characters',
+    },
+    {
+      name: 'variant contains spaces',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'my variant',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variant must match pattern',
+    },
+    {
+      name: 'variant contains special characters',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'variant@123',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variant must match pattern',
+    },
+    {
+      name: 'variant as boolean instead of string',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: true,
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/variant must be string',
+    },
+    {
+      name: 'source as boolean instead of string',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: true,
+            variant: 'v1',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation/source must be string',
+    },
+    {
+      name: 'extra unknown property',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'v1',
+            extraField: 'should not be allowed',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.users.id.getAggregation must NOT have additional properties',
+    },
+    {
+      name: 'invalid key pattern (spaces)',
+      patch: {
+        apiVariants: {
+          'invalid key': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'v1',
+          },
+        },
+      },
+      expected: '/apiVariants must NOT have additional properties',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      ...patch,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'single valid api variant',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'v1',
+          },
+        },
+      },
+    },
+    {
+      name: 'variant with hyphens and underscores',
+      patch: {
+        apiVariants: {
+          'model.posts.id.index': {
+            source: 'model.posts.id.index',
+            variant: 'experimental_v2',
+          },
+        },
+      },
+    },
+    {
+      name: 'max length variant',
+      patch: {
+        apiVariants: {
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'abcdefghijklmnopqrstuvwxy',
+          },
+        },
+      },
+    },
+    {
+      name: 'multiple api variants',
+      patch: {
+        apiVariants: {
+          'model.users.id.index': {
+            source: 'model.users.id.index',
+            variant: 'v1',
+          },
+          'aggregate.users.id.getAggregation': {
+            source: 'aggregate.users.id.getAggregation',
+            variant: 'admin',
+          },
+          'model.posts.id.search': {
+            source: 'model.posts.id.search',
+            variant: 'beta-3',
+          },
+        },
+      },
+    },
+  ])('Scenario: $name . should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      ...patch,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should work without apiVariants (optional)', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
 // ----- Cache DB Config Tests -----
 
 describe('validateCacheDbConfig', () => {

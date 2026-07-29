@@ -204,6 +204,12 @@
             }
         }
     },
+    "apiVariants": {
+        "aggregate.users.id.getAggregation": {
+            "source": "aggregate.users.id.getAggregation",
+            "variant": "v1"
+        }
+    },
     "apis": {
         "aggregate.users.id.getAggregation": {
             "webhooks": [
