@@ -17,6 +17,7 @@ const ALLOWED_APIS: Record<string, string[]> = {
   datetime: [],
   date: [],
   json: [],
+  enum: ['edit', 'delete', 'index'],
 };
 
 const ALLOWED_QUERY: Record<string, string[]> = {
@@ -28,6 +29,7 @@ const ALLOWED_QUERY: Record<string, string[]> = {
   datetime: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
   date: ['sort', 'lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'not_in'],
   json: [],
+  enum: ['eq', 'ne', 'in', 'not_in'],
 };
 
 const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
@@ -39,6 +41,7 @@ const ALLOWED_AGGREGATIONS: Record<string, string[]> = {
   datetime: ['avg', 'max', 'min', 'count'],
   date: ['avg', 'max', 'min', 'count'],
   json: [],
+  enum: ['count', 'frequency'],
 };
 
 function mapModelTypeToJsonSchema(type: string): string {
@@ -58,6 +61,8 @@ function mapModelTypeToJsonSchema(type: string): string {
       return 'date';
     case 'json':
       return 'object';
+    case 'enum':
+      return 'string';
     /* istanbul ignore next */
     default:
       return 'string';
@@ -70,8 +75,15 @@ function validateFieldConstraints(config: AppConfig): string[] {
   Object.entries(config.data.models).forEach(([modelName, model]) => {
     Object.entries(model.fields).forEach(([fieldName, field]) => {
       const path = `/data/models/${modelName}/fields/${fieldName}`;
-      const {type, primaryKey, autoIncrement, apis, query, aggregations} =
-        field;
+      const {
+        type,
+        primaryKey,
+        autoIncrement,
+        apis,
+        query,
+        aggregations,
+        values,
+      } = field;
 
       // Primary key rules
       if (primaryKey) {
@@ -92,6 +104,13 @@ function validateFieldConstraints(config: AppConfig): string[] {
         errors.push(
           `${path}: autoIncrement is only allowed on primaryKey fields`,
         );
+      }
+
+      // Validate enum values
+      if (type === 'enum') {
+        if (!values || values.length === 0) {
+          errors.push(`${path}: values is required for enum type`);
+        }
       }
 
       // Validate apis against allowed list for this type

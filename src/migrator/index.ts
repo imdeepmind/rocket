@@ -78,6 +78,9 @@ function generateSchemaFile(
           case 'json':
             col = `text('${fName}', { mode: 'json' })`;
             break;
+          case 'enum':
+            col = `text('${fName}', { enum: [${(f.values as string[]).map(v => JSON.stringify(v)).join(', ')}] })`;
+            break;
           default:
             col = `text('${fName}')`;
             break;
@@ -123,6 +126,9 @@ function generateSchemaFile(
           case 'json':
             col = `jsonb('${fName}')`;
             break;
+          case 'enum':
+            col = `${modelName}_${fName}_enum('${fName}')`;
+            break;
           default:
             col = `text('${fName}')`;
             break;
@@ -166,6 +172,20 @@ function generateSchemaFile(
 
   const extras = [indexes, relations].filter(Boolean).join(',\n');
 
+  const enumFields = Object.entries(config.fields).filter(
+    ([, f]) => f.type === 'enum' && f.values && f.values.length > 0,
+  );
+
+  const pgEnumDeclarations =
+    engine === 'postgres' && enumFields.length > 0
+      ? enumFields
+          .map(
+            ([fName, f]) =>
+              `export const ${modelName}_${fName}_enum = pgEnum('${modelName}_${fName}_enum', [${(f.values as string[]).map(v => JSON.stringify(v)).join(', ')}]);`,
+          )
+          .join('\n') + '\n'
+      : '';
+
   if (engine === 'sqlite') {
     return `
 import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core';
@@ -177,10 +197,10 @@ ${columns}
 `.trim();
   } else {
     return `
-import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-export const ${modelName} = pgTable('${modelName}', {
+${pgEnumDeclarations}export const ${modelName} = pgTable('${modelName}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();

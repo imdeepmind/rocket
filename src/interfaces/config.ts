@@ -10,7 +10,8 @@ export type DataType =
   | 'datetime'
   | 'decimal'
   | 'date'
-  | 'json';
+  | 'json'
+  | 'enum';
 export type LogLevel =
   | 'trace'
   | 'debug'
@@ -111,6 +112,7 @@ export interface ModelFieldConfig {
   apis?: ApiOperation[];
   query?: QueryOperation[];
   aggregations?: Aggregation[];
+  values?: string[];
 }
 
 export interface ModelIndexConfig {

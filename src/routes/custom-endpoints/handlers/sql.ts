@@ -35,6 +35,8 @@ const cast = (value: unknown, type: DataType): unknown => {
       return Number(value);
     case 'json':
       return value;
+    case 'enum':
+      return String(value);
     default:
       return String(value);
   }

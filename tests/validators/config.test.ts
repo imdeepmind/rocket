@@ -859,6 +859,46 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "count" is not allowed for type "json"',
     },
+    {
+      name: 'enum field without values',
+      patch: {
+        fields: {test: {type: 'enum'}},
+      },
+      expected:
+        '/data/models/test/fields/test: values is required for enum type',
+    },
+    {
+      name: 'enum field with empty values',
+      patch: {
+        fields: {test: {type: 'enum', values: []}},
+      },
+      expected:
+        '/data/models/test/fields/test/values must NOT have fewer than 1 items',
+    },
+    {
+      name: 'field.apis contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.query contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], query: ['sort']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "enum"',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -928,6 +968,15 @@ describe('validateValidModelFieldsConfig', () => {
         fields: {
           id: {type: 'integer', primaryKey: true},
           data: {type: 'json'},
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          status: {type: 'enum', values: ['active', 'inactive']},
         },
       },
     },
@@ -1149,6 +1198,21 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/data: type mismatch (model=json, schema=string)',
     },
+    {
+      name: 'enum field with mismatched schema type',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          required: ['status'],
+          properties: {
+            status: {type: 'number'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/status: type mismatch (model=enum, schema=number)',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1289,6 +1353,18 @@ describe('validateValidModelValidationConfig', () => {
           properties: {
             id: {type: 'integer'},
             data: {type: 'object'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field and string validation',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          properties: {
+            status: {type: 'string'},
           },
         },
       },

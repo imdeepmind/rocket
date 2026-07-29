@@ -231,12 +231,13 @@ describe('handleSql', () => {
           dec: 12.34,
           d: '2023-01-01',
           j: jsonData,
+          e: 'active',
         },
         query: {},
         body: {},
       } as never,
       reply as never,
-      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$);',
+      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$, $$e:enum$$);',
     );
 
     const values = app.db.query.mock.calls[0][1];
@@ -248,6 +249,7 @@ describe('handleSql', () => {
     expect(values[5]).toBe(12.34);
     expect(values[6]).toBe('2023-01-01');
     expect(values[7]).toBe(jsonData);
+    expect(values[8]).toBe('active');
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 

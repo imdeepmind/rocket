@@ -160,6 +160,54 @@ describe('test post api', () => {
 
       await fastify.close();
     });
+
+    test('should return 201 when enum value is valid', async () => {
+      const modelsWithStatus: Record<string, ModelConfig> = {
+        orders: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            status: {type: 'enum', values: ['pending', 'shipped', 'delivered']},
+          },
+        },
+      };
+
+      const fastify = await createTestApp(pgConfig, modelsWithStatus);
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/orders/',
+        payload: {id: 1, status: 'shipped'},
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data.status).toBe('shipped');
+
+      await fastify.close();
+    });
+
+    test('should return 400 when enum value is invalid', async () => {
+      const modelsWithStatus: Record<string, ModelConfig> = {
+        orders: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            status: {type: 'enum', values: ['pending', 'shipped', 'delivered']},
+          },
+        },
+      };
+
+      const fastify = await createTestApp(pgConfig, modelsWithStatus);
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/orders/',
+        payload: {id: 1, status: 'cancelled'}, // not in the enum values
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
   });
 
   describe('error handling', () => {
