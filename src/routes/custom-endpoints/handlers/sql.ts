@@ -4,7 +4,7 @@ import {mapDataTypeToJsonSchema} from '@/routes/schema-helpers';
 
 import {DataType} from '@/interfaces/config';
 
-import {parseMagicVariables} from '@/utils/magic-variables';
+import {parseQueryPlaceholders} from '@/utils/query-placeholders';
 
 type ParamSource = {
   body?: Record<string, unknown>;
@@ -96,9 +96,9 @@ export function buildSqlEndpoint(
   const queryProperties: Record<string, object> = {};
   const bodyProperties: Record<string, object> = {};
 
-  const magicVars = parseMagicVariables(sql);
+  const placeholders = parseQueryPlaceholders(sql);
 
-  for (const {delimiter, name, type} of magicVars) {
+  for (const {delimiter, name, type} of placeholders) {
     if (delimiter === '^^') continue;
 
     const jsonSchema = {

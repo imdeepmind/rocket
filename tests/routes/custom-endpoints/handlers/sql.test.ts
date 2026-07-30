@@ -65,7 +65,7 @@ describe('buildSqlEndpoint', () => {
     expect(result.routePath).toBe('');
   });
 
-  it('should skip header magic variables (^^) without building schema', () => {
+  it('should skip header query placeholders (^^) without building schema', () => {
     const result = buildSqlEndpoint(
       'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^ AND id = $$id:integer$$;',
       'GET',

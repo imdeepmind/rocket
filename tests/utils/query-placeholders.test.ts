@@ -1,41 +1,41 @@
 import {describe, expect, it} from 'vitest';
 
-import {parseMagicVariables} from '@/utils/magic-variables';
+import {parseQueryPlaceholders} from '@/utils/query-placeholders';
 
-describe('parseMagicVariables', () => {
-  it('should parse a single path magic variable', () => {
-    const result = parseMagicVariables(
+describe('parseQueryPlaceholders', () => {
+  it('should parse a single path query placeholder', () => {
+    const result = parseQueryPlaceholders(
       'SELECT * FROM users WHERE id = $$id:integer$$',
     );
     expect(result).toEqual([{delimiter: '$$', name: 'id', type: 'integer'}]);
   });
 
-  it('should parse a single query magic variable', () => {
-    const result = parseMagicVariables(
+  it('should parse a single query query placeholder', () => {
+    const result = parseQueryPlaceholders(
       'SELECT * FROM users WHERE name = &&name:string&&',
     );
     expect(result).toEqual([{delimiter: '&&', name: 'name', type: 'string'}]);
   });
 
-  it('should parse a single body magic variable', () => {
-    const result = parseMagicVariables(
+  it('should parse a single body query placeholder', () => {
+    const result = parseQueryPlaceholders(
       'INSERT INTO users (name) VALUES (@@name:string@@)',
     );
     expect(result).toEqual([{delimiter: '@@', name: 'name', type: 'string'}]);
   });
 
-  it('should parse multiple magic variables of different types', () => {
+  it('should parse multiple query placeholders of different types', () => {
     const sql =
       'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&';
-    const result = parseMagicVariables(sql);
+    const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([
       {delimiter: '$$', name: 'id', type: 'integer'},
       {delimiter: '&&', name: 'name', type: 'string'},
     ]);
   });
 
-  it('should parse magic variables with hyphens and underscores in names', () => {
-    const result = parseMagicVariables(
+  it('should parse query placeholders with hyphens and underscores in names', () => {
+    const result = parseQueryPlaceholders(
       'SELECT * FROM $$user-id:integer$$ WHERE &&my_field:string&& = ?',
     );
     expect(result).toEqual([
@@ -58,7 +58,7 @@ describe('parseMagicVariables', () => {
       $$j:uuid$$,
       $$k:ulid$$
     FROM test`;
-    const result = parseMagicVariables(sql);
+    const result = parseQueryPlaceholders(sql);
     expect(result).toHaveLength(11);
     expect(result[0].type).toBe('integer');
     expect(result[1].type).toBe('string');
@@ -73,40 +73,40 @@ describe('parseMagicVariables', () => {
     expect(result[10].type).toBe('ulid');
   });
 
-  it('should skip unclosed magic variables', () => {
-    const result = parseMagicVariables(
+  it('should skip unclosed query placeholders', () => {
+    const result = parseQueryPlaceholders(
       'SELECT * FROM users WHERE id = $$id:integer',
     );
     expect(result).toEqual([]);
   });
 
   it('should skip mismatched delimiter pairs', () => {
-    const result = parseMagicVariables(
+    const result = parseQueryPlaceholders(
       'SELECT * FROM users WHERE id = $$id:integer@@',
     );
     expect(result).toEqual([]);
   });
 
-  it('should return empty array for SQL with no magic variables', () => {
-    const result = parseMagicVariables('SELECT * FROM users');
+  it('should return empty array for SQL with no query placeholders', () => {
+    const result = parseQueryPlaceholders('SELECT * FROM users');
     expect(result).toEqual([]);
   });
 
   it('should handle empty string', () => {
-    const result = parseMagicVariables('');
+    const result = parseQueryPlaceholders('');
     expect(result).toEqual([]);
   });
 
-  it('should handle mixed valid and invalid magic variables', () => {
+  it('should handle mixed valid and invalid query placeholders', () => {
     const sql =
       'SELECT * FROM $$valid:int$$ WHERE x = @@unclosed:string AND y = &&ok:bool&&';
-    const result = parseMagicVariables(sql);
+    const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([{delimiter: '$$', name: 'valid', type: 'int'}]);
   });
 
-  it('should handle adjacent magic variables', () => {
+  it('should handle adjacent query placeholders', () => {
     const sql = 'SELECT * FROM $$a:int$$, $$b:int$$';
-    const result = parseMagicVariables(sql);
+    const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([
       {delimiter: '$$', name: 'a', type: 'int'},
       {delimiter: '$$', name: 'b', type: 'int'},
@@ -114,17 +114,17 @@ describe('parseMagicVariables', () => {
   });
 
   it('should extract type as empty string when no type specified', () => {
-    const result = parseMagicVariables('SELECT * FROM $$name$$');
+    const result = parseQueryPlaceholders('SELECT * FROM $$name$$');
     expect(result).toEqual([{delimiter: '$$', name: 'name', type: ''}]);
   });
 
   it('should take only the first type when multiple colons present', () => {
-    const result = parseMagicVariables('SELECT * FROM $$name:int:extra$$');
+    const result = parseQueryPlaceholders('SELECT * FROM $$name:int:extra$$');
     expect(result).toEqual([{delimiter: '$$', name: 'name', type: 'int'}]);
   });
 
-  it('should parse a single header magic variable', () => {
-    const result = parseMagicVariables(
+  it('should parse a single header query placeholder', () => {
+    const result = parseQueryPlaceholders(
       'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^',
     );
     expect(result).toEqual([
@@ -132,10 +132,10 @@ describe('parseMagicVariables', () => {
     ]);
   });
 
-  it('should parse header magic variables alongside other delimiters', () => {
+  it('should parse header query placeholders alongside other delimiters', () => {
     const sql =
       'SELECT * FROM users WHERE id = $$id:integer$$ AND key = ^^x-api-key:string^^';
-    const result = parseMagicVariables(sql);
+    const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([
       {delimiter: '$$', name: 'id', type: 'integer'},
       {delimiter: '^^', name: 'x-api-key', type: 'string'},

@@ -1,12 +1,12 @@
-export type MagicVarDelimiter = '@@' | '$$' | '&&' | '^^';
+export type PlaceholderDelimiter = '@@' | '$$' | '&&' | '^^';
 
-export type MagicVarToken = {
-  delimiter: MagicVarDelimiter;
+export type PlaceholderToken = {
+  delimiter: PlaceholderDelimiter;
   name: string;
   type: string;
 };
 
-export function parseMagicVariables(sql: string): MagicVarToken[] {
+export function parseQueryPlaceholders(sql: string): PlaceholderToken[] {
   const delims = ['@@', '$$', '&&', '^^'];
   const positions: {pos: number; type: string}[] = [];
 
@@ -20,7 +20,7 @@ export function parseMagicVariables(sql: string): MagicVarToken[] {
 
   positions.sort((a, b) => a.pos - b.pos);
 
-  const result: MagicVarToken[] = [];
+  const result: PlaceholderToken[] = [];
   for (let i = 0; i < positions.length; i += 2) {
     const start = positions[i];
     const end = positions[i + 1];
@@ -30,7 +30,7 @@ export function parseMagicVariables(sql: string): MagicVarToken[] {
     const varString = sql.substring(start.pos + 2, end.pos);
     const parts = varString.split(':');
     result.push({
-      delimiter: start.type as MagicVarDelimiter,
+      delimiter: start.type as PlaceholderDelimiter,
       name: parts[0],
       type: parts[1] ?? '',
     });

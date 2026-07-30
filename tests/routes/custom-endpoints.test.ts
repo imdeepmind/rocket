@@ -111,7 +111,7 @@ describe('test custom-endpoints api', () => {
       await fastify.close();
     });
 
-    test('should support all data types in magic variables', async () => {
+    test('should support all data types in query placeholders', async () => {
       const allTypesEndpoints = {
         allTypes: {
           method: 'POST' as const,

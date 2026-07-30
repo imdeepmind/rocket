@@ -1989,7 +1989,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
-      name: 'GET method with body magic variables (@@)',
+      name: 'GET method with body query placeholders (@@)',
       patch: {
         customEndpoints: {
           test: {
@@ -2005,7 +2005,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: body magic variables (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body query placeholders (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
@@ -2024,7 +2024,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
@@ -2043,7 +2043,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
@@ -2062,7 +2062,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
@@ -2081,7 +2081,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: mixed magic variable delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: mixed query placeholder delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
@@ -2100,7 +2100,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: unclosed magic variable delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed query placeholder delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
@@ -2119,7 +2119,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid query placeholder format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
@@ -2138,7 +2138,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
@@ -2157,7 +2157,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: missing data type for magic variable "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body (@@) parameter',
     },
     {
       name: 'invalid webhook url',
@@ -2492,7 +2492,7 @@ describe('validateValidCustomEndpointsConfig', () => {
       },
     },
     {
-      name: 'valid magic variable with hyphen and underscore',
+      name: 'valid query placeholder with hyphen and underscore',
       patch: {
         customEndpoints: {
           sample_query: {
