@@ -22,10 +22,24 @@ export default fp(
           const record = val as Record<string, unknown>;
           serverSideParams.forEach(sp => {
             if (sp.type === type) {
-              if (sp.value === '[userId]') {
-                record[sp.name] = request.user?.id;
-              } else if (sp.value === '[userEmail]') {
-                record[sp.name] = request.user?.email;
+              if (
+                typeof sp.value === 'string' &&
+                sp.value.startsWith('[') &&
+                sp.value.endsWith(']') &&
+                sp.value.length > 2
+              ) {
+                const varName = sp.value.slice(1, -1);
+                const customVal =
+                  fastify.appConfig.application.magicVariables?.[varName];
+                if (customVal !== undefined) {
+                  record[sp.name] = customVal;
+                } else if (varName === 'userId') {
+                  record[sp.name] = request.user?.id;
+                } else if (varName === 'userEmail') {
+                  record[sp.name] = request.user?.email;
+                } else {
+                  record[sp.name] = sp.value;
+                }
               } else {
                 record[sp.name] = sp.value;
               }

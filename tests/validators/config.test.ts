@@ -1813,6 +1813,16 @@ describe('validateInvalidApplicationConfig', () => {
       expected:
         '/application/logLevel must be equal to one of the allowed values',
     },
+    {
+      name: 'magicVariables as null',
+      patch: {magicVariables: null},
+      expected: '/application/magicVariables must be object',
+    },
+    {
+      name: 'magicVariables value as null',
+      patch: {magicVariables: {tenant: null}},
+      expected: '/application/magicVariables/tenant must be string',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1846,6 +1856,38 @@ describe('validateValidApplicationConfig', () => {
     {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
     {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
     {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
+    {
+      name: 'magicVariables with string values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', region: 'us-east'},
+      },
+    },
+    {
+      name: 'magicVariables with number values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {maxRetries: 3, timeout: 5000},
+      },
+    },
+    {
+      name: 'magicVariables with boolean values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {isProduction: true, featureEnabled: false},
+      },
+    },
+    {
+      name: 'magicVariables with mixed types',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', maxRetries: 3, isProduction: true},
+      },
+    },
   ])('Scenario: $name . should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1989,7 +2031,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
-      name: 'GET method with body magic variables (@@)',
+      name: 'GET method with body query placeholders (@@)',
       patch: {
         customEndpoints: {
           test: {
@@ -2005,7 +2047,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: body magic variables (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body query placeholders (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
@@ -2024,7 +2066,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
@@ -2043,7 +2085,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
@@ -2062,7 +2104,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
@@ -2081,7 +2123,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: mixed magic variable delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: mixed query placeholder delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
@@ -2100,7 +2142,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: unclosed magic variable delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed query placeholder delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
@@ -2119,7 +2161,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid query placeholder format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
@@ -2138,7 +2180,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
@@ -2157,7 +2199,26 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: missing data type for magic variable "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body (@@) parameter',
+    },
+    {
+      name: 'Invalid header variable name',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = ^^x api key:string^^;',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "x api key" for header (^^) parameter',
     },
     {
       name: 'invalid webhook url',
@@ -2492,7 +2553,7 @@ describe('validateValidCustomEndpointsConfig', () => {
       },
     },
     {
-      name: 'valid magic variable with hyphen and underscore',
+      name: 'valid query placeholder with hyphen and underscore',
       patch: {
         customEndpoints: {
           sample_query: {
