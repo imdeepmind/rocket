@@ -38,6 +38,7 @@ import {AppConfig} from '@/interfaces/config';
 
 vi.mock('fastify', () => {
   let appConfig: AppConfig | undefined;
+  const storedHooks: Record<string, unknown[]> = {};
   const mockApp = {
     register: vi.fn(async (plugin: unknown) => {
       if (typeof plugin === 'function') {
@@ -48,7 +49,11 @@ vi.mock('fastify', () => {
         }
       }
     }),
-    addHook: vi.fn(),
+    addHook: vi.fn((name: string, fn: unknown) => {
+      if (!storedHooks[name]) storedHooks[name] = [];
+      storedHooks[name].push(fn);
+    }),
+    getHook: (name: string) => storedHooks[name],
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
     close: vi.fn(),
@@ -170,6 +175,7 @@ const mockConfig: AppConfig = {
 type MockedApp = FastifyInstance & {
   register: ReturnType<typeof vi.fn>;
   addHook: ReturnType<typeof vi.fn>;
+  getHook: (name: string) => unknown[] | undefined;
   setErrorHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
@@ -485,6 +491,29 @@ describe('Server', () => {
     const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
     expect(Array.isArray(routes)).toBe(true);
+  });
+
+  it('should call enforceSSP in the global preValidation hook', async () => {
+    const {app} = await startServer(mockConfig, 3000, 'dev');
+    const mockApp = app as MockedApp;
+
+    const preValidationHooks = mockApp.getHook('preValidation');
+    expect(preValidationHooks).toBeDefined();
+    expect(preValidationHooks!.length).toBeGreaterThan(0);
+
+    const mockRequest = {
+      routeOptions: {config: {apiIdentifier: 'test'}},
+      query: {},
+      body: {},
+      params: {},
+    };
+    const enforceSSP = vi.fn();
+    (mockApp as unknown as Record<string, unknown>).enforceSSP = enforceSSP;
+    for (const hook of preValidationHooks!) {
+      await (hook as (...args: unknown[]) => unknown)(mockRequest);
+    }
+
+    expect(enforceSSP).toHaveBeenCalledWith(mockRequest);
   });
 
   describe('Redis and Rate Limit Configuration', () => {

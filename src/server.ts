@@ -131,6 +131,10 @@ export async function startServer(
   // register all config-driven routes under /api prefix (swagger excluded)
   await app.register(
     async app => {
+      app.addHook('preValidation', async request => {
+        app.enforceSSP(request);
+      });
+
       registerRoutes(app, config);
 
       // register auth routes (only when up-auth is configured and enabled)

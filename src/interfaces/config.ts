@@ -50,7 +50,7 @@ export type JsonSchemaObject = {
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'response';
 export type AuthProviderType = 'api-key' | 'up-auth';
-export type ServerParamType = 'path' | 'query' | 'body';
+export type ServerSideParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
 export type RelationType = 'belongsTo';
 export type ForeignKeyAction =
@@ -194,8 +194,8 @@ export interface ModelAPIConfig {
   };
 }
 
-export interface ServerParamConfig {
-  type: ServerParamType;
+export interface ServerSideParamConfig {
+  type: ServerSideParamType;
   name: string;
   value: number | string | boolean;
 }
@@ -205,7 +205,7 @@ export interface ApisConfig {
     enabled?: boolean;
     tags?: string[];
     webhooks?: WebhookConfig[];
-    serverParams?: ServerParamConfig[];
+    serverSideParams?: ServerSideParamConfig[];
     authorization?: boolean;
     supportedAggregations?: Aggregation[];
     supportedQueries?: QueryOperation[];

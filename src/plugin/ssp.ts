@@ -1,7 +1,9 @@
 import {FastifyInstance, FastifyRequest} from 'fastify';
 import fp from 'fastify-plugin';
 
-import {ServerParamConfig, ServerParamType} from '@/interfaces/config';
+import {stripServerSideParamsFromSchema} from '@/routes/schema-helpers';
+
+import {ServerSideParamConfig, ServerSideParamType} from '@/interfaces/config';
 
 export default fp(
   async (fastify: FastifyInstance) => {
@@ -11,14 +13,14 @@ export default fp(
         return;
       }
 
-      const serverParams: ServerParamConfig[] =
-        fastify.appConfig.apis?.[apiIdentifier]?.serverParams ?? [];
-      if (!serverParams.length) return;
+      const serverSideParams: ServerSideParamConfig[] =
+        fastify.appConfig.apis?.[apiIdentifier]?.serverSideParams ?? [];
+      if (!serverSideParams.length) return;
 
-      const apply = (val: unknown, type: ServerParamType) => {
+      const apply = (val: unknown, type: ServerSideParamType) => {
         if (val && typeof val === 'object' && !Array.isArray(val)) {
           const record = val as Record<string, unknown>;
-          serverParams.forEach(sp => {
+          serverSideParams.forEach(sp => {
             if (sp.type === type) {
               if (sp.value === '[userId]') {
                 record[sp.name] = request.user?.id;
@@ -38,6 +40,21 @@ export default fp(
     }
 
     fastify.decorate('enforceSSP', enforceSSP);
+
+    fastify.addHook('onRoute', routeOptions => {
+      const apiIdentifier = routeOptions.config?.apiIdentifier;
+      if (!apiIdentifier) return;
+
+      const serverSideParams =
+        fastify.appConfig.apis?.[apiIdentifier]?.serverSideParams;
+      if (!serverSideParams?.length) return;
+      if (!routeOptions.schema) return;
+
+      stripServerSideParamsFromSchema(
+        routeOptions.schema as Record<string, unknown>,
+        serverSideParams,
+      );
+    });
   },
   {
     name: 'ssp-plugin',

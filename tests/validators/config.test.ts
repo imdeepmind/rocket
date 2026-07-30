@@ -4389,34 +4389,34 @@ describe('validateInvalidSspConfig', () => {
   it.each([
     {
       name: 'invalid ssp config param type',
-      patch: {serverParams: [{type: 'invalid', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'invalid', name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param type',
-      patch: {serverParams: [{type: 132, name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 132, name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param name',
-      patch: {serverParams: [{type: 'body', name: 123, value: '1'}]},
+      patch: {serverSideParams: [{type: 'body', name: 123, value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/name must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/name must be string',
     },
     {
       name: 'invalid ssp config param value',
-      patch: {serverParams: [{type: 'body', name: 'id', value: null}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: null}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/value must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/value must be string',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
         'customAPIs.customQueries.all.sample_query': {
-          serverParams: patch.serverParams,
+          serverSideParams: patch.serverSideParams,
         },
       },
     };
@@ -4432,30 +4432,30 @@ describe('validateValidSspConfig', () => {
   it.each([
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: 1}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: 1}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: true}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: true}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'query', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'query', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'path', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'path', name: 'id', value: '1'}]},
     },
   ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: {
         'model.v1.posts.unknown.getAll': {
-          serverParams: patch.serverParams,
+          serverSideParams: patch.serverSideParams,
         },
       },
     };

@@ -406,7 +406,7 @@ const customEndpointSchema = {
   },
 };
 
-const serverParamSchema = {
+const serverSideParamSchema = {
   type: 'object',
   required: ['type', 'name', 'value'],
   additionalProperties: false,
@@ -453,9 +453,9 @@ const apisSchema = {
           items: webhookSchema,
           minItems: 1,
         },
-        serverParams: {
+        serverSideParams: {
           type: 'array',
-          items: serverParamSchema,
+          items: serverSideParamSchema,
           minItems: 1,
         },
         tags: {
