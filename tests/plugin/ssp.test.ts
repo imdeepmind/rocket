@@ -310,4 +310,286 @@ describe('ssp plugin', () => {
 
     expect(request.query).toEqual({ownerId: undefined});
   });
+
+  it('should handle apiIdentifier not found in apis config', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+    await app.ready();
+
+    app.enforceSSP({
+      query: {foo: 'bar'},
+      routeOptions: {
+        config: {apiIdentifier: 'unknown-api'},
+      },
+    } as unknown as FastifyRequest);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests for onRoute hook – strips SSP from route schemas
+// ---------------------------------------------------------------------------
+describe('ssp plugin – onRoute hook', () => {
+  it('should strip query SSP params from route schema querystring', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [
+            {type: 'query', name: 'tenantId', value: 'tenant-1'},
+          ],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.config?.apiIdentifier === 'test-api') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.get('/test', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            tenantId: {type: 'string'},
+            name: {type: 'string'},
+          },
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const qs = schema.querystring as Record<string, unknown>;
+    const props = qs.properties as Record<string, unknown>;
+    expect(props).not.toHaveProperty('tenantId');
+    expect(props).toHaveProperty('name');
+  });
+
+  it('should strip query filter variants from route schema', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [{type: 'query', name: 'org_id', value: '123'}],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.config?.apiIdentifier === 'test-api') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.get('/test', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            org_id_eq: {type: 'string'},
+            org_id_lt: {type: 'string'},
+            name_eq: {type: 'string'},
+          },
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const qs = schema.querystring as Record<string, unknown>;
+    const props = qs.properties as Record<string, unknown>;
+    expect(props).not.toHaveProperty('org_id_eq');
+    expect(props).not.toHaveProperty('org_id_lt');
+    expect(props).toHaveProperty('name_eq');
+  });
+
+  it('should strip body SSP params from route schema body', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [{type: 'body', name: 'org_id', value: 'abc'}],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.config?.apiIdentifier === 'test-api') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.post('/test', {
+      schema: {
+        body: {
+          type: 'object',
+          properties: {org_id: {type: 'string'}, name: {type: 'string'}},
+          required: ['org_id', 'name'],
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const body = schema.body as Record<string, unknown>;
+    const props = body.properties as Record<string, unknown>;
+    expect(props).not.toHaveProperty('org_id');
+    expect(props).toHaveProperty('name');
+    expect(body.required).toEqual(['name']);
+  });
+
+  it('should NOT strip path SSP params from route schema', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [{type: 'path', name: 'id', value: '456'}],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.config?.apiIdentifier === 'test-api') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.get('/test/:id', {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {id: {type: 'integer'}},
+          required: ['id'],
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const params = schema.params as Record<string, unknown>;
+    const props = params.properties as Record<string, unknown>;
+    expect(props).toHaveProperty('id');
+  });
+
+  it('should not modify schema when api has no serverSideParams', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {},
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.config?.apiIdentifier === 'test-api') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.get('/test', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {tenantId: {type: 'string'}},
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const qs = schema.querystring as Record<string, unknown>;
+    const props = qs.properties as Record<string, unknown>;
+    expect(props).toHaveProperty('tenantId');
+  });
+
+  it('should not modify schema when route has no apiIdentifier', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    let capturedSchema: unknown;
+    app.addHook('onRoute', routeOptions => {
+      if (routeOptions.url === '/test-no-ssp') {
+        capturedSchema = routeOptions.schema;
+      }
+    });
+
+    app.get('/test-no-ssp', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {tenantId: {type: 'string'}},
+        },
+      },
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+
+    const schema = capturedSchema as Record<string, unknown>;
+    const qs = schema.querystring as Record<string, unknown>;
+    const props = qs.properties as Record<string, unknown>;
+    expect(props).toHaveProperty('tenantId');
+  });
+
+  it('should handle routes without a schema gracefully', async () => {
+    const app = Fastify();
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
+        },
+      },
+    } as unknown as AppConfig;
+    await app.register(sspPlugin);
+
+    app.get('/no-schema', {
+      config: {apiIdentifier: 'test-api'},
+      handler: async () => ({ok: true}),
+    });
+
+    await app.ready();
+  });
 });

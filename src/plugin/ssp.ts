@@ -1,6 +1,8 @@
 import {FastifyInstance, FastifyRequest} from 'fastify';
 import fp from 'fastify-plugin';
 
+import {stripServerSideParamsFromSchema} from '@/routes/schema-helpers';
+
 import {ServerSideParamConfig, ServerSideParamType} from '@/interfaces/config';
 
 export default fp(
@@ -38,6 +40,21 @@ export default fp(
     }
 
     fastify.decorate('enforceSSP', enforceSSP);
+
+    fastify.addHook('onRoute', routeOptions => {
+      const apiIdentifier = routeOptions.config?.apiIdentifier;
+      if (!apiIdentifier) return;
+
+      const serverSideParams =
+        fastify.appConfig.apis?.[apiIdentifier]?.serverSideParams;
+      if (!serverSideParams?.length) return;
+      if (!routeOptions.schema) return;
+
+      stripServerSideParamsFromSchema(
+        routeOptions.schema as Record<string, unknown>,
+        serverSideParams,
+      );
+    });
   },
   {
     name: 'ssp-plugin',
