@@ -7,6 +7,9 @@
             "enabled": true,
             "max": 1000,
             "timeWindow": "15m"
+        },
+        "magicVariables": {
+            "defaultOrg": "rocket-oss"
         }
     },
     "docs": {
@@ -226,6 +229,11 @@
                     "type": "query",
                     "name": "operations",
                     "value": "min"
+                },
+                {
+                    "type": "query",
+                    "name": "orgId",
+                    "value": "[defaultOrg]"
                 }
             ]
         },

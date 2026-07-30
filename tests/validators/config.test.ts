@@ -1813,6 +1813,16 @@ describe('validateInvalidApplicationConfig', () => {
       expected:
         '/application/logLevel must be equal to one of the allowed values',
     },
+    {
+      name: 'magicVariables as null',
+      patch: {magicVariables: null},
+      expected: '/application/magicVariables must be object',
+    },
+    {
+      name: 'magicVariables value as null',
+      patch: {magicVariables: {tenant: null}},
+      expected: '/application/magicVariables/tenant must be string',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1846,6 +1856,38 @@ describe('validateValidApplicationConfig', () => {
     {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
     {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
     {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
+    {
+      name: 'magicVariables with string values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', region: 'us-east'},
+      },
+    },
+    {
+      name: 'magicVariables with number values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {maxRetries: 3, timeout: 5000},
+      },
+    },
+    {
+      name: 'magicVariables with boolean values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {isProduction: true, featureEnabled: false},
+      },
+    },
+    {
+      name: 'magicVariables with mixed types',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', maxRetries: 3, isProduction: true},
+      },
+    },
   ])('Scenario: $name . should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,

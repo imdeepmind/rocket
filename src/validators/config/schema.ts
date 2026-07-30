@@ -64,6 +64,13 @@ const applicationSchema = {
       maxLength: 25,
       pattern: '^[a-zA-Z0-9_-]+$',
     },
+    magicVariables: {
+      type: 'object',
+      additionalProperties: {
+        anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
+      },
+      minProperties: 1,
+    },
   },
 };
 

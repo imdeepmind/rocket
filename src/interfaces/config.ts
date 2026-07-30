@@ -148,6 +148,7 @@ export interface ApplicationConfig {
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
   dangerouslyOverrideDefaultVariant?: string;
+  magicVariables?: Record<string, string | number | boolean>;
 }
 
 export interface WebhookConfig {
