@@ -3338,6 +3338,26 @@ describe('validateInvalidmodelConfig', () => {
       expected:
         'apis/model.v1.users.unknown.getAll/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")',
     },
+    {
+      name: 'supportedQueries with operation not supported by any field',
+      patch: {
+        'model.v1.users.id.index': {
+          supportedQueries: ['in'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.id.index/supportedQueries: "in" is not supported by any field in model "users"',
+    },
+    {
+      name: 'supportedAggregations with aggregation not supported by any field',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedAggregations: ['avg'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedAggregations: "avg" is not supported by any field in model "users"',
+    },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3425,11 +3445,11 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.users.name.index': {
-          supportedQueries: ['lt', 'gt', 'eq'],
+        'model.v1.posts.user_id.index': {
+          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
         },
-        'aggregate.v1.users.name.getAggregation': {
-          supportedAggregations: ['count', 'sum'],
+        'aggregate.v1.posts.title.getAggregation': {
+          supportedAggregations: ['count'],
         },
       },
     },

@@ -79,6 +79,23 @@ function validateApisConstraints(config: AppConfig): string[] {
       );
     }
 
+    if (supportedQueries && key.startsWith('model.')) {
+      const modelName = parts[2];
+      const model = config.data.models[modelName];
+      if (model) {
+        const allFieldQueries = new Set(
+          Object.values(model.fields).flatMap(f => f.query || []),
+        );
+        for (const op of supportedQueries) {
+          if (!allFieldQueries.has(op)) {
+            errors.push(
+              `apis/${key}/supportedQueries: "${op}" is not supported by any field in model "${modelName}"`,
+            );
+          }
+        }
+      }
+    }
+
     // validate supportedAggregations is only allowed on aggregate APIs
     const supportedAggregations =
       apisConfigurations[key]?.supportedAggregations;
@@ -86,6 +103,23 @@ function validateApisConstraints(config: AppConfig): string[] {
       errors.push(
         `apis/${key}/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")`,
       );
+    }
+
+    if (supportedAggregations && key.startsWith('aggregate.')) {
+      const modelName = parts[2];
+      const model = config.data.models[modelName];
+      if (model) {
+        const allFieldAggregations = new Set(
+          Object.values(model.fields).flatMap(f => f.aggregations || []),
+        );
+        for (const agg of supportedAggregations) {
+          if (!allFieldAggregations.has(agg)) {
+            errors.push(
+              `apis/${key}/supportedAggregations: "${agg}" is not supported by any field in model "${modelName}"`,
+            );
+          }
+        }
+      }
     }
   }
 
