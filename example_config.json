@@ -230,7 +230,7 @@
             ]
         },
         "model.test.users.unknown.getAll": {
-            "supportedQueries": ["eq", "lt", "gt"]
+            "supportedQueries": ["eq"]
         },
         "model.test.users.id.index": {
             "supportedQueries": ["eq", "sort"]
