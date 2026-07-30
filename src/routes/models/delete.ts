@@ -78,6 +78,8 @@ export function registerDeleteRoutes(
           config.authentication?.enabled ??
           false;
 
+        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
         registerDeleteEndpoint(
           app,
           config,
@@ -88,6 +90,7 @@ export function registerDeleteRoutes(
           variant,
           variantApiIdentifier,
           variantAuthorization,
+          variantTags,
         );
       }
     }
@@ -104,6 +107,7 @@ function registerDeleteEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
@@ -112,6 +116,7 @@ function registerDeleteEndpoint(
     modelName,
     config,
     authorization,
+    routeTags,
   );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
@@ -161,13 +166,14 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
   const schema: Record<string, unknown> = {
     summary: `Delete ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
     description: `Delete records from ${capitalizeFirstLetter(modelName)} table where ${fieldName} matches the provided value`,
-    tags: [capitalizeFirstLetter(modelName), 'Delete'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Delete'],
     params: {
       type: 'object',
       properties: {

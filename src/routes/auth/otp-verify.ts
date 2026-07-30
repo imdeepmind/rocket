@@ -36,6 +36,8 @@ function registerOtpVerifyBase(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerOtpVerifyEndpoint(
     app,
     config,
@@ -46,6 +48,7 @@ function registerOtpVerifyBase(
     path,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -68,6 +71,8 @@ function registerOtpVerifyBase(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerOtpVerifyEndpoint(
       app,
       config,
@@ -78,6 +83,7 @@ function registerOtpVerifyBase(
       path,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -92,11 +98,13 @@ function registerOtpVerifyEndpoint(
   path: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
+    routeTags,
   );
 
   const routePath = `/${variant}${path}`;
@@ -237,6 +245,7 @@ function generateSchema(
   usernameField: string,
   model: string,
   action: 'login' | 'register' | 'forgotPassword',
+  routeTags?: string[],
 ) {
   const isForgotPassword = action === 'forgotPassword';
 
@@ -290,7 +299,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Verify OTP for ${capitalizeFirstLetter(model)} ${action}`,
     description: `Verifies the OTP sent to the user's email during ${action}.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'OTP'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'OTP'],
     body: bodySchema,
     response: responseSchema,
   };

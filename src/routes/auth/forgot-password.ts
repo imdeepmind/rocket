@@ -31,6 +31,8 @@ export function registerForgotPasswordRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerForgotPasswordEndpoint(
     app,
     config,
@@ -38,6 +40,7 @@ export function registerForgotPasswordRoute(
     usernameField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -60,6 +63,8 @@ export function registerForgotPasswordRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerForgotPasswordEndpoint(
       app,
       config,
@@ -67,6 +72,7 @@ export function registerForgotPasswordRoute(
       usernameField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -78,8 +84,13 @@ function registerForgotPasswordEndpoint(
   usernameField: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
-  const schema: Record<string, unknown> = generateSchema(usernameField, model);
+  const schema: Record<string, unknown> = generateSchema(
+    usernameField,
+    model,
+    routeTags,
+  );
 
   const path = `/${variant}/auth/forgot-password`;
 
@@ -126,7 +137,11 @@ function registerForgotPasswordEndpoint(
   );
 }
 
-function generateSchema(usernameField: string, model: string) {
+function generateSchema(
+  usernameField: string,
+  model: string,
+  routeTags?: string[],
+) {
   const bodySchema = {
     type: 'object',
     required: [usernameField],
@@ -152,7 +167,7 @@ function generateSchema(usernameField: string, model: string) {
   const schema: Record<string, unknown> = {
     summary: `Forgot password for ${capitalizeFirstLetter(model)}`,
     description: "Sends an OTP to the user's email for password reset.",
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
     body: bodySchema,
     response: responseSchema,
   };

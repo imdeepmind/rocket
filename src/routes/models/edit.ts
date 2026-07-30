@@ -85,6 +85,8 @@ export function registerEditRoutes(
           config.authentication?.enabled ??
           false;
 
+        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
         registerEditEndpoint(
           app,
           config,
@@ -95,6 +97,7 @@ export function registerEditRoutes(
           variant,
           variantApiIdentifier,
           variantAuthorization,
+          variantTags,
         );
       }
     }
@@ -111,6 +114,7 @@ function registerEditEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const isUnique = field.primaryKey || field.unique;
   const paramSchema = mapDataTypeToJsonSchema(field.type);
@@ -157,7 +161,7 @@ function registerEditEndpoint(
     const schema: Record<string, unknown> = {
       summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(modelName)} record(s) by ${fieldName}`,
       description: `${method} update on records from the database by ${fieldName}`,
-      tags: [capitalizeFirstLetter(modelName), 'Update'],
+      tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Update'],
       params: {
         type: 'object',
         properties: {

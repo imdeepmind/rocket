@@ -81,6 +81,8 @@ export function registerIndexRoutes(
           config.authentication?.enabled ??
           false;
 
+        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
         registerIndexEndpoint(
           app,
           config,
@@ -91,6 +93,7 @@ export function registerIndexRoutes(
           variant,
           variantApiIdentifier,
           variantAuthorization,
+          variantTags,
         );
       }
     }
@@ -107,12 +110,21 @@ function registerIndexEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const {
     schema,
     isUnique,
   }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
-    generateSchema(fieldName, field, model, modelName, config, authorization);
+    generateSchema(
+      fieldName,
+      field,
+      model,
+      modelName,
+      config,
+      authorization,
+      routeTags,
+    );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
 
@@ -234,6 +246,7 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
@@ -261,7 +274,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Get ${capitalizeFirstLetter(modelName)} record(s) by ${fieldName}`,
     description: `Get ${modelName} record(s) from the database by ${fieldName}`,
-    tags: [capitalizeFirstLetter(modelName), 'Read'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
     params: {
       type: 'object',
       properties: {

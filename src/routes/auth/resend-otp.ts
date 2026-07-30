@@ -35,6 +35,8 @@ function registerResendOtpBase(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerResendOtpEndpoint(
     app,
     config,
@@ -44,6 +46,7 @@ function registerResendOtpBase(
     path,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -66,6 +69,8 @@ function registerResendOtpBase(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerResendOtpEndpoint(
       app,
       config,
@@ -75,6 +80,7 @@ function registerResendOtpBase(
       path,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -88,11 +94,13 @@ function registerResendOtpEndpoint(
   path: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
+    routeTags,
   );
 
   const routePath = `/${variant}${path}`;
@@ -166,7 +174,12 @@ export function registerForgotPasswordResendOtpRoute(
   );
 }
 
-function generateSchema(usernameField: string, model: string, action: string) {
+function generateSchema(
+  usernameField: string,
+  model: string,
+  action: string,
+  routeTags?: string[],
+) {
   const bodySchema = {
     type: 'object',
     required: [usernameField],
@@ -192,7 +205,7 @@ function generateSchema(usernameField: string, model: string, action: string) {
   const schema: Record<string, unknown> = {
     summary: `Resend OTP for ${capitalizeFirstLetter(model)} ${action}`,
     description: `Resends an OTP to the user's email for ${action}.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'OTP'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'OTP'],
     body: bodySchema,
     response: responseSchema,
   };

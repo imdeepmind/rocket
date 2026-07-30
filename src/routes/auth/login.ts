@@ -32,6 +32,8 @@ export function registerLoginRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerLoginEndpoint(
     app,
     config,
@@ -41,6 +43,7 @@ export function registerLoginRoute(
     upConfig,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -63,6 +66,8 @@ export function registerLoginRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerLoginEndpoint(
       app,
       config,
@@ -72,6 +77,7 @@ export function registerLoginRoute(
       upConfig,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -85,12 +91,14 @@ function registerLoginEndpoint(
   upConfig: UpAuthProviderConfig,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     passwordField,
     model,
     upConfig.mfaRequired ?? false,
+    routeTags,
   );
 
   const path = `/${variant}/auth/login`;
@@ -160,6 +168,7 @@ function generateSchema(
   passwordField: string,
   model: string,
   mfaRequired: boolean,
+  routeTags?: string[],
 ) {
   const bodySchema = {
     type: 'object',
@@ -191,7 +200,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Login for ${capitalizeFirstLetter(model)}`,
     description: `Authenticates a user from the "${model}" table and returns a JWT access token.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Login'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Login'],
     body: bodySchema,
     response: responseSchema,
   };

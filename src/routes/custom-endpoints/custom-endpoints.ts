@@ -38,6 +38,7 @@ export function registerCustomEndpointRoutes(
       config.apis?.[defaultApiIdentifier]?.authorization ??
       config.authentication?.enabled ??
       false;
+    const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
 
     registerCustomEndpoint(
       app,
@@ -47,6 +48,7 @@ export function registerCustomEndpointRoutes(
       defaultVariant,
       defaultApiIdentifier,
       defaultAuthorization,
+      defaultTags,
     );
 
     const baseIdentifier = buildApiIdentifier(
@@ -73,6 +75,7 @@ export function registerCustomEndpointRoutes(
         config.apis?.[variantApiIdentifier]?.authorization ??
         config.authentication?.enabled ??
         false;
+      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
 
       registerCustomEndpoint(
         app,
@@ -82,6 +85,7 @@ export function registerCustomEndpointRoutes(
         variant,
         variantApiIdentifier,
         variantAuthorization,
+        variantTags,
       );
     }
   }
@@ -95,11 +99,13 @@ function registerCustomEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const {schema, routePathSuffix} = generateSchema(
     config,
     endpoint,
     authorization,
+    routeTags,
   );
   const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
 
@@ -136,6 +142,7 @@ function generateSchema(
   config: AppConfig,
   endpoint: CustomEndpointConfig,
   authorization: boolean,
+  routeTags?: string[],
 ): {
   schema: Record<string, unknown>;
   routePathSuffix: string;
@@ -143,7 +150,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Custom Endpoint: ${endpoint.path}`,
     description: endpoint.description,
-    tags: ['Custom Endpoints'],
+    tags: routeTags ?? ['Custom Endpoints'],
   };
 
   let routePathSuffix = '';

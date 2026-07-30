@@ -34,6 +34,8 @@ export function registerEmailChangeRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerEmailChangeEndpoint(
     app,
     config,
@@ -43,6 +45,7 @@ export function registerEmailChangeRoute(
     isVerifiedField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -65,6 +68,8 @@ export function registerEmailChangeRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerEmailChangeEndpoint(
       app,
       config,
@@ -74,6 +79,7 @@ export function registerEmailChangeRoute(
       isVerifiedField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -87,8 +93,13 @@ function registerEmailChangeEndpoint(
   isVerifiedField: string | undefined,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
-  const schema: Record<string, unknown> = generateSchema(usernameField, model);
+  const schema: Record<string, unknown> = generateSchema(
+    usernameField,
+    model,
+    routeTags,
+  );
 
   const path = `/${variant}/auth/user/email`;
 
@@ -169,7 +180,11 @@ function registerEmailChangeEndpoint(
   );
 }
 
-function generateSchema(usernameField: string, model: string) {
+function generateSchema(
+  usernameField: string,
+  model: string,
+  routeTags?: string[],
+) {
   const bodySchema = {
     type: 'object',
     required: [usernameField],
@@ -195,7 +210,7 @@ function generateSchema(usernameField: string, model: string) {
   const schema: Record<string, unknown> = {
     summary: `Change email for ${capitalizeFirstLetter(model)}`,
     description: `Updates the email address for the authenticated user in the "${model}" table and sends an OTP to the new email.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],
