@@ -1,5 +1,7 @@
 import {AppConfig} from '@/interfaces/config';
 
+import {parseMagicVariables} from '@/utils/magic-variables';
+
 import {ajv} from './schema';
 
 function validateCustomAPIs(config: AppConfig): string[] {
@@ -60,22 +62,17 @@ function validateCustomAPIs(config: AppConfig): string[] {
       }
 
       // Magic variables validation
-      const delims = ['@@', '$$', '&&'];
-      const foundDelims: {pos: number; type: string}[] = [];
+      // Structural check: unclosed or mismatched delimiters
+      const delimRegex = /(@@|\$\$|&&)/g;
+      const delims: {pos: number; type: string}[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = delimRegex.exec(endpoint.handler.sql)) !== null) {
+        delims.push({pos: match.index, type: match[1]});
+      }
 
-      delims.forEach(d => {
-        let pos = endpoint.handler.sql.indexOf(d);
-        while (pos !== -1) {
-          foundDelims.push({pos, type: d});
-          pos = endpoint.handler.sql.indexOf(d, pos + 2);
-        }
-      });
-
-      foundDelims.sort((a, b) => a.pos - b.pos);
-
-      for (let i = 0; i < foundDelims.length; i += 2) {
-        const start = foundDelims[i];
-        const end = foundDelims[i + 1];
+      for (let i = 0; i < delims.length; i += 2) {
+        const start = delims[i];
+        const end = delims[i + 1];
 
         if (!end) {
           errors.push(
@@ -88,51 +85,63 @@ function validateCustomAPIs(config: AppConfig): string[] {
           errors.push(
             `${path}/handler/sql: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
           );
-          continue;
         }
+      }
 
-        const varString = endpoint.handler.sql.substring(
-          start.pos + 2,
-          end.pos,
+      // Check for multiple type declarations in magic variables
+      const multiTypeRegex =
+        /(@@|\$\$|&&)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+      let mtMatch: RegExpExecArray | null;
+      while ((mtMatch = multiTypeRegex.exec(endpoint.handler.sql)) !== null) {
+        const varString = mtMatch[0].slice(
+          mtMatch[1].length,
+          -mtMatch[1].length,
         );
-        const parts = varString.split(':');
-        const varName = parts[0];
-        const varType = parts[1];
+        errors.push(
+          `${path}/handler/sql: invalid magic variable format "${varString}", multiple types provided`,
+        );
+      }
+
+      // Per-variable validation
+      const magicVars = parseMagicVariables(endpoint.handler.sql);
+      const validTypes = [
+        'integer',
+        'string',
+        'boolean',
+        'text',
+        'datetime',
+        'decimal',
+        'date',
+        'json',
+        'enum',
+        'uuid',
+        'ulid',
+      ];
+      for (const {delimiter, name: varName, type: varType} of magicVars) {
         const typeName =
-          start.type === '@@'
+          delimiter === '@@'
             ? 'body (@@)'
-            : start.type === '$$'
+            : delimiter === '$$'
               ? 'path ($$)'
               : 'query (&&)';
 
-        // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
         if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
           errors.push(
             `${path}/handler/sql: invalid magic variable name "${varName}" for ${typeName} parameter`,
           );
         }
 
-        // 2. Validate datatype
-        if (parts.length > 2) {
-          errors.push(
-            `${path}/handler/sql: invalid magic variable format "${varString}", multiple types provided`,
-          );
-        } else if (!varType) {
+        if (!varType) {
           errors.push(
             `${path}/handler/sql: missing data type for magic variable "${varName}" in ${typeName} parameter`,
           );
-        } else if (
-          !['integer', 'string', 'boolean', 'text', 'datetime'].includes(
-            varType,
-          )
-        ) {
+        } else if (!validTypes.includes(varType)) {
           errors.push(
             `${path}/handler/sql: invalid magic variable type "${varType}" for ${typeName} parameter`,
           );
         }
 
-        // 3. GET method should not have body magic variables (@@)
-        if (endpoint.method === 'GET' && start.type === '@@') {
+        if (endpoint.method === 'GET' && delimiter === '@@') {
           errors.push(
             `${path}/handler/sql: body magic variables (@@) are not allowed for GET method`,
           );

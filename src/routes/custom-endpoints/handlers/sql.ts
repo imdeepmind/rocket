@@ -4,6 +4,8 @@ import {mapDataTypeToJsonSchema} from '@/routes/schema-helpers';
 
 import {DataType} from '@/interfaces/config';
 
+import {parseMagicVariables} from '@/utils/magic-variables';
+
 type ParamSource = {
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
@@ -34,8 +36,12 @@ const cast = (value: unknown, type: DataType): unknown => {
     case 'decimal':
       return Number(value);
     case 'json':
-      return value;
+      return typeof value === 'string' ? JSON.parse(value) : value;
     case 'enum':
+      return String(value);
+    case 'uuid':
+      return String(value);
+    case 'ulid':
       return String(value);
     default:
       return String(value);
@@ -86,42 +92,20 @@ export function buildSqlEndpoint(
   const queryProperties: Record<string, object> = {};
   const bodyProperties: Record<string, object> = {};
 
-  const delims = ['@@', '$$', '&&'];
-  const foundDelims: {pos: number; type: string}[] = [];
+  const magicVars = parseMagicVariables(sql);
 
-  delims.forEach(d => {
-    let pos = sql.indexOf(d);
-    while (pos !== -1) {
-      foundDelims.push({pos, type: d});
-      pos = sql.indexOf(d, pos + 2);
-    }
-  });
-
-  foundDelims.sort((a, b) => a.pos - b.pos);
-
-  for (let i = 0; i < foundDelims.length; i += 2) {
-    const start = foundDelims[i];
-    const end = foundDelims[i + 1];
-
-    if (!end || start.type !== end.type) continue;
-
-    const varString = sql.substring(start.pos + 2, end.pos);
-    const parts = varString.split(':');
-
-    const varName = parts[0];
-    const varTypeStr = parts[1];
-
+  for (const {delimiter, name, type} of magicVars) {
     const jsonSchema = {
-      ...mapDataTypeToJsonSchema(varTypeStr as DataType),
-      description: `Custom ${start.type === '@@' ? 'body' : start.type === '&&' ? 'query' : 'path'} parameter`,
+      ...mapDataTypeToJsonSchema(type as DataType),
+      description: `Custom ${delimiter === '@@' ? 'body' : delimiter === '&&' ? 'query' : 'path'} parameter`,
     };
 
-    if (start.type === '$$') {
-      paramsProperties[varName] = jsonSchema;
-    } else if (start.type === '&&') {
-      queryProperties[varName] = jsonSchema;
+    if (delimiter === '$$') {
+      paramsProperties[name] = jsonSchema;
+    } else if (delimiter === '&&') {
+      queryProperties[name] = jsonSchema;
     } else {
-      bodyProperties[varName] = jsonSchema;
+      bodyProperties[name] = jsonSchema;
     }
   }
 
