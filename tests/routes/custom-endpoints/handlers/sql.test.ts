@@ -64,6 +64,18 @@ describe('buildSqlEndpoint', () => {
     expect(result.body).toBeUndefined();
     expect(result.routePath).toBe('');
   });
+
+  it('should skip header magic variables (^^) without building schema', () => {
+    const result = buildSqlEndpoint(
+      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^ AND id = $$id:integer$$;',
+      'GET',
+    );
+    expect(result.params).toBeDefined();
+    expect(result.params).toHaveProperty('properties.id');
+    expect(result.querystring).toBeUndefined();
+    expect(result.body).toBeUndefined();
+    expect(result.routePath).toBe('/:id');
+  });
 });
 
 describe('handleSql', () => {
@@ -211,6 +223,44 @@ describe('handleSql', () => {
         'SELECT * FROM users WHERE status = &&status:string&&;',
       ),
     ).rejects.toThrow('Missing query param: "status"');
+  });
+
+  it('should extract header params with ^^delimiter', async () => {
+    const app = mockApp();
+    app.db.query = vi.fn().mockResolvedValue({rows: [{id: 1}], changes: 0});
+    const reply = mockReply();
+
+    await handleSql(
+      app as never,
+      {
+        params: {},
+        query: {},
+        body: {},
+        headers: {'x-api-key': 'secret-123'},
+      } as never,
+      reply as never,
+      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^;',
+    );
+
+    expect(app.db.query).toHaveBeenCalledWith(
+      'SELECT * FROM users WHERE api_key = $1;',
+      ['secret-123'],
+    );
+    expect(reply.status).toHaveBeenCalledWith(200);
+  });
+
+  it('should throw error when header param is missing', async () => {
+    const app = mockApp();
+    const reply = mockReply();
+
+    await expect(
+      handleSql(
+        app as never,
+        {params: {}, query: {}, body: {}, headers: {}} as never,
+        reply as never,
+        'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^;',
+      ),
+    ).rejects.toThrow('Missing header param: "x-api-key"');
   });
 
   it('should support all data types', async () => {

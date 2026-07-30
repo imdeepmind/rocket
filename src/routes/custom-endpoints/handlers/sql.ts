@@ -10,6 +10,7 @@ type ParamSource = {
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
+  headers?: Record<string, unknown>;
 };
 
 const cast = (value: unknown, type: DataType): unknown => {
@@ -50,12 +51,12 @@ const cast = (value: unknown, type: DataType): unknown => {
 
 function interpolateQuery(
   queryTemplate: string,
-  {body = {}, params = {}, query = {}}: ParamSource,
+  {body = {}, params = {}, query = {}, headers = {}}: ParamSource,
 ): {sql: string; values: unknown[]} {
   const values: unknown[] = [];
   let paramIndex = 1;
 
-  const regex = /(\$\$|@@|&&)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+  const regex = /(\$\$|@@|&&|\^\^)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
 
   const sql = queryTemplate.replace(regex, (_, typeSymbol, name, type) => {
     let val: unknown;
@@ -66,9 +67,12 @@ function interpolateQuery(
     } else if (typeSymbol === '@@') {
       val = body[name];
       if (val === undefined) throw new Error(`Missing body param: "${name}"`);
-    } else {
+    } else if (typeSymbol === '&&') {
       val = query[name];
       if (val === undefined) throw new Error(`Missing query param: "${name}"`);
+    } else {
+      val = headers[name];
+      if (val === undefined) throw new Error(`Missing header param: "${name}"`);
     }
 
     values.push(cast(val, type as DataType));
@@ -95,6 +99,8 @@ export function buildSqlEndpoint(
   const magicVars = parseMagicVariables(sql);
 
   for (const {delimiter, name, type} of magicVars) {
+    if (delimiter === '^^') continue;
+
     const jsonSchema = {
       ...mapDataTypeToJsonSchema(type as DataType),
       description: `Custom ${delimiter === '@@' ? 'body' : delimiter === '&&' ? 'query' : 'path'} parameter`,
@@ -191,8 +197,9 @@ export async function handleSql(
   const params = request.params as Record<string, unknown>;
   const query = request.query as Record<string, unknown>;
   const body = (request.body as Record<string, unknown>) || {};
+  const headers = request.headers as Record<string, unknown>;
 
-  const interpolated = interpolateQuery(sql, {params, query, body});
+  const interpolated = interpolateQuery(sql, {params, query, body, headers});
 
   const res = await app.db.query(interpolated.sql, interpolated.values);
 

@@ -1,4 +1,4 @@
-export type MagicVarDelimiter = '@@' | '$$' | '&&';
+export type MagicVarDelimiter = '@@' | '$$' | '&&' | '^^';
 
 export type MagicVarToken = {
   delimiter: MagicVarDelimiter;
@@ -7,7 +7,7 @@ export type MagicVarToken = {
 };
 
 export function parseMagicVariables(sql: string): MagicVarToken[] {
-  const delims = ['@@', '$$', '&&'];
+  const delims = ['@@', '$$', '&&', '^^'];
   const positions: {pos: number; type: string}[] = [];
 
   delims.forEach(d => {

@@ -122,4 +122,23 @@ describe('parseMagicVariables', () => {
     const result = parseMagicVariables('SELECT * FROM $$name:int:extra$$');
     expect(result).toEqual([{delimiter: '$$', name: 'name', type: 'int'}]);
   });
+
+  it('should parse a single header magic variable', () => {
+    const result = parseMagicVariables(
+      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^',
+    );
+    expect(result).toEqual([
+      {delimiter: '^^', name: 'x-api-key', type: 'string'},
+    ]);
+  });
+
+  it('should parse header magic variables alongside other delimiters', () => {
+    const sql =
+      'SELECT * FROM users WHERE id = $$id:integer$$ AND key = ^^x-api-key:string^^';
+    const result = parseMagicVariables(sql);
+    expect(result).toEqual([
+      {delimiter: '$$', name: 'id', type: 'integer'},
+      {delimiter: '^^', name: 'x-api-key', type: 'string'},
+    ]);
+  });
 });

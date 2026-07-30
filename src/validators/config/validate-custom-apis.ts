@@ -63,7 +63,7 @@ function validateCustomAPIs(config: AppConfig): string[] {
 
       // Magic variables validation
       // Structural check: unclosed or mismatched delimiters
-      const delimRegex = /(@@|\$\$|&&)/g;
+      const delimRegex = /(@@|\$\$|&&|\^\^)/g;
       const delims: {pos: number; type: string}[] = [];
       let match: RegExpExecArray | null;
       while ((match = delimRegex.exec(endpoint.handler.sql)) !== null) {
@@ -90,7 +90,7 @@ function validateCustomAPIs(config: AppConfig): string[] {
 
       // Check for multiple type declarations in magic variables
       const multiTypeRegex =
-        /(@@|\$\$|&&)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+        /(@@|\$\$|&&|\^\^)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
       let mtMatch: RegExpExecArray | null;
       while ((mtMatch = multiTypeRegex.exec(endpoint.handler.sql)) !== null) {
         const varString = mtMatch[0].slice(
@@ -123,7 +123,9 @@ function validateCustomAPIs(config: AppConfig): string[] {
             ? 'body (@@)'
             : delimiter === '$$'
               ? 'path ($$)'
-              : 'query (&&)';
+              : delimiter === '&&'
+                ? 'query (&&)'
+                : 'header (^^)';
 
         if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
           errors.push(
