@@ -2160,6 +2160,25 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body (@@) parameter',
     },
     {
+      name: 'Invalid header variable name',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = ^^x api key:string^^;',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "x api key" for header (^^) parameter',
+    },
+    {
       name: 'invalid webhook url',
       patch: {
         customEndpoints: {

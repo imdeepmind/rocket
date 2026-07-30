@@ -249,6 +249,27 @@ describe('handleSql', () => {
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 
+  it('should parse stringified JSON from path param with json type', async () => {
+    const app = mockApp();
+    app.db.query = vi.fn().mockResolvedValue({rows: [], changes: 0});
+    const reply = mockReply();
+
+    await handleSql(
+      app as never,
+      {
+        params: {filter: '{"name":"John","age":30}'},
+        query: {},
+        body: {},
+      } as never,
+      reply as never,
+      'SELECT * FROM users WHERE data = $$filter:json$$;',
+    );
+
+    const values = app.db.query.mock.calls[0][1];
+    expect(values[0]).toEqual({name: 'John', age: 30});
+    expect(reply.status).toHaveBeenCalledWith(200);
+  });
+
   it('should throw error when header param is missing', async () => {
     const app = mockApp();
     const reply = mockReply();
@@ -282,12 +303,14 @@ describe('handleSql', () => {
           d: '2023-01-01',
           j: jsonData,
           e: 'active',
+          u: '550e8400-e29b-41d4-a716-446655440000',
+          l: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
         },
         query: {},
         body: {},
       } as never,
       reply as never,
-      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$, $$e:enum$$);',
+      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$, $$e:enum$$, $$u:uuid$$, $$l:ulid$$);',
     );
 
     const values = app.db.query.mock.calls[0][1];
@@ -300,6 +323,8 @@ describe('handleSql', () => {
     expect(values[6]).toBe('2023-01-01');
     expect(values[7]).toBe(jsonData);
     expect(values[8]).toBe('active');
+    expect(values[9]).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(values[10]).toBe('01ARZ3NDEKTSV4RRFFQ69G5FAV');
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 
