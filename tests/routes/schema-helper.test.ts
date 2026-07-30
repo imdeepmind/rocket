@@ -2,11 +2,14 @@ import {describe, expect, it, test, vi} from 'vitest';
 
 import {
   applyFilters,
+  buildAllQueryProperties,
   buildFilterQueryProperties,
   buildPreValidation,
   buildSecurityArray,
   buildSortQueryProperties,
   generateJSONValidationSchema,
+  getEffectiveAggregations,
+  getEffectiveQueries,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   stripAdditionalPostFields,
@@ -20,6 +23,182 @@ import {
 } from '@/interfaces/config';
 
 describe('test schema helper', () => {
+  // test cases for getEffectiveQueries
+  test('getEffectiveQueries should return undefined when no api config', () => {
+    const config: AppConfig = {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        database: {engine: 'postgres', connection: {url: 'postgresql://'}},
+      },
+      data: {models: {}},
+    };
+    expect(
+      getEffectiveQueries(config, 'model.v1.users.unknown.getAll'),
+    ).toBeUndefined();
+  });
+
+  test('getEffectiveQueries should return supportedQueries from api config', () => {
+    const config: AppConfig = {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        database: {engine: 'postgres', connection: {url: 'postgresql://'}},
+      },
+      data: {models: {}},
+      apis: {
+        'model.v1.users.unknown.getAll': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      },
+    };
+    expect(
+      getEffectiveQueries(config, 'model.v1.users.unknown.getAll'),
+    ).toEqual(['lt', 'gt']);
+  });
+
+  test('getEffectiveQueries should return undefined for unmatched api identifier', () => {
+    const config: AppConfig = {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        database: {engine: 'postgres', connection: {url: 'postgresql://'}},
+      },
+      data: {models: {}},
+      apis: {
+        'model.v1.users.unknown.getAll': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      },
+    };
+    expect(
+      getEffectiveQueries(config, 'model.v1.products.unknown.getAll'),
+    ).toBeUndefined();
+  });
+
+  // test cases for getEffectiveAggregations
+  test('getEffectiveAggregations should return undefined when no api config', () => {
+    const config: AppConfig = {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        database: {engine: 'postgres', connection: {url: 'postgresql://'}},
+      },
+      data: {models: {}},
+    };
+    expect(
+      getEffectiveAggregations(
+        config,
+        'aggregate.v1.sales.amount.getAggregation',
+      ),
+    ).toBeUndefined();
+  });
+
+  test('getEffectiveAggregations should return supportedAggregations from api config', () => {
+    const config: AppConfig = {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
+      },
+      infrastructure: {
+        database: {engine: 'postgres', connection: {url: 'postgresql://'}},
+      },
+      data: {models: {}},
+      apis: {
+        'aggregate.v1.sales.amount.getAggregation': {
+          supportedAggregations: ['count', 'sum'],
+        },
+      },
+    };
+    expect(
+      getEffectiveAggregations(
+        config,
+        'aggregate.v1.sales.amount.getAggregation',
+      ),
+    ).toEqual(['count', 'sum']);
+  });
+
+  // test cases for buildAllQueryProperties with effectiveQueries
+  test('buildAllQueryProperties should respect effectiveQueries to limit query operations', () => {
+    const model: ModelConfig = {
+      fields: {
+        id: {type: 'integer', primaryKey: true},
+        name: {type: 'string', query: ['eq', 'ne', 'sort']},
+        age: {type: 'integer', query: ['lt', 'gt', 'eq']},
+      },
+    };
+    const result = buildAllQueryProperties(model, ['eq', 'lt', 'gt']);
+    // name should only have eq (ne filtered out)
+    expect(result).toHaveProperty('name_eq');
+    expect(result).not.toHaveProperty('name_ne');
+    // age should only have lt, gt, eq
+    expect(result).toHaveProperty('age_lt');
+    expect(result).toHaveProperty('age_gt');
+    expect(result).toHaveProperty('age_eq');
+    // sort should be excluded since 'sort' is not in effectiveQueries
+    expect(result).not.toHaveProperty('orderBy');
+    expect(result).not.toHaveProperty('orderDir');
+    // pagination should always be present
+    expect(result).toHaveProperty('page');
+    expect(result).toHaveProperty('limit');
+  });
+
+  test('buildAllQueryProperties should include all when effectiveQueries is undefined', () => {
+    const model: ModelConfig = {
+      fields: {
+        name: {type: 'string', query: ['eq', 'ne', 'sort']},
+        age: {type: 'integer', query: ['lt', 'gt', 'eq']},
+      },
+    };
+    const result = buildAllQueryProperties(model);
+    expect(result).toHaveProperty('name_eq');
+    expect(result).toHaveProperty('name_ne');
+    expect(result).toHaveProperty('age_lt');
+    expect(result).toHaveProperty('age_gt');
+    expect(result).toHaveProperty('age_eq');
+    expect(result).toHaveProperty('orderBy');
+    expect(result).toHaveProperty('orderDir');
+  });
+
+  // test cases for buildFilterQueryProperties with effectiveQueries
+  test('buildFilterQueryProperties should intersect field query with effectiveQueries', () => {
+    const field: ModelFieldConfig = {
+      type: 'integer',
+      query: ['eq', 'lt', 'gt', 'sort'],
+    };
+    const result = buildFilterQueryProperties('age', field, ['eq', 'lt']);
+    expect(result).toHaveProperty('age_lt');
+    expect(result).toHaveProperty('age_eq');
+    expect(result).not.toHaveProperty('age_gt');
+  });
   // test cases for mapDataTypeToJsonSchema
   it.each([
     {dataType: 'string', expectedSchema: {type: 'string'}},

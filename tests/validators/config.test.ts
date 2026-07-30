@@ -3318,6 +3318,46 @@ describe('validateInvalidmodelConfig', () => {
       },
       expected: 'apis/custom.v1.all.unknown.test.extra: invalid key format',
     },
+    {
+      name: 'supportedQueries on non-model api',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
+    },
+    {
+      name: 'supportedAggregations on non-aggregate api',
+      patch: {
+        'model.v1.users.unknown.getAll': {
+          supportedAggregations: ['count'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.unknown.getAll/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")',
+    },
+    {
+      name: 'supportedQueries with operation not supported by any field',
+      patch: {
+        'model.v1.users.id.index': {
+          supportedQueries: ['in'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.id.index/supportedQueries: "in" is not supported by any field in model "users"',
+    },
+    {
+      name: 'supportedAggregations with aggregation not supported by any field',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedAggregations: ['avg'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedAggregations: "avg" is not supported by any field in model "users"',
+    },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3404,6 +3444,12 @@ describe('validateValidmodelConfig', () => {
               triggerOnResponse: true,
             },
           ],
+        },
+        'model.v1.posts.user_id.index': {
+          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
+        },
+        'aggregate.v1.posts.title.getAggregation': {
+          supportedAggregations: ['count'],
         },
       },
     },

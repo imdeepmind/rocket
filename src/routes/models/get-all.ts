@@ -6,6 +6,7 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getEffectiveQueries,
   getResponseStructureSchema,
   shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
@@ -103,6 +104,7 @@ function registerGetAllEndpoint(
     modelName,
     config,
     authorization,
+    apiIdentifier,
     routeTags,
   );
 
@@ -205,9 +207,11 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  apiIdentifier: string,
   routeTags?: string[],
 ) {
-  const queryProperties = buildAllQueryProperties(model);
+  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const queryProperties = buildAllQueryProperties(model, effectiveQueries);
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,

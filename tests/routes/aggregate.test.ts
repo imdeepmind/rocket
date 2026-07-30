@@ -399,6 +399,88 @@ describe('test aggregate api', () => {
     });
   });
 
+  describe('supportedAggregations', () => {
+    test('should use supportedAggregations from api config instead of field-level aggregations', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{count: 5, sum: 500}],
+        }) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, aggregateModel, {
+        'aggregate.v1.sales.amount.getAggregation': {
+          supportedAggregations: ['count', 'sum'],
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/sales/aggregation/amount?operations=count,sum',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.count).toBe(5);
+      expect(response.json().data.sum).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should reject operations not in supportedAggregations', async () => {
+      const fastify = await createTestApp(pgConfig, aggregateModel, {
+        'aggregate.v1.sales.amount.getAggregation': {
+          supportedAggregations: ['count'],
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/sales/aggregation/amount?operations=avg',
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      await fastify.close();
+    });
+
+    test('should use supportedAggregations with variant endpoints', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{min: 10, max: 100}],
+        }) // aggregation query
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        aggregateModel,
+        {
+          'aggregate.admin.sales.amount.getAggregation': {
+            supportedAggregations: ['min', 'max'],
+          },
+        },
+        undefined,
+        undefined,
+        {
+          'aggregate.v1.sales.amount.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/sales/aggregation/amount?operations=min,max',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.min).toBe(10);
+      expect(response.json().data.max).toBe(100);
+
+      await fastify.close();
+    });
+  });
+
   describe('API variants', () => {
     test('should register additional variant endpoint when apiVariants is configured', async () => {
       pgClientQueryMock

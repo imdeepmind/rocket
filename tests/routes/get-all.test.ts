@@ -558,6 +558,68 @@ describe('test get-all api', () => {
     });
   });
 
+  describe('supportedQueries', () => {
+    test('should work with supportedQueries restricting filter operations', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, getAllModel, {
+        'model.v1.users.unknown.getAll': {
+          supportedQueries: ['eq'],
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/users/?name_eq=Alice',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toHaveLength(1);
+
+      // SQL should include WHERE for name_eq
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE'),
+        expect.arrayContaining(['Alice']),
+      );
+
+      await fastify.close();
+    });
+
+    test('should support supportedQueries on default endpoints', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Bob', email: 'bob@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, getAllModel, {
+        'model.v1.users.unknown.getAll': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/users/',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toHaveLength(1);
+
+      await fastify.close();
+    });
+  });
+
   describe('API variants', () => {
     test('should register additional variant endpoint when apiVariants is configured', async () => {
       pgClientQueryMock

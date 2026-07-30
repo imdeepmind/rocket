@@ -426,6 +426,19 @@ const serverParamSchema = {
   },
 };
 
+const queryOperationValues = [
+  'eq',
+  'ne',
+  'lt',
+  'lte',
+  'gt',
+  'gte',
+  'in',
+  'not_in',
+  'sort',
+];
+const aggregationValues = ['count', 'avg', 'sum', 'min', 'max', 'frequency'];
+
 const apisSchema = {
   type: 'object',
   patternProperties: {
@@ -456,6 +469,24 @@ const apisSchema = {
         },
         authorization: {
           type: 'boolean',
+        },
+        supportedQueries: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: queryOperationValues,
+          },
+          uniqueItems: true,
+          minItems: 1,
+        },
+        supportedAggregations: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: aggregationValues,
+          },
+          uniqueItems: true,
+          minItems: 1,
         },
       },
       additionalProperties: false,
