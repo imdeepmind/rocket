@@ -221,7 +221,7 @@
             ],
             "authorization": true,
             "tags": ["Users", "Aggregations"],
-            "serverParams": [
+            "serverSideParams": [
                 {
                     "type": "query",
                     "name": "operations",
