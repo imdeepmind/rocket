@@ -72,6 +72,8 @@ export function registerGetAllRoutes(
         config.authentication?.enabled ??
         false;
 
+      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
       registerGetAllEndpoint(
         app,
         config,
@@ -80,6 +82,7 @@ export function registerGetAllRoutes(
         variant,
         variantApiIdentifier,
         variantAuthorization,
+        variantTags,
       );
     }
   }
@@ -93,12 +96,14 @@ function registerGetAllEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
     modelName,
     config,
     authorization,
+    routeTags,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -200,13 +205,14 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const queryProperties = buildAllQueryProperties(model);
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
     description: `Get all ${modelName} records from the database`,
-    tags: [capitalizeFirstLetter(modelName), 'Read'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
     querystring: {
       type: 'object',
       properties: queryProperties,

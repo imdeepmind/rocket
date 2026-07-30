@@ -445,6 +445,15 @@ const apisSchema = {
           items: serverParamSchema,
           minItems: 1,
         },
+        tags: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 25,
+          },
+          minItems: 1,
+        },
         authorization: {
           type: 'boolean',
         },

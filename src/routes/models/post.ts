@@ -71,6 +71,8 @@ export function registerPostRoutes(
         config.authentication?.enabled ??
         false;
 
+      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
       registerPostEndpoint(
         app,
         config,
@@ -79,6 +81,7 @@ export function registerPostRoutes(
         variant,
         variantApiIdentifier,
         variantAuthorization,
+        variantTags,
       );
     }
   }
@@ -92,12 +95,14 @@ function registerPostEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
     modelName,
     config,
     authorization,
+    routeTags,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -159,6 +164,7 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const bodySchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
@@ -168,7 +174,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Create a new ${capitalizeFirstLetter(modelName)} record`,
     description: `Create a new ${capitalizeFirstLetter(modelName)} record in the database`,
-    tags: [capitalizeFirstLetter(modelName), 'Insert'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Insert'],
     body: bodySchema,
     response: getResponseStructureSchema([201], bodySchema, bodySchema),
   };

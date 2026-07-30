@@ -43,6 +43,8 @@ export function registerRegistrationRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerRegistrationEndpoint(
     app,
     config,
@@ -54,6 +56,7 @@ export function registerRegistrationRoute(
     upConfig,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -76,6 +79,8 @@ export function registerRegistrationRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerRegistrationEndpoint(
       app,
       config,
@@ -87,6 +92,7 @@ export function registerRegistrationRoute(
       upConfig,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -102,6 +108,7 @@ function registerRegistrationEndpoint(
   upConfig: UpAuthProviderConfig,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
@@ -109,6 +116,7 @@ function registerRegistrationEndpoint(
     model,
     requiresOtp,
     isVerifiedField,
+    routeTags,
   );
 
   const path = `/${variant}/auth/register`;
@@ -201,8 +209,9 @@ function generateSchema(
   authModelConfig: ModelConfig,
   passwordField: string,
   model: string,
-  requiresOtp: boolean = false,
+  requiresOtp?: boolean,
   isVerifiedField?: string,
+  routeTags?: string[],
 ) {
   const bodyModelConfig =
     requiresOtp && isVerifiedField
@@ -246,7 +255,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Register a new ${capitalizeFirstLetter(model)} user`,
     description: `Creates a new user record in the "${model}" table. The password is hashed with bcrypt before being persisted.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Register'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Register'],
     body: bodySchema,
     response: responseSchema,
   };

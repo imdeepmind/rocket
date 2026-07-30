@@ -203,6 +203,7 @@ export interface ServerParamConfig {
 export interface ApisConfig {
   [key: string]: {
     enabled?: boolean;
+    tags?: string[];
     webhooks?: WebhookConfig[];
     serverParams?: ServerParamConfig[];
     authorization?: boolean;

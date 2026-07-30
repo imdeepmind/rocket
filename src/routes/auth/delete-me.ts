@@ -34,6 +34,8 @@ export function registerDeleteMeRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerDeleteMeEndpoint(
     app,
     config,
@@ -41,6 +43,7 @@ export function registerDeleteMeRoute(
     idField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -63,6 +66,8 @@ export function registerDeleteMeRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerDeleteMeEndpoint(
       app,
       config,
@@ -70,6 +75,7 @@ export function registerDeleteMeRoute(
       idField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -81,8 +87,9 @@ function registerDeleteMeEndpoint(
   idField: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model);
+  const schema: Record<string, unknown> = generateSchema(model, routeTags);
 
   const path = `/${variant}/auth/user/me`;
 
@@ -140,7 +147,7 @@ function registerDeleteMeEndpoint(
   );
 }
 
-function generateSchema(model: string) {
+function generateSchema(model: string, routeTags?: string[]) {
   const responseSchema = getResponseStructureSchema([200], {
     type: 'object',
     properties: {
@@ -151,7 +158,7 @@ function generateSchema(model: string) {
   const schema: Record<string, unknown> = {
     summary: `Delete authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Permanently deletes the currently authenticated user from the "${model}" table.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
     response: responseSchema,
     security: [{bearerAuth: []}],
   };

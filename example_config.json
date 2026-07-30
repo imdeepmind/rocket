@@ -220,6 +220,7 @@
                 }
             ],
             "authorization": true,
+            "tags": ["Users", "Aggregations"],
             "serverParams": [
                 {
                     "type": "query",

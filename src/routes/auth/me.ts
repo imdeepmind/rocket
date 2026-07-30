@@ -32,6 +32,8 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerMeEndpoint(
     app,
     config,
@@ -39,6 +41,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
     idField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -61,6 +64,8 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerMeEndpoint(
       app,
       config,
@@ -68,6 +73,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
       idField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -79,8 +85,13 @@ function registerMeEndpoint(
   idField: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model, config);
+  const schema: Record<string, unknown> = generateSchema(
+    model,
+    config,
+    routeTags,
+  );
 
   const path = `/${variant}/auth/user/me`;
 
@@ -123,7 +134,11 @@ function registerMeEndpoint(
   );
 }
 
-function generateSchema(model: string, config: AppConfig) {
+function generateSchema(
+  model: string,
+  config: AppConfig,
+  routeTags?: string[],
+) {
   const authModelConfig = config.data.models[model];
 
   const dataSchema = authModelConfig
@@ -135,7 +150,7 @@ function generateSchema(model: string, config: AppConfig) {
   const schema: Record<string, unknown> = {
     summary: `Get authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Returns the profile of the currently authenticated user from the "${model}" table.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
     response: responseSchema,
     security: [{bearerAuth: []}],
   };

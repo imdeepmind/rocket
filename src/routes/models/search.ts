@@ -80,6 +80,8 @@ export function registerSearchRoutes(
           config.authentication?.enabled ??
           false;
 
+        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
         registerSearchEndpoint(
           app,
           config,
@@ -90,6 +92,7 @@ export function registerSearchRoutes(
           variant,
           variantApiIdentifier,
           variantAuthorization,
+          variantTags,
         );
       }
     }
@@ -106,6 +109,7 @@ function registerSearchEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
@@ -114,6 +118,7 @@ function registerSearchEndpoint(
     modelName,
     config,
     authorization,
+    routeTags,
   );
 
   const path = `/${variant}/${modelName}/search/${fieldName}`;
@@ -220,6 +225,7 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const queryProperties: Record<string, object> = {
     [`${fieldName}_search`]: {
@@ -232,7 +238,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Search ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
     description: `Search ${modelName} records from the database using a LIKE pattern on ${fieldName}`,
-    tags: [capitalizeFirstLetter(modelName), 'Read'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
     querystring: {
       type: 'object',
       properties: queryProperties,

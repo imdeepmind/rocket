@@ -42,6 +42,8 @@ export function registerEditMeRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerEditMeEndpoint(
     app,
     config,
@@ -53,6 +55,7 @@ export function registerEditMeRoute(
     isVerifiedField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -75,6 +78,8 @@ export function registerEditMeRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerEditMeEndpoint(
       app,
       config,
@@ -86,6 +91,7 @@ export function registerEditMeRoute(
       isVerifiedField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -101,6 +107,7 @@ function registerEditMeEndpoint(
   isVerifiedField: string | undefined,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
@@ -109,6 +116,7 @@ function registerEditMeEndpoint(
     usernameField,
     passwordField,
     isVerifiedField,
+    routeTags,
   );
 
   const path = `/${variant}/auth/user/me`;
@@ -210,6 +218,7 @@ function generateSchema(
   usernameField: string,
   passwordField: string,
   isVerifiedField?: string,
+  routeTags?: string[],
 ) {
   const protectedFields = new Set(
     [idField, usernameField, passwordField, isVerifiedField].filter(Boolean),
@@ -239,7 +248,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Edit authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${usernameField}, ${passwordField}, or ${isVerifiedField}.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

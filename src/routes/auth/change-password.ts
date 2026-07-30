@@ -35,6 +35,8 @@ export function registerChangePasswordRoute(
 
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
   registerChangePasswordEndpoint(
     app,
     config,
@@ -43,6 +45,7 @@ export function registerChangePasswordRoute(
     passwordField,
     defaultVariant,
     defaultApiIdentifier,
+    defaultTags,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -65,6 +68,8 @@ export function registerChangePasswordRoute(
 
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
     registerChangePasswordEndpoint(
       app,
       config,
@@ -73,6 +78,7 @@ export function registerChangePasswordRoute(
       passwordField,
       variant,
       variantApiIdentifier,
+      variantTags,
     );
   }
 }
@@ -85,8 +91,9 @@ function registerChangePasswordEndpoint(
   passwordField: string,
   variant: string,
   apiIdentifier: string,
+  routeTags?: string[],
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model);
+  const schema: Record<string, unknown> = generateSchema(model, routeTags);
 
   const path = `/${variant}/auth/change-password`;
 
@@ -165,7 +172,7 @@ function registerChangePasswordEndpoint(
   );
 }
 
-function generateSchema(model: string) {
+function generateSchema(model: string, routeTags?: string[]) {
   const bodySchema = {
     type: 'object',
     required: ['existingPassword', 'newPassword'],
@@ -192,7 +199,7 @@ function generateSchema(model: string) {
   const schema: Record<string, unknown> = {
     summary: `Change password for ${capitalizeFirstLetter(model)}`,
     description: `Changes the password for an authenticated user in the "${model}" table.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

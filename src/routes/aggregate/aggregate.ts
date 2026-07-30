@@ -39,6 +39,7 @@ export function registerAggregateRoutes(
           config.apis?.[defaultApiIdentifier]?.authorization ??
           config.authentication?.enabled ??
           false;
+        const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
 
         registerAggregateEndpoint(
           app,
@@ -49,6 +50,7 @@ export function registerAggregateRoutes(
           defaultVariant,
           defaultApiIdentifier,
           defaultAuthorization,
+          defaultTags,
         );
       }
 
@@ -78,6 +80,8 @@ export function registerAggregateRoutes(
           config.authentication?.enabled ??
           false;
 
+        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
         registerAggregateEndpoint(
           app,
           config,
@@ -87,6 +91,7 @@ export function registerAggregateRoutes(
           variant,
           variantApiIdentifier,
           variantAuthorization,
+          variantTags,
         );
       }
     }
@@ -105,6 +110,7 @@ function registerAggregateEndpoint(
   variant: string,
   apiIdentifier: string,
   authorization: boolean,
+  routeTags?: string[],
 ): void {
   // Build path with variant prefix
   const path = `/${variant}/${modelName}/aggregation/${fieldName}`;
@@ -115,6 +121,7 @@ function registerAggregateEndpoint(
     modelName,
     aggregations,
     authorization,
+    routeTags,
   );
 
   app.get(
@@ -233,13 +240,14 @@ function generateSchema(
   modelName: string,
   aggregations: Aggregation[],
   authorization: boolean,
+  routeTags?: string[],
 ) {
   const security = buildSecurityArray(config, authorization);
 
   const schema: Record<string, unknown> = {
     summary: `Aggregate ${fieldName} on ${capitalizeFirstLetter(modelName)}`,
     description: `Get aggregation data for ${fieldName} in ${modelName}`,
-    tags: [capitalizeFirstLetter(modelName), 'Read'],
+    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
     querystring: {
       type: 'object',
       properties: {
