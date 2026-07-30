@@ -5,6 +5,7 @@ import {
   buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
+  getEffectiveQueries,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
@@ -119,7 +120,10 @@ function registerEditEndpoint(
   const isUnique = field.primaryKey || field.unique;
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-  const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
+  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const queryProperties = isUnique
+    ? {}
+    : buildAllQueryProperties(model, effectiveQueries);
 
   const bodyProperties: Record<string, object> = {};
   const allBodyFieldNames: string[] = [];

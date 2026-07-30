@@ -70,6 +70,23 @@ function validateApisConstraints(config: AppConfig): string[] {
         `apis/${key}/authorization: authorization is only allowed when auth is enabled`,
       );
     }
+
+    // validate supportedQueries is only allowed on model APIs
+    const supportedQueries = apisConfigurations[key]?.supportedQueries;
+    if (supportedQueries && !key.startsWith('model.')) {
+      errors.push(
+        `apis/${key}/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")`,
+      );
+    }
+
+    // validate supportedAggregations is only allowed on aggregate APIs
+    const supportedAggregations =
+      apisConfigurations[key]?.supportedAggregations;
+    if (supportedAggregations && !key.startsWith('aggregate.')) {
+      errors.push(
+        `apis/${key}/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")`,
+      );
+    }
   }
 
   return errors;

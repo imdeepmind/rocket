@@ -207,6 +207,8 @@ export interface ApisConfig {
     webhooks?: WebhookConfig[];
     serverParams?: ServerParamConfig[];
     authorization?: boolean;
+    supportedAggregations?: Aggregation[];
+    supportedQueries?: QueryOperation[];
   };
 }
 

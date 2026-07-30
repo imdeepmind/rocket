@@ -6,6 +6,7 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getEffectiveQueries,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
@@ -123,6 +124,7 @@ function registerIndexEndpoint(
       modelName,
       config,
       authorization,
+      apiIdentifier,
       routeTags,
     );
 
@@ -246,12 +248,16 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  apiIdentifier: string,
   routeTags?: string[],
 ) {
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
 
-  const queryProperties = isUnique ? {} : buildAllQueryProperties(model);
+  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const queryProperties = isUnique
+    ? {}
+    : buildAllQueryProperties(model, effectiveQueries);
 
   const responseSchemaProperties: Record<string, object> = {
     data: isUnique

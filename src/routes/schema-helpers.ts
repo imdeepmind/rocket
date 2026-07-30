@@ -1,11 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  Aggregation,
   AppConfig,
   DataType,
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
+  QueryOperation,
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
@@ -90,15 +92,22 @@ export function buildSortQueryProperties(
  */
 export function buildAllQueryProperties(
   model: ModelConfig,
+  effectiveQueries?: QueryOperation[],
 ): Record<string, object> {
   const properties: Record<string, object> = {};
 
   for (const [fName, f] of Object.entries(model.fields)) {
-    Object.assign(properties, buildFilterQueryProperties(fName, f));
+    Object.assign(
+      properties,
+      buildFilterQueryProperties(fName, f, effectiveQueries),
+    );
   }
 
   const sortableFields = Object.entries(model.fields)
-    .filter(([, f]) => f.query?.includes('sort'))
+    .filter(([, f]) => {
+      if (effectiveQueries && !effectiveQueries.includes('sort')) return false;
+      return f.query?.includes('sort');
+    })
     .map(([fName]) => fName);
   Object.assign(properties, buildSortQueryProperties(sortableFields));
 
@@ -108,14 +117,41 @@ export function buildAllQueryProperties(
 }
 
 /**
+ * Get the effective query operations for an API endpoint.
+ * If the API config specifies supportedQueries, they restrict which
+ * query operations are available. Returns undefined if no override.
+ */
+export function getEffectiveQueries(
+  config: AppConfig,
+  apiIdentifier: string,
+): QueryOperation[] | undefined {
+  return config.apis?.[apiIdentifier]?.supportedQueries;
+}
+
+/**
+ * Get the effective aggregations for an API endpoint.
+ * If the API config specifies supportedAggregations, they override
+ * the field-level aggregations. Returns undefined if no override.
+ */
+export function getEffectiveAggregations(
+  config: AppConfig,
+  apiIdentifier: string,
+): Aggregation[] | undefined {
+  return config.apis?.[apiIdentifier]?.supportedAggregations;
+}
+
+/**
  * Build filter query parameter schema properties for a field
  * based on its query operations (lt, lte, gt, gte, eq, in, etc.).
  */
 export function buildFilterQueryProperties(
   fieldName: string,
   field: ModelFieldConfig,
+  effectiveQueries?: QueryOperation[],
 ): Record<string, object> {
-  const ops = field.query || [];
+  const ops = effectiveQueries
+    ? (field.query || []).filter(op => effectiveQueries.includes(op))
+    : field.query || [];
   const jsonType = mapDataTypeToJsonSchema(field.type);
   const properties: Record<string, object> = {};
 

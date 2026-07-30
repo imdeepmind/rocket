@@ -3318,6 +3318,26 @@ describe('validateInvalidmodelConfig', () => {
       },
       expected: 'apis/custom.v1.all.unknown.test.extra: invalid key format',
     },
+    {
+      name: 'supportedQueries on non-model api',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
+    },
+    {
+      name: 'supportedAggregations on non-aggregate api',
+      patch: {
+        'model.v1.users.unknown.getAll': {
+          supportedAggregations: ['count'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.unknown.getAll/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")',
+    },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3404,6 +3424,12 @@ describe('validateValidmodelConfig', () => {
               triggerOnResponse: true,
             },
           ],
+        },
+        'model.v1.users.name.index': {
+          supportedQueries: ['lt', 'gt', 'eq'],
+        },
+        'aggregate.v1.users.name.getAggregation': {
+          supportedAggregations: ['count', 'sum'],
         },
       },
     },

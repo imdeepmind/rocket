@@ -228,6 +228,15 @@
                     "value": "min"
                 }
             ]
+        },
+        "model.test.users.unknown.getAll": {
+            "supportedQueries": ["eq", "lt", "gt"]
+        },
+        "model.test.users.id.index": {
+            "supportedQueries": ["eq", "sort"]
+        },
+        "aggregate.test.users.email.getAggregation": {
+            "supportedAggregations": ["count"]
         }
     }
 }

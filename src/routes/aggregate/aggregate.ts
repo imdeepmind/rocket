@@ -3,6 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   buildPreValidation,
   buildSecurityArray,
+  getEffectiveAggregations,
   getResponseStructureSchema,
 } from '@/routes/schema-helpers';
 
@@ -29,8 +30,6 @@ export function registerAggregateRoutes(
     );
 
     for (const [fieldName, field] of aggregatableFields) {
-      const aggregations = field.aggregations!;
-
       // Register default variant endpoint
       const defaultApiIdentifier = `aggregate${getVariantSegment(config)}.${modelName}.${fieldName}.getAggregation`;
 
@@ -40,13 +39,16 @@ export function registerAggregateRoutes(
           config.authentication?.enabled ??
           false;
         const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+        const defaultAggregations =
+          getEffectiveAggregations(config, defaultApiIdentifier) ??
+          field.aggregations!;
 
         registerAggregateEndpoint(
           app,
           config,
           modelName,
           fieldName,
-          aggregations,
+          defaultAggregations,
           defaultVariant,
           defaultApiIdentifier,
           defaultAuthorization,
@@ -81,13 +83,16 @@ export function registerAggregateRoutes(
           false;
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+        const variantAggregations =
+          getEffectiveAggregations(config, variantApiIdentifier) ??
+          field.aggregations!;
 
         registerAggregateEndpoint(
           app,
           config,
           modelName,
           fieldName,
-          aggregations,
+          variantAggregations,
           variant,
           variantApiIdentifier,
           variantAuthorization,

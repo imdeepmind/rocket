@@ -6,6 +6,7 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getEffectiveQueries,
   getResponseStructureSchema,
   shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
@@ -118,6 +119,7 @@ function registerSearchEndpoint(
     modelName,
     config,
     authorization,
+    apiIdentifier,
     routeTags,
   );
 
@@ -225,14 +227,16 @@ function generateSchema(
   modelName: string,
   config: AppConfig,
   authorization: boolean,
+  apiIdentifier: string,
   routeTags?: string[],
 ) {
+  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
   const queryProperties: Record<string, object> = {
     [`${fieldName}_search`]: {
       type: 'string',
       description: `Search pattern to match against ${fieldName}`,
     },
-    ...buildAllQueryProperties(model),
+    ...buildAllQueryProperties(model, effectiveQueries),
   };
 
   const schema: Record<string, unknown> = {
