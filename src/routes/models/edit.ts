@@ -5,7 +5,10 @@ import {
   buildAllQueryProperties,
   buildPreValidation,
   buildSecurityArray,
+  getApiAuthorization,
+  getApiBypassSecret,
   getEffectiveQueries,
+  getPublicFields,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
@@ -44,10 +47,14 @@ export function registerEditRoutes(
       if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
         continue;
 
-      const defaultAuthorization =
-        config.apis?.[defaultApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const defaultAuthorization = getApiAuthorization(
+        config,
+        defaultApiIdentifier,
+      );
+      const defaultBypassSecret = getApiBypassSecret(
+        config,
+        defaultApiIdentifier,
+      );
 
       registerEditEndpoint(
         app,
@@ -59,6 +66,8 @@ export function registerEditRoutes(
         defaultVariant,
         defaultApiIdentifier,
         defaultAuthorization,
+        undefined,
+        defaultBypassSecret,
       );
 
       const baseIdentifier = buildApiIdentifier(
@@ -81,12 +90,16 @@ export function registerEditRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+        const variantBypassSecret = getApiBypassSecret(
+          config,
+          variantApiIdentifier,
+        );
 
         registerEditEndpoint(
           app,
@@ -99,6 +112,7 @@ export function registerEditRoutes(
           variantApiIdentifier,
           variantAuthorization,
           variantTags,
+          variantBypassSecret,
         );
       }
     }
@@ -116,6 +130,7 @@ function registerEditEndpoint(
   apiIdentifier: string,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const isUnique = field.primaryKey || field.unique;
   const paramSchema = mapDataTypeToJsonSchema(field.type);
@@ -123,7 +138,7 @@ function registerEditEndpoint(
   const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
   const queryProperties = isUnique
     ? {}
-    : buildAllQueryProperties(model, effectiveQueries);
+    : buildAllQueryProperties(model, effectiveQueries, bypassSecret);
 
   const bodyProperties: Record<string, object> = {};
   const allBodyFieldNames: string[] = [];
@@ -139,6 +154,10 @@ function registerEditEndpoint(
     };
     allBodyFieldNames.push(otherName);
   }
+
+  const publicFieldNames = new Set(
+    getPublicFields(model, bypassSecret).map(([name]) => name),
+  );
 
   const buildRouteSchema = (method: 'PATCH' | 'PUT') => {
     let finalBodySchema: Record<string, unknown>;
@@ -157,7 +176,14 @@ function registerEditEndpoint(
       };
     }
 
-    const responseDataSchema = {...finalBodySchema} as Record<string, unknown>;
+    const responseDataSchema = {
+      ...finalBodySchema,
+      properties: Object.fromEntries(
+        Object.entries(
+          (finalBodySchema.properties as Record<string, object>) || {},
+        ).filter(([name]) => publicFieldNames.has(name)),
+      ),
+    } as Record<string, unknown>;
     if (method === 'PATCH' && responseDataSchema.required) {
       delete responseDataSchema.required;
     }
@@ -241,6 +267,13 @@ function registerEditEndpoint(
 
     const query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`;
 
+    const responseBody: ModelBody = {};
+    for (const [key, value] of Object.entries(body)) {
+      if (publicFieldNames.has(key)) {
+        responseBody[key] = value;
+      }
+    }
+
     let tx;
     try {
       tx = await app.db.beginTransaction();
@@ -267,7 +300,7 @@ function registerEditEndpoint(
           app.buildResponse(
             200,
             `Successfully updated records in the ${tableName} table`,
-            body,
+            responseBody,
             res,
           ),
         );

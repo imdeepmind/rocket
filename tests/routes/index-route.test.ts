@@ -132,7 +132,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
-        'SELECT * FROM "users" WHERE "id" = $1 LIMIT $2;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" = $1 LIMIT $2;',
         [5, 1],
       );
 
@@ -190,7 +190,7 @@ describe('test index-route api', () => {
       expect(response.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
-        'SELECT * FROM "users" WHERE "email" = $1 LIMIT $2;',
+        'SELECT "id", "email" FROM "users" WHERE "email" = $1 LIMIT $2;',
         ['bob@example.com', 1],
       );
 
@@ -253,7 +253,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
         ['tech', 20, 0],
       );
 
@@ -288,7 +288,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 LIMIT $2 OFFSET $3;',
         ['tech', 10, 20], // offset = (3-1) * 10 = 20
       );
 
@@ -384,7 +384,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" < $2 LIMIT $3 OFFSET $4;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" < $2 LIMIT $3 OFFSET $4;',
         ['tech', 100, 20, 0],
       );
 
@@ -401,7 +401,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" != $2 LIMIT $3 OFFSET $4;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" != $2 LIMIT $3 OFFSET $4;',
         ['tech', 99, 20, 0],
       );
 
@@ -418,7 +418,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" <= $2 LIMIT $3 OFFSET $4;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" <= $2 LIMIT $3 OFFSET $4;',
         ['tech', 50, 20, 0],
       );
 
@@ -435,7 +435,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" > $2 LIMIT $3 OFFSET $4;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" > $2 LIMIT $3 OFFSET $4;',
         ['tech', 10, 20, 0],
       );
 
@@ -452,7 +452,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" >= $2 LIMIT $3 OFFSET $4;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" >= $2 LIMIT $3 OFFSET $4;',
         ['tech', 1, 20, 0],
       );
 
@@ -469,7 +469,7 @@ describe('test index-route api', () => {
 
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "posts" WHERE "category" = $1 AND "id" IN ($2, $3, $4) LIMIT $5 OFFSET $6;',
+        'SELECT "id", "category", "title" FROM "posts" WHERE "category" = $1 AND "id" IN ($2, $3, $4) LIMIT $5 OFFSET $6;',
         ['tech', 1, 2, 3, 20, 0],
       );
 
@@ -507,7 +507,7 @@ describe('test index-route api', () => {
       expect(byId.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
-        'SELECT * FROM "articles" WHERE "id" = $1 LIMIT $2;',
+        'SELECT "id", "slug", "tag" FROM "articles" WHERE "id" = $1 LIMIT $2;',
         [1, 1],
       );
 
@@ -521,7 +521,7 @@ describe('test index-route api', () => {
       expect(bySlug.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         2,
-        'SELECT * FROM "articles" WHERE "slug" = $1 LIMIT $2;',
+        'SELECT "id", "slug", "tag" FROM "articles" WHERE "slug" = $1 LIMIT $2;',
         ['my-article', 1],
       );
 
@@ -535,7 +535,7 @@ describe('test index-route api', () => {
       expect(byTag.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "articles" WHERE "tag" = $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "slug", "tag" FROM "articles" WHERE "tag" = $1 LIMIT $2 OFFSET $3;',
         ['news', 20, 0],
       );
 

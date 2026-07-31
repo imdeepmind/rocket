@@ -109,7 +109,7 @@ describe('test search api', () => {
 
       expect(pgClientQueryMock).toHaveBeenCalledTimes(4);
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%alice%', 20, 0],
       );
 
@@ -194,7 +194,7 @@ describe('test search api', () => {
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%al%', 15, 15],
       );
 
@@ -210,7 +210,7 @@ describe('test search api', () => {
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%al%', 10, 0],
       );
 
@@ -420,7 +420,7 @@ describe('test search api', () => {
       expect(byTitle.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "products" WHERE LOWER("title") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "title", "description" FROM "products" WHERE LOWER("title") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%rocket%', 20, 0],
       );
 
@@ -435,7 +435,7 @@ describe('test search api', () => {
       expect(byDescription.statusCode).toBe(200);
       expect(pgClientQueryMock).toHaveBeenNthCalledWith(
         3,
-        'SELECT * FROM "products" WHERE LOWER("description") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "title", "description" FROM "products" WHERE LOWER("description") LIKE $1 LIMIT $2 OFFSET $3;',
         ['%rocket%', 20, 0],
       );
 
@@ -580,7 +580,7 @@ describe('test search api', () => {
       const callArgs = pgClientQueryMock.mock.calls[2];
       // Only the LIKE clause should appear, not any clause for `name_contains`
       expect(callArgs[0]).toBe(
-        'SELECT * FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE LOWER("name") LIKE $1 LIMIT $2 OFFSET $3;',
       );
 
       await fastify.close();

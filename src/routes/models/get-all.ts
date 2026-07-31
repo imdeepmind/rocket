@@ -6,7 +6,10 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getApiAuthorization,
+  getApiBypassSecret,
   getEffectiveQueries,
+  getPublicFields,
   getResponseStructureSchema,
   shouldApiBeEnabled,
 } from '@/routes/schema-helpers';
@@ -33,10 +36,14 @@ export function registerGetAllRoutes(
 
     if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName)) continue;
 
-    const defaultAuthorization =
-      config.apis?.[defaultApiIdentifier]?.authorization ??
-      config.authentication?.enabled ??
-      false;
+    const defaultAuthorization = getApiAuthorization(
+      config,
+      defaultApiIdentifier,
+    );
+    const defaultBypassSecret = getApiBypassSecret(
+      config,
+      defaultApiIdentifier,
+    );
 
     registerGetAllEndpoint(
       app,
@@ -46,6 +53,8 @@ export function registerGetAllRoutes(
       defaultVariant,
       defaultApiIdentifier,
       defaultAuthorization,
+      undefined,
+      defaultBypassSecret,
     );
 
     const baseIdentifier = buildApiIdentifier(
@@ -68,12 +77,16 @@ export function registerGetAllRoutes(
 
       if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-      const variantAuthorization =
-        config.apis?.[variantApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const variantAuthorization = getApiAuthorization(
+        config,
+        variantApiIdentifier,
+      );
 
       const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+      const variantBypassSecret = getApiBypassSecret(
+        config,
+        variantApiIdentifier,
+      );
 
       registerGetAllEndpoint(
         app,
@@ -84,6 +97,7 @@ export function registerGetAllRoutes(
         variantApiIdentifier,
         variantAuthorization,
         variantTags,
+        variantBypassSecret,
       );
     }
   }
@@ -98,6 +112,7 @@ function registerGetAllEndpoint(
   apiIdentifier: string,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
@@ -106,6 +121,7 @@ function registerGetAllEndpoint(
     authorization,
     apiIdentifier,
     routeTags,
+    bypassSecret,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -127,7 +143,9 @@ function registerGetAllEndpoint(
       const queryParams = request.query as Record<string, unknown>;
       const tableName = modelName;
 
-      let query = `SELECT * FROM "${tableName}"`;
+      const publicFields = getPublicFields(model, bypassSecret);
+      const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
+      let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
       let paramIndex = 1;
 
@@ -209,9 +227,15 @@ function generateSchema(
   authorization: boolean,
   apiIdentifier: string,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ) {
   const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
-  const queryProperties = buildAllQueryProperties(model, effectiveQueries);
+  const queryProperties = buildAllQueryProperties(
+    model,
+    effectiveQueries,
+    bypassSecret,
+  );
+  const excludeSecret = !bypassSecret;
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
@@ -229,7 +253,9 @@ function generateSchema(
         properties: {
           data: {
             type: 'array',
-            items: generateJSONValidationSchema(model),
+            items: generateJSONValidationSchema(model, {
+              excludeSecretFields: excludeSecret,
+            }),
           },
           pagination: {
             type: 'object',
@@ -242,7 +268,9 @@ function generateSchema(
           },
         },
       },
-      generateJSONValidationSchema(model),
+      generateJSONValidationSchema(model, {
+        excludeSecretFields: excludeSecret,
+      }),
     ),
   };
 

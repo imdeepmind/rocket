@@ -94,11 +94,12 @@
                         "query": ["eq", "sort"],
                         "aggregations": ["count"]
                     },
-                    "password": {
-                        "type": "string",
-                        "unique": false,
-                        "nullable": false
-                    },
+      "password": {
+        "type": "string",
+        "unique": false,
+        "nullable": false,
+        "secret": true
+      },
                     "name": {
                         "type": "string",
                         "nullable": true,

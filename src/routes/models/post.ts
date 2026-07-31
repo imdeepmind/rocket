@@ -4,6 +4,9 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getApiAuthorization,
+  getApiBypassSecret,
+  getPublicFields,
   getResponseStructureSchema,
   shouldApiBeEnabled,
   stripAdditionalPostFields,
@@ -31,10 +34,14 @@ export function registerPostRoutes(
 
     if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName)) continue;
 
-    const defaultAuthorization =
-      config.apis?.[defaultApiIdentifier]?.authorization ??
-      config.authentication?.enabled ??
-      false;
+    const defaultAuthorization = getApiAuthorization(
+      config,
+      defaultApiIdentifier,
+    );
+    const defaultBypassSecret = getApiBypassSecret(
+      config,
+      defaultApiIdentifier,
+    );
 
     registerPostEndpoint(
       app,
@@ -44,6 +51,8 @@ export function registerPostRoutes(
       defaultVariant,
       defaultApiIdentifier,
       defaultAuthorization,
+      undefined,
+      defaultBypassSecret,
     );
 
     const baseIdentifier = buildApiIdentifier(
@@ -66,12 +75,16 @@ export function registerPostRoutes(
 
       if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-      const variantAuthorization =
-        config.apis?.[variantApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const variantAuthorization = getApiAuthorization(
+        config,
+        variantApiIdentifier,
+      );
 
       const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+      const variantBypassSecret = getApiBypassSecret(
+        config,
+        variantApiIdentifier,
+      );
 
       registerPostEndpoint(
         app,
@@ -82,6 +95,7 @@ export function registerPostRoutes(
         variantApiIdentifier,
         variantAuthorization,
         variantTags,
+        variantBypassSecret,
       );
     }
   }
@@ -96,6 +110,7 @@ function registerPostEndpoint(
   apiIdentifier: string,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
@@ -103,6 +118,7 @@ function registerPostEndpoint(
     config,
     authorization,
     routeTags,
+    bypassSecret,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -127,6 +143,17 @@ function registerPostEndpoint(
       const body = stripAdditionalPostFields(model, incomingBody, {
         ignorePrimaryKey: true,
       });
+
+      const publicFieldNames = new Set(
+        getPublicFields(model, bypassSecret).map(([name]) => name),
+      );
+      const responseBody: ModelBody = {};
+      for (const [key, value] of Object.entries(body)) {
+        if (publicFieldNames.has(key)) {
+          responseBody[key] = value;
+        }
+      }
+
       const keys = Object.keys(body);
       const values = Object.values(body);
 
@@ -146,7 +173,7 @@ function registerPostEndpoint(
             app.buildResponse(
               201,
               `Successfully added the new entry to the ${tableName} table`,
-              body,
+              responseBody,
               res,
             ),
           );
@@ -165,10 +192,17 @@ function generateSchema(
   config: AppConfig,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ) {
   const bodySchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
     additionalProperties: false,
+  });
+
+  const responseSchema = generateJSONValidationSchema(model, {
+    ignorePrimaryKey: true,
+    additionalProperties: false,
+    excludeSecretFields: !bypassSecret,
   });
 
   const schema: Record<string, unknown> = {
@@ -176,7 +210,7 @@ function generateSchema(
     description: `Create a new ${capitalizeFirstLetter(modelName)} record in the database`,
     tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Insert'],
     body: bodySchema,
-    response: getResponseStructureSchema([201], bodySchema, bodySchema),
+    response: getResponseStructureSchema([201], responseSchema, responseSchema),
   };
 
   const security = buildSecurityArray(config, authorization);

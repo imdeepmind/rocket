@@ -15,6 +15,18 @@ import {
 import {normalizeSchemaForAjv} from '@/utils/schema';
 
 /**
+ * Return field entries excluding secret fields unless bypassSecret is true.
+ */
+export function getPublicFields(
+  model: ModelConfig,
+  bypassSecret?: boolean,
+): [string, ModelFieldConfig][] {
+  return Object.entries(model.fields).filter(
+    ([, f]) => bypassSecret || !f.secret,
+  );
+}
+
+/**
  * Map config DataType to JSON Schema type definition for Swagger.
  */
 export function mapDataTypeToJsonSchema(type: DataType): {
@@ -94,17 +106,22 @@ export function buildSortQueryProperties(
 export function buildAllQueryProperties(
   model: ModelConfig,
   effectiveQueries?: QueryOperation[],
+  bypassSecret?: boolean,
 ): Record<string, object> {
   const properties: Record<string, object> = {};
 
-  for (const [fName, f] of Object.entries(model.fields)) {
+  const fields = bypassSecret
+    ? Object.entries(model.fields)
+    : getPublicFields(model);
+
+  for (const [fName, f] of fields) {
     Object.assign(
       properties,
       buildFilterQueryProperties(fName, f, effectiveQueries),
     );
   }
 
-  const sortableFields = Object.entries(model.fields)
+  const sortableFields = fields
     .filter(([, f]) => {
       if (effectiveQueries && !effectiveQueries.includes('sort')) return false;
       return f.query?.includes('sort');
@@ -139,6 +156,31 @@ export function getEffectiveAggregations(
   apiIdentifier: string,
 ): Aggregation[] | undefined {
   return config.apis?.[apiIdentifier]?.supportedAggregations;
+}
+
+/**
+ * Get whether the API endpoint requires authorization.
+ * Falls back to the global authentication.enabled flag.
+ */
+export function getApiAuthorization(
+  config: AppConfig,
+  apiIdentifier: string,
+): boolean {
+  return (
+    config.apis?.[apiIdentifier]?.authorization ??
+    config.authentication?.enabled ??
+    false
+  );
+}
+
+/**
+ * Get whether the API endpoint bypasses secret field protection.
+ */
+export function getApiBypassSecret(
+  config: AppConfig,
+  apiIdentifier: string,
+): boolean {
+  return config.apis?.[apiIdentifier]?.bypassSecret ?? false;
 }
 
 /**
@@ -225,15 +267,23 @@ export function buildFilterQueryProperties(
  */
 export function generateJSONValidationSchema(
   model: ModelConfig,
-  options: {ignorePrimaryKey?: boolean; additionalProperties?: boolean} = {},
+  options: {
+    ignorePrimaryKey?: boolean;
+    additionalProperties?: boolean;
+    excludeSecretFields?: boolean;
+  } = {},
 ): Record<string, unknown> {
   if (model.validation) return normalizeSchemaForAjv(model.validation);
 
-  const fields = options.ignorePrimaryKey
+  let fields = options.ignorePrimaryKey
     ? Object.entries(model.fields).filter(
         ([, field]) => field.primaryKey !== true,
       )
     : Object.entries(model.fields);
+
+  if (options.excludeSecretFields) {
+    fields = fields.filter(([, field]) => !field.secret);
+  }
 
   const bodyProperties: Record<string, object> = {};
   for (const [fieldName, field] of fields) {

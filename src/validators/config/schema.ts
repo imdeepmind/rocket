@@ -228,6 +228,7 @@ const fieldSchema = {
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
+    secret: {type: 'boolean', default: false},
     apis: {
       type: 'array',
       items: {
@@ -475,6 +476,9 @@ const apisSchema = {
           minItems: 1,
         },
         authorization: {
+          type: 'boolean',
+        },
+        bypassSecret: {
           type: 'boolean',
         },
         supportedQueries: {

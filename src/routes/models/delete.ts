@@ -3,6 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {
   buildPreValidation,
   buildSecurityArray,
+  getApiAuthorization,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
@@ -36,10 +37,10 @@ export function registerDeleteRoutes(
       if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
         continue;
 
-      const defaultAuthorization =
-        config.apis?.[defaultApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const defaultAuthorization = getApiAuthorization(
+        config,
+        defaultApiIdentifier,
+      );
 
       registerDeleteEndpoint(
         app,
@@ -73,10 +74,10 @@ export function registerDeleteRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
 

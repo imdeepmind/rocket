@@ -6,7 +6,10 @@ import {
   buildPreValidation,
   buildSecurityArray,
   generateJSONValidationSchema,
+  getApiAuthorization,
+  getApiBypassSecret,
   getEffectiveQueries,
+  getPublicFields,
   getResponseStructureSchema,
   mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
@@ -40,10 +43,14 @@ export function registerIndexRoutes(
       if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
         continue;
 
-      const defaultAuthorization =
-        config.apis?.[defaultApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const defaultAuthorization = getApiAuthorization(
+        config,
+        defaultApiIdentifier,
+      );
+      const defaultBypassSecret = getApiBypassSecret(
+        config,
+        defaultApiIdentifier,
+      );
 
       registerIndexEndpoint(
         app,
@@ -55,6 +62,8 @@ export function registerIndexRoutes(
         defaultVariant,
         defaultApiIdentifier,
         defaultAuthorization,
+        undefined,
+        defaultBypassSecret,
       );
 
       const baseIdentifier = buildApiIdentifier(
@@ -77,12 +86,16 @@ export function registerIndexRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+        const variantBypassSecret = getApiBypassSecret(
+          config,
+          variantApiIdentifier,
+        );
 
         registerIndexEndpoint(
           app,
@@ -95,6 +108,7 @@ export function registerIndexRoutes(
           variantApiIdentifier,
           variantAuthorization,
           variantTags,
+          variantBypassSecret,
         );
       }
     }
@@ -112,6 +126,7 @@ function registerIndexEndpoint(
   apiIdentifier: string,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const {
     schema,
@@ -126,6 +141,7 @@ function registerIndexEndpoint(
       authorization,
       apiIdentifier,
       routeTags,
+      bypassSecret,
     );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
@@ -148,7 +164,9 @@ function registerIndexEndpoint(
       const params = request.params as Record<string, unknown>;
       const tableName = modelName;
 
-      let query = `SELECT * FROM "${tableName}"`;
+      const publicFields = getPublicFields(model, bypassSecret);
+      const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
+      let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
       let paramIndex = 1;
 
@@ -250,6 +268,7 @@ function generateSchema(
   authorization: boolean,
   apiIdentifier: string,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ) {
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
@@ -257,12 +276,23 @@ function generateSchema(
   const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
   const queryProperties = isUnique
     ? {}
-    : buildAllQueryProperties(model, effectiveQueries);
+    : buildAllQueryProperties(model, effectiveQueries, bypassSecret);
 
+  const excludeSecret = !bypassSecret;
   const responseSchemaProperties: Record<string, object> = {
     data: isUnique
-      ? {...generateJSONValidationSchema(model), nullable: true}
-      : {type: 'array', items: generateJSONValidationSchema(model)},
+      ? {
+          ...generateJSONValidationSchema(model, {
+            excludeSecretFields: excludeSecret,
+          }),
+          nullable: true,
+        }
+      : {
+          type: 'array',
+          items: generateJSONValidationSchema(model, {
+            excludeSecretFields: excludeSecret,
+          }),
+        },
   };
 
   if (!isUnique) {
@@ -297,7 +327,9 @@ function generateSchema(
         type: 'object',
         properties: responseSchemaProperties,
       },
-      generateJSONValidationSchema(model),
+      generateJSONValidationSchema(model, {
+        excludeSecretFields: excludeSecret,
+      }),
     ),
   };
 
