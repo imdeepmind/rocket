@@ -88,6 +88,7 @@ const timestampEditModel: Record<string, ModelConfig> = {
         apis: ['edit'],
       },
       name: {type: 'string'},
+      created_at: {type: 'datetime'},
       updated_at: {type: 'datetime'},
     },
   },
@@ -259,6 +260,34 @@ describe('test edit api', () => {
         payload: {
           title: 'Only Title', // content is missing, but PATCH removes required array
         },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      await fastify.close();
+    });
+
+    test('should handle a custom validation schema without properties', async () => {
+      const bareValidationModel: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, apis: ['edit']},
+            name: {type: 'string'},
+          },
+          validation: {type: 'object'},
+        },
+      };
+      const fastify = await createTestApp(pgConfig, bareValidationModel);
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob'},
       });
 
       expect(response.statusCode).toBe(200);
@@ -577,6 +606,119 @@ describe('test edit api', () => {
       expect(updateCall).toBeDefined();
       const updateQuery = (updateCall as [string, unknown[]])[0] as string;
       expect(updateQuery).toContain('"updated_at" = (datetime(\'now\'))');
+
+      await fastify.close();
+    });
+
+    test('should strip user-supplied created_at from the update', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, timestampEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob', created_at: '1990-01-01T00:00:00.000Z'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Bob'});
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      const [updateQuery, updateValues] = updateCall as [string, unknown[]];
+      expect(updateQuery).not.toContain('"created_at"');
+      expect(updateQuery).toContain('"name" = $1');
+      expect(updateQuery).toContain('"updated_at" = now()');
+      expect(updateValues).toEqual(['Bob', 1]);
+
+      await fastify.close();
+    });
+
+    test('should strip managed timestamps from updates when a custom validation schema is used', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const validationModel: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, apis: ['edit']},
+            name: {type: 'string'},
+            created_at: {type: 'datetime'},
+          },
+          validation: {
+            type: 'object',
+            properties: {
+              name: {type: 'string'},
+              created_at: {type: 'datetime'},
+            },
+            additionalProperties: true,
+          },
+        },
+      };
+      const fastify = await createTestApp(pgConfig, validationModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob', created_at: '1990-01-01T00:00:00.000Z'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Bob'});
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      const [updateQuery, updateValues] = updateCall as [string, unknown[]];
+      expect(updateQuery).not.toContain('"created_at"');
+      expect(updateQuery).toContain('"name" = $1');
+      expect(updateValues).toEqual(['Bob', 1]);
+
+      await fastify.close();
+    });
+
+    test('should write secret fields to the database but exclude them from the response', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const secretEditModel: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, apis: ['edit']},
+            name: {type: 'string'},
+            api_key: {type: 'string', secret: true},
+          },
+        },
+      };
+      const fastify = await createTestApp(pgConfig, secretEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob', api_key: 'sk-1'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Bob'});
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      const [updateQuery] = updateCall as [string, unknown[]];
+      expect(updateQuery).toContain('"api_key" = $');
+      expect(updateQuery).toContain('"name" = $1');
 
       await fastify.close();
     });

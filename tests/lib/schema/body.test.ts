@@ -251,3 +251,83 @@ test('should generate body schema with enum values', () => {
     },
   });
 });
+
+// test excludeTimestamps option
+test('should exclude managed timestamp fields when excludeTimestamps is true', () => {
+  const model: ModelConfig = {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      name: {type: 'string'},
+      created_at: {type: 'datetime', nullable: false},
+      updated_at: {type: 'datetime', nullable: false},
+    },
+  };
+  const result = generateJSONValidationSchema(model, {
+    excludeTimestamps: true,
+  }) as {properties: Record<string, unknown>; required?: string[]};
+
+  expect(result.properties).not.toHaveProperty('created_at');
+  expect(result.properties).not.toHaveProperty('updated_at');
+  expect(result.properties).toHaveProperty('name');
+  expect(result.required).toEqual(['id', 'name']);
+});
+
+test('should strip managed timestamp fields from validation schema when excludeTimestamps is true', () => {
+  const model: ModelConfig = {
+    fields: {name: {type: 'string'}},
+    validation: {
+      type: 'object',
+      properties: {
+        name: {type: 'string'},
+        created_at: {type: 'datetime'},
+        updated_at: {type: 'date-time'},
+      },
+      required: ['name', 'created_at', 'updated_at'],
+    },
+  };
+  const result = generateJSONValidationSchema(model, {
+    excludeTimestamps: true,
+  }) as {properties: Record<string, unknown>; required?: string[]};
+
+  expect(result.properties).not.toHaveProperty('created_at');
+  expect(result.properties).not.toHaveProperty('updated_at');
+  expect(result.properties).toHaveProperty('name');
+  expect(result.required).toEqual(['name']);
+});
+
+test('should not require properties or required when stripping managed timestamps from validation schema', () => {
+  const model: ModelConfig = {
+    fields: {name: {type: 'string'}},
+    validation: {
+      type: 'object',
+    },
+  };
+  const result = generateJSONValidationSchema(model, {
+    excludeTimestamps: true,
+  });
+
+  expect(result).toEqual({type: 'object'});
+});
+
+// test stripAdditionalPostFields excludes managed timestamp fields
+test('should strip managed timestamp fields from the body', () => {
+  const model: ModelConfig = {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      name: {type: 'string'},
+      created_at: {type: 'datetime'},
+      updated_at: {type: 'datetime'},
+    },
+  };
+  const body = {
+    id: 1,
+    name: 'test',
+    created_at: '2022-01-01',
+    updated_at: '2022-01-01',
+  };
+  const expectedBody = {
+    id: 1,
+    name: 'test',
+  };
+  expect(stripAdditionalPostFields(model, body)).toEqual(expectedBody);
+});

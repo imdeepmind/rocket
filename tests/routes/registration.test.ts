@@ -17,7 +17,11 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
+import {
+  pgClientQueryMock,
+  pgConnectMock,
+  pgQueryMock,
+} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -356,6 +360,42 @@ describe('POST /auth/register', () => {
 
       await app.close();
     });
+
+    test('should strip managed timestamp fields even when defined in the model', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            name: {type: 'string', nullable: true},
+            created_at: {type: 'datetime'},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createAuthApp(upAuthConfig, modelsWithTimestamps);
+
+      await app.inject({
+        method: 'POST',
+        url: '/v1/auth/register',
+        payload: {
+          email: 'iris@example.com',
+          password: 'secret',
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+        },
+      });
+
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
+
+      expect(query).not.toContain('"created_at"');
+      expect(query).not.toContain('"updated_at"');
+
+      await app.close();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -450,6 +490,20 @@ describe('POST /auth/register', () => {
         .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
         .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/register',
+        payload: {email: 'ivan@example.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
+    test('should return 500 when the transaction begin fails', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      pgConnectMock.mockRejectedValueOnce(new Error('Connection failed'));
 
       const response = await app.inject({
         method: 'POST',

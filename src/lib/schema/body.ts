@@ -1,3 +1,8 @@
+import {
+  filterManagedTimestampFields,
+  isManagedTimestampField,
+  MANAGED_TIMESTAMP_FIELDS,
+} from '@/lib/schema/fields';
 import {normalizeSchemaForAjv} from '@/lib/schema/normalize';
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 
@@ -17,9 +22,16 @@ export function generateJSONValidationSchema(
     ignorePrimaryKey?: boolean;
     additionalProperties?: boolean;
     excludeSecretFields?: boolean;
+    excludeTimestamps?: boolean;
   } = {},
 ): Record<string, unknown> {
-  if (model.validation) return normalizeSchemaForAjv(model.validation);
+  if (model.validation) {
+    const normalized = normalizeSchemaForAjv(model.validation);
+    if (options.excludeTimestamps) {
+      stripManagedTimestampProperties(normalized);
+    }
+    return normalized;
+  }
 
   let fields = options.ignorePrimaryKey
     ? Object.entries(model.fields).filter(
@@ -29,6 +41,10 @@ export function generateJSONValidationSchema(
 
   if (options.excludeSecretFields) {
     fields = fields.filter(([, field]) => !field.secret);
+  }
+
+  if (options.excludeTimestamps) {
+    fields = filterManagedTimestampFields(fields);
   }
 
   const bodyProperties: Record<string, object> = {};
@@ -56,6 +72,21 @@ export function generateJSONValidationSchema(
   };
 }
 
+export function stripManagedTimestampProperties(
+  schema: Record<string, unknown>,
+): void {
+  const properties = schema.properties as Record<string, unknown> | undefined;
+  if (properties) {
+    for (const name of MANAGED_TIMESTAMP_FIELDS) {
+      delete properties[name];
+    }
+  }
+  const required = schema.required as string[] | undefined;
+  if (required) {
+    schema.required = required.filter(name => !isManagedTimestampField(name));
+  }
+}
+
 /**
  * Strip any fields from the request body that are not present in the model.
  */
@@ -70,7 +101,9 @@ export function stripAdditionalPostFields(
       )
     : Object.entries(model.fields);
 
-  const allowed = new Set(allowedFields.map(([name]) => name));
+  const allowed = new Set(
+    filterManagedTimestampFields(allowedFields).map(([name]) => name),
+  );
   const filtered: ModelBody = {};
 
   for (const [key, value] of Object.entries(body)) {

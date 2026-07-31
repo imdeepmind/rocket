@@ -2,7 +2,11 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
+import {
+  pgClientQueryMock,
+  pgConnectMock,
+  pgQueryMock,
+} from '@tests/helpers/db-mocks';
 import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
 
 const upAuthConfig: AuthenticationConfig = {
@@ -93,6 +97,95 @@ describe('test post api', () => {
       expect(pgClientQueryMock).toHaveBeenCalledWith(
         'INSERT INTO "users" ("name", "email") VALUES ($1, $2);',
         ['Bob', 'bob@example.com'],
+      );
+
+      await fastify.close();
+    });
+  });
+
+  describe('secret fields', () => {
+    const secretModel: Record<string, ModelConfig> = {
+      users: {
+        fields: {
+          id: {type: 'integer', primaryKey: true, autoIncrement: true},
+          name: {type: 'string'},
+          email: {type: 'string'},
+          api_key: {type: 'string', secret: true},
+        },
+      },
+    };
+
+    test('should write secret fields to the database but exclude them from the response', async () => {
+      const fastify = await createTestApp(pgConfig, secretModel);
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {
+          name: 'Carol',
+          email: 'carol@example.com',
+          api_key: 'sk-123',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toEqual({
+        name: 'Carol',
+        email: 'carol@example.com',
+      });
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'INSERT INTO "users" ("name", "email", "api_key") VALUES ($1, $2, $3);',
+        ['Carol', 'carol@example.com', 'sk-123'],
+      );
+
+      await fastify.close();
+    });
+  });
+
+  describe('managed timestamps', () => {
+    const timestampModel: Record<string, ModelConfig> = {
+      posts: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          title: {type: 'string'},
+          created_at: {type: 'datetime', nullable: false},
+          updated_at: {type: 'datetime', nullable: false},
+        },
+      },
+    };
+
+    test('should not require managed timestamp fields on create', async () => {
+      const fastify = await createTestApp(pgConfig, timestampModel);
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/posts/',
+        payload: {title: 'Hello'},
+      });
+
+      expect(response.statusCode).toBe(201);
+
+      await fastify.close();
+    });
+
+    test('should strip user-supplied created_at and updated_at from the INSERT', async () => {
+      const fastify = await createTestApp(pgConfig, timestampModel);
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/posts/',
+        payload: {
+          title: 'Hello',
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'INSERT INTO "posts" ("title") VALUES ($1);',
+        ['Hello'],
       );
 
       await fastify.close();
@@ -251,6 +344,21 @@ describe('test post api', () => {
         .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockRejectedValueOnce(new Error('DB connection lost')) // INSERT
         .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(500);
+
+      await fastify.close();
+    });
+
+    test('should return 500 when the transaction begin fails', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels);
+      pgConnectMock.mockRejectedValueOnce(new Error('Connection failed'));
 
       const response = await fastify.inject({
         method: 'POST',

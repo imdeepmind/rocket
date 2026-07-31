@@ -11,6 +11,8 @@ import {
   getAdditionalVariants,
   getVariantSegment,
 } from '@/lib/config/identifier';
+import {stripManagedTimestampProperties} from '@/lib/schema/body';
+import {isManagedTimestampField} from '@/lib/schema/fields';
 import {buildAllQueryProperties} from '@/lib/schema/query';
 import {
   buildSecurityArray,
@@ -146,7 +148,7 @@ function registerEditEndpoint(
   const allBodyFieldNames: string[] = [];
 
   for (const [otherName, otherField] of Object.entries(model.fields)) {
-    if (otherName === fieldName) continue;
+    if (otherName === fieldName || isManagedTimestampField(otherName)) continue;
     bodyProperties[otherName] = {
       ...mapDataTypeToJsonSchema(otherField.type),
       ...(otherField.type === 'enum' && otherField.values
@@ -166,6 +168,7 @@ function registerEditEndpoint(
 
     if (model.validation) {
       finalBodySchema = {...model.validation};
+      stripManagedTimestampProperties(finalBodySchema);
       if (method === 'PATCH') {
         delete finalBodySchema.required;
       }
@@ -237,13 +240,16 @@ function registerEditEndpoint(
 
     delete body[fieldName];
 
+    for (const key of Object.keys(body)) {
+      if (isManagedTimestampField(key)) {
+        delete body[key];
+      }
+    }
+
     const updatedAtClause = buildUpdatedAtClause(
       model,
       config.infrastructure.database.engine,
     );
-    if (updatedAtClause) {
-      delete body.updated_at;
-    }
 
     const keys = Object.keys(body);
     if (keys.length === 0) {

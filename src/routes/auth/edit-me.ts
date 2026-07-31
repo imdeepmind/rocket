@@ -5,6 +5,7 @@ import {
   getAdditionalVariants,
   getVariantSegment,
 } from '@/lib/config/identifier';
+import {isManagedTimestampField} from '@/lib/schema/fields';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
@@ -147,7 +148,7 @@ function registerEditMeEndpoint(
         ),
       );
       const editableKeys = Object.keys(body).filter(
-        k => !protectedFields.has(k) && k !== 'updated_at',
+        k => !protectedFields.has(k) && !isManagedTimestampField(k),
       );
 
       if (editableKeys.length === 0) {
@@ -233,7 +234,10 @@ function generateSchema(
 
   const bodyProperties: Record<string, object> = {};
   for (const [fieldName, field] of Object.entries(authModelConfig.fields)) {
-    if (!protectedFields.has(fieldName)) {
+    if (
+      !protectedFields.has(fieldName) &&
+      !isManagedTimestampField(fieldName)
+    ) {
       bodyProperties[fieldName] = {
         ...mapDataTypeToJsonSchema(field.type),
         description: `New value for ${fieldName}`,

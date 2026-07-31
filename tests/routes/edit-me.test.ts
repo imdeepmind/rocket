@@ -14,7 +14,11 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
+import {
+  pgClientQueryMock,
+  pgConnectMock,
+  pgQueryMock,
+} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -325,6 +329,69 @@ describe('PATCH /auth/user/me', () => {
 
       await app.close();
     });
+
+    test('should strip user-supplied created_at from the update', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            name: {type: 'string', nullable: true},
+            created_at: {type: 'datetime'},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createEditMeApp(upAuthConfig, modelsWithTimestamps);
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      // Mock transaction: BEGIN, SELECT, UPDATE, COMMIT
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed',
+              name: 'Alice',
+              created_at: null,
+              updated_at: null,
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/auth/user/me',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {name: 'Alice Smith', created_at: '1990-01-01T00:00:00.000Z'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Alice Smith'});
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      expect(updateCall).toBeDefined();
+      const [updateQuery, updateValues] = updateCall as [string, unknown[]];
+      expect(updateQuery).not.toContain('"created_at"');
+      expect(updateQuery).toContain('"name" = $1');
+      expect(updateQuery).toContain('"updated_at" = now()');
+      expect(updateValues).toEqual(['Alice Smith', 1]);
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {
@@ -380,6 +447,24 @@ describe('PATCH /auth/user/me', () => {
         .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockRejectedValueOnce(new Error('Query failed')) // SELECT fails
         .mockRejectedValueOnce(new Error('Rollback failed')); // ROLLBACK fails
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/auth/user/me',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {name: 'Alice'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
+    test('should return 500 when the transaction begin fails', async () => {
+      const app = await createEditMeApp(upAuthConfig);
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgConnectMock.mockRejectedValueOnce(new Error('Connection failed'));
 
       const response = await app.inject({
         method: 'PATCH',

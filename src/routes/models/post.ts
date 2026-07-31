@@ -201,12 +201,14 @@ function generateSchema(
   const bodySchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
     additionalProperties: false,
+    excludeTimestamps: true,
   });
 
   const responseSchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
     additionalProperties: false,
     excludeSecretFields: !bypassSecret,
+    excludeTimestamps: true,
   });
 
   const schema: Record<string, unknown> = {
