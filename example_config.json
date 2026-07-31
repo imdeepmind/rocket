@@ -95,9 +95,10 @@
                         "aggregations": ["count"]
                     },
                     "password": {
-                        "type": "string",
-                        "unique": false,
-                        "nullable": false
+                      "type": "string",
+                      "unique": false,
+                      "nullable": false,
+                      "secret": true
                     },
                     "name": {
                         "type": "string",

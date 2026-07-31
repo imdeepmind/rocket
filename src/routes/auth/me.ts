@@ -1,18 +1,18 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildPreValidation,
-  generateJSONValidationSchema,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
-
+import {getApiBypassSecret} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {generateJSONValidationSchema} from '@/lib/schema/body';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+import {getPublicFields} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
@@ -33,6 +33,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
   if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
   const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+  const defaultBypassSecret = getApiBypassSecret(config, defaultApiIdentifier);
 
   registerMeEndpoint(
     app,
@@ -42,6 +43,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
     defaultVariant,
     defaultApiIdentifier,
     defaultTags,
+    defaultBypassSecret,
   );
 
   const baseIdentifier = buildApiIdentifier(
@@ -65,6 +67,10 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
     if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
     const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+    const variantBypassSecret = getApiBypassSecret(
+      config,
+      variantApiIdentifier,
+    );
 
     registerMeEndpoint(
       app,
@@ -74,6 +80,7 @@ export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
       variant,
       variantApiIdentifier,
       variantTags,
+      variantBypassSecret,
     );
   }
 }
@@ -86,11 +93,13 @@ function registerMeEndpoint(
   variant: string,
   apiIdentifier: string,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
     config,
     routeTags,
+    bypassSecret,
   );
 
   const path = `/${variant}/auth/user/me`;
@@ -114,7 +123,15 @@ function registerMeEndpoint(
           );
       }
 
-      const query = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
+      const authModelConfig = config.data.models[model];
+      const publicFields = getPublicFields(authModelConfig, bypassSecret);
+      const columns = [
+        ...new Set([idField, ...publicFields.map(([name]) => name)]),
+      ]
+        .map(name => `"${name}"`)
+        .join(', ');
+
+      const query = `SELECT ${columns} FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [userId]);
 
       if (res.rows.length === 0) {
@@ -138,11 +155,14 @@ function generateSchema(
   model: string,
   config: AppConfig,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ) {
   const authModelConfig = config.data.models[model];
 
   const dataSchema = authModelConfig
-    ? generateJSONValidationSchema(authModelConfig)
+    ? generateJSONValidationSchema(authModelConfig, {
+        excludeSecretFields: !bypassSecret,
+      })
     : {type: 'object', additionalProperties: true};
 
   const responseSchema = getResponseStructureSchema([200], dataSchema);

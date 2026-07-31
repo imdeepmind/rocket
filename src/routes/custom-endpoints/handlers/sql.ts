@@ -1,10 +1,9 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {mapDataTypeToJsonSchema} from '@/routes/schema-helpers';
+import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {parseQueryPlaceholders} from '@/lib/sql/placeholders';
 
 import {DataType} from '@/interfaces/config';
-
-import {parseQueryPlaceholders} from '@/utils/query-placeholders';
 
 type ParamSource = {
   body?: Record<string, unknown>;

@@ -1,19 +1,19 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getEffectiveAggregations,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {Aggregation, AppConfig} from '@/interfaces/config';
-
+import {getApiAuthorization, getEffectiveAggregations} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {Aggregation, AppConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerAggregateRoutes(
@@ -34,10 +34,10 @@ export function registerAggregateRoutes(
       const defaultApiIdentifier = `aggregate${getVariantSegment(config)}.${modelName}.${fieldName}.getAggregation`;
 
       if (config.apis?.[defaultApiIdentifier]?.enabled !== false) {
-        const defaultAuthorization =
-          config.apis?.[defaultApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const defaultAuthorization = getApiAuthorization(
+          config,
+          defaultApiIdentifier,
+        );
         const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
         const defaultAggregations =
           getEffectiveAggregations(config, defaultApiIdentifier) ??
@@ -77,10 +77,10 @@ export function registerAggregateRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
         const variantAggregations =

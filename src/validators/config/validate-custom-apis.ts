@@ -1,6 +1,6 @@
-import {AppConfig} from '@/interfaces/config';
+import {parseQueryPlaceholders} from '@/lib/sql/placeholders';
 
-import {parseQueryPlaceholders} from '@/utils/query-placeholders';
+import {AppConfig} from '@/interfaces/config';
 
 import {ajv} from './schema';
 

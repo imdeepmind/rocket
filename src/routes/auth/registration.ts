@@ -1,10 +1,15 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {
   generateJSONValidationSchema,
-  getResponseStructureSchema,
   stripAdditionalPostFields,
-} from '@/routes/schema-helpers';
+} from '@/lib/schema/body';
+import {getResponseStructureSchema} from '@/lib/schema/response';
 
 import {
   AppConfig,
@@ -13,11 +18,6 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/utils/config';
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 

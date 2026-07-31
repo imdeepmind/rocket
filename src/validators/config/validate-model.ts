@@ -1,12 +1,12 @@
 import Ajv from 'ajv';
 
+import {normalizeSchemaForAjv} from '@/lib/schema/normalize';
+
 import {
   AppConfig,
   JsonSchemaObject,
   JsonSchemaProperty,
 } from '@/interfaces/config';
-
-import {normalizeSchemaForAjv} from '@/utils/schema';
 
 const ALLOWED_APIS: Record<string, string[]> = {
   integer: ['edit', 'delete', 'index'],
@@ -87,11 +87,42 @@ function validateFieldConstraints(config: AppConfig): string[] {
         type,
         primaryKey,
         autoIncrement,
+        secret,
         apis,
         query,
         aggregations,
         values,
       } = field;
+
+      // Secret field rules
+      if (secret) {
+        if (primaryKey) {
+          errors.push(`${path}: secret cannot be combined with primaryKey`);
+        }
+
+        if (apis) {
+          const forbiddenApis = apis.filter(
+            op => op === 'search' || op === 'index',
+          );
+          if (forbiddenApis.length > 0) {
+            errors.push(
+              `${path}/apis: secret fields cannot have "search" or "index" APIs (found: ${forbiddenApis.join(', ')})`,
+            );
+          }
+        }
+
+        if (query && query.length > 0) {
+          errors.push(
+            `${path}/query: secret fields cannot have query operations`,
+          );
+        }
+
+        if (aggregations && aggregations.length > 0) {
+          errors.push(
+            `${path}/aggregations: secret fields cannot have aggregations`,
+          );
+        }
+      }
 
       // Primary key rules
       if (primaryKey) {

@@ -1,20 +1,20 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getResponseStructureSchema,
-  mapDataTypeToJsonSchema,
-  shouldApiBeEnabled,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
-
+import {getApiAuthorization, shouldApiBeEnabled} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteRoutes(
@@ -36,10 +36,10 @@ export function registerDeleteRoutes(
       if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
         continue;
 
-      const defaultAuthorization =
-        config.apis?.[defaultApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const defaultAuthorization = getApiAuthorization(
+        config,
+        defaultApiIdentifier,
+      );
 
       registerDeleteEndpoint(
         app,
@@ -73,10 +73,10 @@ export function registerDeleteRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
 

@@ -88,7 +88,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 
@@ -140,7 +140,7 @@ describe('test get-all api', () => {
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" LIMIT $1 OFFSET $2;',
         [10, 10], // page 2, limit 10 = offset 10
       );
 
@@ -153,7 +153,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?page=0'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 
@@ -186,7 +186,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?name_eq=Alice'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "name" = $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "name" = $1 LIMIT $2 OFFSET $3;',
         ['Alice', 20, 0],
       );
 
@@ -199,7 +199,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?id_lt=10'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" < $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" < $1 LIMIT $2 OFFSET $3;',
         [10, 20, 0],
       );
 
@@ -212,7 +212,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?id_lte=100'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" <= $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" <= $1 LIMIT $2 OFFSET $3;',
         [100, 20, 0],
       );
 
@@ -225,7 +225,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?id_gt=5'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" > $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" > $1 LIMIT $2 OFFSET $3;',
         [5, 20, 0],
       );
 
@@ -238,7 +238,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?id_gte=1'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" >= $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" >= $1 LIMIT $2 OFFSET $3;',
         [1, 20, 0],
       );
 
@@ -251,7 +251,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?id_in=1,2,3'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
         [1, 2, 3, 20, 0],
       );
 
@@ -264,7 +264,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?name_ne=Alice'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "name" != $1 LIMIT $2 OFFSET $3;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "name" != $1 LIMIT $2 OFFSET $3;',
         ['Alice', 20, 0],
       );
 
@@ -280,7 +280,7 @@ describe('test get-all api', () => {
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" WHERE "id" NOT IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
+        'SELECT "id", "name", "email" FROM "users" WHERE "id" NOT IN ($1, $2, $3) LIMIT $4 OFFSET $5;',
         [1, 2, 3, 20, 0],
       );
 
@@ -313,7 +313,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?orderBy=name'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" ORDER BY "name" ASC LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" ORDER BY "name" ASC LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 
@@ -329,7 +329,7 @@ describe('test get-all api', () => {
       });
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" ORDER BY "id" DESC LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" ORDER BY "id" DESC LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 
@@ -342,7 +342,7 @@ describe('test get-all api', () => {
       await fastify.inject({method: 'GET', url: '/v1/users/?orderDir=desc'});
 
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 
@@ -490,7 +490,7 @@ describe('test get-all api', () => {
 
       // Should not have a WHERE clause for foo
       expect(pgClientQueryMock).toHaveBeenCalledWith(
-        'SELECT * FROM "users" LIMIT $1 OFFSET $2;',
+        'SELECT "id", "name", "email" FROM "users" LIMIT $1 OFFSET $2;',
         [20, 0],
       );
 

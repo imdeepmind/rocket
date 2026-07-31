@@ -8,9 +8,9 @@ import {
   type MockInstance,
 } from 'vitest';
 
-import {AppConfig} from '@/interfaces/config';
+import {RouteInfo, showWelcomeScreen} from '@/lib/server/welcome';
 
-import {RouteInfo, showWelcomeScreen} from '@/utils/welcome';
+import {AppConfig} from '@/interfaces/config';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;

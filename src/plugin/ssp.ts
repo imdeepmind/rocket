@@ -1,7 +1,7 @@
 import {FastifyInstance, FastifyRequest} from 'fastify';
 import fp from 'fastify-plugin';
 
-import {stripServerSideParamsFromSchema} from '@/routes/schema-helpers';
+import {stripServerSideParamsFromSchema} from '@/lib/schema/ssp';
 
 import {ServerSideParamConfig, ServerSideParamType} from '@/interfaces/config';
 

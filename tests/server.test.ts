@@ -139,7 +139,7 @@ vi.mock('@/routes/auth/change-email', () => ({
   registerEmailChangeRoute: vi.fn(),
 }));
 
-vi.mock('@/utils/welcome', () => ({
+vi.mock('@/lib/server/welcome', () => ({
   showWelcomeScreen: vi.fn(),
 }));
 

@@ -1,6 +1,6 @@
-import {AppConfig, WebhookConfig} from '@/interfaces/config';
+import {getAPIFromUniqueIdentifier} from '@/lib/config/identifier';
 
-import {getAPIFromUniqueIdentifier} from '@/utils/config';
+import {AppConfig, WebhookConfig} from '@/interfaces/config';
 
 function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   const errors: string[] = [];

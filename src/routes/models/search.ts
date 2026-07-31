@@ -1,23 +1,28 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  applyFilters,
-  buildAllQueryProperties,
-  buildPreValidation,
-  buildSecurityArray,
-  generateJSONValidationSchema,
+  getApiAuthorization,
+  getApiBypassSecret,
   getEffectiveQueries,
-  getResponseStructureSchema,
   shouldApiBeEnabled,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
-
+} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {generateJSONValidationSchema} from '@/lib/schema/body';
+import {buildAllQueryProperties} from '@/lib/schema/query';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {getPublicFields} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+import {applyFilters} from '@/lib/sql/filters';
+
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerSearchRoutes(
@@ -39,10 +44,14 @@ export function registerSearchRoutes(
       if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
         continue;
 
-      const defaultAuthorization =
-        config.apis?.[defaultApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const defaultAuthorization = getApiAuthorization(
+        config,
+        defaultApiIdentifier,
+      );
+      const defaultBypassSecret = getApiBypassSecret(
+        config,
+        defaultApiIdentifier,
+      );
 
       registerSearchEndpoint(
         app,
@@ -54,6 +63,8 @@ export function registerSearchRoutes(
         defaultVariant,
         defaultApiIdentifier,
         defaultAuthorization,
+        undefined,
+        defaultBypassSecret,
       );
 
       const baseIdentifier = buildApiIdentifier(
@@ -76,12 +87,16 @@ export function registerSearchRoutes(
 
         if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-        const variantAuthorization =
-          config.apis?.[variantApiIdentifier]?.authorization ??
-          config.authentication?.enabled ??
-          false;
+        const variantAuthorization = getApiAuthorization(
+          config,
+          variantApiIdentifier,
+        );
 
         const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+        const variantBypassSecret = getApiBypassSecret(
+          config,
+          variantApiIdentifier,
+        );
 
         registerSearchEndpoint(
           app,
@@ -94,6 +109,7 @@ export function registerSearchRoutes(
           variantApiIdentifier,
           variantAuthorization,
           variantTags,
+          variantBypassSecret,
         );
       }
     }
@@ -111,6 +127,7 @@ function registerSearchEndpoint(
   apiIdentifier: string,
   authorization: boolean,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
@@ -121,6 +138,7 @@ function registerSearchEndpoint(
     authorization,
     apiIdentifier,
     routeTags,
+    bypassSecret,
   );
 
   const path = `/${variant}/${modelName}/search/${fieldName}`;
@@ -142,7 +160,9 @@ function registerSearchEndpoint(
       const queryParams = request.query as Record<string, unknown>;
       const tableName = modelName;
 
-      let query = `SELECT * FROM "${tableName}"`;
+      const publicFields = getPublicFields(model, bypassSecret);
+      const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
+      let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
       let paramIndex = 1;
 
@@ -229,6 +249,7 @@ function generateSchema(
   authorization: boolean,
   apiIdentifier: string,
   routeTags?: string[],
+  bypassSecret?: boolean,
 ) {
   const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
   const queryProperties: Record<string, object> = {
@@ -236,9 +257,10 @@ function generateSchema(
       type: 'string',
       description: `Search pattern to match against ${fieldName}`,
     },
-    ...buildAllQueryProperties(model, effectiveQueries),
+    ...buildAllQueryProperties(model, effectiveQueries, bypassSecret),
   };
 
+  const excludeSecret = !bypassSecret;
   const schema: Record<string, unknown> = {
     summary: `Search ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
     description: `Search ${modelName} records from the database using a LIKE pattern on ${fieldName}`,
@@ -256,7 +278,9 @@ function generateSchema(
         properties: {
           data: {
             type: 'array',
-            items: generateJSONValidationSchema(model),
+            items: generateJSONValidationSchema(model, {
+              excludeSecretFields: excludeSecret,
+            }),
           },
           pagination: {
             type: 'object',
@@ -269,7 +293,7 @@ function generateSchema(
           },
         },
       },
-      generateJSONValidationSchema(model),
+      generateJSONValidationSchema(model, {excludeSecretFields: excludeSecret}),
     ),
   };
 

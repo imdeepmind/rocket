@@ -17,6 +17,8 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {RouteInfo} from '@/lib/server/welcome';
+
 import {registerRoutes} from '@/routes';
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
@@ -41,7 +43,6 @@ import {Mode} from '@/interfaces';
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
-import {RouteInfo} from '@/utils/welcome';
 
 export interface StartServerResult {
   app: FastifyInstance;

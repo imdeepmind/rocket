@@ -111,6 +111,7 @@ export interface ModelFieldConfig {
   nullable?: boolean;
   unique?: boolean;
   default?: unknown;
+  secret?: boolean;
   apis?: ApiOperation[];
   query?: QueryOperation[];
   aggregations?: Aggregation[];
@@ -208,6 +209,7 @@ export interface ApisConfig {
     webhooks?: WebhookConfig[];
     serverSideParams?: ServerSideParamConfig[];
     authorization?: boolean;
+    bypassSecret?: boolean;
     supportedAggregations?: Aggregation[];
     supportedQueries?: QueryOperation[];
   };

@@ -1,22 +1,23 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildSqlEndpoint,
-  handleSql,
-} from '@/routes/custom-endpoints/handlers/sql';
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
-
+import {getApiAuthorization} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {
+  buildSqlEndpoint,
+  handleSql,
+} from '@/routes/custom-endpoints/handlers/sql';
+
+import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
 export function registerCustomEndpointRoutes(
   app: FastifyInstance,
@@ -34,10 +35,10 @@ export function registerCustomEndpointRoutes(
 
     if (config.apis?.[defaultApiIdentifier]?.enabled === false) continue;
 
-    const defaultAuthorization =
-      config.apis?.[defaultApiIdentifier]?.authorization ??
-      config.authentication?.enabled ??
-      false;
+    const defaultAuthorization = getApiAuthorization(
+      config,
+      defaultApiIdentifier,
+    );
     const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
 
     registerCustomEndpoint(
@@ -71,10 +72,10 @@ export function registerCustomEndpointRoutes(
 
       if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
 
-      const variantAuthorization =
-        config.apis?.[variantApiIdentifier]?.authorization ??
-        config.authentication?.enabled ??
-        false;
+      const variantAuthorization = getApiAuthorization(
+        config,
+        variantApiIdentifier,
+      );
       const variantTags = config.apis?.[variantApiIdentifier]?.tags;
 
       registerCustomEndpoint(

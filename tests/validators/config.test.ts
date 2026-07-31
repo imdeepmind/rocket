@@ -947,6 +947,48 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "ulid"',
     },
+    {
+      name: 'secret + primaryKey',
+      patch: {
+        fields: {test: {type: 'string', secret: true, primaryKey: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: secret cannot be combined with primaryKey',
+    },
+    {
+      name: 'secret + apis search',
+      patch: {
+        fields: {test: {type: 'string', secret: true, apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: secret fields cannot have "search" or "index" APIs (found: search)',
+    },
+    {
+      name: 'secret + apis index',
+      patch: {
+        fields: {test: {type: 'string', secret: true, apis: ['index']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: secret fields cannot have "search" or "index" APIs (found: index)',
+    },
+    {
+      name: 'secret + query',
+      patch: {
+        fields: {test: {type: 'string', secret: true, query: ['eq']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: secret fields cannot have query operations',
+    },
+    {
+      name: 'secret + aggregations',
+      patch: {
+        fields: {
+          test: {type: 'integer', secret: true, aggregations: ['count']},
+        },
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: secret fields cannot have aggregations',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
