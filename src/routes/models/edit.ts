@@ -19,6 +19,7 @@ import {
 import {getPublicFields, mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {applyFilters} from '@/lib/sql/filters';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
   AppConfig,
@@ -236,6 +237,14 @@ function registerEditEndpoint(
 
     delete body[fieldName];
 
+    const updatedAtClause = buildUpdatedAtClause(
+      model,
+      config.infrastructure.database.engine,
+    );
+    if (updatedAtClause) {
+      delete body.updated_at;
+    }
+
     const keys = Object.keys(body);
     if (keys.length === 0) {
       return reply.status(400).send({error: 'No fields provided for update'});
@@ -248,6 +257,9 @@ function registerEditEndpoint(
     for (const key of keys) {
       setClauses.push(`"${key}" = $${paramIndex++}`);
       values.push(body[key]);
+    }
+    if (updatedAtClause) {
+      setClauses.push(updatedAtClause);
     }
 
     const whereClauses: string[] = [];

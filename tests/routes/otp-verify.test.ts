@@ -461,6 +461,65 @@ describe('POST /auth/register/verify/otp', () => {
       await app.close();
     });
 
+    test('should set updated_at when the auth model has an updated_at field', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean', default: false},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createOtpApp(upAuthConfig, modelsWithTimestamps);
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              is_active: false,
+              updated_at: null,
+            },
+          ],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/register/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const updateCall = pgClientQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return (
+          typeof query === 'string' && (query as string).includes('UPDATE')
+        );
+      });
+      expect(updateCall).toBeDefined();
+      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
+      expect(updateQuery).toContain('UPDATE "users"');
+      expect(updateQuery).toContain('"is_active" = true');
+      expect(updateQuery).toContain('"updated_at" = now()');
+
+      await app.close();
+    });
+
     test('should return 200 without UPDATE when isVerifiedField is not configured', async () => {
       const authWithoutVerified: AuthenticationConfig = {
         ...upAuthConfig,
@@ -688,6 +747,72 @@ describe('POST /auth/forgot-password/verify/otp', () => {
       const updateQuery = (updateCall as [string, unknown[]])[0] as string;
       expect(updateQuery).toContain('UPDATE "users"');
       expect(updateQuery).toContain('"password" = $1');
+
+      await app.close();
+    });
+
+    test('should set updated_at when the auth model has an updated_at field', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createOtpApp(upAuthConfig, modelsWithTimestamps);
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'old_hashed',
+              updated_at: null,
+            },
+          ],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'hash').mockResolvedValue(
+        'new_hashed_password' as never,
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/forgot-password/verify/otp',
+        payload: {
+          ulid,
+          otp: '000000',
+          email: 'alice@example.com',
+          newPassword: 'newPass123',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const updateCall = pgClientQueryMock.mock.calls.find(call => {
+        const [query] = call;
+        return (
+          typeof query === 'string' && (query as string).includes('UPDATE')
+        );
+      });
+      expect(updateCall).toBeDefined();
+      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
+      expect(updateQuery).toContain('UPDATE "users"');
+      expect(updateQuery).toContain('"password" = $1');
+      expect(updateQuery).toContain('"updated_at" = now()');
 
       await app.close();
     });

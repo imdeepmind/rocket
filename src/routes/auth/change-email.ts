@@ -7,8 +7,13 @@ import {
 } from '@/lib/config/identifier';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {
+  AppConfig,
+  ModelConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -38,6 +43,7 @@ export function registerEmailChangeRoute(
     app,
     config,
     model,
+    authModelConfig,
     idField,
     usernameField,
     isVerifiedField,
@@ -72,6 +78,7 @@ export function registerEmailChangeRoute(
       app,
       config,
       model,
+      authModelConfig,
       idField,
       usernameField,
       isVerifiedField,
@@ -86,6 +93,7 @@ function registerEmailChangeEndpoint(
   app: FastifyInstance,
   config: AppConfig,
   model: string,
+  authModelConfig: ModelConfig,
   idField: string,
   usernameField: string,
   isVerifiedField: string | undefined,
@@ -153,8 +161,16 @@ function registerEmailChangeEndpoint(
           values.push(false);
         }
 
+        const updatedAtClause = buildUpdatedAtClause(
+          authModelConfig,
+          config.infrastructure.database.engine,
+        );
+        if (updatedAtClause) {
+          setClauses.push(updatedAtClause);
+        }
+
         values.push(userId);
-        const paramIndex = setClauses.length + 1;
+        const paramIndex = values.length;
         const updateQuery = `UPDATE "${model}" SET ${setClauses.join(', ')} WHERE "${idField}" = $${paramIndex};`;
         await tx.query(updateQuery, values);
 

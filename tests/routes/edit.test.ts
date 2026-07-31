@@ -2,8 +2,13 @@ import {beforeEach, describe, expect, test} from 'vitest';
 
 import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
 
-import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
-import {createTestApp, pgConfig} from '@tests/helpers/test-app';
+import {
+  pgClientQueryMock,
+  pgQueryMock,
+  sqlitePrepareMock,
+  sqliteRunMock,
+} from '@tests/helpers/db-mocks';
+import {createTestApp, pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -74,10 +79,26 @@ const validatedEditModel: Record<string, ModelConfig> = {
   },
 };
 
+const timestampEditModel: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {
+        type: 'integer',
+        primaryKey: true,
+        apis: ['edit'],
+      },
+      name: {type: 'string'},
+      updated_at: {type: 'datetime'},
+    },
+  },
+};
+
 describe('test edit api', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
     pgClientQueryMock.mockClear();
+    sqlitePrepareMock.mockClear();
+    sqliteRunMock.mockReset();
   });
 
   describe('PATCH partial updates', () => {
@@ -472,6 +493,90 @@ describe('test edit api', () => {
       expect(callArgs[0]).toContain(
         'WHERE "status" = $2 AND "title" = $3 AND "id" IN ($4, $5, $6)',
       );
+
+      await fastify.close();
+    });
+  });
+
+  describe('timestamps', () => {
+    test('should append updated_at = now() when the model has updated_at field', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, timestampEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      expect(updateCall).toBeDefined();
+      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
+      expect(updateQuery).toContain('"updated_at" = now()');
+
+      await fastify.close();
+    });
+
+    test('should override user-supplied updated_at with current timestamp', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, timestampEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob', updated_at: '1990-01-01T00:00:00.000Z'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Bob'});
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      const [updateQuery, updateValues] = updateCall as [string, unknown[]];
+      expect(updateQuery).toContain('"name" = $1');
+      expect(updateQuery).toContain('"updated_at" = now()');
+      expect(updateQuery).not.toContain('"updated_at" = $');
+      expect(updateQuery).toMatch(/WHERE "id" = \$2/);
+      expect(updateValues).toEqual(['Bob', 1]);
+
+      await fastify.close();
+    });
+
+    test('should append sqlite datetime expression for updated_at on sqlite engine', async () => {
+      sqliteRunMock.mockReturnValue({changes: 1});
+
+      const fastify = await createTestApp(sqliteConfig, timestampEditModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        payload: {name: 'Bob'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const updateCall = sqlitePrepareMock.mock.calls.find(call => {
+        const [sql] = call;
+        return typeof sql === 'string' && (sql as string).includes('UPDATE');
+      });
+      expect(updateCall).toBeDefined();
+      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
+      expect(updateQuery).toContain('"updated_at" = (datetime(\'now\'))');
 
       await fastify.close();
     });

@@ -8,6 +8,7 @@ import {
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
   AppConfig,
@@ -146,7 +147,7 @@ function registerEditMeEndpoint(
         ),
       );
       const editableKeys = Object.keys(body).filter(
-        k => !protectedFields.has(k),
+        k => !protectedFields.has(k) && k !== 'updated_at',
       );
 
       if (editableKeys.length === 0) {
@@ -154,6 +155,11 @@ function registerEditMeEndpoint(
           .status(400)
           .send(app.buildResponse(400, 'No editable fields provided', null));
       }
+
+      const updatedAtClause = buildUpdatedAtClause(
+        authModelConfig,
+        config.infrastructure.database.engine,
+      );
 
       const selectQuery = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
 
@@ -177,6 +183,9 @@ function registerEditMeEndpoint(
         for (const key of editableKeys) {
           setClauses.push(`"${key}" = $${paramIndex++}`);
           values.push(body[key]);
+        }
+        if (updatedAtClause) {
+          setClauses.push(updatedAtClause);
         }
 
         values.push(userId);
