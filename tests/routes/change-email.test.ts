@@ -365,6 +365,69 @@ describe('PATCH /auth/user/email', () => {
 
       await app.close();
     });
+
+    test('should set updated_at when the auth model has an updated_at field', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean', default: false},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createChangeEmailApp(
+        upAuthConfig,
+        modelsWithTimestamps,
+      );
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed',
+              is_active: true,
+              updated_at: null,
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/auth/user/email',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {email: 'newalice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const updateCall = pgClientQueryMock.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
+      );
+      expect(updateCall).toBeDefined();
+      const [updateQuery, updateValues] = updateCall as [string, unknown[]];
+      expect(updateQuery).toContain('"email" = $1');
+      expect(updateQuery).toContain('"is_active" = $2');
+      expect(updateQuery).toContain('"updated_at" = now()');
+      expect(updateQuery).toContain('WHERE "id" = $3');
+      expect(updateValues).toEqual(['newalice@example.com', false, 1]);
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {

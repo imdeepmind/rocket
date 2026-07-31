@@ -6,6 +6,7 @@ import {
   getVariantSegment,
 } from '@/lib/config/identifier';
 import {getResponseStructureSchema} from '@/lib/schema/response';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
@@ -162,7 +163,11 @@ function registerOtpVerifyEndpoint(
         if (action === 'register') {
           const isVerifiedField = upConfig.userModel.isVerifiedField;
           if (isVerifiedField) {
-            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
+            const updatedAtClause = buildUpdatedAtClause(
+              config.data.models[model],
+              config.infrastructure.database.engine,
+            );
+            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $1;`;
             await tx.query(updateQuery, [String(username)]);
           }
 
@@ -187,7 +192,11 @@ function registerOtpVerifyEndpoint(
 
           const {passwordField} = upConfig.userModel;
           const hashedPassword = await hash(String(newPassword));
-          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${usernameField}" = $2;`;
+          const updatedAtClause = buildUpdatedAtClause(
+            config.data.models[model],
+            config.infrastructure.database.engine,
+          );
+          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $2;`;
           await tx.query(updateQuery, [hashedPassword, String(username)]);
 
           await tx.commit();

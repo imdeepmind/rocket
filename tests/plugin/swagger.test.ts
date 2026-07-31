@@ -3,6 +3,8 @@ import {describe, expect, it} from 'vitest';
 
 import swaggerPlugin from '@/plugin/swagger';
 
+import {generateJSONValidationSchema} from '@/lib/schema/body';
+
 const baseConfig = {
   application: {name: 'test', logLevel: 'error'},
   docs: {
@@ -123,6 +125,47 @@ describe('Swagger Plugin', () => {
     expect(res.statusCode).toBe(200);
     const spec = JSON.parse(res.body);
     expect(spec.components.securitySchemes).toBeUndefined();
+
+    await app.close();
+  });
+
+  it('should exclude managed timestamp fields from POST request body schemas', async () => {
+    const app = Fastify();
+    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig.data.models = {
+      posts: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          title: {type: 'string'},
+          created_at: {type: 'datetime'},
+          updated_at: {type: 'datetime'},
+        },
+      },
+    };
+    const bodySchema = generateJSONValidationSchema(
+      app.appConfig.data.models.posts,
+      {
+        excludeTimestamps: true,
+      },
+    );
+    await app.register(swaggerPlugin);
+    app.post('/api/v1/posts/', {
+      schema: {body: bodySchema, response: {201: {type: 'object'}}},
+      handler: async () => ({statusCode: 201}),
+    });
+    await app.ready();
+
+    const res = await app.inject({method: 'GET', url: '/docs/json'});
+    expect(res.statusCode).toBe(200);
+    const spec = JSON.parse(res.body);
+
+    const specBody = JSON.stringify(spec.paths);
+    // The POST route must be present in the spec...
+    expect(specBody).toContain('posts');
+    expect(specBody).toContain('title');
+    // ...but managed timestamp fields must not leak into request schemas
+    expect(specBody).not.toContain('created_at');
+    expect(specBody).not.toContain('updated_at');
 
     await app.close();
   });

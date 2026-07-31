@@ -217,6 +217,59 @@ describe('POST /auth/change-password', () => {
 
       await app.close();
     });
+
+    test('should set updated_at when the auth model has an updated_at field', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createAuthApp(upAuthConfig, modelsWithTimestamps);
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'hash').mockResolvedValue(
+        'new_hashed_password' as never,
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/change-password',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          existingPassword: 'old_password',
+          newPassword: 'new_password',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'UPDATE "users" SET "password" = $1, "updated_at" = now() WHERE "id" = $2;',
+        ['new_hashed_password', 1],
+      );
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {

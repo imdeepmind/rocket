@@ -7,6 +7,7 @@ import {
 } from '@/lib/config/identifier';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
@@ -150,7 +151,11 @@ function registerChangePasswordEndpoint(
 
         const newHashedPassword = await hash(String(newPassword));
 
-        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${idField}" = $2;`;
+        const updatedAtClause = buildUpdatedAtClause(
+          config.data.models[model],
+          config.infrastructure.database.engine,
+        );
+        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
         await tx.query(updateQuery, [newHashedPassword, userId]);
 
         await tx.commit();

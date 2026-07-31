@@ -227,6 +227,7 @@ function generateSchema(
   const bodySchema = generateJSONValidationSchema(bodyModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
+    excludeTimestamps: true,
   });
 
   const responseData = requiresOtp
@@ -243,7 +244,11 @@ function generateSchema(
             ),
           ),
         },
-        {ignorePrimaryKey: true, additionalProperties: false},
+        {
+          ignorePrimaryKey: true,
+          additionalProperties: false,
+          excludeTimestamps: true,
+        },
       );
 
   const responseSchema = getResponseStructureSchema(

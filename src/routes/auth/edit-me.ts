@@ -5,9 +5,11 @@ import {
   getAdditionalVariants,
   getVariantSegment,
 } from '@/lib/config/identifier';
+import {isManagedTimestampField} from '@/lib/schema/fields';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
   AppConfig,
@@ -146,7 +148,7 @@ function registerEditMeEndpoint(
         ),
       );
       const editableKeys = Object.keys(body).filter(
-        k => !protectedFields.has(k),
+        k => !protectedFields.has(k) && !isManagedTimestampField(k),
       );
 
       if (editableKeys.length === 0) {
@@ -154,6 +156,11 @@ function registerEditMeEndpoint(
           .status(400)
           .send(app.buildResponse(400, 'No editable fields provided', null));
       }
+
+      const updatedAtClause = buildUpdatedAtClause(
+        authModelConfig,
+        config.infrastructure.database.engine,
+      );
 
       const selectQuery = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
 
@@ -177,6 +184,9 @@ function registerEditMeEndpoint(
         for (const key of editableKeys) {
           setClauses.push(`"${key}" = $${paramIndex++}`);
           values.push(body[key]);
+        }
+        if (updatedAtClause) {
+          setClauses.push(updatedAtClause);
         }
 
         values.push(userId);
@@ -224,7 +234,10 @@ function generateSchema(
 
   const bodyProperties: Record<string, object> = {};
   for (const [fieldName, field] of Object.entries(authModelConfig.fields)) {
-    if (!protectedFields.has(fieldName)) {
+    if (
+      !protectedFields.has(fieldName) &&
+      !isManagedTimestampField(fieldName)
+    ) {
       bodyProperties[fieldName] = {
         ...mapDataTypeToJsonSchema(field.type),
         description: `New value for ${fieldName}`,
