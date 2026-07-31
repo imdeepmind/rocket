@@ -1,12 +1,12 @@
 import Ajv from 'ajv';
 
+import {normalizeSchemaForAjv} from '@/lib/schema/normalize';
+
 import {
   AppConfig,
   JsonSchemaObject,
   JsonSchemaProperty,
 } from '@/interfaces/config';
-
-import {normalizeSchemaForAjv} from '@/utils/schema';
 
 const ALLOWED_APIS: Record<string, string[]> = {
   integer: ['edit', 'delete', 'index'],

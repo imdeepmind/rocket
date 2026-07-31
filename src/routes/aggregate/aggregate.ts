@@ -1,20 +1,19 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getApiAuthorization,
-  getEffectiveAggregations,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {Aggregation, AppConfig} from '@/interfaces/config';
-
+import {getApiAuthorization, getEffectiveAggregations} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {Aggregation, AppConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerAggregateRoutes(

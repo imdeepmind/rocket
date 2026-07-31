@@ -1,23 +1,23 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildSqlEndpoint,
-  handleSql,
-} from '@/routes/custom-endpoints/handlers/sql';
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getApiAuthorization,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
-
+import {getApiAuthorization} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {
+  buildSqlEndpoint,
+  handleSql,
+} from '@/routes/custom-endpoints/handlers/sql';
+
+import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
 export function registerCustomEndpointRoutes(
   app: FastifyInstance,

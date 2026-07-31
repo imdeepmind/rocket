@@ -1,18 +1,24 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  applyFilters,
-  buildAllQueryProperties,
-  buildPreValidation,
-  buildSecurityArray,
   getApiAuthorization,
   getApiBypassSecret,
   getEffectiveQueries,
-  getPublicFields,
-  getResponseStructureSchema,
-  mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
-} from '@/routes/schema-helpers';
+} from '@/lib/config/api';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {buildAllQueryProperties} from '@/lib/schema/query';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {getPublicFields, mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+import {applyFilters} from '@/lib/sql/filters';
 
 import {
   AppConfig,
@@ -21,11 +27,6 @@ import {
   ModelFieldConfig,
 } from '@/interfaces/config';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditRoutes(

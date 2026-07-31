@@ -1,27 +1,28 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  applyFilters,
-  buildAllQueryProperties,
-  buildPreValidation,
-  buildSecurityArray,
-  generateJSONValidationSchema,
   getApiAuthorization,
   getApiBypassSecret,
   getEffectiveQueries,
-  getPublicFields,
-  getResponseStructureSchema,
-  mapDataTypeToJsonSchema,
   shouldApiBeEnabled,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
-
+} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {generateJSONValidationSchema} from '@/lib/schema/body';
+import {buildAllQueryProperties} from '@/lib/schema/query';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {getPublicFields, mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+import {applyFilters} from '@/lib/sql/filters';
+
+import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerIndexRoutes(

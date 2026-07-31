@@ -10,6 +10,8 @@ module.exports = {
     '^@/plugin(/.*)?$',
     '^@/server(/.*)?$',
     '',
+    '^@/lib(/.*)?$',
+    '',
     '^@/routes(/.*)?$',
     '',
     '^@/interfaces(/.*)?$',

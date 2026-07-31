@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {parseQueryPlaceholders} from '@/utils/query-placeholders';
+import {parseQueryPlaceholders} from '@/lib/sql/placeholders';
 
 describe('parseQueryPlaceholders', () => {
   it('should parse a single path query placeholder', () => {

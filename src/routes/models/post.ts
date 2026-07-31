@@ -1,24 +1,28 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  buildPreValidation,
-  buildSecurityArray,
-  generateJSONValidationSchema,
   getApiAuthorization,
   getApiBypassSecret,
-  getPublicFields,
-  getResponseStructureSchema,
   shouldApiBeEnabled,
-  stripAdditionalPostFields,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
-
+} from '@/lib/config/api';
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {
+  generateJSONValidationSchema,
+  stripAdditionalPostFields,
+} from '@/lib/schema/body';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {getPublicFields} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerPostRoutes(

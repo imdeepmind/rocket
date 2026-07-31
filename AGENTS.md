@@ -30,7 +30,7 @@ Run `./dev.sh check` after every change before committing.
 
 ## Import order (enforced by Prettier)
 
-Builtins → Third-party → `@/migrator` → `@/plugin` → `@/server` → `@/routes` → `@/interfaces` → `@/types` → `@/validators` → `@/utils` → `@/constants` → `@tests/` → relative `./`
+Builtins → Third-party → `@/migrator` → `@/plugin` → `@/server` → `@/lib` → `@/routes` → `@/interfaces` → `@/types` → `@/validators` → `@/utils` → `@/constants` → `@tests/` → relative `./`
 
 ## Commit messages
 
@@ -45,8 +45,9 @@ Types: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`. Max header: 120 chars.
 - **Entrypoint:** `src/main.ts` (commander CLI) → `startServer()` in `src/server.ts`.
 - **Fastify custom decorators** (augmented in `src/types/fastify.d.ts`): `app.db`, `app.buildResponse()`, `app.appConfig`, `app.cache`, `app.callWebhook`, `app.enforceSSP`.
 - **DB abstraction:** Uniform `DatabaseQuery` interface (`{changes, rows}`). PG uses `pg.Pool`, SQLite uses `better-sqlite3` (sync wrapped in Promise). DDL queries are blocked.
-- **Config env vars:** Use `env:VARNAME` in JSON config values — resolved by `src/utils/config.ts`.
+- **Config env vars:** Use `env:VARNAME` in JSON config values — resolved by `src/lib/config/env.ts`.
 - **Config validation:** AJV schema in `src/validators/config/schema.ts`. Reference config: `example_config.json`.
 - **Plugin registration order** in `startServer()`: db → cache → communicate → rate-limit → response → ssp → webhook → auth. Fastify-plugin (`fp`) wrapper used throughout.
+- **Shared library code lives in `src/lib/`**, grouped by framework layer: `config/` (env resolution, API identifiers, `config.apis` accessors), `schema/` (JSON Schema builders for Swagger), `sql/` (WHERE-clause filters, placeholder parsing), `server/` (prevalidation, welcome screen). Tests mirror this under `tests/lib/`.
 - **ESM only** (`"type": "module"`). No require().
 - **`docs/`** is a separate Docusaurus site (own package.json) — not part of the main project.

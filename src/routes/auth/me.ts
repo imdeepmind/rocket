@@ -1,18 +1,16 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  buildPreValidation,
-  generateJSONValidationSchema,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
-
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
-
-import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {generateJSONValidationSchema} from '@/lib/schema/body';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
+import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {

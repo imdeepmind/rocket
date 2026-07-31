@@ -1,10 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  buildPreValidation,
-  getResponseStructureSchema,
-  mapDataTypeToJsonSchema,
-} from '@/routes/schema-helpers';
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {buildPreValidation} from '@/lib/server/prevalidation';
 
 import {
   AppConfig,
@@ -13,11 +16,6 @@ import {
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/utils/config';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditMeRoute(

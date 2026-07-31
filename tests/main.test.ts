@@ -34,7 +34,7 @@ vi.mock('../src/server', () => ({
   startServer: vi.fn(),
 }));
 
-vi.mock('../src/utils/welcome', () => ({
+vi.mock('../src/lib/server/welcome', () => ({
   showWelcomeScreen: vi.fn(),
 }));
 

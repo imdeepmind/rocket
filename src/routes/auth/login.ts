@@ -1,14 +1,14 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
-
-import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
-
 import {
   buildApiIdentifier,
   getAdditionalVariants,
   getVariantSegment,
-} from '@/utils/config';
+} from '@/lib/config/identifier';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+
+import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
+
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
