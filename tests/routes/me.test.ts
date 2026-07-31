@@ -25,7 +25,7 @@ const authModels: Record<string, ModelConfig> = {
     fields: {
       id: {type: 'integer', primaryKey: true},
       email: {type: 'string', nullable: false},
-      password: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false, secret: true},
     },
   },
 };
@@ -60,7 +60,7 @@ async function createMeApp(
   authentication: AuthenticationConfig,
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
-  apis?: Record<string, {enabled: boolean}>,
+  apis?: Record<string, {enabled?: boolean; bypassSecret?: boolean}>,
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
@@ -227,7 +227,46 @@ describe('GET /auth/user/me', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.message).toBe('User profile retrieved successfully');
-      expect(body.data).toEqual(mockUser);
+      expect(body.data).toEqual({id: 1, email: 'alice@example.com'});
+
+      const selectArg = pgQueryMock.mock.calls[0][0] as string;
+      expect(selectArg).not.toContain('password');
+
+      await app.close();
+    });
+
+    test('should return secret fields when bypassSecret is enabled', async () => {
+      const app = await createMeApp(upAuthConfig, authModels, pgConfig, {
+        'auth.v1.users.unknown.me': {
+          bypassSecret: true,
+        },
+      });
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      const mockUser = {
+        id: 1,
+        email: 'alice@example.com',
+        password: 'hashed_password',
+      };
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [mockUser],
+        rowCount: 1,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/auth/user/me',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual(mockUser);
+
+      const selectArg = pgQueryMock.mock.calls[0][0] as string;
+      expect(selectArg).toContain('"password"');
 
       await app.close();
     });
@@ -287,6 +326,50 @@ describe('GET /auth/user/me', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should exclude secret fields on variant endpoint unless bypassSecret is set', async () => {
+      const app = await createMeApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        {
+          'auth.admin.users.unknown.me': {
+            bypassSecret: true,
+          },
+        },
+        {
+          'auth.v1.users.unknown.me': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'admin@example.com', password: 'hash'}],
+        rowCount: 1,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/admin/auth/user/me',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({
+        id: 1,
+        email: 'admin@example.com',
+        password: 'hash',
+      });
+
+      const selectArg = pgQueryMock.mock.calls[0][0] as string;
+      expect(selectArg).toContain('"password"');
+
       await app.close();
     });
 
