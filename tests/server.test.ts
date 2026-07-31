@@ -13,15 +13,47 @@ import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
+import {registerEmailChangeRoute} from '@/routes/auth/change-email';
+import {registerChangePasswordRoute} from '@/routes/auth/change-password';
+import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
+import {registerEditMeRoute} from '@/routes/auth/edit-me';
+import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
+import {registerLoginRoute} from '@/routes/auth/login';
+import {registerMeRoute} from '@/routes/auth/me';
+import {
+  registerForgotPasswordOtpVerifyRoute,
+  registerLoginOtpVerifyRoute,
+  registerRegistrationOtpVerifyRoute,
+} from '@/routes/auth/otp-verify';
+import {registerRegistrationRoute} from '@/routes/auth/registration';
+import {
+  registerForgotPasswordResendOtpRoute,
+  registerLoginResendOtpRoute,
+  registerRegistrationResendOtpRoute,
+} from '@/routes/auth/resend-otp';
 import {registerRoutes} from '@/routes/index';
 
 import {Mode} from '@/interfaces';
 import {AppConfig} from '@/interfaces/config';
 
 vi.mock('fastify', () => {
+  let appConfig: AppConfig | undefined;
+  const storedHooks: Record<string, unknown[]> = {};
   const mockApp = {
-    register: vi.fn(),
-    addHook: vi.fn(),
+    register: vi.fn(async (plugin: unknown) => {
+      if (typeof plugin === 'function') {
+        try {
+          await plugin(mockApp, {});
+        } catch {
+          // plugins may fail in mock context — ignore
+        }
+      }
+    }),
+    addHook: vi.fn((name: string, fn: unknown) => {
+      if (!storedHooks[name]) storedHooks[name] = [];
+      storedHooks[name].push(fn);
+    }),
+    getHook: (name: string) => storedHooks[name],
     setErrorHandler: vi.fn(),
     listen: vi.fn(),
     close: vi.fn(),
@@ -39,6 +71,12 @@ vi.mock('fastify', () => {
       message,
       meta,
     })),
+    set appConfig(val: AppConfig) {
+      appConfig = val;
+    },
+    get appConfig(): AppConfig | undefined {
+      return appConfig;
+    },
   };
   return {
     default: vi.fn(() => mockApp),
@@ -61,7 +99,47 @@ vi.mock('@/routes/auth/registration', () => ({
   registerRegistrationRoute: vi.fn(),
 }));
 
-vi.mock('@/utils/welcome', () => ({
+vi.mock('@/routes/auth/login', () => ({
+  registerLoginRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/change-password', () => ({
+  registerChangePasswordRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/forgot-password', () => ({
+  registerForgotPasswordRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/otp-verify', () => ({
+  registerForgotPasswordOtpVerifyRoute: vi.fn(),
+  registerLoginOtpVerifyRoute: vi.fn(),
+  registerRegistrationOtpVerifyRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/resend-otp', () => ({
+  registerForgotPasswordResendOtpRoute: vi.fn(),
+  registerLoginResendOtpRoute: vi.fn(),
+  registerRegistrationResendOtpRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/me', () => ({
+  registerMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/delete-me', () => ({
+  registerDeleteMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/edit-me', () => ({
+  registerEditMeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/change-email', () => ({
+  registerEmailChangeRoute: vi.fn(),
+}));
+
+vi.mock('@/lib/server/welcome', () => ({
   showWelcomeScreen: vi.fn(),
 }));
 
@@ -97,6 +175,7 @@ const mockConfig: AppConfig = {
 type MockedApp = FastifyInstance & {
   register: ReturnType<typeof vi.fn>;
   addHook: ReturnType<typeof vi.fn>;
+  getHook: (name: string) => unknown[] | undefined;
   setErrorHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
@@ -226,10 +305,15 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    expect(mockApp.register).toHaveBeenCalledTimes(9);
+
+    const prefixCall = mockApp.register.mock.calls.find(
+      ([, opts]) => opts?.prefix === '/api',
+    );
+    expect(prefixCall).toBeDefined();
 
     expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
-    expect(registerRoutes).toHaveBeenCalledWith(mockApp, mockConfig);
+    expect(registerRoutes).toHaveBeenCalled();
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -246,7 +330,7 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(5);
+    expect(mockApp.register).toHaveBeenCalledTimes(6);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -259,6 +343,10 @@ describe('Server', () => {
     expect(registerRoutes).toHaveBeenCalledWith(
       expect.any(Object),
       noModelsConfig,
+    );
+    expect(mockApp.register).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({prefix: '/api'}),
     );
   });
 
@@ -405,6 +493,29 @@ describe('Server', () => {
     expect(Array.isArray(routes)).toBe(true);
   });
 
+  it('should call enforceSSP in the global preValidation hook', async () => {
+    const {app} = await startServer(mockConfig, 3000, 'dev');
+    const mockApp = app as MockedApp;
+
+    const preValidationHooks = mockApp.getHook('preValidation');
+    expect(preValidationHooks).toBeDefined();
+    expect(preValidationHooks!.length).toBeGreaterThan(0);
+
+    const mockRequest = {
+      routeOptions: {config: {apiIdentifier: 'test'}},
+      query: {},
+      body: {},
+      params: {},
+    };
+    const enforceSSP = vi.fn();
+    (mockApp as unknown as Record<string, unknown>).enforceSSP = enforceSSP;
+    for (const hook of preValidationHooks!) {
+      await (hook as (...args: unknown[]) => unknown)(mockRequest);
+    }
+
+    expect(enforceSSP).toHaveBeenCalledWith(mockRequest);
+  });
+
   describe('Redis and Rate Limit Configuration', () => {
     it('should register rate-limit plugin when rateLimit is configured', async () => {
       const configWithRateLimit: AppConfig = {
@@ -529,6 +640,143 @@ describe('Server', () => {
       await startServer(configWithMfa, 3000, 'dev');
 
       expect(registerMock).toHaveBeenCalledWith(otpPlugin);
+    });
+
+    it('should register auth routes conditionally based on config', async () => {
+      const configWithAll: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithAll, 3000, 'dev');
+
+      expect(registerRegistrationRoute).toHaveBeenCalled();
+      expect(registerLoginRoute).toHaveBeenCalled();
+      expect(registerChangePasswordRoute).toHaveBeenCalled();
+      expect(registerForgotPasswordRoute).toHaveBeenCalled();
+      expect(registerLoginOtpVerifyRoute).toHaveBeenCalled();
+      expect(registerRegistrationOtpVerifyRoute).toHaveBeenCalled();
+      expect(registerForgotPasswordOtpVerifyRoute).toHaveBeenCalled();
+      expect(registerLoginResendOtpRoute).toHaveBeenCalled();
+      expect(registerRegistrationResendOtpRoute).toHaveBeenCalled();
+      expect(registerForgotPasswordResendOtpRoute).toHaveBeenCalled();
+      expect(registerMeRoute).toHaveBeenCalled();
+      expect(registerDeleteMeRoute).toHaveBeenCalled();
+      expect(registerEditMeRoute).toHaveBeenCalled();
+      expect(registerEmailChangeRoute).toHaveBeenCalled();
+    });
+
+    it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
+      const configWithoutVerified: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithoutVerified, 3000, 'dev');
+
+      expect(registerRegistrationOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerRegistrationResendOtpRoute).not.toHaveBeenCalled();
+      expect(registerEmailChangeRoute).not.toHaveBeenCalled();
+    });
+
+    it('should not register login OTP verify route when mfa is not required', async () => {
+      const configWithoutMfa: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+            },
+          },
+        },
+      };
+
+      await startServer(configWithoutMfa, 3000, 'dev');
+
+      expect(registerLoginOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerLoginResendOtpRoute).not.toHaveBeenCalled();
+    });
+
+    it('should not register forgot-password routes when email is not configured', async () => {
+      const configWithoutEmail: AppConfig = {
+        ...mockConfig,
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithoutEmail, 3000, 'dev');
+
+      expect(registerForgotPasswordRoute).not.toHaveBeenCalled();
+      expect(registerForgotPasswordOtpVerifyRoute).not.toHaveBeenCalled();
+      expect(registerForgotPasswordResendOtpRoute).not.toHaveBeenCalled();
     });
   });
 

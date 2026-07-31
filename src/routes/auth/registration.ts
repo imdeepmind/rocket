@@ -1,10 +1,15 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {
   generateJSONValidationSchema,
-  getResponseStructureSchema,
   stripAdditionalPostFields,
-} from '@/routes/schema-helpers';
+} from '@/lib/schema/body';
+import {getResponseStructureSchema} from '@/lib/schema/response';
 
 import {
   AppConfig,
@@ -21,6 +26,8 @@ export function registerRegistrationRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -32,20 +39,90 @@ export function registerRegistrationRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.registration`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.registration`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
+  registerRegistrationEndpoint(
+    app,
+    config,
+    model,
+    authModelConfig,
+    passwordField,
+    isVerifiedField,
+    requiresOtp,
+    upConfig,
+    defaultVariant,
+    defaultApiIdentifier,
+    defaultTags,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'registration',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'registration',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
+    registerRegistrationEndpoint(
+      app,
+      config,
+      model,
+      authModelConfig,
+      passwordField,
+      isVerifiedField,
+      requiresOtp,
+      upConfig,
+      variant,
+      variantApiIdentifier,
+      variantTags,
+    );
+  }
+}
+
+function registerRegistrationEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  authModelConfig: ModelConfig,
+  passwordField: string,
+  isVerifiedField: string | undefined,
+  requiresOtp: boolean,
+  upConfig: UpAuthProviderConfig,
+  variant: string,
+  apiIdentifier: string,
+  routeTags?: string[],
+): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
     passwordField,
     model,
     requiresOtp,
     isVerifiedField,
+    routeTags,
   );
 
+  const path = `/${variant}/auth/register`;
+
   app.post(
-    '/auth/register',
+    path,
     {
       schema,
       config: {apiIdentifier},
@@ -132,8 +209,9 @@ function generateSchema(
   authModelConfig: ModelConfig,
   passwordField: string,
   model: string,
-  requiresOtp: boolean = false,
+  requiresOtp?: boolean,
   isVerifiedField?: string,
+  routeTags?: string[],
 ) {
   const bodyModelConfig =
     requiresOtp && isVerifiedField
@@ -149,6 +227,7 @@ function generateSchema(
   const bodySchema = generateJSONValidationSchema(bodyModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
+    excludeTimestamps: true,
   });
 
   const responseData = requiresOtp
@@ -165,7 +244,11 @@ function generateSchema(
             ),
           ),
         },
-        {ignorePrimaryKey: true, additionalProperties: false},
+        {
+          ignorePrimaryKey: true,
+          additionalProperties: false,
+          excludeTimestamps: true,
+        },
       );
 
   const responseSchema = getResponseStructureSchema(
@@ -177,7 +260,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Register a new ${capitalizeFirstLetter(model)} user`,
     description: `Creates a new user record in the "${model}" table. The password is hashed with bcrypt before being persisted.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Register'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Register'],
     body: bodySchema,
     response: responseSchema,
   };

@@ -62,6 +62,7 @@ async function createAuthApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -77,6 +78,7 @@ async function createAuthApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -111,7 +113,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         payload: {existingPassword: 'old', newPassword: 'new'},
       });
 
@@ -124,7 +126,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         payload: {existingPassword: 'old', newPassword: 'new'},
       });
 
@@ -135,12 +137,12 @@ describe('POST /auth/change-password', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.changePassword': {enabled: false},
+        'auth.v1.users.unknown.changePassword': {enabled: false},
       });
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         payload: {existingPassword: 'old', newPassword: 'new'},
       });
 
@@ -181,7 +183,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -215,6 +217,59 @@ describe('POST /auth/change-password', () => {
 
       await app.close();
     });
+
+    test('should set updated_at when the auth model has an updated_at field', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createAuthApp(upAuthConfig, modelsWithTimestamps);
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          ],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'hash').mockResolvedValue(
+        'new_hashed_password' as never,
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/change-password',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          existingPassword: 'old_password',
+          newPassword: 'new_password',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'UPDATE "users" SET "password" = $1, "updated_at" = now() WHERE "id" = $2;',
+        ['new_hashed_password', 1],
+      );
+
+      await app.close();
+    });
   });
 
   describe('unhappy path', () => {
@@ -223,7 +278,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         payload: {existingPassword: 'old', newPassword: 'new'},
       });
 
@@ -239,7 +294,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: 'Bearer invalidtoken',
         },
@@ -261,7 +316,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -284,7 +339,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -307,7 +362,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {authorization: `Bearer ${token}`},
         payload: {existingPassword: 'old', newPassword: 'new'},
       });
@@ -336,7 +391,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -356,7 +411,7 @@ describe('POST /auth/change-password', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/change-password',
+        url: '/v1/auth/change-password',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -364,6 +419,57 @@ describe('POST /auth/change-password', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        undefined,
+        {
+          'auth.v1.users.unknown.changePassword': {
+            variants: ['admin'],
+          },
+        },
+      );
+      const token = app.jwt.sign({id: 1, email: 'admin@example.com'});
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{id: 1, email: 'admin@example.com', password: 'hashed'}],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'hash').mockResolvedValue('new_hashed' as never);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/change-password',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {existingPassword: 'old', newPassword: 'new'},
+      });
+      expect(response.statusCode).toBe(200);
+      await app.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        undefined,
+        undefined,
+        {'auth.admin.users.unknown.changePassword': {enabled: false}},
+        {'auth.v1.users.unknown.changePassword': {variants: ['admin']}},
+      );
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/change-password',
+      });
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

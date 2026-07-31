@@ -1,0 +1,229 @@
+import {expect, test} from 'vitest';
+
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+
+import {AppConfig} from '@/interfaces/config';
+
+// test cases for getResponseStructureSchema
+test('should get response structure schema', () => {
+  const codes = [200, 201, 204];
+  const dataSchema = {
+    type: 'object',
+    properties: {
+      id: {
+        type: 'integer',
+        description: 'Value for id',
+      },
+      name: {
+        type: 'string',
+        description: 'Value for name',
+      },
+      email: {
+        type: 'string',
+        description: 'Value for email',
+      },
+      age: {
+        type: 'integer',
+        description: 'Value for age',
+      },
+    },
+    required: ['id', 'name', 'email'],
+  };
+  const rowSchema = {
+    type: 'object',
+    properties: {
+      id: {
+        type: 'integer',
+        description: 'Value for id',
+      },
+      name: {
+        type: 'string',
+        description: 'Value for name',
+      },
+      email: {
+        type: 'string',
+        description: 'Value for email',
+      },
+      age: {
+        type: 'integer',
+        description: 'Value for age',
+      },
+    },
+    required: ['id', 'name', 'email'],
+  };
+  const expectedSchema = {
+    200: {
+      type: 'object',
+      properties: {
+        code: {type: 'integer'},
+        message: {type: 'string'},
+        data: dataSchema,
+        raw_data: {
+          type: 'object',
+          properties: {
+            changes: {type: 'integer'},
+            rows: {
+              type: 'array',
+              items: rowSchema,
+            },
+          },
+        },
+      },
+    },
+    201: {
+      type: 'object',
+      properties: {
+        code: {type: 'integer'},
+        message: {type: 'string'},
+        data: dataSchema,
+        raw_data: {
+          type: 'object',
+          properties: {
+            changes: {type: 'integer'},
+            rows: {
+              type: 'array',
+              items: rowSchema,
+            },
+          },
+        },
+      },
+    },
+    204: {
+      type: 'null',
+      description: 'Successfully deleted the entry',
+    },
+  };
+  expect(getResponseStructureSchema(codes, dataSchema, rowSchema)).toEqual(
+    expectedSchema,
+  );
+});
+
+test('should throw error for unsupported HTTP status code', () => {
+  const codes = [999];
+  const dataSchema = {};
+  const rowSchema = {};
+  expect(() =>
+    getResponseStructureSchema(codes, dataSchema, rowSchema),
+  ).toThrow('Unsupported HTTP status code: 999');
+});
+
+test('run getResponseStructureSchema with no rowSchema', () => {
+  const codes = [200];
+  const dataSchema = {};
+  const expectedSchema = {
+    200: {
+      type: 'object',
+      properties: {
+        code: {type: 'integer'},
+        message: {type: 'string'},
+        data: dataSchema,
+        raw_data: {
+          type: 'object',
+          properties: {
+            changes: {type: 'integer'},
+            rows: {
+              type: 'array',
+              items: {type: 'object', additionalProperties: true},
+            },
+          },
+        },
+      },
+    },
+  };
+  expect(getResponseStructureSchema(codes, dataSchema)).toEqual(expectedSchema);
+});
+
+// test cases for buildSecurityArray
+const baseConfig: AppConfig = {
+  application: {name: 'test', logLevel: 'info'},
+  docs: {
+    openapi: {
+      enabled: false,
+      path: '/docs',
+      info: {title: 'Test', version: '1.0.0'},
+    },
+  },
+  infrastructure: {
+    database: {
+      engine: 'postgres',
+      connection: {url: 'postgresql://localhost:5432/test'},
+    },
+  },
+  data: {models: {}},
+};
+
+const upAuthUserModel = {
+  model: 'user',
+  idField: 'id',
+  usernameField: 'email',
+  passwordField: 'password',
+};
+
+test('should return empty array when authentication is disabled', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: false,
+      provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+    },
+  };
+  expect(buildSecurityArray(config, true)).toEqual([]);
+});
+
+test('should return empty array when authentication is disabled and authorization is false', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: false,
+      provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+    },
+  };
+  expect(buildSecurityArray(config, false)).toEqual([]);
+});
+
+test('should return bearerAuth when provider is up-auth and authorization is true', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: true,
+      provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+    },
+  };
+  expect(buildSecurityArray(config, true)).toEqual([{bearerAuth: []}]);
+});
+
+test('should return apiKeyAuth when provider is api-key and authorization is true', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: true,
+      provider: {type: 'api-key', config: {key: 'test-key'}},
+    },
+  };
+  expect(buildSecurityArray(config, true)).toEqual([{apiKeyAuth: []}]);
+});
+
+test('should return empty array when authorization is false even if auth is enabled', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: true,
+      provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
+    },
+  };
+  expect(buildSecurityArray(config, false)).toEqual([]);
+});
+
+test('should return empty array when authorization is false with api-key provider', () => {
+  const config: AppConfig = {
+    ...baseConfig,
+    authentication: {
+      enabled: true,
+      provider: {type: 'api-key', config: {key: 'test-key'}},
+    },
+  };
+  expect(buildSecurityArray(config, false)).toEqual([]);
+});

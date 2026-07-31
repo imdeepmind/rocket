@@ -1,6 +1,6 @@
-import {AppConfig, WebhookConfig} from '@/interfaces/config';
+import {getAPIFromUniqueIdentifier} from '@/lib/config/identifier';
 
-import {getAPIFromUniqueIdentifier} from '@/utils/config';
+import {AppConfig, WebhookConfig} from '@/interfaces/config';
 
 function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   const errors: string[] = [];
@@ -34,8 +34,8 @@ function validateApisConstraints(config: AppConfig): string[] {
   for (const key of keys) {
     const parts = key.split('.');
 
-    if (parts[0] === 'customEndpoints') {
-      if (parts.length === 2) {
+    if (parts[0] === 'custom') {
+      if (parts.length === 5) {
         const endpointConfig = getAPIFromUniqueIdentifier(config, key);
 
         if (!endpointConfig) {
@@ -46,7 +46,7 @@ function validateApisConstraints(config: AppConfig): string[] {
         errors.push(`apis/${key}: invalid key format`);
         continue;
       }
-    } else if (parts.length !== 4) {
+    } else if (parts.length !== 5) {
       errors.push(`apis/${key}: invalid key format`);
       continue;
     }
@@ -69,6 +69,57 @@ function validateApisConstraints(config: AppConfig): string[] {
       errors.push(
         `apis/${key}/authorization: authorization is only allowed when auth is enabled`,
       );
+    }
+
+    // validate supportedQueries is only allowed on model APIs
+    const supportedQueries = apisConfigurations[key]?.supportedQueries;
+    if (supportedQueries && !key.startsWith('model.')) {
+      errors.push(
+        `apis/${key}/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")`,
+      );
+    }
+
+    if (supportedQueries && key.startsWith('model.')) {
+      const modelName = parts[2];
+      const model = config.data.models[modelName];
+      if (model) {
+        const allFieldQueries = new Set(
+          Object.values(model.fields).flatMap(f => f.query || []),
+        );
+        for (const op of supportedQueries) {
+          if (!allFieldQueries.has(op)) {
+            errors.push(
+              `apis/${key}/supportedQueries: "${op}" is not supported by any field in model "${modelName}"`,
+            );
+          }
+        }
+      }
+    }
+
+    // validate supportedAggregations is only allowed on aggregate APIs
+    const supportedAggregations =
+      apisConfigurations[key]?.supportedAggregations;
+    if (supportedAggregations && !key.startsWith('aggregate.')) {
+      errors.push(
+        `apis/${key}/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")`,
+      );
+    }
+
+    if (supportedAggregations && key.startsWith('aggregate.')) {
+      const modelName = parts[2];
+      const model = config.data.models[modelName];
+      if (model) {
+        const allFieldAggregations = new Set(
+          Object.values(model.fields).flatMap(f => f.aggregations || []),
+        );
+        for (const agg of supportedAggregations) {
+          if (!allFieldAggregations.has(agg)) {
+            errors.push(
+              `apis/${key}/supportedAggregations: "${agg}" is not supported by any field in model "${modelName}"`,
+            );
+          }
+        }
+      }
     }
   }
 

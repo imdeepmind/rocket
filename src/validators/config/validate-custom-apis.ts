@@ -1,3 +1,5 @@
+import {parseQueryPlaceholders} from '@/lib/sql/placeholders';
+
 import {AppConfig} from '@/interfaces/config';
 
 import {ajv} from './schema';
@@ -59,82 +61,91 @@ function validateCustomAPIs(config: AppConfig): string[] {
         }
       }
 
-      // Magic variables validation
-      const delims = ['@@', '$$', '&&'];
-      const foundDelims: {pos: number; type: string}[] = [];
+      // Query placeholders validation
+      // Structural check: unclosed or mismatched delimiters
+      const delimRegex = /(@@|\$\$|&&|\^\^)/g;
+      const delims: {pos: number; type: string}[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = delimRegex.exec(endpoint.handler.sql)) !== null) {
+        delims.push({pos: match.index, type: match[1]});
+      }
 
-      delims.forEach(d => {
-        let pos = endpoint.handler.sql.indexOf(d);
-        while (pos !== -1) {
-          foundDelims.push({pos, type: d});
-          pos = endpoint.handler.sql.indexOf(d, pos + 2);
-        }
-      });
-
-      foundDelims.sort((a, b) => a.pos - b.pos);
-
-      for (let i = 0; i < foundDelims.length; i += 2) {
-        const start = foundDelims[i];
-        const end = foundDelims[i + 1];
+      for (let i = 0; i < delims.length; i += 2) {
+        const start = delims[i];
+        const end = delims[i + 1];
 
         if (!end) {
           errors.push(
-            `${path}/handler/sql: unclosed magic variable delimiter "${start.type}"`,
+            `${path}/handler/sql: unclosed query placeholder delimiter "${start.type}"`,
           );
           break;
         }
 
         if (start.type !== end.type) {
           errors.push(
-            `${path}/handler/sql: mixed magic variable delimiters "${start.type}" and "${end.type}"`,
+            `${path}/handler/sql: mixed query placeholder delimiters "${start.type}" and "${end.type}"`,
           );
-          continue;
         }
+      }
 
-        const varString = endpoint.handler.sql.substring(
-          start.pos + 2,
-          end.pos,
+      // Check for multiple type declarations in query placeholders
+      const multiTypeRegex =
+        /(@@|\$\$|&&|\^\^)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+      let mtMatch: RegExpExecArray | null;
+      while ((mtMatch = multiTypeRegex.exec(endpoint.handler.sql)) !== null) {
+        const varString = mtMatch[0].slice(
+          mtMatch[1].length,
+          -mtMatch[1].length,
         );
-        const parts = varString.split(':');
-        const varName = parts[0];
-        const varType = parts[1];
-        const typeName =
-          start.type === '@@'
-            ? 'body (@@)'
-            : start.type === '$$'
-              ? 'path ($$)'
-              : 'query (&&)';
+        errors.push(
+          `${path}/handler/sql: invalid query placeholder format "${varString}", multiple types provided`,
+        );
+      }
 
-        // 1. Validation for variable name patterns (alphanumeric, underscores, hyphens)
+      // Per-variable validation
+      const placeholders = parseQueryPlaceholders(endpoint.handler.sql);
+      const validTypes = [
+        'integer',
+        'string',
+        'boolean',
+        'text',
+        'datetime',
+        'decimal',
+        'date',
+        'json',
+        'enum',
+        'uuid',
+        'ulid',
+      ];
+      for (const {delimiter, name: varName, type: varType} of placeholders) {
+        const typeName =
+          delimiter === '@@'
+            ? 'body (@@)'
+            : delimiter === '$$'
+              ? 'path ($$)'
+              : delimiter === '&&'
+                ? 'query (&&)'
+                : 'header (^^)';
+
         if (!/^[a-zA-Z0-9_-]+$/.test(varName)) {
           errors.push(
-            `${path}/handler/sql: invalid magic variable name "${varName}" for ${typeName} parameter`,
+            `${path}/handler/sql: invalid query placeholder name "${varName}" for ${typeName} parameter`,
           );
         }
 
-        // 2. Validate datatype
-        if (parts.length > 2) {
+        if (!varType) {
           errors.push(
-            `${path}/handler/sql: invalid magic variable format "${varString}", multiple types provided`,
+            `${path}/handler/sql: missing data type for query placeholder "${varName}" in ${typeName} parameter`,
           );
-        } else if (!varType) {
+        } else if (!validTypes.includes(varType)) {
           errors.push(
-            `${path}/handler/sql: missing data type for magic variable "${varName}" in ${typeName} parameter`,
-          );
-        } else if (
-          !['integer', 'string', 'boolean', 'text', 'datetime'].includes(
-            varType,
-          )
-        ) {
-          errors.push(
-            `${path}/handler/sql: invalid magic variable type "${varType}" for ${typeName} parameter`,
+            `${path}/handler/sql: invalid query placeholder type "${varType}" for ${typeName} parameter`,
           );
         }
 
-        // 3. GET method should not have body magic variables (@@)
-        if (endpoint.method === 'GET' && start.type === '@@') {
+        if (endpoint.method === 'GET' && delimiter === '@@') {
           errors.push(
-            `${path}/handler/sql: body magic variables (@@) are not allowed for GET method`,
+            `${path}/handler/sql: body query placeholders (@@) are not allowed for GET method`,
           );
         }
       }

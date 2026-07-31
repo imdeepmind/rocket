@@ -9,7 +9,11 @@ export type DataType =
   | 'text'
   | 'datetime'
   | 'decimal'
-  | 'date';
+  | 'date'
+  | 'json'
+  | 'enum'
+  | 'uuid'
+  | 'ulid';
 export type LogLevel =
   | 'trace'
   | 'debug'
@@ -46,7 +50,7 @@ export type JsonSchemaObject = {
 };
 export type WebhookData = 'query' | 'body' | 'params' | 'response';
 export type AuthProviderType = 'api-key' | 'up-auth';
-export type ServerParamType = 'path' | 'query' | 'body';
+export type ServerSideParamType = 'path' | 'query' | 'body';
 export type EmailEngine = 'dummy';
 export type RelationType = 'belongsTo';
 export type ForeignKeyAction =
@@ -107,9 +111,11 @@ export interface ModelFieldConfig {
   nullable?: boolean;
   unique?: boolean;
   default?: unknown;
+  secret?: boolean;
   apis?: ApiOperation[];
   query?: QueryOperation[];
   aggregations?: Aggregation[];
+  values?: string[];
 }
 
 export interface ModelIndexConfig {
@@ -142,6 +148,8 @@ export interface ApplicationConfig {
   name: string;
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
+  dangerouslyOverrideDefaultVariant?: string;
+  magicVariables?: Record<string, string | number | boolean>;
 }
 
 export interface WebhookConfig {
@@ -188,8 +196,8 @@ export interface ModelAPIConfig {
   };
 }
 
-export interface ServerParamConfig {
-  type: ServerParamType;
+export interface ServerSideParamConfig {
+  type: ServerSideParamType;
   name: string;
   value: number | string | boolean;
 }
@@ -197,9 +205,13 @@ export interface ServerParamConfig {
 export interface ApisConfig {
   [key: string]: {
     enabled?: boolean;
+    tags?: string[];
     webhooks?: WebhookConfig[];
-    serverParams?: ServerParamConfig[];
+    serverSideParams?: ServerSideParamConfig[];
     authorization?: boolean;
+    bypassSecret?: boolean;
+    supportedAggregations?: Aggregation[];
+    supportedQueries?: QueryOperation[];
   };
 }
 
@@ -252,6 +264,10 @@ export interface InfrastructureConfig {
   cache?: CacheDbConfig;
 }
 
+export interface ApiVariantEntry {
+  variants: string[];
+}
+
 export interface AppConfig {
   application: ApplicationConfig;
   docs: DocsConfig;
@@ -261,4 +277,5 @@ export interface AppConfig {
   customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
   integrations?: IntegrationsConfig;
+  apiVariants?: Record<string, ApiVariantEntry>;
 }

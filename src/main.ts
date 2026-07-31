@@ -6,12 +6,13 @@ import {Command} from 'commander';
 
 import {startServer} from '@/server';
 
+import {resolveEnvVars} from '@/lib/config/env';
+import {showWelcomeScreen} from '@/lib/server/welcome';
+
 import {CLIOptions} from '@/interfaces';
 import {AppConfig} from '@/interfaces/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
-import {resolveEnvVars} from '@/utils/config';
-import {showWelcomeScreen} from '@/utils/welcome';
 
 /**
  * Load Config

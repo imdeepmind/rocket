@@ -1,6 +1,12 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
@@ -11,9 +17,11 @@ function registerOtpVerifyBase(
   app: FastifyInstance,
   config: AppConfig,
   path: string,
-  action: 'login' | 'registration' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -23,18 +31,87 @@ function registerOtpVerifyBase(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.otp-verify-${action}`;
+  const operation = `otpVerify${capitalizeFirstLetter(action)}`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.${operation}`;
 
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
+
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
+  registerOtpVerifyEndpoint(
+    app,
+    config,
+    model,
+    usernameField,
+    upConfig,
+    action,
+    path,
+    defaultVariant,
+    defaultApiIdentifier,
+    defaultTags,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    operation,
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      operation,
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
+    registerOtpVerifyEndpoint(
+      app,
+      config,
+      model,
+      usernameField,
+      upConfig,
+      action,
+      path,
+      variant,
+      variantApiIdentifier,
+      variantTags,
+    );
+  }
+}
+
+function registerOtpVerifyEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  usernameField: string,
+  upConfig: UpAuthProviderConfig,
+  action: 'login' | 'register' | 'forgotPassword',
+  path: string,
+  variant: string,
+  apiIdentifier: string,
+  routeTags?: string[],
+): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
+    routeTags,
   );
 
+  const routePath = `/${variant}${path}`;
+
   app.post(
-    path,
+    routePath,
     {
       schema,
       config: {apiIdentifier},
@@ -83,10 +160,14 @@ function registerOtpVerifyBase(
           });
         }
 
-        if (action === 'registration') {
+        if (action === 'register') {
           const isVerifiedField = upConfig.userModel.isVerifiedField;
           if (isVerifiedField) {
-            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true WHERE "${usernameField}" = $1;`;
+            const updatedAtClause = buildUpdatedAtClause(
+              config.data.models[model],
+              config.infrastructure.database.engine,
+            );
+            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $1;`;
             await tx.query(updateQuery, [String(username)]);
           }
 
@@ -97,7 +178,7 @@ function registerOtpVerifyBase(
             .send(app.buildResponse(200, 'OTP verification successful', null));
         }
 
-        if (action === 'forgot-password') {
+        if (action === 'forgotPassword') {
           const newPassword = (request.body as Record<string, string>)
             .newPassword;
           /* c8 ignore start */
@@ -111,7 +192,11 @@ function registerOtpVerifyBase(
 
           const {passwordField} = upConfig.userModel;
           const hashedPassword = await hash(String(newPassword));
-          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${usernameField}" = $2;`;
+          const updatedAtClause = buildUpdatedAtClause(
+            config.data.models[model],
+            config.infrastructure.database.engine,
+          );
+          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $2;`;
           await tx.query(updateQuery, [hashedPassword, String(username)]);
 
           await tx.commit();
@@ -162,20 +247,16 @@ export function registerRegistrationOtpVerifyRoute(
   app: FastifyInstance,
   config: AppConfig,
 ): void {
-  registerOtpVerifyBase(
-    app,
-    config,
-    '/auth/registration/verify/otp',
-    'registration',
-  );
+  registerOtpVerifyBase(app, config, '/auth/register/verify/otp', 'register');
 }
 
 function generateSchema(
   usernameField: string,
   model: string,
-  action: 'login' | 'registration' | 'forgot-password',
+  action: 'login' | 'register' | 'forgotPassword',
+  routeTags?: string[],
 ) {
-  const isForgotPassword = action === 'forgot-password';
+  const isForgotPassword = action === 'forgotPassword';
 
   const bodySchema = {
     type: 'object',
@@ -209,7 +290,7 @@ function generateSchema(
             accessToken: {type: 'string', description: 'JWT access token'},
           },
         }
-      : action === 'forgot-password'
+      : action === 'forgotPassword'
         ? {
             type: 'object',
             properties: {
@@ -227,7 +308,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Verify OTP for ${capitalizeFirstLetter(model)} ${action}`,
     description: `Verifies the OTP sent to the user's email during ${action}.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'OTP'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'OTP'],
     body: bodySchema,
     response: responseSchema,
   };
@@ -242,6 +323,6 @@ export function registerForgotPasswordOtpVerifyRoute(
     app,
     config,
     '/auth/forgot-password/verify/otp',
-    'forgot-password',
+    'forgotPassword',
   );
 }

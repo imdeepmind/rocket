@@ -1,5 +1,3 @@
-import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
-
 /**
  * Recursively resolves environment variables in the configuration object.
  * If a string starts with 'env:', it's replaced with the value of the environment variable.
@@ -43,19 +41,4 @@ export function resolveEnvVars<T>(config: T): T {
   }
 
   return config;
-}
-
-export function getAPIFromUniqueIdentifier(
-  config: AppConfig,
-  identifier: string,
-): CustomEndpointConfig | null {
-  const parts = identifier.split('.');
-
-  if (parts[0] === 'customEndpoints') {
-    if (parts.length === 2) {
-      return config?.customEndpoints?.[parts[1]] ?? null;
-    }
-  }
-
-  return null;
 }

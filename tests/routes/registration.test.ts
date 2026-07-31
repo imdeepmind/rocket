@@ -17,7 +17,11 @@ import {
   ModelConfig,
 } from '@/interfaces/config';
 
-import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
+import {
+  pgClientQueryMock,
+  pgConnectMock,
+  pgQueryMock,
+} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -67,6 +71,7 @@ async function createAuthApp(
   models: Record<string, ModelConfig> = authModels,
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
+  apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config: AppConfig = {
@@ -82,6 +87,7 @@ async function createAuthApp(
     data: {models},
     authentication,
     ...(apis ? {apis} : {}),
+    ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
   await app.register(databasePlugin);
@@ -120,7 +126,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'a@b.com', password: 'secret'},
       });
 
@@ -139,7 +145,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'a@b.com', password: 'secret'},
       });
 
@@ -154,7 +160,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'a@b.com', password: 'secret'},
       });
 
@@ -165,12 +171,12 @@ describe('POST /auth/register', () => {
 
     test('should NOT register the route when the API is disabled via apis config', async () => {
       const app = await createAuthApp(upAuthConfig, authModels, pgConfig, {
-        'auth.users.all.registration': {enabled: false},
+        'auth.v1.users.unknown.registration': {enabled: false},
       });
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'a@b.com', password: 'secret'},
       });
 
@@ -190,7 +196,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           email: 'alice@example.com',
           password: 'p@ssw0rd',
@@ -220,7 +226,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'bob@example.com', password: 'mySecret'},
       });
 
@@ -237,7 +243,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'carol@example.com', password: 'plaintext'},
       });
 
@@ -259,7 +265,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'dave@example.com', password: 'secret'},
       });
 
@@ -282,7 +288,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           email: 'eve@example.com',
           password: 'secret',
@@ -312,7 +318,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           email: 'frank@example.com',
           password: 'secret',
@@ -337,7 +343,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           id: 999,
           email: 'grace@example.com',
@@ -354,6 +360,42 @@ describe('POST /auth/register', () => {
 
       await app.close();
     });
+
+    test('should strip managed timestamp fields even when defined in the model', async () => {
+      const modelsWithTimestamps: Record<string, ModelConfig> = {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            name: {type: 'string', nullable: true},
+            created_at: {type: 'datetime'},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+      const app = await createAuthApp(upAuthConfig, modelsWithTimestamps);
+
+      await app.inject({
+        method: 'POST',
+        url: '/v1/auth/register',
+        payload: {
+          email: 'iris@example.com',
+          password: 'secret',
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+        },
+      });
+
+      const [query] = pgClientQueryMock.mock.calls.find(
+        call => typeof call[0] === 'string' && call[0].includes('INSERT'),
+      ) as [string, unknown[]];
+
+      expect(query).not.toContain('"created_at"');
+      expect(query).not.toContain('"updated_at"');
+
+      await app.close();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -366,7 +408,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {password: 'secret'}, // email is required
       });
 
@@ -380,7 +422,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'henry@example.com'}, // password is required
       });
 
@@ -394,7 +436,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {},
       });
 
@@ -410,7 +452,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 12345, password: 'secret'},
       });
 
@@ -434,7 +476,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'ivan@example.com', password: 'secret'},
       });
 
@@ -451,7 +493,21 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
+        payload: {email: 'ivan@example.com', password: 'secret'},
+      });
+
+      expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
+    test('should return 500 when the transaction begin fails', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      pgConnectMock.mockRejectedValueOnce(new Error('Connection failed'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/register',
         payload: {email: 'ivan@example.com', password: 'secret'},
       });
 
@@ -474,7 +530,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {email: 'duplicate@example.com', password: 'secret'},
       });
 
@@ -523,7 +579,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {username: 'judy', secret: 'topsecret'},
       });
 
@@ -548,7 +604,7 @@ describe('POST /auth/register', () => {
 
       await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {username: 'kate', secret: 'rawpass'},
       });
 
@@ -636,7 +692,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           email: 'alice@example.com',
           password: 'p@ssw0rd',
@@ -676,7 +732,7 @@ describe('POST /auth/register', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/v1/auth/register',
         payload: {
           email: 'bob@example.com',
           password: 'secret',
@@ -702,6 +758,56 @@ describe('POST /auth/register', () => {
       expect(isActiveIdx).toBeGreaterThanOrEqual(0);
       expect(insertValues[isActiveIdx]).toBe(false);
 
+      await app.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register admin variant endpoint when apiVariants is configured', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        {
+          'auth.v1.users.unknown.registration': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/register',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(201);
+      await app.close();
+    });
+
+    test('should not register admin variant when disabled in apis config', async () => {
+      const app = await createAuthApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        {
+          'auth.admin.users.unknown.registration': {enabled: false},
+        },
+        {
+          'auth.v1.users.unknown.registration': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/register',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(404);
       await app.close();
     });
   });

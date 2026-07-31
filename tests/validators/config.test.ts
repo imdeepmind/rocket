@@ -455,7 +455,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'boolean', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found boolean)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found boolean)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -463,7 +463,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'text', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found text)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found text)',
     },
     {
       name: 'invalid field.primaryKey',
@@ -471,7 +471,7 @@ describe('validateInvalidModelFieldsConfig', () => {
         fields: {test: {type: 'datetime', primaryKey: true}},
       },
       expected:
-        '/data/models/test/fields/test: primaryKey field must be of type integer or string (found datetime)',
+        '/data/models/test/fields/test: primaryKey field must be of type integer, string, uuid, or ulid (found datetime)',
     },
     {
       name: 'invalid field.unique',
@@ -835,6 +835,160 @@ describe('validateInvalidModelFieldsConfig', () => {
       expected:
         '/data/models/test/fields/test/aggregations: "frequency" is not allowed for type "datetime"',
     },
+    {
+      name: 'field.apis contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "json"',
+    },
+    {
+      name: 'field.query contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', query: ['eq']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "eq" is not allowed for type "json"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=json',
+      patch: {
+        fields: {test: {type: 'json', aggregations: ['count']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "count" is not allowed for type "json"',
+    },
+    {
+      name: 'enum field without values',
+      patch: {
+        fields: {test: {type: 'enum'}},
+      },
+      expected:
+        '/data/models/test/fields/test: values is required for enum type',
+    },
+    {
+      name: 'enum field with empty values',
+      patch: {
+        fields: {test: {type: 'enum', values: []}},
+      },
+      expected:
+        '/data/models/test/fields/test/values must NOT have fewer than 1 items',
+    },
+    {
+      name: 'field.apis contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.query contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], query: ['sort']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "sort" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=enum',
+      patch: {
+        fields: {test: {type: 'enum', values: ['a'], aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "enum"',
+    },
+    {
+      name: 'field.apis contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=uuid',
+      patch: {
+        fields: {test: {type: 'uuid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "uuid"',
+    },
+    {
+      name: 'field.apis contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: "search" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.query contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', query: ['lt']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: "lt" is not allowed for type "ulid"',
+    },
+    {
+      name: 'field.aggregations contains invalid value for type=ulid',
+      patch: {
+        fields: {test: {type: 'ulid', aggregations: ['avg']}},
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: "avg" is not allowed for type "ulid"',
+    },
+    {
+      name: 'secret + primaryKey',
+      patch: {
+        fields: {test: {type: 'string', secret: true, primaryKey: true}},
+      },
+      expected:
+        '/data/models/test/fields/test: secret cannot be combined with primaryKey',
+    },
+    {
+      name: 'secret + apis search',
+      patch: {
+        fields: {test: {type: 'string', secret: true, apis: ['search']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: secret fields cannot have "search" or "index" APIs (found: search)',
+    },
+    {
+      name: 'secret + apis index',
+      patch: {
+        fields: {test: {type: 'string', secret: true, apis: ['index']}},
+      },
+      expected:
+        '/data/models/test/fields/test/apis: secret fields cannot have "search" or "index" APIs (found: index)',
+    },
+    {
+      name: 'secret + query',
+      patch: {
+        fields: {test: {type: 'string', secret: true, query: ['eq']}},
+      },
+      expected:
+        '/data/models/test/fields/test/query: secret fields cannot have query operations',
+    },
+    {
+      name: 'secret + aggregations',
+      patch: {
+        fields: {
+          test: {type: 'integer', secret: true, aggregations: ['count']},
+        },
+      },
+      expected:
+        '/data/models/test/fields/test/aggregations: secret fields cannot have aggregations',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -895,6 +1049,42 @@ describe('validateValidModelFieldsConfig', () => {
             query: ['sort'],
             aggregations: ['avg', 'max', 'min', 'count', 'sum'],
           },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          data: {type: 'json'},
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field',
+      patch: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          status: {type: 'enum', values: ['active', 'inactive']},
+        },
+      },
+    },
+    {
+      name: 'valid model with uuid field',
+      patch: {
+        fields: {
+          id: {type: 'uuid', primaryKey: true},
+          ref: {type: 'uuid'},
+        },
+      },
+    },
+    {
+      name: 'valid model with ulid field',
+      patch: {
+        fields: {
+          id: {type: 'ulid', primaryKey: true},
+          code: {type: 'ulid'},
         },
       },
     },
@@ -1101,6 +1291,36 @@ describe('validateInvalidModelValidationConfig', () => {
       expected:
         '/data/models/test/validation/properties/eventDate: type mismatch (model=date, schema=string)',
     },
+    {
+      name: 'json field with mismatched schema type',
+      patch: {
+        fields: {data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['data'],
+          properties: {
+            data: {type: 'string'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/data: type mismatch (model=json, schema=string)',
+    },
+    {
+      name: 'enum field with mismatched schema type',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          required: ['status'],
+          properties: {
+            status: {type: 'number'},
+          },
+        },
+      },
+      expected:
+        '/data/models/test/validation/properties/status: type mismatch (model=enum, schema=number)',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1227,6 +1447,32 @@ describe('validateValidModelValidationConfig', () => {
           type: 'object',
           properties: {
             id: {minimum: 1},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with json field and object validation',
+      patch: {
+        fields: {id: {type: 'integer'}, data: {type: 'json'}},
+        validation: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: {type: 'integer'},
+            data: {type: 'object'},
+          },
+        },
+      },
+    },
+    {
+      name: 'valid model with enum field and string validation',
+      patch: {
+        fields: {status: {type: 'enum', values: ['a', 'b']}},
+        validation: {
+          type: 'object',
+          properties: {
+            status: {type: 'string'},
           },
         },
       },
@@ -1609,6 +1855,16 @@ describe('validateInvalidApplicationConfig', () => {
       expected:
         '/application/logLevel must be equal to one of the allowed values',
     },
+    {
+      name: 'magicVariables as null',
+      patch: {magicVariables: null},
+      expected: '/application/magicVariables must be object',
+    },
+    {
+      name: 'magicVariables value as null',
+      patch: {magicVariables: {tenant: null}},
+      expected: '/application/magicVariables/tenant must be string',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1642,6 +1898,38 @@ describe('validateValidApplicationConfig', () => {
     {name: 'logLevel error', patch: {name: 'Test App', logLevel: 'error'}},
     {name: 'logLevel fatal', patch: {name: 'Test App', logLevel: 'fatal'}},
     {name: 'logLevel silent', patch: {name: 'Test App', logLevel: 'silent'}},
+    {
+      name: 'magicVariables with string values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', region: 'us-east'},
+      },
+    },
+    {
+      name: 'magicVariables with number values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {maxRetries: 3, timeout: 5000},
+      },
+    },
+    {
+      name: 'magicVariables with boolean values',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {isProduction: true, featureEnabled: false},
+      },
+    },
+    {
+      name: 'magicVariables with mixed types',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        magicVariables: {tenant: 'acme', maxRetries: 3, isProduction: true},
+      },
+    },
   ])('Scenario: $name . should return', ({patch}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1785,7 +2073,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
-      name: 'GET method with body magic variables (@@)',
+      name: 'GET method with body query placeholders (@@)',
       patch: {
         customEndpoints: {
           test: {
@@ -1801,7 +2089,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: body magic variables (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body query placeholders (@@) are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
@@ -1820,7 +2108,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "first name" for body (@@) parameter',
     },
     {
       name: 'Invalid path variable name',
@@ -1839,7 +2127,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "id!" for path ($$) parameter',
     },
     {
       name: 'Invalid query variable name',
@@ -1858,7 +2146,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "country space" for query (&&) parameter',
     },
     {
       name: 'Mixed delimiters ($$id&&)',
@@ -1877,7 +2165,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: mixed magic variable delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: mixed query placeholder delimiters "$$" and "&&"',
     },
     {
       name: 'Unclosed delimiter (@@id@)',
@@ -1896,7 +2184,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: unclosed magic variable delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed query placeholder delimiter "@@"',
     },
     {
       name: 'Multiple datatype declarations',
@@ -1915,7 +2203,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid query placeholder format "id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
@@ -1934,7 +2222,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid magic variable type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder type "varchar" for body (@@) parameter',
     },
     {
       name: 'Missing datatype in variable',
@@ -1953,7 +2241,26 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: missing data type for magic variable "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body (@@) parameter',
+    },
+    {
+      name: 'Invalid header variable name',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = ^^x api key:string^^;',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "x api key" for header (^^) parameter',
     },
     {
       name: 'invalid webhook url',
@@ -1971,7 +2278,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'invalid',
@@ -1983,7 +2290,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/url must match pattern "^https?:\\/\\/"',
     },
     {
       name: 'data field type is not array',
@@ -2001,7 +2308,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2012,7 +2319,8 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
       },
-      expected: '/apis/customEndpoints.test/webhooks/0/data must be array',
+      expected:
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data must be array',
     },
     {
       name: 'data field is empty array',
@@ -2030,7 +2338,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2042,7 +2350,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/data must NOT have fewer than 1 items',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data must NOT have fewer than 1 items',
     },
     {
       name: 'data field contains invalid value',
@@ -2060,7 +2368,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2072,7 +2380,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/data/1 must be equal to one of the allowed values',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/data/1 must be equal to one of the allowed values',
     },
     {
       name: 'triggerOnRequest is not a boolean',
@@ -2090,7 +2398,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2102,7 +2410,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/triggerOnRequest must be boolean',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/triggerOnRequest must be boolean',
     },
     {
       name: 'triggerOnResponse is not a boolean',
@@ -2120,7 +2428,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2133,7 +2441,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/apis/customEndpoints.test/webhooks/0/triggerOnResponse must be boolean',
+        '/apis/custom.v1.all.unknown.test/webhooks/0/triggerOnResponse must be boolean',
     },
     {
       name: 'triggerOnResponse or triggerOnRequest needs to be true, both cannot be false',
@@ -2151,7 +2459,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.test': {
+          'custom.v1.all.unknown.test': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2164,7 +2472,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        'apis/customEndpoints.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
+        'apis/custom.v1.all.unknown.test/webhooks/0: webhook must have at least one of triggerOnRequest or triggerOnResponse',
     },
     {
       name: 'custom endpoint with invalid validation schema',
@@ -2287,7 +2595,7 @@ describe('validateValidCustomEndpointsConfig', () => {
       },
     },
     {
-      name: 'valid magic variable with hyphen and underscore',
+      name: 'valid query placeholder with hyphen and underscore',
       patch: {
         customEndpoints: {
           sample_query: {
@@ -2316,7 +2624,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2341,7 +2649,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2366,7 +2674,7 @@ describe('validateValidCustomEndpointsConfig', () => {
           },
         },
         apis: {
-          'customEndpoints.sample_query': {
+          'custom.v1.all.unknown.sample_query': {
             webhooks: [
               {
                 url: 'https://example.com',
@@ -2570,6 +2878,328 @@ describe('validateRateLimitConfig', () => {
   });
 });
 
+// ----- Variant Config Tests -----
+
+describe('validateVariantConfig', () => {
+  it.each([
+    {
+      name: 'empty string (too short)',
+      patch: {dangerouslyOverrideDefaultVariant: ''},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'string longer than 25 characters',
+      patch: {
+        dangerouslyOverrideDefaultVariant: 'abcdefghijklmnopqrstuvwxyz',
+      },
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must NOT have more than 25 characters',
+    },
+    {
+      name: 'contains spaces',
+      patch: {dangerouslyOverrideDefaultVariant: 'my variant'},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must match pattern',
+    },
+    {
+      name: 'contains special characters',
+      patch: {dangerouslyOverrideDefaultVariant: 'variant@123'},
+      expected:
+        '/application/dangerouslyOverrideDefaultVariant must match pattern',
+    },
+    {
+      name: 'boolean instead of string',
+      patch: {
+        dangerouslyOverrideDefaultVariant:
+          true as unknown as typeof validBaseConfig.application,
+      },
+      expected: '/application/dangerouslyOverrideDefaultVariant must be string',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'simple variant',
+      patch: {dangerouslyOverrideDefaultVariant: 'v1'},
+    },
+    {
+      name: 'variant with hyphens',
+      patch: {dangerouslyOverrideDefaultVariant: 'experimental-v2'},
+    },
+    {
+      name: 'variant with underscore',
+      patch: {dangerouslyOverrideDefaultVariant: 'test_variant'},
+    },
+    {
+      name: 'max length variant',
+      patch: {
+        dangerouslyOverrideDefaultVariant: 'abcdefghijklmnopqrstuvwxy',
+      },
+    },
+    {
+      name: 'variant with numbers',
+      patch: {dangerouslyOverrideDefaultVariant: 'build-42'},
+    },
+    {
+      name: 'variant with uppercase',
+      patch: {dangerouslyOverrideDefaultVariant: 'Variant-V3'},
+    },
+  ])('Scenario: $name . should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      application: {
+        ...validBaseConfig.application,
+        ...patch,
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should work without dangerouslyOverrideDefaultVariant (optional)', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+// ----- Api Variants Config Tests -----
+
+describe('validateApiVariantsConfig', () => {
+  it.each([
+    {
+      name: 'missing variants property',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {} as unknown as {
+            variants: string[];
+          },
+        },
+      },
+      expected:
+        "/apiVariants/aggregate.v1.users.id.getAggregation must have required property 'variants'",
+    },
+    {
+      name: 'variants is a string instead of array',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: 'admin',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must be array',
+    },
+    {
+      name: 'empty variants array',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: [],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must NOT have fewer than 1 items',
+    },
+    {
+      name: 'variant name longer than 25 characters',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['abcdefghijklmnopqrstuvwxyz'],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must NOT have more than 25 characters',
+    },
+    {
+      name: 'variant contains spaces',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['my variant'],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must match pattern',
+    },
+    {
+      name: 'variant contains special characters',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['variant@123'],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must match pattern',
+    },
+    {
+      name: 'variant as boolean instead of string',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: [true],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must be string',
+    },
+    {
+      name: 'duplicate variant names',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['admin', 'admin'],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants must NOT have duplicate items',
+    },
+    {
+      name: 'empty variant string in array',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: [''],
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation/variants/0 must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'extra unknown property',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['admin'],
+            extraField: 'should not be allowed',
+          },
+        },
+      },
+      expected:
+        '/apiVariants/aggregate.v1.users.id.getAggregation must NOT have additional properties',
+    },
+    {
+      name: 'invalid key pattern (spaces)',
+      patch: {
+        apiVariants: {
+          'invalid key': {
+            variants: ['admin'],
+          },
+        },
+      },
+      expected: '/apiVariants must NOT have additional properties',
+    },
+  ])('Scenario: $name . should throw error', ({patch, expected}) => {
+    const config = {
+      ...validBaseConfig,
+      ...patch,
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      expected,
+    );
+  });
+
+  it.each([
+    {
+      name: 'single valid api variant with one variant',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['admin'],
+          },
+        },
+      },
+    },
+    {
+      name: 'variant with hyphens and underscores',
+      patch: {
+        apiVariants: {
+          'model.v1.posts.id.index': {
+            variants: ['experimental_v2'],
+          },
+        },
+      },
+    },
+    {
+      name: 'max length variant',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['abcdefghijklmnopqrstuvwxy'],
+          },
+        },
+      },
+    },
+    {
+      name: 'multiple variants per api',
+      patch: {
+        apiVariants: {
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['admin', 'v1', 'beta-2'],
+          },
+        },
+      },
+    },
+    {
+      name: 'multiple api variants entries',
+      patch: {
+        apiVariants: {
+          'model.v1.users.id.index': {
+            variants: ['v1'],
+          },
+          'aggregate.v1.users.id.getAggregation': {
+            variants: ['admin'],
+          },
+          'model.v1.posts.id.search': {
+            variants: ['beta-3'],
+          },
+        },
+      },
+    },
+  ])('Scenario: $name . should return', ({patch}) => {
+    const config = {
+      ...validBaseConfig,
+      ...patch,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should work without apiVariants (optional)', () => {
+    const config = {
+      ...validBaseConfig,
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
 // ----- Cache DB Config Tests -----
 
 describe('validateCacheDbConfig', () => {
@@ -2713,19 +3343,19 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid webhook for model',
       patch: {
-        'aggregate.users.id.getAggregation': 'invalid',
+        'aggregate.v1.users.id.getAggregation': 'invalid',
       },
-      expected: '/apis/aggregate.users.id.getAggregation must be object',
+      expected: '/apis/aggregate.v1.users.id.getAggregation must be object',
     },
     {
       name: 'invalid webhook conf',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: 'invalid',
         },
       },
       expected:
-        '/apis/aggregate.users.id.getAggregation/webhooks must be array',
+        '/apis/aggregate.v1.users.id.getAggregation/webhooks must be array',
     },
     {
       name: 'invalid api key format',
@@ -2746,7 +3376,7 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2758,12 +3388,12 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/aggregate.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+        'apis/aggregate.v1.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
     {
       name: 'custom endpoint key not found',
       patch: {
-        'customEndpoints.nonexistent': {
+        'custom.v1.all.unknown.nonexistent': {
           webhooks: [
             {
               url: 'https://example.com',
@@ -2773,12 +3403,13 @@ describe('validateInvalidmodelConfig', () => {
           ],
         },
       },
-      expected: 'apis/customEndpoints.nonexistent: custom endpoint not found',
+      expected:
+        'apis/custom.v1.all.unknown.nonexistent: custom endpoint not found',
     },
     {
       name: 'custom endpoint key invalid format',
       patch: {
-        'customEndpoints.test.extra': {
+        'custom.v1.all.unknown.test.extra': {
           webhooks: [
             {
               url: 'https://example.com',
@@ -2788,7 +3419,47 @@ describe('validateInvalidmodelConfig', () => {
           ],
         },
       },
-      expected: 'apis/customEndpoints.test.extra: invalid key format',
+      expected: 'apis/custom.v1.all.unknown.test.extra: invalid key format',
+    },
+    {
+      name: 'supportedQueries on non-model api',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedQueries: ['lt', 'gt'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
+    },
+    {
+      name: 'supportedAggregations on non-aggregate api',
+      patch: {
+        'model.v1.users.unknown.getAll': {
+          supportedAggregations: ['count'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.unknown.getAll/supportedAggregations: supportedAggregations is only allowed on aggregate APIs (keys starting with "aggregate.")',
+    },
+    {
+      name: 'supportedQueries with operation not supported by any field',
+      patch: {
+        'model.v1.users.id.index': {
+          supportedQueries: ['in'],
+        },
+      },
+      expected:
+        'apis/model.v1.users.id.index/supportedQueries: "in" is not supported by any field in model "users"',
+    },
+    {
+      name: 'supportedAggregations with aggregation not supported by any field',
+      patch: {
+        'aggregate.v1.users.id.getAggregation': {
+          supportedAggregations: ['avg'],
+        },
+      },
+      expected:
+        'apis/aggregate.v1.users.id.getAggregation/supportedAggregations: "avg" is not supported by any field in model "users"',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -2807,7 +3478,7 @@ describe('validateValidmodelConfig', () => {
     {
       name: 'valid model',
       patch: {
-        'aggregate.users.id.getAggregation': {
+        'aggregate.v1.users.id.getAggregation': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2817,7 +3488,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.delete': {
+        'model.v1.users.id.delete': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2827,7 +3498,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.edit': {
+        'model.v1.users.id.edit': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2837,7 +3508,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.all.getAll': {
+        'model.v1.users.unknown.getAll': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2847,7 +3518,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.index': {
+        'model.v1.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2857,7 +3528,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.all.insert': {
+        'model.v1.users.unknown.insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2867,7 +3538,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.users.id.search': {
+        'model.v1.users.id.search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -2876,6 +3547,12 @@ describe('validateValidmodelConfig', () => {
               triggerOnResponse: true,
             },
           ],
+        },
+        'model.v1.posts.user_id.index': {
+          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
+        },
+        'aggregate.v1.posts.title.getAggregation': {
+          supportedAggregations: ['count'],
         },
       },
     },
@@ -3815,34 +4492,34 @@ describe('validateInvalidSspConfig', () => {
   it.each([
     {
       name: 'invalid ssp config param type',
-      patch: {serverParams: [{type: 'invalid', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'invalid', name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param type',
-      patch: {serverParams: [{type: 132, name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 132, name: 'id', value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/type must be equal to one of the allowed values',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
     },
     {
       name: 'invalid ssp config param name',
-      patch: {serverParams: [{type: 'body', name: 123, value: '1'}]},
+      patch: {serverSideParams: [{type: 'body', name: 123, value: '1'}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/name must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/name must be string',
     },
     {
       name: 'invalid ssp config param value',
-      patch: {serverParams: [{type: 'body', name: 'id', value: null}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: null}]},
       expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverParams/0/value must be string',
+        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/value must be string',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
         'customAPIs.customQueries.all.sample_query': {
-          serverParams: patch.serverParams,
+          serverSideParams: patch.serverSideParams,
         },
       },
     };
@@ -3858,30 +4535,30 @@ describe('validateValidSspConfig', () => {
   it.each([
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: 1}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: 1}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'body', name: 'id', value: true}]},
+      patch: {serverSideParams: [{type: 'body', name: 'id', value: true}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'query', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'query', name: 'id', value: '1'}]},
     },
     {
       name: 'valid ssp config',
-      patch: {serverParams: [{type: 'path', name: 'id', value: '1'}]},
+      patch: {serverSideParams: [{type: 'path', name: 'id', value: '1'}]},
     },
   ])('Scenario: $name . should return', ({patch}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'model.posts.all.getAll': {
-          serverParams: patch.serverParams,
+        'model.v1.posts.unknown.getAll': {
+          serverSideParams: patch.serverSideParams,
         },
       },
     };
@@ -3896,18 +4573,20 @@ describe('validateInvalidAuthorizationConfig', () => {
     {
       name: 'invalid authorization config',
       patch: {authorization: 'wrong'},
-      expected: 'model.posts.all.getAll/authorization must be boolean',
+      expected:
+        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
     },
     {
       name: 'invalid authorization config',
       patch: {authorization: null},
-      expected: 'model.posts.all.getAll/authorization must be boolean',
+      expected:
+        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3925,7 +4604,7 @@ describe('validateInvalidAuthorizationConfig', () => {
       name: 'authorization is enabled when authentication is disabled',
       patch: {authorization: true},
       expected:
-        'apis/model.posts.all.getAll/authorization: authorization is only allowed when auth is enabled',
+        'apis/model.v1.posts.unknown.getAll/authorization: authorization is only allowed when auth is enabled',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3938,7 +4617,7 @@ describe('validateInvalidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },
@@ -3971,7 +4650,7 @@ describe('validateValidAuthorizationConfig', () => {
         },
       },
       apis: {
-        'model.posts.all.getAll': {
+        'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
         },
       },

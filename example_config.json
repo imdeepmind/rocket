@@ -2,10 +2,14 @@
     "application": {
         "name": "Rocket OSS",
         "logLevel": "debug",
+        "dangerouslyOverrideDefaultVariant": "test",
         "rateLimit": {
             "enabled": true,
             "max": 1000,
             "timeWindow": "15m"
+        },
+        "magicVariables": {
+            "defaultOrg": "rocket-oss"
         }
     },
     "docs": {
@@ -91,9 +95,10 @@
                         "aggregations": ["count"]
                     },
                     "password": {
-                        "type": "string",
-                        "unique": false,
-                        "nullable": false
+                      "type": "string",
+                      "unique": false,
+                      "nullable": false,
+                      "secret": true
                     },
                     "name": {
                         "type": "string",
@@ -203,8 +208,13 @@
             }
         }
     },
+    "apiVariants": {
+        "aggregate.test.users.id.getAggregation": {
+            "variants": ["admin"]
+        }
+    },
     "apis": {
-        "aggregate.users.id.getAggregation": {
+        "aggregate.admin.users.id.getAggregation": {
             "webhooks": [
                 {
                     "url": "https://example.com",
@@ -214,13 +224,28 @@
                 }
             ],
             "authorization": true,
-            "serverParams": [
+            "tags": ["Users", "Aggregations"],
+            "serverSideParams": [
                 {
                     "type": "query",
                     "name": "operations",
-                    "value": "[userEmail]"
+                    "value": "min"
+                },
+                {
+                    "type": "query",
+                    "name": "orgId",
+                    "value": "[defaultOrg]"
                 }
             ]
+        },
+        "model.test.users.unknown.getAll": {
+            "supportedQueries": ["eq"]
+        },
+        "model.test.users.id.index": {
+            "supportedQueries": ["eq", "sort"]
+        },
+        "aggregate.test.users.email.getAggregation": {
+            "supportedAggregations": ["count"]
         }
     }
 }

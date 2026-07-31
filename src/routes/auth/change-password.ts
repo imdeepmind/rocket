@@ -1,9 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {
-  buildPreValidation,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {getResponseStructureSchema} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
@@ -15,6 +19,8 @@ export function registerChangePasswordRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, idField, passwordField} = (
     config.authentication!.provider.config as UpAuthProviderConfig
@@ -24,14 +30,74 @@ export function registerChangePasswordRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.changePassword`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.changePassword`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
-  const schema: Record<string, unknown> = generateSchema(model);
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
+  registerChangePasswordEndpoint(
+    app,
+    config,
+    model,
+    idField,
+    passwordField,
+    defaultVariant,
+    defaultApiIdentifier,
+    defaultTags,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'changePassword',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'changePassword',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
+    registerChangePasswordEndpoint(
+      app,
+      config,
+      model,
+      idField,
+      passwordField,
+      variant,
+      variantApiIdentifier,
+      variantTags,
+    );
+  }
+}
+
+function registerChangePasswordEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  idField: string,
+  passwordField: string,
+  variant: string,
+  apiIdentifier: string,
+  routeTags?: string[],
+): void {
+  const schema: Record<string, unknown> = generateSchema(model, routeTags);
+
+  const path = `/${variant}/auth/change-password`;
 
   app.post(
-    '/auth/change-password',
+    path,
     {
       schema,
       config: {apiIdentifier},
@@ -85,7 +151,11 @@ export function registerChangePasswordRoute(
 
         const newHashedPassword = await hash(String(newPassword));
 
-        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1 WHERE "${idField}" = $2;`;
+        const updatedAtClause = buildUpdatedAtClause(
+          config.data.models[model],
+          config.infrastructure.database.engine,
+        );
+        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
         await tx.query(updateQuery, [newHashedPassword, userId]);
 
         await tx.commit();
@@ -105,7 +175,7 @@ export function registerChangePasswordRoute(
   );
 }
 
-function generateSchema(model: string) {
+function generateSchema(model: string, routeTags?: string[]) {
   const bodySchema = {
     type: 'object',
     required: ['existingPassword', 'newPassword'],
@@ -132,7 +202,7 @@ function generateSchema(model: string) {
   const schema: Record<string, unknown> = {
     summary: `Change password for ${capitalizeFirstLetter(model)}`,
     description: `Changes the password for an authenticated user in the "${model}" table.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

@@ -9,25 +9,25 @@ export interface RouteInfo {
 }
 
 const ROCKET_ASCII = `
-                                                                     
-                                                                     
-                                                       :!FxvcccF     
-                                                ;vLQQQQQQQQQQQQQc    
-                                           ;rLQQQQQQQQQQQQLCLQQQc    
-                                        fJQQQQQQQQJuTi      UQQQn    
-                                     TCQQQQQQQn:           .QQQQf    
-                                   ,YQQQQQQY;               ;QQQQ,    
-                                 ICQQQQQz;                  rQQQX     
-                               iCQQQQLT                    ,LQQQf     
-                            .CQQQQQi                      rQQQC      
-                           fQQQQL!    ,YQQQQQQCl         iQQQQ!      
-                ixYQQQQQQQQQQQQn     fQQQQQQQQQQz        UQQQz       
-             xLQQQQQQQQQQQQQQQ;     ;QQQQj  ;LQQQF      YQQQL.       
-          :UQQQQQQCzf: iQQQQU       !QQQQ:   UQQQv     YQQQL         
-         zQQQQQv;     lQQQQv         UQQQQvnLQQQL:    XQQQLi         
-       ;LQQQQt       lQQQQx          .YQQQQQQQQLi   .JQQQL;          
-      lQQQQz        ,QQQQn              jCLLCv,    !QQQQL,           
-     IQQQQx         XQQQJ                        .YQQQQz             
+                                                                      
+                                                                      
+                                                        :!FxvcccF     
+                                                 ;vLQQQQQQQQQQQQQQQc    
+                                            ;rLQQQQQQQQQQQQLCLQQQc    
+                                         fJQQQQQQQQJuTi      UQQQn    
+                                      TCQQQQQQQn:           .QQQQf    
+                                    ,YQQQQQQY;               ;QQQQ,    
+                                  ICQQQQQz;                  rQQQX     
+                                iCQQQQLT                    ,LQQQf     
+                             .CQQQQQi                      rQQQC      
+                            fQQQQL!    ,YQQQQQQCl         iQQQQ!      
+                 ixYQQQQQQQQQQQQn     fQQQQQQQQQQz        UQQQz       
+              xLQQQQQQQQQQQQQQQ;     ;QQQQj  ;LQQQF      YQQQL.       
+           :UQQQQCzf: iQQQQU       !QQQQ:   UQQQv     YQQQL         
+          zQQQQQv;     lQQQQv         UQQQQvnLQQQL:    XQQQLi         
+        ;LQQQQt       lQQQQx          .YQQQQQQQQLi   .JQQQL;          
+       lQQQQz        ,QQQQn              jCLLCv,    !QQQQL,           
+      IQQQQx         XQQQJ                        .YQQQQz             
      YQQQc         jQQQL,                       rQQQQLl              
     !QQQQ;         CQQQF                      FLQQQQu                
     nQQQLcccccccccYQQQJ                    .nQQQQQU,                 
@@ -45,8 +45,8 @@ const ROCKET_ASCII = `
       iQQQQQQQQQLn:      .QQQQQQQQQQQQQn.                            
         .itl:.           .QQQQQQQQQQv.                               
                           ;cXzuFi                                    
-                                                                     
-                                                   
+                                                                      
+                                                    
 `;
 
 function getMethodColor(method: string) {

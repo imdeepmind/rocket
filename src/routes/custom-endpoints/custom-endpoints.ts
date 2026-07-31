@@ -1,14 +1,21 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {getApiAuthorization} from '@/lib/config/api';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {
+  buildSecurityArray,
+  getResponseStructureSchema,
+} from '@/lib/schema/response';
+import {buildPreValidation} from '@/lib/server/prevalidation';
+
 import {
   buildSqlEndpoint,
   handleSql,
 } from '@/routes/custom-endpoints/handlers/sql';
-import {
-  buildPreValidation,
-  buildSecurityArray,
-  getResponseStructureSchema,
-} from '@/routes/schema-helpers';
 
 import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
 
@@ -20,57 +27,123 @@ export function registerCustomEndpointRoutes(
 
   if (!customEndpoints) return;
 
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
   for (const [name, endpoint] of Object.entries(customEndpoints)) {
-    const apiIdentifier = `customEndpoints.${name}`;
+    const defaultApiIdentifier = `custom${getVariantSegment(config)}.all.unknown.${name}`;
 
-    if (config.apis?.[apiIdentifier]?.enabled === false) continue;
+    if (config.apis?.[defaultApiIdentifier]?.enabled === false) continue;
 
-    const authorization =
-      config.apis?.[apiIdentifier]?.authorization ??
-      config.authentication?.enabled ??
-      false;
-
-    const {schema, routePathSuffix} = generateSchema(
+    const defaultAuthorization = getApiAuthorization(
       config,
-      endpoint,
-      authorization,
+      defaultApiIdentifier,
     );
-    const routePath = `/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
+    const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
 
-    app.route({
-      method: endpoint.method,
-      url: routePath,
-      schema,
-      config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
-      preHandler: async request => {
-        await app.callWebhook('request', request, null);
-      },
-      onSend: async (request, _, payload) => {
-        await app.callWebhook('response', request, payload);
-      },
-      handler: async (request: FastifyRequest, reply: FastifyReply) => {
-        if (endpoint.handler.type === 'sql') {
-          return handleSql(app, request, reply, endpoint.handler.sql);
-        }
-        return reply
-          .status(500)
-          .send(
-            app.buildResponse(
-              500,
-              `Handler type "${endpoint.handler.type}" not supported`,
-              null,
-            ),
-          );
-      },
-    });
+    registerCustomEndpoint(
+      app,
+      config,
+      name,
+      endpoint,
+      defaultVariant,
+      defaultApiIdentifier,
+      defaultAuthorization,
+      defaultTags,
+    );
+
+    const baseIdentifier = buildApiIdentifier(
+      'custom',
+      defaultVariant,
+      'all',
+      'unknown',
+      name,
+    );
+    const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+    for (const variant of additionalVariants) {
+      const variantApiIdentifier = buildApiIdentifier(
+        'custom',
+        variant,
+        'all',
+        'unknown',
+        name,
+      );
+
+      if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+      const variantAuthorization = getApiAuthorization(
+        config,
+        variantApiIdentifier,
+      );
+      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
+      registerCustomEndpoint(
+        app,
+        config,
+        name,
+        endpoint,
+        variant,
+        variantApiIdentifier,
+        variantAuthorization,
+        variantTags,
+      );
+    }
   }
+}
+
+function registerCustomEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  name: string,
+  endpoint: CustomEndpointConfig,
+  variant: string,
+  apiIdentifier: string,
+  authorization: boolean,
+  routeTags?: string[],
+): void {
+  const {schema, routePathSuffix} = generateSchema(
+    config,
+    endpoint,
+    authorization,
+    routeTags,
+  );
+  const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
+
+  app.route({
+    method: endpoint.method,
+    url: routePath,
+    schema,
+    config: {apiIdentifier},
+    preValidation: buildPreValidation(app, config, authorization),
+    preHandler: async request => {
+      await app.callWebhook('request', request, null);
+    },
+    onSend: async (request, _, payload) => {
+      await app.callWebhook('response', request, payload);
+    },
+    handler: async (request: FastifyRequest, reply: FastifyReply) => {
+      if (endpoint.handler.type === 'sql') {
+        return handleSql(app, request, reply, endpoint.handler.sql);
+      }
+      return reply
+        .status(500)
+        .send(
+          app.buildResponse(
+            500,
+            `Handler type "${endpoint.handler.type}" not supported`,
+            null,
+          ),
+        );
+    },
+  });
 }
 
 function generateSchema(
   config: AppConfig,
   endpoint: CustomEndpointConfig,
   authorization: boolean,
+  routeTags?: string[],
 ): {
   schema: Record<string, unknown>;
   routePathSuffix: string;
@@ -78,7 +151,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Custom Endpoint: ${endpoint.path}`,
     description: endpoint.description,
-    tags: ['Custom Endpoints'],
+    tags: routeTags ?? ['Custom Endpoints'],
   };
 
   let routePathSuffix = '';

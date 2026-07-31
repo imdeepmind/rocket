@@ -68,7 +68,7 @@ describe('test custom-endpoints api', () => {
       // Successfully call the endpoint with correct schema
       const validResponse = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {
           status: 'active',
           minAge: '18',
@@ -96,7 +96,7 @@ describe('test custom-endpoints api', () => {
       // Since it's a POST with path variables, we use the injected /:id
       const validResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/update-user/42',
+        url: '/v1/custom-endpoints/update-user/42',
         payload: {
           name: 'Jane Doe',
         },
@@ -111,7 +111,7 @@ describe('test custom-endpoints api', () => {
       await fastify.close();
     });
 
-    test('should support all data types in magic variables', async () => {
+    test('should support all data types in query placeholders', async () => {
       const allTypesEndpoints = {
         allTypes: {
           method: 'POST' as const,
@@ -133,7 +133,7 @@ describe('test custom-endpoints api', () => {
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/all-types',
+        url: '/v1/custom-endpoints/all-types',
         payload: {
           b: true,
           t: 'some long text',
@@ -160,7 +160,7 @@ describe('test custom-endpoints api', () => {
       // minAge is expected to be integer. If we pass a string that isn't parseable as int, fastify fails
       const invalidResponse = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {
           status: 'active',
           minAge: 'invalid-string',
@@ -182,7 +182,7 @@ describe('test custom-endpoints api', () => {
 
       const invalidBodyResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/update-user/42',
+        url: '/v1/custom-endpoints/update-user/42',
         payload: {
           name: 'Jane Doe',
           extra_field: 'not allowed',
@@ -205,7 +205,7 @@ describe('test custom-endpoints api', () => {
 
       const invalidPathResponse = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/update-user/not-a-number',
+        url: '/v1/custom-endpoints/update-user/not-a-number',
         payload: {
           name: 'Jane Doe',
         },
@@ -240,7 +240,7 @@ describe('test custom-endpoints api', () => {
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/missing-param',
+        url: '/v1/custom-endpoints/missing-param',
         // Omitting 'status' query string
       });
 
@@ -271,7 +271,7 @@ describe('test custom-endpoints api', () => {
 
       const res = await fastify.inject({
         method: 'POST',
-        url: '/custom-endpoints/missing-body',
+        url: '/v1/custom-endpoints/missing-body',
         payload: {
           // 'id' is missing
         },
@@ -288,7 +288,7 @@ describe('test custom-endpoints api', () => {
 
   describe('authentication', () => {
     const apisConfig = {
-      'customEndpoints.searchUsers': {
+      'custom.v1.all.unknown.searchUsers': {
         authorization: true,
       },
     };
@@ -304,7 +304,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {status: 'active', minAge: '18'},
       });
 
@@ -325,7 +325,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         headers: {
           authorization: `Bearer ${token}`,
         },
@@ -355,7 +355,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         headers: {
           'x-api-key': 'test-key-123',
         },
@@ -391,7 +391,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/unsupported',
+        url: '/v1/custom-endpoints/unsupported',
       });
 
       expect(response.statusCode).toBe(500);
@@ -427,7 +427,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/mismatched',
+        url: '/v1/custom-endpoints/mismatched',
       });
 
       // It should still register but without the parameters
@@ -459,7 +459,7 @@ describe('test custom-endpoints api', () => {
 
       const response = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/unknown-type',
+        url: '/v1/custom-endpoints/unknown-type',
         query: {name: 'Alice'},
       });
 
@@ -471,7 +471,7 @@ describe('test custom-endpoints api', () => {
   describe('api config disabled', () => {
     test('should skip endpoint when enabled is false', async () => {
       const apisConfig = {
-        'customEndpoints.searchUsers': {
+        'custom.v1.all.unknown.searchUsers': {
           enabled: false,
         },
       };
@@ -485,7 +485,7 @@ describe('test custom-endpoints api', () => {
 
       const res = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {status: 'active', minAge: '18'},
       });
 
@@ -519,7 +519,7 @@ describe('test custom-endpoints api', () => {
       // Path param 'id' is required by default, query params are optional
       const res = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/get-user/10',
+        url: '/v1/custom-endpoints/get-user/10',
       });
 
       expect(res.statusCode).toBe(200);
@@ -537,7 +537,7 @@ describe('test custom-endpoints api', () => {
       // searchUsers has validation requiring minAge >= 1
       const res = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {
           status: 'active',
           minAge: '0', // violates minimum: 1
@@ -562,7 +562,7 @@ describe('test custom-endpoints api', () => {
       // searchUsers requires minAge in validation
       const res = await fastify.inject({
         method: 'GET',
-        url: '/custom-endpoints/search-users',
+        url: '/v1/custom-endpoints/search-users',
         query: {},
       });
 
@@ -570,6 +570,44 @@ describe('test custom-endpoints api', () => {
       const body = JSON.parse(res.body);
       expect(body.message).toContain('minAge');
 
+      await fastify.close();
+    });
+  });
+
+  describe('API variants', () => {
+    test('should register additional variant endpoint when apiVariants is configured', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        undefined,
+        customEndpoints,
+        undefined,
+        {'custom.v1.all.unknown.searchUsers': {variants: ['admin']}},
+      );
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/admin/custom-endpoints/search-users',
+        query: {status: 'active', minAge: '18'},
+      });
+      expect(response.statusCode).toBe(200);
+      await fastify.close();
+    });
+
+    test('should not register variant endpoint when disabled in apis config', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        {},
+        {'custom.admin.all.unknown.searchUsers': {enabled: false}},
+        customEndpoints,
+        undefined,
+        {'custom.v1.all.unknown.searchUsers': {variants: ['admin']}},
+      );
+      const res = await fastify.inject({
+        method: 'GET',
+        url: '/admin/custom-endpoints/search-users',
+        query: {status: 'active', minAge: '18'},
+      });
+      expect(res.statusCode).toBe(404);
       await fastify.close();
     });
   });

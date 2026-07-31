@@ -58,6 +58,19 @@ const applicationSchema = {
         },
       },
     },
+    dangerouslyOverrideDefaultVariant: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 25,
+      pattern: '^[a-zA-Z0-9_-]+$',
+    },
+    magicVariables: {
+      type: 'object',
+      additionalProperties: {
+        anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
+      },
+      minProperties: 1,
+    },
   },
 };
 
@@ -204,6 +217,10 @@ const fieldSchema = {
         'datetime',
         'decimal',
         'date',
+        'json',
+        'enum',
+        'uuid',
+        'ulid',
       ],
     },
     primaryKey: {type: 'boolean', default: false},
@@ -211,6 +228,7 @@ const fieldSchema = {
     nullable: {type: 'boolean', default: true},
     unique: {type: 'boolean', default: false},
     default: true,
+    secret: {type: 'boolean', default: false},
     apis: {
       type: 'array',
       items: {
@@ -233,6 +251,12 @@ const fieldSchema = {
         type: 'string',
         enum: ['count', 'avg', 'sum', 'min', 'max', 'frequency'],
       },
+      uniqueItems: true,
+    },
+    values: {
+      type: 'array',
+      items: {type: 'string', minLength: 1},
+      minItems: 1,
       uniqueItems: true,
     },
   },
@@ -390,7 +414,7 @@ const customEndpointSchema = {
   },
 };
 
-const serverParamSchema = {
+const serverSideParamSchema = {
   type: 'object',
   required: ['type', 'name', 'value'],
   additionalProperties: false,
@@ -410,6 +434,19 @@ const serverParamSchema = {
   },
 };
 
+const queryOperationValues = [
+  'eq',
+  'ne',
+  'lt',
+  'lte',
+  'gt',
+  'gte',
+  'in',
+  'not_in',
+  'sort',
+];
+const aggregationValues = ['count', 'avg', 'sum', 'min', 'max', 'frequency'];
+
 const apisSchema = {
   type: 'object',
   patternProperties: {
@@ -424,13 +461,43 @@ const apisSchema = {
           items: webhookSchema,
           minItems: 1,
         },
-        serverParams: {
+        serverSideParams: {
           type: 'array',
-          items: serverParamSchema,
+          items: serverSideParamSchema,
+          minItems: 1,
+        },
+        tags: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 25,
+          },
           minItems: 1,
         },
         authorization: {
           type: 'boolean',
+        },
+        bypassSecret: {
+          type: 'boolean',
+        },
+        supportedQueries: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: queryOperationValues,
+          },
+          uniqueItems: true,
+          minItems: 1,
+        },
+        supportedAggregations: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: aggregationValues,
+          },
+          uniqueItems: true,
+          minItems: 1,
         },
       },
       additionalProperties: false,
@@ -542,6 +609,31 @@ const integrationsSchema = {
   },
 };
 
+const apiVariantsSchema = {
+  type: 'object',
+  patternProperties: {
+    '^[A-Za-z0-9-_.]+$': {
+      type: 'object',
+      required: ['variants'],
+      additionalProperties: false,
+      properties: {
+        variants: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 25,
+            pattern: '^[a-zA-Z0-9_-]+$',
+          },
+          uniqueItems: true,
+        },
+      },
+    },
+  },
+  additionalProperties: false,
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'docs', 'infrastructure', 'data'],
@@ -566,6 +658,7 @@ const schema = {
     customEndpoints: customEndpointsSchema,
     authentication: authenticationSchema,
     integrations: integrationsSchema,
+    apiVariants: apiVariantsSchema,
   },
 };
 

@@ -1,6 +1,11 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getResponseStructureSchema} from '@/routes/schema-helpers';
+import {
+  buildApiIdentifier,
+  getAdditionalVariants,
+  getVariantSegment,
+} from '@/lib/config/identifier';
+import {getResponseStructureSchema} from '@/lib/schema/response';
 
 import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
 
@@ -12,6 +17,8 @@ export function registerLoginRoute(
   config: AppConfig,
 ): void {
   const {models} = config.data;
+  const defaultVariant =
+    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const upConfig = config.authentication!.provider
     .config as UpAuthProviderConfig;
@@ -21,19 +28,83 @@ export function registerLoginRoute(
 
   if (!authModelConfig) return;
 
-  const apiIdentifier = `auth.${model}.all.login`;
+  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.login`;
 
-  if (config.apis?.[apiIdentifier]?.enabled === false) return;
+  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
 
+  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
+
+  registerLoginEndpoint(
+    app,
+    config,
+    model,
+    usernameField,
+    passwordField,
+    upConfig,
+    defaultVariant,
+    defaultApiIdentifier,
+    defaultTags,
+  );
+
+  const baseIdentifier = buildApiIdentifier(
+    'auth',
+    defaultVariant,
+    model,
+    'unknown',
+    'login',
+  );
+  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
+
+  for (const variant of additionalVariants) {
+    const variantApiIdentifier = buildApiIdentifier(
+      'auth',
+      variant,
+      model,
+      'unknown',
+      'login',
+    );
+
+    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
+
+    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
+
+    registerLoginEndpoint(
+      app,
+      config,
+      model,
+      usernameField,
+      passwordField,
+      upConfig,
+      variant,
+      variantApiIdentifier,
+      variantTags,
+    );
+  }
+}
+
+function registerLoginEndpoint(
+  app: FastifyInstance,
+  config: AppConfig,
+  model: string,
+  usernameField: string,
+  passwordField: string,
+  upConfig: UpAuthProviderConfig,
+  variant: string,
+  apiIdentifier: string,
+  routeTags?: string[],
+): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     passwordField,
     model,
     upConfig.mfaRequired ?? false,
+    routeTags,
   );
 
+  const path = `/${variant}/auth/login`;
+
   app.post(
-    '/auth/login',
+    path,
     {
       schema,
       config: {apiIdentifier},
@@ -97,6 +168,7 @@ function generateSchema(
   passwordField: string,
   model: string,
   mfaRequired: boolean,
+  routeTags?: string[],
 ) {
   const bodySchema = {
     type: 'object',
@@ -128,7 +200,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Login for ${capitalizeFirstLetter(model)}`,
     description: `Authenticates a user from the "${model}" table and returns a JWT access token.`,
-    tags: [capitalizeFirstLetter(model), 'Auth', 'Login'],
+    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Login'],
     body: bodySchema,
     response: responseSchema,
   };
