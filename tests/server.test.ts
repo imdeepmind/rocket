@@ -55,6 +55,7 @@ vi.mock('fastify', () => {
     }),
     getHook: (name: string) => storedHooks[name],
     setErrorHandler: vi.fn(),
+    setNotFoundHandler: vi.fn(),
     listen: vi.fn(),
     close: vi.fn(),
     post: vi.fn(),
@@ -67,8 +68,10 @@ vi.mock('fastify', () => {
       info: vi.fn(),
     },
     buildResponse: vi.fn((statusCode, message, data, meta) => ({
+      code: statusCode,
       statusCode,
       message,
+      data,
       meta,
     })),
     set appConfig(val: AppConfig) {
@@ -177,6 +180,7 @@ type MockedApp = FastifyInstance & {
   addHook: ReturnType<typeof vi.fn>;
   getHook: (name: string) => unknown[] | undefined;
   setErrorHandler: ReturnType<typeof vi.fn>;
+  setNotFoundHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
@@ -511,24 +515,23 @@ describe('Server', () => {
       });
     });
 
-    it('should pass validation errors in metadata payload', () => {
-      // Create a mock validation error block conforming to fastify's validation structure
+    it('should format validation errors as standard 400 envelope without leaking internals', () => {
       const validationPayload = [
         {message: 'field required'},
       ] as unknown as FastifyError['validation'];
       const err = createError(
         'Validation failed',
-        undefined,
+        'FST_ERR_VALIDATION',
         400,
         validationPayload,
       );
       errorHandler(err, mockReq, mockReply);
 
+      expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          meta: expect.objectContaining({
-            validation: [{message: 'field required'}],
-          }),
+          statusCode: 400,
+          message: 'Validation failed',
         }),
       );
     });
@@ -551,6 +554,15 @@ describe('Server', () => {
     await startServer(mockConfig, 3000, 'dev');
 
     const handlerOrder = mockApp.setErrorHandler.mock.invocationCallOrder[0];
+    const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
+
+    expect(handlerOrder).toBeLessThan(firstRegisterOrder);
+  });
+
+  it('should install the not-found handler before registering any routes', async () => {
+    await startServer(mockConfig, 3000, 'dev');
+
+    const handlerOrder = mockApp.setNotFoundHandler.mock.invocationCallOrder[0];
     const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
 
     expect(handlerOrder).toBeLessThan(firstRegisterOrder);

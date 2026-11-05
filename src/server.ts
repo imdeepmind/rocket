@@ -12,7 +12,10 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
-import {registerErrorHandler} from '@/lib/server/error-handler';
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
 import {RouteInfo} from '@/lib/server/welcome';
 
 import {registerRoutes} from '@/routes';
@@ -75,6 +78,7 @@ export async function startServer(
   // Must be installed before routes are registered, otherwise Fastify keeps
   // the default error handler for those routes.
   registerErrorHandler(app);
+  registerNotFoundHandler(app);
 
   // Track each registered route
   app.addHook('onRoute', routeOptions => {
