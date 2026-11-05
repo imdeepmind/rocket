@@ -8,7 +8,10 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
-import {registerErrorHandler} from '@/lib/server/error-handler';
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
 
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 
@@ -103,6 +106,7 @@ async function createAuthApp(
   await app.register(responsePlugin);
 
   registerErrorHandler(app);
+  registerNotFoundHandler(app);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
     registerRegistrationRoute(app, config);
@@ -426,6 +430,11 @@ describe('POST /auth/register', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: "body must have required property 'email'",
+        data: null,
+      });
       expect(pgQueryMock).not.toHaveBeenCalled();
       await app.close();
     });
@@ -440,6 +449,11 @@ describe('POST /auth/register', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: "body must have required property 'password'",
+        data: null,
+      });
       expect(pgQueryMock).not.toHaveBeenCalled();
       await app.close();
     });
@@ -454,6 +468,11 @@ describe('POST /auth/register', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: "body must have required property 'email'",
+        data: null,
+      });
       expect(pgQueryMock).not.toHaveBeenCalled();
       await app.close();
     });

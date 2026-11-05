@@ -6,6 +6,11 @@ import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
+
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 
 import {
@@ -81,6 +86,8 @@ async function createAuthApp(
     ...(apiVariants ? {apiVariants} : {}),
   };
   app.appConfig = config;
+  registerErrorHandler(app);
+  registerNotFoundHandler(app);
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
@@ -399,7 +406,11 @@ describe('POST /auth/change-password', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().message).toBe('Invalid existing password');
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'Invalid existing password',
+        data: null,
+      });
       await app.close();
     });
   });
@@ -419,6 +430,11 @@ describe('POST /auth/change-password', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: "body must have required property 'newPassword'",
+        data: null,
+      });
       await app.close();
     });
   });

@@ -9,7 +9,10 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
-import {registerErrorHandler} from '@/lib/server/error-handler';
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
 
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 
@@ -126,6 +129,7 @@ async function createChangeEmailApp(
   await app.register(otpPlugin);
 
   registerErrorHandler(app);
+  registerNotFoundHandler(app);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
     registerEmailChangeRoute(app, config);

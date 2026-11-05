@@ -7,7 +7,10 @@ import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
 
-import {registerErrorHandler} from '@/lib/server/error-handler';
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
 
 import {registerRoutes} from '@/routes';
 
@@ -69,6 +72,7 @@ export async function createTestApp(
   fastify.appConfig = appConfig;
 
   registerErrorHandler(fastify);
+  registerNotFoundHandler(fastify);
 
   await fastify.register(databasePlugin);
   await fastify.register(cachePlugin);
