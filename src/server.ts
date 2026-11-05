@@ -1,9 +1,4 @@
-import Fastify, {
-  FastifyError,
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest,
-} from 'fastify';
+import Fastify, {FastifyInstance} from 'fastify';
 
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
@@ -17,6 +12,7 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {registerErrorHandler} from '@/lib/server/error-handler';
 import {RouteInfo} from '@/lib/server/welcome';
 
 import {registerRoutes} from '@/routes';
@@ -75,6 +71,10 @@ export async function startServer(
   });
 
   app.appConfig = config;
+
+  // Must be installed before routes are registered, otherwise Fastify keeps
+  // the default error handler for those routes.
+  registerErrorHandler(app);
 
   // Track each registered route
   app.addHook('onRoute', routeOptions => {
@@ -172,54 +172,6 @@ export async function startServer(
       }
     },
     {prefix: '/api'},
-  );
-
-  // Global error handler
-  app.setErrorHandler(
-    (
-      err: FastifyError & {code?: string},
-      req: FastifyRequest,
-      reply: FastifyReply,
-    ) => {
-      req.log.error(err);
-
-      const errRecord = err as unknown as Record<string, unknown>;
-      if (errRecord.body) {
-        reply
-          .status((errRecord.statusCode as number) || 500)
-          .send(errRecord.body);
-        return;
-      }
-
-      // Default from Fastify or fallback
-      let statusCode: number = err.statusCode || 500;
-
-      // If this looks like a Postgres DatabaseError, classify 4xx vs 5xx
-      if (err.code) {
-        const code = err.code;
-        // Data & integrity errors (invalid data, constraint violations) → 4xx
-        // Common classes:
-        // - 22xxx: data exceptions (e.g. invalid_text_representation, numeric_value_out_of_range)
-        // - 23xxx: integrity constraint violations (e.g. unique_violation, foreign_key_violation)
-        if (code.startsWith('22') || code.startsWith('23')) {
-          statusCode = 400;
-        }
-        // Connection exceptions (08xxx) → 5xx (service unavailable)
-        else if (code.startsWith('08')) {
-          statusCode = 503;
-        } else {
-          statusCode = statusCode >= 400 && statusCode < 600 ? statusCode : 500;
-        }
-      }
-
-      const payload = app.buildResponse(statusCode, err.message, null, {
-        error: err.name,
-        code: err.code,
-        ...(err.validation ? {validation: err.validation} : {}),
-      });
-
-      reply.status(statusCode).send(payload);
-    },
   );
 
   return {app, routes};

@@ -412,11 +412,42 @@ describe('Server', () => {
       );
     });
 
-    it('should process Integrity violations (23xxx) as 400', () => {
+    it('should map Unique violations (23505) to 409 without leaking driver details', () => {
       const err = createError('Unique constraint violation', '23505');
       errorHandler(err, mockReq, mockReply);
 
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 409,
+          message: 'A record with this value already exists',
+        }),
+      );
+    });
+
+    it('should include the offending column in unique violation messages', () => {
+      const err = createError('Unique constraint violation', '23505');
+      (err as unknown as Record<string, unknown>).detail =
+        'Key (email)=(user@example.com) already exists.';
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({message: 'Email already exists'}),
+      );
+    });
+
+    it('should map other Integrity violations (23xxx) to 400', () => {
+      const err = createError('Foreign key violation', '23503');
+      errorHandler(err, mockReq, mockReply);
+
       expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The request references a record that does not exist',
+        }),
+      );
     });
 
     it('should process Connection exceptions (08xxx) as 503', () => {
@@ -431,6 +462,12 @@ describe('Server', () => {
       errorHandler(err, mockReq, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 500,
+          message: 'Internal Server Error',
+        }),
+      );
     });
 
     it('should respect incoming status code if specified, provided it is valid HTTP', () => {
@@ -491,6 +528,15 @@ describe('Server', () => {
     const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
     expect(Array.isArray(routes)).toBe(true);
+  });
+
+  it('should install the error handler before registering any routes', async () => {
+    await startServer(mockConfig, 3000, 'dev');
+
+    const handlerOrder = mockApp.setErrorHandler.mock.invocationCallOrder[0];
+    const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
+
+    expect(handlerOrder).toBeLessThan(firstRegisterOrder);
   });
 
   it('should call enforceSSP in the global preValidation hook', async () => {
