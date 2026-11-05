@@ -1,15 +1,6 @@
+import {ClassifiedDatabaseError, DatabaseErrorLike} from '@/interfaces';
+
 import {capitalizeFirstLetter} from '@/utils/string';
-
-export interface ClassifiedDatabaseError {
-  statusCode: number;
-  message: string;
-}
-
-interface DatabaseErrorLike {
-  code: string;
-  message?: unknown;
-  detail?: unknown;
-}
 
 /**
  * SQLSTATE classes that identify an error coming from the database engine.

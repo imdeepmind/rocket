@@ -16,3 +16,14 @@ export interface DatabaseQuery {
   close: () => Promise<void>;
   beginTransaction(): Promise<TransactionClient>;
 }
+
+export interface DatabaseErrorLike {
+  code: string;
+  message?: unknown;
+  detail?: unknown;
+}
+
+export interface ClassifiedDatabaseError {
+  statusCode: number;
+  message: string;
+}

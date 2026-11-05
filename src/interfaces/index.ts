@@ -9,7 +9,12 @@ export interface CLIOptions {
   migrate: boolean;
 }
 
-export {DatabaseQuery, TransactionClient} from './database';
+export {
+  ClassifiedDatabaseError,
+  DatabaseErrorLike,
+  DatabaseQuery,
+  TransactionClient,
+} from './database';
 
 export interface StructuredResponse<T = unknown, R = unknown> {
   code: number;
