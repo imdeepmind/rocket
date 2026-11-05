@@ -35,10 +35,31 @@ Builtins → Third-party → `@/migrator` → `@/plugin` → `@/server` → `@/l
 ## Commit messages
 
 ```
-type(scope): ROSS-<NUMBER>: message
+type(scope): #<NUMBER>: message
 ```
 
 Types: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`. Max header: 120 chars.
+
+Example: `feat(auth): #123: add token refresh`
+
+## Branch naming
+
+```
+<type>/#<issue-number>-<short-description>
+```
+
+- `<type>` is one of the allowed commit types: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`.
+- `<issue-number>` is the GitHub issue being worked on.
+- `<short-description>` is lowercase, hyphen-separated.
+
+Examples: `feat/#86-migrate-commit-msg`, `bug/#92-fix-auth-refresh`, `refactor/#74-split-where-builder`
+
+Flow:
+
+1. Create a branch from the default branch: `git switch -c feat/#86-migrate-commit-msg`.
+2. Commit using the commit convention: `git commit -m "chore(ci): #86: migrate commit convention from JIRA to GitHub Issues"`.
+3. Push the branch (quote `#` in shell commands): `git push -u origin 'feat/#86-migrate-commit-msg'`.
+4. Open a PR that references the issue.
 
 ## Architecture essentials
 
