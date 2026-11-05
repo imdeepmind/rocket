@@ -6,7 +6,7 @@ export interface ClassifiedDatabaseError {
 }
 
 interface DatabaseErrorLike {
-  code?: unknown;
+  code: string;
   message?: unknown;
   detail?: unknown;
 }
@@ -51,20 +51,16 @@ const SQLITE_CONNECTION_CODES = [
 
 function getCode(err: unknown): string | undefined {
   if (typeof err !== 'object' || err === null) return undefined;
-  const code = (err as DatabaseErrorLike).code;
+  const code = (err as {code?: unknown}).code;
   return typeof code === 'string' ? code : undefined;
 }
 
-function getMessage(err: unknown): string {
-  if (typeof err !== 'object' || err === null) return '';
-  const message = (err as DatabaseErrorLike).message;
-  return typeof message === 'string' ? message : '';
-}
-
-function getDetail(err: unknown): string {
-  if (typeof err !== 'object' || err === null) return '';
-  const detail = (err as DatabaseErrorLike).detail;
-  return typeof detail === 'string' ? detail : '';
+function getStringField(
+  error: DatabaseErrorLike,
+  field: 'message' | 'detail',
+): string {
+  const value = error[field];
+  return typeof value === 'string' ? value : '';
 }
 
 function isSqliteConnectionCode(code: string): boolean {
@@ -76,7 +72,10 @@ function isSqliteConnectionCode(code: string): boolean {
 function normalizeFieldList(fields: string): string[] {
   return fields
     .split(',')
-    .map(field => field.trim().replace(/^"|"$/g, '').split('.').pop() ?? '')
+    .map(field => {
+      const parts = field.trim().replace(/^"|"$/g, '').split('.');
+      return parts[parts.length - 1];
+    })
     .filter(Boolean);
 }
 
@@ -86,12 +85,16 @@ function normalizeFieldList(fields: string): string[] {
  * machine readable code and, usually, a `detail` string such as
  * `Key (email)=(user@example.com) already exists.`.
  */
-function getUniqueViolationFields(err: unknown): string[] | null {
-  const code = getCode(err) ?? '';
-  const message = getMessage(err);
+function getUniqueViolationFields(
+  error: DatabaseErrorLike,
+  code: string,
+): string[] | null {
+  const message = getStringField(error, 'message');
 
   if (code === '23505') {
-    const detailMatch = /Key\s*\(([^)]+)\)\s*=/.exec(getDetail(err));
+    const detailMatch = /Key\s*\(([^)]+)\)\s*=/.exec(
+      getStringField(error, 'detail'),
+    );
     return detailMatch ? normalizeFieldList(detailMatch[1]) : [];
   }
 
@@ -136,9 +139,10 @@ export function describeDatabaseError(
 ): ClassifiedDatabaseError | null {
   if (!isDatabaseError(err)) return null;
 
-  const code = getCode(err) ?? '';
+  const error = err as DatabaseErrorLike;
+  const {code} = error;
 
-  const uniqueFields = getUniqueViolationFields(err);
+  const uniqueFields = getUniqueViolationFields(error, code);
   if (uniqueFields !== null) {
     return {
       statusCode: 409,

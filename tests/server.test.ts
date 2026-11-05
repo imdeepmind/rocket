@@ -494,6 +494,23 @@ describe('Server', () => {
       });
     });
 
+    it('should default to 500 when a body error has no status code', () => {
+      const err = createError('Business error');
+      (err as unknown as Record<string, unknown>).body = {
+        code: 500,
+        message: 'Business error',
+        data: null,
+      };
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        code: 500,
+        message: 'Business error',
+        data: null,
+      });
+    });
+
     it('should pass validation errors in metadata payload', () => {
       // Create a mock validation error block conforming to fastify's validation structure
       const validationPayload = [

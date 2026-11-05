@@ -117,12 +117,19 @@ describe('describeDatabaseError', () => {
   });
 
   test('should use a generic message when SQLite does not expose columns', () => {
-    expect(
-      describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_UNIQUE')),
-    ).toEqual({
+    expect(describeDatabaseError({code: 'SQLITE_CONSTRAINT_UNIQUE'})).toEqual({
       statusCode: 409,
       message: 'A record with this value already exists',
     });
+  });
+
+  test('should ignore empty column names parsed from SQLite messages', () => {
+    expect(
+      describeDatabaseError({
+        code: 'SQLITE_CONSTRAINT_UNIQUE',
+        message: 'UNIQUE constraint failed: users.email, ',
+      }),
+    ).toEqual({statusCode: 409, message: 'Email already exists'});
   });
 
   test('should map PostgreSQL foreign key violations to 400', () => {
