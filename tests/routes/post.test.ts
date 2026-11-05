@@ -338,6 +338,38 @@ describe('test post api', () => {
       await fastify.close();
     });
 
+    test('should return 409 with a friendly envelope on unique violation', async () => {
+      const fastify = await createTestApp(pgConfig, mockModels);
+      const constraintError = Object.assign(
+        new Error('duplicate key value violates unique constraint'),
+        {
+          code: '23505',
+          detail: 'Key (email)=(taken@example.com) already exists.',
+        },
+      );
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockRejectedValueOnce(constraintError) // INSERT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'taken@example.com'},
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        code: 409,
+        message: 'Email already exists',
+        data: null,
+      });
+      expect(response.body).not.toContain('23505');
+      expect(response.body).not.toContain('duplicate key');
+
+      await fastify.close();
+    });
+
     test('should handle rollback failure gracefully', async () => {
       const fastify = await createTestApp(pgConfig, mockModels);
       pgClientQueryMock

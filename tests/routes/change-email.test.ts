@@ -9,6 +9,8 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
+import {registerErrorHandler} from '@/lib/server/error-handler';
+
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 
 import {
@@ -22,6 +24,9 @@ import {
   pgClientQueryMock,
   pgConnectMock,
   pgQueryMock,
+  sqliteAllMock,
+  sqliteExecMock,
+  sqliteRunMock,
 } from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
@@ -60,6 +65,11 @@ const pgConfig: DatabaseConfig = {
   connection: {
     url: 'postgresql://postgres:postgres@localhost:5432/postgres',
   },
+};
+
+const sqliteConfig: DatabaseConfig = {
+  engine: 'sqlite',
+  connection: {url: ':memory:'},
 };
 
 // ---------------------------------------------------------------------------
@@ -115,6 +125,8 @@ async function createChangeEmailApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
+  registerErrorHandler(app);
+
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
     registerEmailChangeRoute(app, config);
   }
@@ -130,6 +142,9 @@ describe('PATCH /auth/user/email', () => {
   beforeEach(() => {
     pgQueryMock.mockClear();
     pgClientQueryMock.mockClear();
+    sqliteAllMock.mockClear();
+    sqliteRunMock.mockClear();
+    sqliteExecMock.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -472,6 +487,79 @@ describe('PATCH /auth/user/email', () => {
       });
 
       expect(response.statusCode).toBe(500);
+      await app.close();
+    });
+
+    test('should return 409 with a friendly envelope when the new email is taken (PostgreSQL)', async () => {
+      const app = await createChangeEmailApp(upAuthConfig);
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+      const constraintError = Object.assign(
+        new Error('duplicate key value violates unique constraint'),
+        {
+          code: '23505',
+          detail: 'Key (email)=(taken@example.com) already exists.',
+        },
+      );
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{id: 1}], rowCount: 1}) // SELECT
+        .mockRejectedValueOnce(constraintError) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // ROLLBACK
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/auth/user/email',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {email: 'taken@example.com'},
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        code: 409,
+        message: 'Email already exists',
+        data: null,
+      });
+      expect(response.body).not.toContain('23505');
+      expect(response.body).not.toContain('duplicate key');
+      await app.close();
+    });
+
+    test('should return 409 with a friendly envelope when the new email is taken (SQLite)', async () => {
+      const app = await createChangeEmailApp(
+        upAuthConfig,
+        authModels,
+        sqliteConfig,
+      );
+
+      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
+      const constraintError = Object.assign(
+        new Error('UNIQUE constraint failed: users.email'),
+        {code: 'SQLITE_CONSTRAINT_UNIQUE'},
+      );
+
+      sqliteAllMock.mockReturnValueOnce([{id: 1, email: 'alice@example.com'}]);
+      sqliteRunMock.mockImplementationOnce(() => {
+        throw constraintError;
+      });
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/auth/user/email',
+        headers: {authorization: `Bearer ${token}`},
+        payload: {email: 'taken@example.com'},
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        code: 409,
+        message: 'Email already exists',
+        data: null,
+      });
+      expect(response.body).not.toContain('SQLITE_CONSTRAINT');
+      expect(response.body).not.toContain('UNIQUE constraint failed');
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
       await app.close();
     });
 
