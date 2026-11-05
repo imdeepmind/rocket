@@ -133,6 +133,14 @@ function registerLoginEndpoint(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
+      const {isVerifiedField} = upConfig.userModel;
+
+      if (isVerifiedField && Boolean(user[isVerifiedField]) !== true) {
+        return reply
+          .status(401)
+          .send(app.buildResponse(401, 'User is not verified', null));
+      }
+
       if (upConfig.mfaRequired) {
         const userEmail = String(user[usernameField]);
         const ulid = await app.otp.sendOTPForVerification(userEmail);
