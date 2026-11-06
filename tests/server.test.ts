@@ -7,7 +7,7 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
-import cachePlugin from '@/plugin/cache';
+import cachePlugin, {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
@@ -66,6 +66,7 @@ vi.mock('fastify', () => {
     log: {
       error: vi.fn(),
       info: vi.fn(),
+      warn: vi.fn(),
     },
     buildResponse: vi.fn((statusCode, message, data, meta) => ({
       code: statusCode,
@@ -191,6 +192,7 @@ type MockedApp = FastifyInstance & {
   log: {
     error: ReturnType<typeof vi.fn>;
     info: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
   };
   buildResponse: ReturnType<typeof vi.fn>;
 };
@@ -213,6 +215,14 @@ describe('Server', () => {
     migrate: boolean = false,
   ) => {
     await startServer(mockConfig, 3000, mode, verbose, migrate);
+  };
+
+  const runLastOnListenHook = async () => {
+    const hooks = mockApp.getHook('onListen');
+    const hook = hooks?.[hooks.length - 1];
+    if (hook) {
+      await (hook as () => unknown)();
+    }
   };
 
   it('should initialize fastify with correct logger based on configuration', async () => {
@@ -715,6 +725,108 @@ describe('Server', () => {
       await startServer(configWithMfa, 3000, 'dev');
 
       expect(registerMock).toHaveBeenCalledWith(otpPlugin);
+    });
+
+    it('should warn when mfaRequired is enabled without a cache', async () => {
+      const configWithMfa: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithMfa, 3000, 'dev');
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should warn when isVerifiedField is configured without a cache', async () => {
+      const configWithVerification: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'test-secret',
+            },
+          },
+        },
+      };
+
+      await startServer(configWithVerification, 3000, 'dev');
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should not warn when a cache is configured', async () => {
+      const configWithRedis: AppConfig = {
+        ...mockConfig,
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithRedis, 3000, 'dev');
+
+      expect(mockApp.log.warn).not.toHaveBeenCalled();
     });
 
     it('should register auth routes conditionally based on config', async () => {

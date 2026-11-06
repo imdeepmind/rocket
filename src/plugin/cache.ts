@@ -3,6 +3,15 @@ import fp from 'fastify-plugin';
 import Redis from 'ioredis';
 import NodeCache from 'node-cache';
 
+import {AppConfig} from '@/interfaces/config';
+
+export const NODE_CACHE_OTP_WARNING =
+  'No cache configured; OTPs are stored in node-cache (in-memory). OTPs are not shared across processes and will be lost on restart.';
+
+export function isRedisCacheConfigured(config: AppConfig | undefined): boolean {
+  return config?.infrastructure?.cache?.engine === 'redis';
+}
+
 export interface ICache {
   get<T = unknown>(key: string): Promise<T | null>;
   set<T = unknown>(key: string, value: T, ttlSeconds?: number): Promise<void>;

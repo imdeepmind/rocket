@@ -1,6 +1,7 @@
 import Fastify, {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 
+import {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import otpPlugin from '@/plugin/otp';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -149,6 +150,30 @@ describe('OTP Plugin', () => {
       const otpMatch = htmlBody.match(/<strong>(\d{6})<\/strong>/);
       expect(otpMatch).not.toBeNull();
       expect(otpMatch![1]).toMatch(/^\d{6}$/);
+    });
+
+    it('should warn when OTP is stored without a configured cache', async () => {
+      const warnSpy = vi.spyOn(app.log, 'warn');
+
+      await (app as any).otp.sendOTPForVerification('test@example.com');
+
+      expect(warnSpy).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should not warn when a cache is configured', async () => {
+      (app as any).appConfig = {
+        infrastructure: {
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+      };
+      const warnSpy = vi.spyOn(app.log, 'warn');
+
+      await (app as any).otp.sendOTPForVerification('test@example.com');
+
+      expect(warnSpy).not.toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
     });
 
     it('should handle multiple OTPs for different emails', async () => {

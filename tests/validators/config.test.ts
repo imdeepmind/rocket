@@ -3984,29 +3984,6 @@ describe('validateInvalidAuthConfig', () => {
       expected: '/authentication/provider/config/mfaRequired must be boolean',
     },
     {
-      name: 'mfaRequired true but no cache configured',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
-    },
-    {
       name: 'mfaRequired true but no communicate configured',
       patch: {
         authentication: {
@@ -4236,6 +4213,30 @@ describe('validateValidAuthConfig', () => {
           engine: 'redis' as const,
           connection: {url: 'redis://localhost:6379'},
         },
+        integrations: {email: {provider: 'dummy' as const}},
+      },
+    },
+    {
+      name: 'valid up-auth auth config with mfaRequired true and node-cache fallback',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      extra: {
         integrations: {email: {provider: 'dummy' as const}},
       },
     },
