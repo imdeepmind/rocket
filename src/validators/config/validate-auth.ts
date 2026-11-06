@@ -71,11 +71,6 @@ function validateAuthConstraints(config: AppConfig): string[] {
     }
 
     if (upConfig.mfaRequired) {
-      if (!config.infrastructure?.cache) {
-        errors.push(
-          '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
-        );
-      }
       if (!config.integrations?.email) {
         errors.push(
           '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',

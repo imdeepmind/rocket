@@ -2,7 +2,10 @@ import Fastify, {FastifyInstance} from 'fastify';
 
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
-import cachePlugin from '@/plugin/cache';
+import cachePlugin, {
+  isRedisCacheConfigured,
+  NODE_CACHE_OTP_WARNING,
+} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import dbPlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
@@ -74,6 +77,20 @@ export async function startServer(
   });
 
   app.appConfig = config;
+
+  const upAuthConfig =
+    config.authentication?.provider.type === 'up-auth'
+      ? (config.authentication.provider.config as UpAuthProviderConfig)
+      : undefined;
+  const usesAccountOtp = Boolean(
+    upAuthConfig?.mfaRequired || upAuthConfig?.userModel?.isVerifiedField,
+  );
+
+  if (usesAccountOtp && !isRedisCacheConfigured(config)) {
+    app.addHook('onListen', () => {
+      app.log.warn(NODE_CACHE_OTP_WARNING);
+    });
+  }
 
   // Must be installed before routes are registered, otherwise Fastify keeps
   // the default error handler for those routes.
