@@ -53,11 +53,8 @@ describe('test post api', () => {
           name: 'Test User',
           email: 'test@example.com',
         },
-        raw_data: {
-          rows: [],
-          changes: 0,
-        },
       });
+      expect(response.json()).not.toHaveProperty('raw_data');
 
       await fastify.close();
     });

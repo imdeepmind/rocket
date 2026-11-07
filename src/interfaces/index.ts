@@ -17,11 +17,10 @@ export {
   TransactionClient,
 } from './database';
 
-export interface StructuredResponse<T = unknown, R = unknown> {
+export interface StructuredResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
-  raw_data?: R;
 }
 
 export interface WebhookPayload {

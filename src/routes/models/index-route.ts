@@ -175,7 +175,6 @@ function registerIndexEndpoint(
               200,
               `Successfully retrieved records from the ${tableName} table`,
               responsePayload,
-              res,
             ),
           );
       } catch (err) {
@@ -247,16 +246,10 @@ function generateSchema(
       },
       required: [fieldName],
     },
-    response: getResponseStructureSchema(
-      [200],
-      {
-        type: 'object',
-        properties: responseSchemaProperties,
-      },
-      generateJSONValidationSchema(model, {
-        excludeSecretFields: excludeSecret,
-      }),
-    ),
+    response: getResponseStructureSchema([200], {
+      type: 'object',
+      properties: responseSchemaProperties,
+    }),
   };
 
   if (Object.keys(queryProperties).length > 0) {

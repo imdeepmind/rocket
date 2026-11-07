@@ -12,7 +12,7 @@ describe('response plugin', () => {
     expect(fastify.hasDecorator('buildResponse')).toBe(true);
   });
 
-  test('buildResponse returns a correctly structured response', async () => {
+  test('buildResponse returns a correctly structured response without raw_data', async () => {
     const fastify = Fastify();
     await fastify.register(responsePlugin);
     await fastify.ready();
@@ -20,19 +20,19 @@ describe('response plugin', () => {
     const code = 200;
     const message = 'Success';
     const data = {id: 1, name: 'Test'};
-    const raw_data = {debug: 'info'};
 
-    const response = fastify.buildResponse(code, message, data, raw_data);
+    const response = fastify.buildResponse(code, message, data);
 
     expect(response).toEqual({
       code,
       message,
       data,
-      raw_data,
     });
+    expect(response).not.toHaveProperty('raw_data');
+    expect(Object.keys(response)).toEqual(['code', 'message', 'data']);
   });
 
-  test('buildResponse works without optional raw_data', async () => {
+  test('buildResponse works with null data', async () => {
     const fastify = Fastify();
     await fastify.register(responsePlugin);
     await fastify.ready();
@@ -47,7 +47,7 @@ describe('response plugin', () => {
       code,
       message,
       data,
-      raw_data: undefined,
     });
+    expect(response).not.toHaveProperty('raw_data');
   });
 });

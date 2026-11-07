@@ -24,12 +24,11 @@ declare module 'fastify' {
 
   interface FastifyInstance {
     db: DatabaseQuery;
-    buildResponse: <T = unknown, R = unknown>(
+    buildResponse: <T = unknown>(
       code: number,
       message: string,
       data: T,
-      raw_data?: R,
-    ) => StructuredResponse<T, R>;
+    ) => StructuredResponse<T>;
     cache: import('@/plugin/cache').ICache;
     jwt: import('@fastify/jwt').JWT;
     appConfig: ResolvedAppConfig;

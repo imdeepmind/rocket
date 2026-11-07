@@ -207,24 +207,20 @@ function generateSchema(
       required: ['operations'],
       additionalProperties: false,
     },
-    response: getResponseStructureSchema(
-      [200],
-      {
-        type: 'object',
-        properties: {
-          avg: {type: 'number', nullable: true},
-          max: {type: 'number', nullable: true},
-          min: {type: 'number', nullable: true},
-          sum: {type: 'number', nullable: true},
-          count: {type: 'number', nullable: true},
-          frequency: {
-            type: 'object',
-            additionalProperties: {type: 'integer'},
-          },
+    response: getResponseStructureSchema([200], {
+      type: 'object',
+      properties: {
+        avg: {type: 'number', nullable: true},
+        max: {type: 'number', nullable: true},
+        min: {type: 'number', nullable: true},
+        sum: {type: 'number', nullable: true},
+        count: {type: 'number', nullable: true},
+        frequency: {
+          type: 'object',
+          additionalProperties: {type: 'integer'},
         },
       },
-      {type: 'object', additionalProperties: true},
-    ),
+    }),
   };
 
   if (security.length > 0) {

@@ -103,7 +103,7 @@ function registerPostEndpoint(
       let tx;
       try {
         tx = await app.db.beginTransaction();
-        const res = await tx.query(query, values);
+        await tx.query(query, values);
         await tx.commit();
 
         return reply
@@ -113,7 +113,6 @@ function registerPostEndpoint(
               201,
               `Successfully added the new entry to the ${tableName} table`,
               responseBody,
-              res,
             ),
           );
       } catch (err) {
@@ -149,7 +148,7 @@ function generateSchema(
     description: `Create a new ${capitalizeFirstLetter(modelName)} record in the database`,
     tags: policy.tags,
     body: bodySchema,
-    response: getResponseStructureSchema([201], responseSchema, responseSchema),
+    response: getResponseStructureSchema([201], responseSchema),
   };
 
   const security = buildSecurityArray(config, policy.authorization);
