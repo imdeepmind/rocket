@@ -1,7 +1,7 @@
 import {HTTPMethod} from './index';
 
 export type DBEngine = 'sqlite' | 'postgres';
-export type CacheDbEngine = 'redis';
+export type CacheDbEngine = 'redis' | 'memory';
 export type DataType =
   | 'integer'
   | 'string'
@@ -268,14 +268,189 @@ export interface ApiVariantEntry {
   variants: string[];
 }
 
-export interface AppConfig {
+export type DocsInfoConfig = DocsConfig['openapi']['info'];
+
+/**
+ * Sparse, user-facing configuration. Every operational section is optional;
+ * `resolveConfig` is responsible for turning it into a `ResolvedAppConfig`.
+ */
+export interface ApplicationConfigInput extends Omit<
+  Partial<ApplicationConfig>,
+  'rateLimit'
+> {
+  rateLimit?: Partial<RateLimitConfig>;
+}
+
+export interface DocsConfigInput extends Omit<Partial<DocsConfig>, 'openapi'> {
+  openapi?: Omit<Partial<DocsConfig['openapi']>, 'info'> & {
+    info?: Partial<DocsInfoConfig>;
+  };
+}
+
+export interface InfrastructureConfigInput {
+  database?: DatabaseConfig;
+  cache?: CacheDbConfig;
+}
+
+export interface ModelConfigInput extends Omit<
+  ModelConfig,
+  'indexes' | 'relations'
+> {
+  indexes?: Record<string, ModelIndexConfig>;
+  relations?: Record<string, ModelRelationConfig>;
+}
+
+export interface DataConfigInput {
+  models?: Record<string, ModelConfigInput>;
+}
+
+export interface AuthenticationConfigInput {
+  enabled?: boolean;
+  provider?: AuthProvider;
+}
+
+export interface AppConfigInput {
+  application?: ApplicationConfigInput;
+  docs?: DocsConfigInput;
+  infrastructure?: InfrastructureConfigInput;
+  data?: DataConfigInput;
+  apis?: ApisConfig;
+  customEndpoints?: Record<string, CustomEndpointConfig>;
+  authentication?: AuthenticationConfigInput;
+  integrations?: IntegrationsConfig;
+  apiVariants?: Record<string, ApiVariantEntry>;
+}
+
+/**
+ * Dense, consumer-facing configuration produced by `resolveConfig`.
+ */
+export interface ResolvedApplicationConfig {
+  name: string;
+  logLevel: LogLevel;
+  rateLimit: RateLimitConfig;
+  dangerouslyOverrideDefaultVariant: string;
+  magicVariables: Record<string, string | number | boolean>;
+}
+
+export interface ResolvedDocsConfig {
+  openapi: {
+    enabled: boolean;
+    path: string;
+    info: DocsInfoConfig;
+  };
+}
+
+export interface ResolvedDatabaseConfig {
+  engine: DBEngine;
+  connection: {
+    url: string;
+  };
+  timeout: number;
+}
+
+export type ResolvedCacheConfig =
+  | {engine: 'memory'}
+  | {
+      engine: 'redis';
+      connection: {
+        url: string;
+      };
+      timeout: number;
+    };
+
+export interface ResolvedInfrastructureConfig {
+  database: ResolvedDatabaseConfig;
+  cache: ResolvedCacheConfig;
+}
+
+export interface ResolvedModelFieldConfig {
+  type: DataType;
+  primaryKey: boolean;
+  autoIncrement: boolean;
+  nullable: boolean;
+  unique: boolean;
+  secret: boolean;
+  apis: ApiOperation[];
+  query: QueryOperation[];
+  aggregations: Aggregation[];
+  default?: unknown;
+  values?: string[];
+}
+
+export interface ResolvedModelIndexConfig {
+  fields: string[];
+  unique: boolean;
+}
+
+export interface ResolvedModelRelationConfig {
+  type: RelationType;
+  model: string;
+  localField: string;
+  foreignField: string;
+  onDelete?: ForeignKeyAction;
+  onUpdate?: ForeignKeyAction;
+}
+
+export interface ResolvedModelConfig {
+  timestamps: boolean;
+  validation?: Record<string, unknown>;
+  fields: Record<string, ResolvedModelFieldConfig>;
+  indexes: Record<string, ResolvedModelIndexConfig>;
+  relations: Record<string, ResolvedModelRelationConfig>;
+}
+
+export interface ResolvedDataConfig {
+  models: Record<string, ResolvedModelConfig>;
+}
+
+export interface ResolvedUpAuthProviderConfig {
+  userModel: UserModelConfig;
+  jwtSecret: string;
+  tokenExpiration: string;
+  mfaRequired: boolean;
+}
+
+export interface ResolvedUpAuthProvider {
+  type: 'up-auth';
+  config: ResolvedUpAuthProviderConfig;
+}
+
+export interface ResolvedApiKeyProvider {
+  type: 'api-key';
+  config: ApiKeyProviderConfig;
+}
+
+export type ResolvedAuthProvider =
+  | ResolvedUpAuthProvider
+  | ResolvedApiKeyProvider;
+
+export type ResolvedAuthenticationConfig =
+  | {enabled: false}
+  | {enabled: true; provider: ResolvedAuthProvider};
+
+export interface ResolvedAppConfig {
+  application: ResolvedApplicationConfig;
+  docs: ResolvedDocsConfig;
+  infrastructure: ResolvedInfrastructureConfig;
+  data: ResolvedDataConfig;
+  apis: ApisConfig;
+  customEndpoints: Record<string, CustomEndpointConfig>;
+  authentication: ResolvedAuthenticationConfig;
+  integrations: IntegrationsConfig;
+  apiVariants: Record<string, ApiVariantEntry>;
+}
+
+/**
+ * Dense configuration with required operational sections. Kept as the
+ * compatibility type for code that has not migrated to `ResolvedAppConfig`.
+ */
+export interface AppConfig extends Omit<
+  AppConfigInput,
+  'application' | 'docs' | 'infrastructure' | 'data' | 'authentication'
+> {
   application: ApplicationConfig;
   docs: DocsConfig;
   infrastructure: InfrastructureConfig;
   data: DataConfig;
-  apis?: ApisConfig;
-  customEndpoints?: Record<string, CustomEndpointConfig>;
   authentication?: AuthenticationConfig;
-  integrations?: IntegrationsConfig;
-  apiVariants?: Record<string, ApiVariantEntry>;
 }
