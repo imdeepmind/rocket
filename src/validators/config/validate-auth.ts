@@ -25,6 +25,12 @@ function validateAuthConstraints(config: AppConfig): string[] {
     return errors;
   }
 
+  // Disabled auth resolves to `{enabled: false}` (never has a provider);
+  // nothing to validate in that branch of the resolved union.
+  if (!authentication.enabled) {
+    return errors;
+  }
+
   const providerType = authentication.provider?.type;
   const providerConfig = authentication.provider?.config;
 

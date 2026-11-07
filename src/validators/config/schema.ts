@@ -6,7 +6,7 @@ import {validateEntityName} from '@/validators/entity';
 export const ajv = new Ajv({
   allErrors: true,
   removeAdditional: false,
-  useDefaults: true,
+  useDefaults: false,
   coerceTypes: false,
   strict: true,
 });
@@ -38,7 +38,7 @@ ajv.addKeyword({
 const applicationSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['logLevel', 'name'],
+  required: ['name'],
   properties: {
     name: {type: 'string', minLength: 1},
     logLevel: {
@@ -69,7 +69,6 @@ const applicationSchema = {
       additionalProperties: {
         anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
       },
-      minProperties: 1,
     },
   },
 };
@@ -136,7 +135,7 @@ const databaseSchema = {
         url: {type: 'string'},
       },
     },
-    timeout: {type: 'integer', default: 10000, minimum: 1},
+    timeout: {type: 'integer', minimum: 1},
   },
   oneOf: [
     {
@@ -174,22 +173,34 @@ const databaseSchema = {
   additionalProperties: false,
 };
 
-const cacheDbSchema = {
-  type: 'object',
-  required: ['engine', 'connection'],
-  additionalProperties: false,
-  properties: {
-    engine: {type: 'string', enum: ['redis']},
-    connection: {
+const cacheSchema = {
+  oneOf: [
+    {
       type: 'object',
-      required: ['url'],
       additionalProperties: false,
+      required: ['engine'],
       properties: {
-        url: {type: 'string', pattern: '^redis:\\/\\/'},
+        engine: {const: 'memory'},
       },
     },
-    timeout: {type: 'integer', default: 10000, minimum: 1},
-  },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['engine', 'connection'],
+      properties: {
+        engine: {const: 'redis'},
+        connection: {
+          type: 'object',
+          required: ['url'],
+          additionalProperties: false,
+          properties: {
+            url: {type: 'string', pattern: '^redis:\\/\\/'},
+          },
+        },
+        timeout: {type: 'integer', minimum: 1},
+      },
+    },
+  ],
 };
 
 const infrastructureSchema = {
@@ -198,7 +209,7 @@ const infrastructureSchema = {
   additionalProperties: false,
   properties: {
     database: databaseSchema,
-    cache: cacheDbSchema,
+    cache: cacheSchema,
   },
 };
 
@@ -223,12 +234,14 @@ const fieldSchema = {
         'ulid',
       ],
     },
-    primaryKey: {type: 'boolean', default: false},
-    autoIncrement: {type: 'boolean', default: false},
-    nullable: {type: 'boolean', default: true},
-    unique: {type: 'boolean', default: false},
-    default: true,
-    secret: {type: 'boolean', default: false},
+    primaryKey: {type: 'boolean'},
+    autoIncrement: {type: 'boolean'},
+    nullable: {type: 'boolean'},
+    unique: {type: 'boolean'},
+    // `default` allows any user value for the column default (no schema
+    // default-keyword here; `{}` = any value)
+    default: {},
+    secret: {type: 'boolean'},
     apis: {
       type: 'array',
       items: {
@@ -278,7 +291,6 @@ const indexSchema = {
     },
     unique: {
       type: 'boolean',
-      default: false,
     },
   },
 };
@@ -349,7 +361,7 @@ const modelSchema = {
 const webhookSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['url'],
+  required: ['url', 'data'],
   properties: {
     url: {
       type: 'string',
@@ -365,11 +377,9 @@ const webhookSchema = {
     },
     triggerOnRequest: {
       type: 'boolean',
-      default: false,
     },
     triggerOnResponse: {
       type: 'boolean',
-      default: false,
     },
   },
 };
@@ -508,7 +518,6 @@ const apisSchema = {
 
 const customEndpointsSchema = {
   type: 'object',
-  minProperties: 1,
   additionalProperties: customEndpointSchema,
 };
 
@@ -546,47 +555,57 @@ const userModelSchema = {
 };
 
 const authenticationSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['enabled', 'provider'],
-  properties: {
-    enabled: {
-      type: 'boolean',
-    },
-    provider: {
+  oneOf: [
+    {
       type: 'object',
       additionalProperties: false,
-      required: ['type', 'config'],
+      required: ['enabled'],
       properties: {
-        type: {
-          type: 'string',
-          enum: ['api-key', 'up-auth'],
-        },
-        config: {
+        enabled: {const: false},
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['enabled', 'provider'],
+      properties: {
+        enabled: {const: true},
+        provider: {
           type: 'object',
           additionalProperties: false,
+          required: ['type', 'config'],
           properties: {
-            userModel: userModelSchema,
-            jwtSecret: {
+            type: {
               type: 'string',
-              minLength: 32,
+              enum: ['api-key', 'up-auth'],
             },
-            tokenExpiration: {
-              type: 'string',
-              pattern: '^\\d+[smhd]$',
-            },
-            mfaRequired: {
-              type: 'boolean',
-            },
-            key: {
-              type: 'string',
-              minLength: 1,
+            config: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                userModel: userModelSchema,
+                jwtSecret: {
+                  type: 'string',
+                  minLength: 32,
+                },
+                tokenExpiration: {
+                  type: 'string',
+                  pattern: '^\\d+[smhd]$',
+                },
+                mfaRequired: {
+                  type: 'boolean',
+                },
+                key: {
+                  type: 'string',
+                  minLength: 1,
+                },
+              },
             },
           },
         },
       },
     },
-  },
+  ],
 };
 
 const emailSchema = {
@@ -636,7 +655,7 @@ const apiVariantsSchema = {
 
 const schema = {
   type: 'object',
-  required: ['application', 'docs', 'infrastructure', 'data'],
+  required: ['application', 'data'],
   additionalProperties: false,
   properties: {
     application: applicationSchema,

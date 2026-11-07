@@ -1,11 +1,17 @@
+import * as fs from 'fs';
+
 import {describe, expect, it, vi} from 'vitest';
+
+import {resolveConfig} from '@/lib/config/resolve';
 
 import {
   ApisConfig,
   AppConfig,
+  AuthProvider,
   CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
@@ -54,7 +60,7 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => {
   };
 };
 
-const validBaseConfig: AppConfig = {
+const rawBaseConfig: AppConfig = {
   application: {
     name: 'Test App',
     logLevel: 'info',
@@ -73,6 +79,12 @@ const validBaseConfig: AppConfig = {
   infrastructure: {database: getDefaultDatabaseConfig()},
   data: {models: getDefaultModelConfig()},
 };
+
+// Validation runs on the resolved (dense) configuration, mirroring what the
+// pipeline feeds it in production.
+const validBaseConfig: ResolvedAppConfig = resolveConfig(rawBaseConfig, {
+  mode: 'dev',
+});
 
 describe('validateInvalidDocsConfig', () => {
   it.each([
@@ -3207,8 +3219,7 @@ describe('validateCacheDbConfig', () => {
     {
       name: 'engine as invalid value',
       patch: {engine: 'memcached', connection: {url: 'redis://localhost:6379'}},
-      expected:
-        '/infrastructure/cache/engine must be equal to one of the allowed values',
+      expected: '/infrastructure/cache must match exactly one schema in oneOf',
     },
     {
       name: 'connection url with invalid format (http)',
@@ -3579,7 +3590,7 @@ describe('validateInvalidAuthConfig', () => {
           },
         },
       },
-      expected: '/authentication/enabled must be boolean',
+      expected: '/authentication must match exactly one schema in oneOf',
     },
     {
       name: 'invalid provider type',
@@ -4212,6 +4223,7 @@ describe('validateValidAuthConfig', () => {
         cache: {
           engine: 'redis' as const,
           connection: {url: 'redis://localhost:6379'},
+          timeout: 10000,
         },
         integrations: {email: {provider: 'dummy' as const}},
       },
@@ -4267,7 +4279,9 @@ describe('validateValidAuthConfig', () => {
   ])('Scenario: $name . should return', ({patch, extra}) => {
     const base = {...validBaseConfig};
     if (extra) {
-      base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      if (extra.cache) {
+        base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      }
       base.integrations = extra.integrations;
     }
     const config = {
@@ -4289,9 +4303,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
         enabled: true,
         provider: {
           type: 'up-auth',
-          config: undefined as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          config: undefined as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4328,9 +4340,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4367,9 +4377,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4406,9 +4414,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 789,
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4446,9 +4452,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               isVerifiedField: 123,
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4475,9 +4479,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4610,13 +4612,7 @@ describe('validateInvalidAuthorizationConfig', () => {
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      authentication: {
-        enabled: false,
-        provider: {
-          type: 'api-key',
-          config: {key: '1234'},
-        },
-      },
+      authentication: {enabled: false},
       apis: {
         'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
@@ -4864,5 +4860,98 @@ describe('validateSchemaKeyword', () => {
     );
 
     spy.mockRestore();
+  });
+});
+
+// ----- Resolved-config union & density cases -----
+
+describe('validateResolvedConfigShapes', () => {
+  it('validates a resolved memory-cache infrastructure', () => {
+    const config: ResolvedAppConfig = resolveConfig(
+      {
+        ...rawBaseConfig,
+        infrastructure: {database: getDefaultDatabaseConfig()},
+      },
+      {mode: 'dev'},
+    );
+
+    expect(config.infrastructure.cache).toEqual({engine: 'memory'});
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('validates a resolved redis-cache infrastructure', () => {
+    const config: ResolvedAppConfig = resolveConfig(
+      {
+        ...rawBaseConfig,
+        infrastructure: {
+          database: getDefaultDatabaseConfig(),
+          cache: {engine: 'redis', connection: {url: 'redis://localhost:6379'}},
+        },
+      },
+      {mode: 'dev'},
+    );
+
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('validates the resolved disabled-auth shape', () => {
+    const config: ResolvedAppConfig = {
+      ...validBaseConfig,
+      authentication: {enabled: false},
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('rejects disabled auth that carries a provider', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: false,
+        provider: {type: 'api-key', config: {key: '1234'}},
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match exactly one schema in oneOf',
+    );
+  });
+
+  it('rejects enabled auth without a provider', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {enabled: true},
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match exactly one schema in oneOf',
+    );
+  });
+
+  it('validates the resolved example configuration', () => {
+    const raw = JSON.parse(
+      fs.readFileSync(
+        new URL('../../example_config.json', import.meta.url),
+        'utf-8',
+      ),
+    ) as AppConfig;
+
+    const resolved = resolveConfig(raw, {mode: 'dev'});
+
+    expect(validateConfig(resolved as unknown as AppConfig)).toBe(resolved);
+  });
+
+  it('validates a resolved minimal configuration', () => {
+    const resolved = resolveConfig(
+      {
+        application: {name: 'Minimal App'},
+        data: {models: getDefaultModelConfig()},
+      },
+      {mode: 'dev'},
+    );
+
+    expect(() =>
+      validateConfig(resolved as unknown as AppConfig),
+    ).not.toThrow();
   });
 });

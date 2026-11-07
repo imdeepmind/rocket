@@ -1,6 +1,9 @@
+import Fastify from 'fastify';
 import {describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig} from '@/interfaces/config';
+import {registerCustomEndpointRoutes} from '@/routes/custom-endpoints/custom-endpoints';
+
+import {AppConfig, AuthenticationConfig} from '@/interfaces/config';
 
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
 
@@ -609,6 +612,21 @@ describe('test custom-endpoints api', () => {
       });
       expect(res.statusCode).toBe(404);
       await fastify.close();
+    });
+  });
+  describe('legacy sparse config', () => {
+    test('returns early when customEndpoints is absent', async () => {
+      const app = Fastify();
+
+      // The resolver always materialises `customEndpoints` as `{}`; this
+      // covers the defensive guard for callers still passing a sparse config.
+      registerCustomEndpointRoutes(app, {
+        customEndpoints: undefined,
+      } as unknown as AppConfig);
+
+      await app.ready();
+      expect(app.printRoutes()).not.toContain('custom-endpoints');
+      await app.close();
     });
   });
 });
