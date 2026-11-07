@@ -158,10 +158,10 @@ export async function startServer(
 
       // register auth routes (only when up-auth is configured and enabled)
       if (
-        config.authentication?.enabled &&
-        config.authentication?.provider?.type === 'up-auth'
+        resolvedConfig.authentication.enabled &&
+        resolvedConfig.authentication.provider.type === 'up-auth'
       ) {
-        const upConfig = config.authentication.provider
+        const upConfig = resolvedConfig.authentication.provider
           .config as UpAuthProviderConfig;
 
         registerRegistrationRoute(app, resolvedConfig);

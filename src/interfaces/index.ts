@@ -7,6 +7,7 @@ export interface CLIOptions {
   mode: Mode;
   verbose: boolean;
   migrate: boolean;
+  printConfig: boolean;
 }
 
 export {

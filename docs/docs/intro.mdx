@@ -45,6 +45,62 @@ npm run dev -- -c example_config.json
 Once the server is initialized, refer to the Swagger UI for interactive API documentation:
 [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
+
+
+## 01 Barebone Configuration
+
+The smallest config that boots a working API needs only an application name
+and one model. Database, docs, cache, authentication and rate limits all fall
+back to defaults:
+
+```json
+{
+  "application": { "name": "Barebone API" },
+  "data": {
+    "models": {
+      "notes": {
+        "fields": {
+          "id": { "type": "integer", "primaryKey": true, "autoIncrement": true },
+          "title": { "type": "string", "nullable": false },
+          "body": { "type": "text", "nullable": true }
+        }
+      }
+    }
+  }
+}
+```
+
+```bash
+npm run dev -- -c examples/01-barebone/barebone_config.json
+```
+
+The single model exposes `POST /api/v1/notes/`, `GET /api/v1/notes/`,
+`GET /api/v1/notes/id/:id`, `GET /api/v1/notes/search/title`,
+`PATCH`/`PUT /api/v1/notes/title/:title`, and
+`PATCH`/`DELETE /api/v1/notes/status/:status` on a dev SQLite database,
+with Swagger at `/docs`.
+
+## Configuration defaults
+
+Rocket resolves your configuration before validating it. Only
+`application.name` and `data.models` are required — omitted sections receive
+defaults:
+
+- docs are enabled in `dev` and disabled in `prod`
+- the dev database defaults to SQLite (`./database.db`); `prod` requires
+  `infrastructure.database`
+- the cache defaults to in-memory; Redis is only used when configured
+- authentication defaults to disabled
+- rate limiting defaults to disabled (`100 requests / 1m`)
+- the API variant defaults to `v1`
+
+Inspect the fully resolved configuration (with secrets redacted) before
+starting the server:
+
+```bash
+npm run dev -- -c config.json --print-config
+```
+
 ## Technology Stack
 
 - **Runtime**: Node.js
