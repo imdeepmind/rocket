@@ -70,12 +70,11 @@ vi.mock('fastify', () => {
       info: vi.fn(),
       warn: vi.fn(),
     },
-    buildResponse: vi.fn((statusCode, message, data, meta) => ({
+    buildResponse: vi.fn((statusCode, message, data) => ({
       code: statusCode,
       statusCode,
       message,
       data,
-      meta,
     })),
     set appConfig(val: AppConfig) {
       appConfig = val;

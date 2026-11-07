@@ -120,7 +120,7 @@ function registerRegistrationEndpoint(
         const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
         const query = `INSERT INTO "${model}" (${columns}) VALUES (${placeholders});`;
 
-        const res = await tx.query(query, values);
+        await tx.query(query, values);
 
         if (requiresOtp) {
           const usernameField = upConfig.userModel.usernameField;
@@ -136,7 +136,6 @@ function registerRegistrationEndpoint(
                 201,
                 'Registration successful. OTP sent to your email.',
                 {requiresMfa: true, ulid},
-                res,
               ),
             );
         }
@@ -157,7 +156,6 @@ function registerRegistrationEndpoint(
               201,
               `Successfully registered a new user in the ${model} table`,
               responseData,
-              res,
             ),
           );
       } catch (err) {
@@ -216,11 +214,7 @@ function generateSchema(
         },
       );
 
-  const responseSchema = getResponseStructureSchema(
-    [201],
-    responseData,
-    responseData,
-  );
+  const responseSchema = getResponseStructureSchema([201], responseData);
 
   const schema: Record<string, unknown> = {
     summary: `Register a new ${capitalizeFirstLetter(model)} user`,

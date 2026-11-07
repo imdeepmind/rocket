@@ -334,6 +334,7 @@ describe('test custom-endpoints api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       await fastify.close();
     });
 
@@ -364,6 +365,7 @@ describe('test custom-endpoints api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       await fastify.close();
     });
   });
@@ -433,6 +435,7 @@ describe('test custom-endpoints api', () => {
 
       // It should still register but without the parameters
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       await fastify.close();
     });
 
@@ -465,6 +468,7 @@ describe('test custom-endpoints api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       await fastify.close();
     });
   });
@@ -591,6 +595,7 @@ describe('test custom-endpoints api', () => {
         query: {status: 'active', minAge: '18'},
       });
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       await fastify.close();
     });
 

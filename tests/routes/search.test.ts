@@ -93,6 +93,7 @@ describe('test search api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual([
         {id: 1, name: 'Alice', email: 'alice@example.com'},
       ]);
@@ -126,6 +127,7 @@ describe('test search api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual([]);
 
       await fastify.close();
@@ -146,6 +148,7 @@ describe('test search api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual([]);
 
       await fastify.close();
@@ -678,6 +681,7 @@ describe('test search api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual([
         {id: 1, name: 'Alice', email: 'alice@example.com'},
       ]);

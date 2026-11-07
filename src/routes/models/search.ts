@@ -162,7 +162,6 @@ function registerSearchEndpoint(
                 totalPages: Math.ceil(total / limit),
               },
             },
-            res,
           ),
         );
       } catch (err) {
@@ -203,30 +202,26 @@ function generateSchema(
       required: [`${fieldName}_search`],
       additionalProperties: false,
     },
-    response: getResponseStructureSchema(
-      [200],
-      {
-        type: 'object',
-        properties: {
-          data: {
-            type: 'array',
-            items: generateJSONValidationSchema(model, {
-              excludeSecretFields: excludeSecret,
-            }),
-          },
-          pagination: {
-            type: 'object',
-            properties: {
-              page: {type: 'integer'},
-              limit: {type: 'integer'},
-              total: {type: 'integer'},
-              totalPages: {type: 'integer'},
-            },
+    response: getResponseStructureSchema([200], {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: generateJSONValidationSchema(model, {
+            excludeSecretFields: excludeSecret,
+          }),
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: {type: 'integer'},
+            limit: {type: 'integer'},
+            total: {type: 'integer'},
+            totalPages: {type: 'integer'},
           },
         },
       },
-      generateJSONValidationSchema(model, {excludeSecretFields: excludeSecret}),
-    ),
+    }),
   };
 
   const security = buildSecurityArray(config, policy.authorization);

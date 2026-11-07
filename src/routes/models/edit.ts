@@ -254,7 +254,6 @@ function registerEditEndpoint(
             200,
             `Successfully updated records in the ${tableName} table`,
             responseBody,
-            res,
           ),
         );
     } catch (err) {

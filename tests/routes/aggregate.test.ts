@@ -168,6 +168,7 @@ describe('test aggregate api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({
         avg: 85,
         frequency: {'80': 2, '90': 1},
@@ -286,6 +287,7 @@ describe('test aggregate api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({});
 
       await fastify.close();

@@ -231,6 +231,7 @@ describe('POST /auth/register', () => {
       const body = response.json();
       expect(body.code).toBe(201);
       expect(body.message).toContain('users');
+      expect(body).not.toHaveProperty('raw_data');
 
       // data must NOT include the password field
       expect(body.data).not.toHaveProperty('password');

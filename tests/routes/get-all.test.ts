@@ -79,6 +79,7 @@ describe('test get-all api', () => {
         total: 2,
         totalPages: 1,
       });
+      expect(body).not.toHaveProperty('raw_data');
 
       await fastify.close();
     });

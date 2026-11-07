@@ -6,17 +6,15 @@ import {StructuredResponse} from '@/interfaces';
 export default fp(async (fastify: FastifyInstance) => {
   fastify.decorate(
     'buildResponse',
-    <T = unknown, R = unknown>(
+    <T = unknown>(
       code: number,
       message: string,
       data: T,
-      raw_data?: R,
-    ): StructuredResponse<T, R> => {
+    ): StructuredResponse<T> => {
       return {
         code,
         message,
         data,
-        raw_data,
       };
     },
   );
