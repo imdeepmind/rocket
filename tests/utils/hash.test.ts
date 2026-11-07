@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'vitest';
 
 import {compare, hash} from '@/utils/hash';
+import {BCRYPT_SALT_ROUNDS, DUMMY_PASSWORD_HASH} from '@/constants';
 
 describe('hash utility', () => {
   test('should successfully hash a plain text string', async () => {
@@ -51,5 +52,13 @@ describe('hash utility', () => {
     expect(lowSaltHashed).toMatch(/^\$2[aby]\$04\$/);
     const isMatch = await compare(plainText, lowSaltHashed);
     expect(isMatch).toBe(true);
+  });
+
+  test('DUMMY_PASSWORD_HASH should be a valid bcrypt hash with BCRYPT_SALT_ROUNDS and not match', async () => {
+    expect(DUMMY_PASSWORD_HASH).toMatch(
+      new RegExp(`^\\$2[aby]\\$${BCRYPT_SALT_ROUNDS}\\$`),
+    );
+    const isMatch = await compare('any-random-password', DUMMY_PASSWORD_HASH);
+    expect(isMatch).toBe(false);
   });
 });

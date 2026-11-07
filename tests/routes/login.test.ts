@@ -21,6 +21,9 @@ import {
   ResolvedAppConfig,
 } from '@/interfaces/config';
 
+import * as hashUtils from '@/utils/hash';
+import {DUMMY_PASSWORD_HASH} from '@/constants';
+
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 
 // ---------------------------------------------------------------------------
@@ -463,8 +466,10 @@ describe('POST /auth/login', () => {
   });
 
   describe('unhappy path', () => {
-    test('should return 401 if user is not found', async () => {
+    test('should return 401 if user is not found and invoke password compare with dummy hash', async () => {
       const app = await createAuthApp(upAuthConfig);
+
+      const compareSpy = vi.spyOn(hashUtils, 'compare');
 
       // Mock DB: no user
       pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
@@ -476,7 +481,12 @@ describe('POST /auth/login', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().message).toBe('Invalid username or password');
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'Invalid username or password',
+        data: null,
+      });
+      expect(compareSpy).toHaveBeenCalledWith('any', DUMMY_PASSWORD_HASH);
       await app.close();
     });
 
@@ -492,7 +502,9 @@ describe('POST /auth/login', () => {
       });
 
       // Mock bcrypt: password mismatch
-      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      const compareSpy = vi
+        .spyOn(hashUtils, 'compare')
+        .mockResolvedValue(false as never);
 
       const response = await app.inject({
         method: 'POST',
@@ -501,7 +513,55 @@ describe('POST /auth/login', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().message).toBe('Invalid username or password');
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'Invalid username or password',
+        data: null,
+      });
+      expect(compareSpy).toHaveBeenCalledWith(
+        'wrong_password',
+        'hashed_password',
+      );
+      await app.close();
+    });
+
+    test('should have comparable response times between unknown user and wrong password (prevent timing attack)', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      const realHash = await hashUtils.hash('correct-password');
+
+      // 1. Unknown user request with real bcrypt comparison
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      const startUnknown = performance.now();
+      const resUnknown = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'unknown@example.com', password: 'test-password-123'},
+      });
+      const timeUnknown = performance.now() - startUnknown;
+
+      // 2. Existing user with wrong password
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'user@example.com', password: realHash}],
+        rowCount: 1,
+      });
+      const startWrongPw = performance.now();
+      const resWrongPw = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'user@example.com', password: 'test-password-123'},
+      });
+      const timeWrongPw = performance.now() - startWrongPw;
+
+      expect(resUnknown.statusCode).toBe(401);
+      expect(resWrongPw.statusCode).toBe(401);
+      expect(resUnknown.json()).toEqual(resWrongPw.json());
+
+      // Latency difference should be within measurement noise (both run 10 rounds of bcrypt)
+      // When bcrypt was skipped, timeUnknown was ~18ms vs ~87ms (70ms diff).
+      // With dummy hash compare, diff is small (well within 35ms even on loaded environments).
+      const diff = Math.abs(timeUnknown - timeWrongPw);
+      expect(diff).toBeLessThan(40);
+
       await app.close();
     });
   });
