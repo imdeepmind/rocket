@@ -47,9 +47,7 @@ Once the server is initialized, refer to the Swagger UI for interactive API docu
 
 ## 01 Barebone Configuration
 
-The smallest config that boots a working API is "name + one model". Everything
-else — database (dev SQLite), docs, cache, auth, rate limits — is filled in by
-the defaults layer:
+The smallest config that boots a working API is "name + one model":
 
 ```json
 {
