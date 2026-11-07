@@ -58,7 +58,7 @@ export function buildSecurityArray(
 
   if (
     config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
+    config.authentication.provider?.type === 'up-auth' &&
     authorization
   ) {
     security.push({bearerAuth: []});
@@ -66,7 +66,7 @@ export function buildSecurityArray(
 
   if (
     config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
+    config.authentication.provider?.type === 'api-key' &&
     authorization
   ) {
     security.push({apiKeyAuth: []});

@@ -17,6 +17,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
@@ -111,7 +112,7 @@ async function createAuthApp(
     ...(apis ? {apis} : {}),
     ...(apiVariants ? {apiVariants} : {}),
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
@@ -142,7 +143,7 @@ async function createAuthAppWithMfa(
     data: {models},
     authentication,
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
 
   const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
   (app as any).cache = {

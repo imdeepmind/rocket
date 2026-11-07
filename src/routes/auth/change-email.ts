@@ -25,7 +25,7 @@ export function registerEmailChangeRoute(
   const defaultVariant =
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider
+  const upConfig = config.authentication!.provider!
     .config as UpAuthProviderConfig;
   const {model, idField, usernameField, isVerifiedField} = upConfig.userModel;
 

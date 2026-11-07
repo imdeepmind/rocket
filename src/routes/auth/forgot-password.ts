@@ -20,7 +20,7 @@ export function registerForgotPasswordRoute(
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, usernameField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    config.authentication!.provider!.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];

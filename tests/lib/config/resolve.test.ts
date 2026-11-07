@@ -62,7 +62,7 @@ test('minimal dev config resolves every section densely', () => {
     name: 'rocket',
     logLevel: 'info',
     rateLimit: {enabled: false, max: 100, timeWindow: '1m'},
-    dangerouslyOverrideDefaultVariant: '',
+    dangerouslyOverrideDefaultVariant: 'v1',
     magicVariables: {},
   });
 
@@ -866,7 +866,7 @@ test('resolving never mutates the raw input', () => {
   // the raw input is untouched
   expect(raw.application!.rateLimit).toEqual({enabled: false});
   expect(raw.application!.magicVariables).toEqual({org: 'a'});
-  expect(config.application.dangerouslyOverrideDefaultVariant).toBe('');
+  expect(config.application.dangerouslyOverrideDefaultVariant).toBe('v1');
   expect(raw.data!.models!.users.indexes!.email_idx.fields).toEqual(['email']);
 });
 

@@ -7,6 +7,7 @@ import responsePlugin from '@/plugin/response';
 import sspPlugin from '@/plugin/ssp';
 import webhookPlugin from '@/plugin/webhook';
 
+import {resolveConfig} from '@/lib/config/resolve';
 import {
   registerErrorHandler,
   registerNotFoundHandler,
@@ -16,11 +17,11 @@ import {registerRoutes} from '@/routes';
 
 import {
   ApisConfig,
-  AppConfig,
   AuthenticationConfig,
   CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 export const mockModels: Record<string, ModelConfig> = {
@@ -51,8 +52,8 @@ export async function createTestApp(
   authentication?: AuthenticationConfig,
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
-  const appConfig: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
+  const inputConfig = {
+    application: {name: 'Test App', logLevel: 'error' as const},
     docs: {
       openapi: {
         enabled: false,
@@ -67,6 +68,12 @@ export async function createTestApp(
     authentication,
     apiVariants,
   };
+
+  // Route tests exercise the resolved (dense) configuration in dev mode,
+  // mirroring what `startServer` does in production.
+  const appConfig: ResolvedAppConfig = resolveConfig(inputConfig, {
+    mode: 'dev',
+  });
 
   const fastify = Fastify();
   fastify.appConfig = appConfig;

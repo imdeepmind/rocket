@@ -15,6 +15,7 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {
   registerErrorHandler,
   registerNotFoundHandler,
@@ -42,9 +43,7 @@ import {
 } from '@/routes/auth/resend-otp';
 
 import {Mode} from '@/interfaces';
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
-
-import {validateConfig} from '@/validators/config';
+import {AppConfigInput, UpAuthProviderConfig} from '@/interfaces/config';
 
 export interface StartServerResult {
   app: FastifyInstance;
@@ -52,20 +51,20 @@ export interface StartServerResult {
 }
 
 export async function startServer(
-  config: AppConfig,
+  config: AppConfigInput,
   port: number,
   mode: Mode,
   verbose: boolean = false,
   migrate: boolean = false,
 ): Promise<StartServerResult> {
-  // validate the schema
-  config = validateConfig(config);
+  // resolve env vars, defaults, and validate in a single pipeline
+  const resolvedConfig = resolveAndValidateConfig(config, mode);
 
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: verbose ? 'debug' : config.application.logLevel,
+      level: verbose ? 'debug' : resolvedConfig.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {
@@ -76,17 +75,18 @@ export async function startServer(
     },
   });
 
-  app.appConfig = config;
+  app.appConfig = resolvedConfig;
 
-  const upAuthConfig =
-    config.authentication?.provider.type === 'up-auth'
-      ? (config.authentication.provider.config as UpAuthProviderConfig)
+  const auth =
+    resolvedConfig.authentication.enabled &&
+    resolvedConfig.authentication.provider?.type === 'up-auth'
+      ? (resolvedConfig.authentication.provider.config as UpAuthProviderConfig)
       : undefined;
   const usesAccountOtp = Boolean(
-    upAuthConfig?.mfaRequired || upAuthConfig?.userModel?.isVerifiedField,
+    auth?.mfaRequired || auth?.userModel?.isVerifiedField,
   );
 
-  if (usesAccountOtp && !isRedisCacheConfigured(config)) {
+  if (usesAccountOtp && !isRedisCacheConfigured(resolvedConfig)) {
     app.addHook('onListen', () => {
       app.log.warn(NODE_CACHE_OTP_WARNING);
     });
@@ -116,38 +116,35 @@ export async function startServer(
   await app.register(cachePlugin);
 
   // config-driven integrations (email)
-  if (config.integrations?.email) {
+  if (resolvedConfig.integrations?.email) {
     await app.register(communicatePlugin);
   }
 
   // config-driven rate limit
-  if (config.application.rateLimit?.enabled) {
+  if (resolvedConfig.application.rateLimit.enabled) {
     await app.register(rateLimitPlugin);
   }
 
   await app.register(responsePlugin);
   await app.register(sspPlugin);
   await app.register(webhookPlugin);
-  if (config.authentication) {
-    await app.register(authPlugin);
-  }
+  await app.register(authPlugin);
   // config-driven OTP (required for MFA or forgot-password)
   if (
-    config.authentication?.provider.type === 'up-auth' &&
-    ((config.authentication.provider.config as {mfaRequired?: boolean})
-      ?.mfaRequired ||
-      config.integrations?.email)
+    resolvedConfig.authentication.enabled &&
+    auth?.mfaRequired !== undefined &&
+    resolvedConfig.integrations?.email
   ) {
     await app.register(otpPlugin);
   }
   // register swagger
-  if (config.docs.openapi.enabled) {
+  if (resolvedConfig.docs.openapi.enabled) {
     await app.register(swaggerPlugin);
   }
 
   // migrate the db based on config
   if (migrate) {
-    await migrateDatabase(config);
+    await migrateDatabase(resolvedConfig);
   }
 
   // register all config-driven routes under /api prefix (swagger excluded)
@@ -157,7 +154,7 @@ export async function startServer(
         app.enforceSSP(request);
       });
 
-      registerRoutes(app, config);
+      registerRoutes(app, resolvedConfig);
 
       // register auth routes (only when up-auth is configured and enabled)
       if (
@@ -167,28 +164,28 @@ export async function startServer(
         const upConfig = config.authentication.provider
           .config as UpAuthProviderConfig;
 
-        registerRegistrationRoute(app, config);
-        registerLoginRoute(app, config);
-        registerChangePasswordRoute(app, config);
-        registerMeRoute(app, config);
-        registerDeleteMeRoute(app, config);
-        registerEditMeRoute(app, config);
+        registerRegistrationRoute(app, resolvedConfig);
+        registerLoginRoute(app, resolvedConfig);
+        registerChangePasswordRoute(app, resolvedConfig);
+        registerMeRoute(app, resolvedConfig);
+        registerDeleteMeRoute(app, resolvedConfig);
+        registerEditMeRoute(app, resolvedConfig);
 
-        if (config.integrations?.email) {
-          registerForgotPasswordRoute(app, config);
-          registerForgotPasswordOtpVerifyRoute(app, config);
-          registerForgotPasswordResendOtpRoute(app, config);
+        if (resolvedConfig.integrations?.email) {
+          registerForgotPasswordRoute(app, resolvedConfig);
+          registerForgotPasswordOtpVerifyRoute(app, resolvedConfig);
+          registerForgotPasswordResendOtpRoute(app, resolvedConfig);
         }
 
         if (upConfig.mfaRequired) {
-          registerLoginOtpVerifyRoute(app, config);
-          registerLoginResendOtpRoute(app, config);
+          registerLoginOtpVerifyRoute(app, resolvedConfig);
+          registerLoginResendOtpRoute(app, resolvedConfig);
         }
 
         if (upConfig.userModel.isVerifiedField) {
-          registerRegistrationOtpVerifyRoute(app, config);
-          registerRegistrationResendOtpRoute(app, config);
-          registerEmailChangeRoute(app, config);
+          registerRegistrationOtpVerifyRoute(app, resolvedConfig);
+          registerRegistrationResendOtpRoute(app, resolvedConfig);
+          registerEmailChangeRoute(app, resolvedConfig);
         }
       }
     },

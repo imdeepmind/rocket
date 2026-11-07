@@ -12,6 +12,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
@@ -79,7 +80,7 @@ async function createMeApp(
     ...(apis ? {apis} : {}),
     ...(apiVariants ? {apiVariants} : {}),
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);

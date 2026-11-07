@@ -3,7 +3,7 @@ import {describe, expect, test, vi} from 'vitest';
 
 import databasePlugin from '@/plugin/database';
 
-import {DatabaseConfig} from '@/interfaces/config';
+import {DatabaseConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 
@@ -33,7 +33,7 @@ describe('database plugin', () => {
       },
       infrastructure: {database: dbConfig},
       data: {models: {}},
-    };
+    } as ResolvedAppConfig;
     return fastify;
   }
 

@@ -5,6 +5,8 @@ import swaggerPlugin from '@/plugin/swagger';
 
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 
+import {ResolvedAppConfig} from '@/interfaces/config';
+
 const baseConfig = {
   application: {name: 'test', logLevel: 'error'},
   docs: {
@@ -70,7 +72,7 @@ describe('Swagger Plugin', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -98,7 +100,7 @@ describe('Swagger Plugin', () => {
           key: 'test-key',
         },
       },
-    };
+    } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -141,7 +143,7 @@ describe('Swagger Plugin', () => {
           updated_at: {type: 'datetime'},
         },
       },
-    };
+    } as unknown as ResolvedAppConfig['data']['models'];
     const bodySchema = generateJSONValidationSchema(
       app.appConfig.data.models.posts,
       {

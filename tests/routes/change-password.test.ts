@@ -18,6 +18,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
@@ -85,7 +86,7 @@ async function createAuthApp(
     ...(apis ? {apis} : {}),
     ...(apiVariants ? {apiVariants} : {}),
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
   registerErrorHandler(app);
   registerNotFoundHandler(app);
   await app.register(databasePlugin);

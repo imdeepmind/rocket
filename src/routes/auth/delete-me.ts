@@ -21,7 +21,7 @@ export function registerDeleteMeRoute(
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const {model, idField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    config.authentication!.provider!.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];

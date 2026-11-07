@@ -29,7 +29,7 @@ export function registerRegistrationRoute(
   const defaultVariant =
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider
+  const upConfig = config.authentication!.provider!
     .config as UpAuthProviderConfig;
   const {model, passwordField} = upConfig.userModel;
   const requiresOtp = !!upConfig.userModel.isVerifiedField;

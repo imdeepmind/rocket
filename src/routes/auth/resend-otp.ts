@@ -21,7 +21,7 @@ function registerResendOtpBase(
   const defaultVariant =
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider
+  const upConfig = config.authentication!.provider!
     .config as UpAuthProviderConfig;
   const {model, usernameField} = upConfig.userModel;
 

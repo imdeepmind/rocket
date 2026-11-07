@@ -12,6 +12,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {
@@ -85,7 +86,7 @@ async function createEditMeApp(
     ...(apis ? {apis} : {}),
     ...(apiVariants ? {apiVariants} : {}),
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);

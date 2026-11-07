@@ -51,6 +51,15 @@ describe('resolveEnvVars', () => {
     expect(resolveEnvVars(config)).toEqual(expected);
   });
 
+  it('should resolve without mutating the input object', () => {
+    process.env.VAR1 = 'val1';
+    const config = {a: 'env:VAR1', b: 1};
+    const resolved = resolveEnvVars(config);
+    expect(resolved).toEqual({a: 'val1', b: 1});
+    expect(config).toEqual({a: 'env:VAR1', b: 1});
+    expect(resolved).not.toBe(config);
+  });
+
   it('should handle null and non-object types', () => {
     expect(resolveEnvVars(null)).toBe(null);
     expect(resolveEnvVars(123)).toBe(123);

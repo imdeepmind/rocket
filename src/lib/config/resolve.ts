@@ -85,6 +85,9 @@ export const DEFAULT_MODEL_FIELD = {
 /** Resolved authentication shape when auth is absent or disabled. */
 export const DEFAULT_AUTH_DISABLED = {enabled: false} as const;
 
+/** Default variant segment when `dangerouslyOverrideDefaultVariant` is unset. */
+export const DEFAULT_VARIANT = 'v1';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -124,7 +127,7 @@ export function resolveApplication(
       timeWindow: input.rateLimit?.timeWindow ?? DEFAULT_RATE_LIMIT.timeWindow,
     },
     dangerouslyOverrideDefaultVariant:
-      input.dangerouslyOverrideDefaultVariant ?? '',
+      input.dangerouslyOverrideDefaultVariant || DEFAULT_VARIANT,
     magicVariables: input.magicVariables ? clone(input.magicVariables) : {},
   };
 }
@@ -202,7 +205,7 @@ function resolveCache(
 
   return {
     engine: 'redis',
-    connection: {url: cache.connection.url},
+    connection: {url: cache.connection?.url as string},
     timeout: cache.timeout ?? DEFAULT_CACHE_TIMEOUT,
   };
 }

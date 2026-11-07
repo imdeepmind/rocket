@@ -92,7 +92,7 @@ export interface DatabaseConfig {
 
 export interface CacheDbConfig {
   engine: CacheDbEngine;
-  connection: {
+  connection?: {
     url: string;
   };
   timeout?: number;
@@ -248,7 +248,7 @@ export type AuthProvider = UpAuthProvider | ApiKeyProvider;
 
 export interface AuthenticationConfig {
   enabled: boolean;
-  provider: AuthProvider;
+  provider?: AuthProvider;
 }
 
 export interface EmailConfig {

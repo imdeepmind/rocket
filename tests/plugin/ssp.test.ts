@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import sspPlugin from '@/plugin/ssp';
 
-import {AppConfig, ServerSideParamConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, ServerSideParamConfig} from '@/interfaces/config';
 
 describe('ssp plugin', () => {
   beforeEach(() => {
@@ -16,7 +16,9 @@ describe('ssp plugin', () => {
 
   it('ssp plugin decorates fastify with enforceSSP', async () => {
     const app = Fastify();
-    app.appConfig = {application: {logLevel: 'silent'}} as unknown as AppConfig;
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -25,7 +27,9 @@ describe('ssp plugin', () => {
 
   it('should not modify the request if apiIdentifier is missing', async () => {
     const app = Fastify();
-    app.appConfig = {application: {logLevel: 'silent'}} as unknown as AppConfig;
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -54,7 +58,7 @@ describe('ssp plugin', () => {
           serverSideParams: [],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -91,7 +95,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -128,7 +132,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -163,7 +167,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -194,7 +198,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -229,7 +233,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -261,7 +265,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -293,7 +297,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -327,7 +331,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -363,7 +367,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -397,7 +401,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -429,7 +433,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -451,7 +455,7 @@ describe('ssp plugin', () => {
     const app = Fastify();
     app.appConfig = {
       application: {logLevel: 'silent'},
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
     await app.ready();
 
@@ -479,7 +483,7 @@ describe('ssp plugin – onRoute hook', () => {
           ],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -521,7 +525,7 @@ describe('ssp plugin – onRoute hook', () => {
           serverSideParams: [{type: 'query', name: 'org_id', value: '123'}],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -565,7 +569,7 @@ describe('ssp plugin – onRoute hook', () => {
           serverSideParams: [{type: 'body', name: 'org_id', value: 'abc'}],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -606,7 +610,7 @@ describe('ssp plugin – onRoute hook', () => {
           serverSideParams: [{type: 'path', name: 'id', value: '456'}],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -643,7 +647,7 @@ describe('ssp plugin – onRoute hook', () => {
       apis: {
         'test-api': {},
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -681,7 +685,7 @@ describe('ssp plugin – onRoute hook', () => {
           serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -718,7 +722,7 @@ describe('ssp plugin – onRoute hook', () => {
           serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(sspPlugin);
 
     app.get('/no-schema', {

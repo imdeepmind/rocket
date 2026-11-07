@@ -5,7 +5,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {ICache} from '@/plugin/cache';
 import rateLimitPlugin from '@/plugin/rate-limit';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 const {mockParseDuration} = vi.hoisted(() => {
   return {
@@ -37,7 +37,7 @@ vi.mock('@/utils/duration', () => ({
 function createMockAppConfig(overrides?: {
   max?: number;
   timeWindow?: string;
-}): AppConfig {
+}): ResolvedAppConfig {
   return {
     application: {
       name: 'test-app',
@@ -59,7 +59,7 @@ function createMockAppConfig(overrides?: {
       database: {engine: 'sqlite', connection: {url: ':memory:'}},
     },
     data: {models: {}},
-  };
+  } as unknown as ResolvedAppConfig;
 }
 
 describe('rate-limit plugin', () => {

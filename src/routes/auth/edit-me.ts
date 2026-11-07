@@ -29,7 +29,7 @@ export function registerEditMeRoute(
     config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   const authConfig = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    config.authentication!.provider!.config as UpAuthProviderConfig
   ).userModel;
   const {model, idField, usernameField, passwordField, isVerifiedField} =
     authConfig;

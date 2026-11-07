@@ -6,21 +6,19 @@ import {Command} from 'commander';
 
 import {startServer} from '@/server';
 
-import {resolveEnvVars} from '@/lib/config/env';
 import {showWelcomeScreen} from '@/lib/server/welcome';
 
 import {CLIOptions} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {AppConfigInput} from '@/interfaces/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
 
 /**
  * Load Config
  */
-function loadConfig(configPath: string): AppConfig {
+function loadConfig(configPath: string): AppConfigInput {
   const raw = fs.readFileSync(configPath, 'utf-8');
-  const config = JSON.parse(raw);
-  return resolveEnvVars(config);
+  return JSON.parse(raw) as AppConfigInput;
 }
 
 /**
@@ -88,7 +86,7 @@ program
     // Start listening
     try {
       await app.listen({port, host: '0.0.0.0'});
-      showWelcomeScreen(loadedConfig, port, routes);
+      showWelcomeScreen(app.appConfig, port, routes);
     } catch (err) {
       console.error(chalk.red('Failed to start server:'), err);
       process.exit(1);

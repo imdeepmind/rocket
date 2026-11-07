@@ -20,6 +20,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {
@@ -101,7 +102,7 @@ async function createAuthApp(
     ...(apis ? {apis} : {}),
     ...(apiVariants ? {apiVariants} : {}),
   };
-  app.appConfig = config;
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
 
@@ -703,7 +704,7 @@ describe('POST /auth/register', () => {
         data: {models},
         authentication,
       };
-      app.appConfig = config;
+      app.appConfig = config as ResolvedAppConfig;
 
       const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
       (app as any).cache = {
