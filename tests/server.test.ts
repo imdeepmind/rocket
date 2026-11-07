@@ -9,6 +9,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import migrateDatabase from '@/migrator/index';
 import cachePlugin, {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
+import corsPlugin from '@/plugin/cors';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
@@ -662,6 +663,61 @@ describe('Server', () => {
         (call: unknown[]) => call[0] === rateLimitPlugin,
       );
       expect(rateLimitRegistration).toBeUndefined();
+    });
+  });
+
+  describe('CORS Configuration', () => {
+    it('should register cors plugin when cors is configured and enabled', async () => {
+      const configWithCors: AppConfig = {
+        ...mockConfig,
+        application: {
+          name: 'Test App',
+          logLevel: 'info',
+          cors: {
+            enabled: true,
+            origins: ['https://app.example.com'],
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCors, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeDefined();
+    });
+
+    it('should not register cors plugin when cors is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeUndefined();
+    });
+
+    it('should not register cors plugin when cors enabled is false', async () => {
+      const configWithDisabledCors: AppConfig = {
+        ...mockConfig,
+        application: {
+          name: 'Test App',
+          logLevel: 'info',
+          cors: {
+            enabled: false,
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithDisabledCors, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeUndefined();
     });
   });
 

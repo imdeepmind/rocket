@@ -64,6 +64,16 @@ test('minimal dev config resolves every section densely', () => {
     rateLimit: {enabled: false, max: 100, timeWindow: '1m'},
     dangerouslyOverrideDefaultVariant: 'v1',
     magicVariables: {},
+    cors: {
+      enabled: false,
+      origins: [],
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      exposedHeaders: [],
+      credentials: false,
+      maxAge: 86400,
+      routes: [],
+    },
   });
 
   // docs enabled in dev

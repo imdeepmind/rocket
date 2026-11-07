@@ -4,6 +4,7 @@ import validateSchema, {ajv} from './schema';
 import validateApisConstraints from './validate-apis';
 import validateAuthConstraints from './validate-auth';
 import validateCacheDbConstraints from './validate-cache-db';
+import validateCorsConstraints from './validate-cors';
 import validateCustomAPIs from './validate-custom-apis';
 import validateIndexes from './validate-index';
 import validateModelValidation from './validate-model';
@@ -24,6 +25,7 @@ export function validateConfig<T extends AppConfig | ResolvedAppConfig>(
         ...validateIndexes(input as AppConfig),
         ...validateRelations(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
+        ...validateCorsConstraints(input as AppConfig),
         ...validateCustomAPIs(input as AppConfig),
         ...validateApisConstraints(input as ResolvedAppConfig),
         ...validateAuthConstraints(input as AppConfig),

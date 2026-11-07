@@ -58,6 +58,39 @@ const applicationSchema = {
         },
       },
     },
+    cors: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['enabled'],
+      properties: {
+        enabled: {type: 'boolean'},
+        origins: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+        },
+        methods: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+          },
+        },
+        allowedHeaders: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+        },
+        exposedHeaders: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+        },
+        credentials: {type: 'boolean'},
+        maxAge: {type: 'integer', minimum: 0},
+        routes: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+        },
+      },
+    },
     dangerouslyOverrideDefaultVariant: {
       type: 'string',
       minLength: 1,

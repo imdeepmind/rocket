@@ -2,6 +2,34 @@
   "application": {
     "name": "Rocket OSS",
     "logLevel": "debug",
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://app.example.com",
+        "http://localhost:5173"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH",
+        "PUT",
+        "DELETE"
+      ],
+      "allowedHeaders": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "exposedHeaders": [
+        "x-ratelimit-limit",
+        "x-ratelimit-remaining",
+        "x-ratelimit-reset"
+      ],
+      "credentials": false,
+      "maxAge": 86400,
+      "routes": [
+        "/api/*"
+      ]
+    },
     "rateLimit": {
       "enabled": true,
       "max": 1000,

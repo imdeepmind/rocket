@@ -1,4 +1,4 @@
-import {Mode} from '@/interfaces';
+import {HTTPMethod, Mode} from '@/interfaces';
 import {
   ApiKeyProvider,
   ApisConfig,
@@ -43,6 +43,20 @@ export const DEFAULT_RATE_LIMIT = {
   enabled: false,
   max: 100,
   timeWindow: '1m',
+} as const;
+
+export const DEFAULT_CORS = {
+  enabled: false,
+  origins: [] as string[],
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'] as (
+    | HTTPMethod
+    | 'HEAD'
+  )[],
+  allowedHeaders: ['Content-Type', 'Authorization'] as string[],
+  exposedHeaders: [] as string[],
+  credentials: false,
+  maxAge: 86400,
+  routes: [] as string[],
 } as const;
 
 export const DEFAULT_DOCS_PATH = '/docs';
@@ -125,6 +139,26 @@ export function resolveApplication(
       enabled: input.rateLimit?.enabled ?? DEFAULT_RATE_LIMIT.enabled,
       max: input.rateLimit?.max ?? DEFAULT_RATE_LIMIT.max,
       timeWindow: input.rateLimit?.timeWindow ?? DEFAULT_RATE_LIMIT.timeWindow,
+    },
+    cors: {
+      enabled: input.cors?.enabled ?? DEFAULT_CORS.enabled,
+      origins: input.cors?.origins
+        ? [...input.cors.origins]
+        : [...DEFAULT_CORS.origins],
+      methods: input.cors?.methods
+        ? [...input.cors.methods]
+        : [...DEFAULT_CORS.methods],
+      allowedHeaders: input.cors?.allowedHeaders
+        ? [...input.cors.allowedHeaders]
+        : [...DEFAULT_CORS.allowedHeaders],
+      exposedHeaders: input.cors?.exposedHeaders
+        ? [...input.cors.exposedHeaders]
+        : [...DEFAULT_CORS.exposedHeaders],
+      credentials: input.cors?.credentials ?? DEFAULT_CORS.credentials,
+      maxAge: input.cors?.maxAge ?? DEFAULT_CORS.maxAge,
+      routes: input.cors?.routes
+        ? [...input.cors.routes]
+        : [...DEFAULT_CORS.routes],
     },
     dangerouslyOverrideDefaultVariant:
       input.dangerouslyOverrideDefaultVariant || DEFAULT_VARIANT,
