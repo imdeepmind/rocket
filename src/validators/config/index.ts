@@ -25,7 +25,7 @@ export function validateConfig<T extends AppConfig | ResolvedAppConfig>(
         ...validateRelations(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
         ...validateCustomAPIs(input as AppConfig),
-        ...validateApisConstraints(input as AppConfig),
+        ...validateApisConstraints(input as ResolvedAppConfig),
         ...validateAuthConstraints(input as AppConfig),
       ]
     : [];

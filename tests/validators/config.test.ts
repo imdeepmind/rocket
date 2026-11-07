@@ -3387,7 +3387,7 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'model.v1.users.unknown.insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3399,7 +3399,7 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+        'apis/model.v1.users.unknown.insert/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
     {
       name: 'custom endpoint key not found',
@@ -3415,7 +3415,7 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/custom.v1.all.unknown.nonexistent: custom endpoint not found',
+        'apis/custom.v1.all.unknown.nonexistent: does not match any generated API route',
     },
     {
       name: 'custom endpoint key invalid format',
@@ -3435,12 +3435,12 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'supportedQueries on non-model api',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'aggregate.v1.posts.title.getAggregation': {
           supportedQueries: ['lt', 'gt'],
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
+        'apis/aggregate.v1.posts.title.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
     },
     {
       name: 'supportedAggregations on non-aggregate api',
@@ -3465,12 +3465,12 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'supportedAggregations with aggregation not supported by any field',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'aggregate.v1.posts.title.getAggregation': {
           supportedAggregations: ['avg'],
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/supportedAggregations: "avg" is not supported by any field in model "users"',
+        'apis/aggregate.v1.posts.title.getAggregation/supportedAggregations: "avg" is not supported by any field in model "posts"',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3489,27 +3489,7 @@ describe('validateValidmodelConfig', () => {
     {
       name: 'valid model',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
-        'model.v1.users.id.delete': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
-        'model.v1.users.id.edit': {
+        'model.v1.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3529,16 +3509,6 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.users.id.index': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
         'model.v1.users.unknown.insert': {
           webhooks: [
             {
@@ -3549,7 +3519,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.users.id.search': {
+        'model.v1.posts.title.search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3559,11 +3529,19 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.posts.user_id.index': {
-          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
-        },
         'aggregate.v1.posts.title.getAggregation': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'response'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
           supportedAggregations: ['count'],
+        },
+        'model.v1.posts.unknown.getAll': {
+          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
         },
       },
     },
