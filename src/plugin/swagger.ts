@@ -9,9 +9,9 @@ export default fp(
     const swaggerConfig = docsConfig.openapi;
     const components: Record<string, unknown> = {};
 
-    if (authentication?.enabled) {
+    if (authentication.enabled) {
       const provider = authentication.provider;
-      if (provider?.type === 'up-auth') {
+      if (provider.type === 'up-auth') {
         components['securitySchemes'] = {
           bearerAuth: {
             type: 'http',
@@ -21,7 +21,7 @@ export default fp(
         };
       }
 
-      if (provider?.type === 'api-key') {
+      if (provider.type === 'api-key') {
         components['securitySchemes'] = {
           apiKeyAuth: {
             type: 'apiKey',

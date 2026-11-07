@@ -14,7 +14,7 @@ export default fp(
       }
 
       const serverSideParams: ServerSideParamConfig[] =
-        fastify.appConfig.apis?.[apiIdentifier]?.serverSideParams ?? [];
+        fastify.appConfig.apis[apiIdentifier]?.serverSideParams ?? [];
       if (!serverSideParams.length) return;
 
       const apply = (val: unknown, type: ServerSideParamType) => {
@@ -30,7 +30,7 @@ export default fp(
               ) {
                 const varName = sp.value.slice(1, -1);
                 const customVal =
-                  fastify.appConfig.application.magicVariables?.[varName];
+                  fastify.appConfig.application.magicVariables[varName];
                 if (customVal !== undefined) {
                   record[sp.name] = customVal;
                 } else if (varName === 'userId') {
@@ -60,7 +60,7 @@ export default fp(
       if (!apiIdentifier) return;
 
       const serverSideParams =
-        fastify.appConfig.apis?.[apiIdentifier]?.serverSideParams;
+        fastify.appConfig.apis[apiIdentifier]?.serverSideParams;
       if (!serverSideParams?.length) return;
       if (!routeOptions.schema) return;
 

@@ -5,7 +5,33 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
 
-import {AppConfig} from '@/interfaces/config';
+import {resolveModel} from '@/lib/config/resolve';
+
+import {ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
+
+// Migrator tests describe sparse user models on purpose; the migrator input
+// is the resolved config, so route through a widened test type.
+type MigratorTestConfig = Omit<ResolvedAppConfig, 'data'> & {
+  data: {models: Record<string, ModelConfig>};
+};
+
+const runMigrate = async (config: MigratorTestConfig) => {
+  const resolved = {
+    ...config,
+    data: {
+      models: Object.fromEntries(
+        Object.entries(config.data.models).map(([name, model]) => [
+          name,
+          resolveModel(model),
+        ]),
+      ),
+    },
+  } as ResolvedAppConfig;
+
+  await migrateDatabase(resolved);
+
+  return resolved;
+};
 
 vi.mock('fs', async importOriginal => {
   const actual = await importOriginal<typeof import('fs')>();
@@ -47,7 +73,7 @@ describe('migrateDatabase', () => {
       },
       data: {models: {}},
       routes: {},
-    }) as unknown as AppConfig;
+    }) as unknown as MigratorTestConfig;
 
   it('should generate schema file for sqlite full coverage', async () => {
     const config = getBaseConfig('sqlite');
@@ -74,7 +100,7 @@ describe('migrateDatabase', () => {
         },
       },
     };
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     // checking if it is trying to write schema and config
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
@@ -154,7 +180,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     expect(writeFileSyncMock).toHaveBeenCalledTimes(2);
@@ -205,7 +231,7 @@ describe('migrateDatabase', () => {
         fields: {},
       },
     };
-    await migrateDatabase(config);
+    await runMigrate(config);
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
     expect(schemaContent).toContain("export const empty = pgTable('empty', {");
@@ -214,7 +240,7 @@ describe('migrateDatabase', () => {
   it('should create .migrations directory if it does not exist', async () => {
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    await migrateDatabase(getBaseConfig('sqlite'));
+    await runMigrate(getBaseConfig('sqlite'));
 
     expect(fs.mkdirSync).toHaveBeenCalledWith(
       expect.stringContaining('.migrations'),
@@ -236,7 +262,7 @@ describe('migrateDatabase', () => {
       return true;
     });
 
-    await migrateDatabase(getBaseConfig('sqlite'));
+    await runMigrate(getBaseConfig('sqlite'));
 
     expect(fs.mkdirSync).not.toHaveBeenCalled();
   });
@@ -246,7 +272,7 @@ describe('migrateDatabase', () => {
       return true;
     });
 
-    await migrateDatabase(getBaseConfig('sqlite'));
+    await runMigrate(getBaseConfig('sqlite'));
 
     expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', {
       recursive: true,
@@ -263,7 +289,7 @@ describe('migrateDatabase', () => {
 
     vi.mocked(fs.existsSync).mockImplementation(() => true);
 
-    await expect(migrateDatabase(getBaseConfig('sqlite'))).rejects.toThrow(
+    await expect(runMigrate(getBaseConfig('sqlite'))).rejects.toThrow(
       'execSync failed',
     );
 
@@ -289,7 +315,7 @@ describe('migrateDatabase', () => {
       throw new Error('cleanup error');
     });
 
-    await migrateDatabase(getBaseConfig('sqlite'));
+    await runMigrate(getBaseConfig('sqlite'));
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to cleanup temp directory:',
@@ -323,7 +349,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -359,7 +385,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -394,7 +420,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -425,7 +451,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -471,7 +497,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -509,7 +535,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -545,7 +571,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -567,7 +593,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
@@ -596,7 +622,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
@@ -628,7 +654,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -648,11 +674,11 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    const resolved = await runMigrate(config);
 
     // Injected timestamp fields must be dense: route registration reads
     // `field.apis` and friends after the migrator has run.
-    const injected = config.data.models.records.fields;
+    const injected = resolved.data.models.records.fields;
     expect(injected.created_at.apis).toEqual([]);
     expect(injected.created_at.query).toEqual([]);
     expect(injected.created_at.aggregations).toEqual([]);
@@ -681,7 +707,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -702,7 +728,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
@@ -725,7 +751,7 @@ describe('migrateDatabase', () => {
       },
     };
 
-    await migrateDatabase(config);
+    await runMigrate(config);
 
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;

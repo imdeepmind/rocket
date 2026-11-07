@@ -1,8 +1,9 @@
 import {describe, expect, test, vi} from 'vitest';
 
+import {resolveConfig} from '@/lib/config/resolve';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 describe('buildPreValidation', () => {
   const buildMockApp = (overrides: Record<string, unknown> = {}) => ({
@@ -26,58 +27,52 @@ describe('buildPreValidation', () => {
     return {status, send, ...overrides};
   };
 
-  const baseAppConfig: AppConfig = {
-    application: {name: 'test', logLevel: 'info'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', version: '1.0.0'},
+  const baseAppConfig = resolveConfig(
+    {
+      application: {name: 'test', logLevel: 'info'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', version: '1.0.0'},
+        },
       },
-    },
-    infrastructure: {
-      database: {
-        engine: 'postgres',
-        connection: {url: 'postgresql://localhost:5432/test'},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://localhost:5432/test'},
+        },
       },
+      data: {models: {}},
     },
-    data: {models: {}},
-  };
+    {mode: 'dev'},
+  );
 
-  const authEnabledConfig: AppConfig = {
-    ...baseAppConfig,
-    authentication: {
-      enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'user',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
+  const authEnabledConfig: ResolvedAppConfig = resolveConfig(
+    {
+      application: {name: 'test', logLevel: 'info'},
+      data: {models: {}},
+      authentication: {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'user',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+            },
           },
         },
       },
     },
-  };
+    {mode: 'dev'},
+  );
 
-  const authDisabledConfig: AppConfig = {
+  const authDisabledConfig: ResolvedAppConfig = {
     ...baseAppConfig,
-    authentication: {
-      enabled: false,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'user',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
-          },
-        },
-      },
-    },
+    authentication: {enabled: false},
   };
 
   // --- default checks: ['auth'] ---
@@ -181,7 +176,7 @@ describe('buildPreValidation', () => {
   });
 
   test('auth fails with 401 when api-key provider is used', async () => {
-    const apiKeyConfig: AppConfig = {
+    const apiKeyConfig: ResolvedAppConfig = {
       ...baseAppConfig,
       authentication: {
         enabled: true,

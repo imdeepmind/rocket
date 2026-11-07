@@ -4,6 +4,8 @@ import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 
 import cachePlugin from '@/plugin/cache';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {CacheDbConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 // Mock ioredis
@@ -39,7 +41,10 @@ describe('cache plugin', () => {
   describe('NodeCache', () => {
     it('uses node-cache when no cache config is provided', async () => {
       app = Fastify();
-      app.appConfig = {} as unknown as ResolvedAppConfig;
+      app.appConfig = resolveConfig(
+        {application: {name: 'test'}, data: {models: {}}},
+        {mode: 'dev'},
+      );
       await app.register(cachePlugin);
       await app.ready();
 
@@ -49,7 +54,10 @@ describe('cache plugin', () => {
 
     it('performs node-cache operations', async () => {
       app = Fastify();
-      app.appConfig = {} as unknown as ResolvedAppConfig;
+      app.appConfig = resolveConfig(
+        {application: {name: 'test'}, data: {models: {}}},
+        {mode: 'dev'},
+      );
       await app.register(cachePlugin);
       await app.ready();
 

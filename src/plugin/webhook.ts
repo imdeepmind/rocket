@@ -44,7 +44,7 @@ export default fp(
       }
 
       const webhookConfigs =
-        fastify.appConfig.apis?.[apiIdentifier]?.webhooks ?? null;
+        fastify.appConfig.apis[apiIdentifier]?.webhooks ?? [];
       if (!webhookConfigs?.length) return;
 
       const isRequestTrigger = trigger === 'request';

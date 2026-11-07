@@ -3,7 +3,23 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import sspPlugin from '@/plugin/ssp';
 
-import {ResolvedAppConfig, ServerSideParamConfig} from '@/interfaces/config';
+import {resolveConfig} from '@/lib/config/resolve';
+
+import {
+  AppConfigInput,
+  ResolvedAppConfig,
+  ServerSideParamConfig,
+} from '@/interfaces/config';
+
+const resolvedConfig = (raw: AppConfigInput): ResolvedAppConfig =>
+  resolveConfig(
+    {
+      ...raw,
+      application: {name: 'test', ...raw.application},
+      data: raw.data ?? {models: {}},
+    },
+    {mode: 'dev'},
+  );
 
 describe('ssp plugin', () => {
   beforeEach(() => {
@@ -16,9 +32,9 @@ describe('ssp plugin', () => {
 
   it('ssp plugin decorates fastify with enforceSSP', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -27,9 +43,9 @@ describe('ssp plugin', () => {
 
   it('should not modify the request if apiIdentifier is missing', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -51,14 +67,14 @@ describe('ssp plugin', () => {
 
   it('should not modify request if no ssp configs exist for the API', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -88,14 +104,14 @@ describe('ssp plugin', () => {
       {type: 'path', name: 'pParam', value: true},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -125,14 +141,14 @@ describe('ssp plugin', () => {
       {type: 'path', name: 'groupId', value: 'newGroup'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -160,14 +176,14 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'tenantId', value: 'newTenant'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -191,14 +207,14 @@ describe('ssp plugin', () => {
       {type: 'path', name: 'groupId', value: 'newGroup'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -226,14 +242,14 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'ownerId', value: '[userId]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -258,14 +274,14 @@ describe('ssp plugin', () => {
       {type: 'body', name: 'user_email', value: '[userEmail]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -290,14 +306,14 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'ownerId', value: '[userId]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -321,7 +337,7 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'org', value: '[defaultOrg]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {
         logLevel: 'silent',
         magicVariables: {defaultOrg: 'rocket-oss'},
@@ -331,7 +347,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -357,7 +373,7 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'boolVal', value: '[myBool]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {
         logLevel: 'silent',
         magicVariables: {myString: 'hello', myNumber: 42, myBool: true},
@@ -367,7 +383,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -391,7 +407,7 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'ownerId', value: '[userId]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {
         logLevel: 'silent',
         magicVariables: {userId: 'overridden-user-id'},
@@ -401,7 +417,7 @@ describe('ssp plugin', () => {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -426,14 +442,14 @@ describe('ssp plugin', () => {
       {type: 'query', name: 'unknown', value: '[notDefinedAnywhere]'},
     ];
 
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: ssps,
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -453,9 +469,9 @@ describe('ssp plugin', () => {
 
   it('should handle apiIdentifier not found in apis config', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
     await app.ready();
 
@@ -474,7 +490,7 @@ describe('ssp plugin', () => {
 describe('ssp plugin – onRoute hook', () => {
   it('should strip query SSP params from route schema querystring', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
@@ -483,7 +499,7 @@ describe('ssp plugin – onRoute hook', () => {
           ],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -518,14 +534,14 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should strip query filter variants from route schema', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [{type: 'query', name: 'org_id', value: '123'}],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -562,14 +578,14 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should strip body SSP params from route schema body', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [{type: 'body', name: 'org_id', value: 'abc'}],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -603,14 +619,14 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should NOT strip path SSP params from route schema', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [{type: 'path', name: 'id', value: '456'}],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -642,12 +658,12 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should not modify schema when api has no serverSideParams', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {},
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -678,14 +694,14 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should not modify schema when route has no apiIdentifier', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     let capturedSchema: unknown;
@@ -715,14 +731,14 @@ describe('ssp plugin – onRoute hook', () => {
 
   it('should handle routes without a schema gracefully', async () => {
     const app = Fastify();
-    app.appConfig = {
+    app.appConfig = resolvedConfig({
       application: {logLevel: 'silent'},
       apis: {
         'test-api': {
           serverSideParams: [{type: 'query', name: 'tenantId', value: 'x'}],
         },
       },
-    } as unknown as ResolvedAppConfig;
+    });
     await app.register(sspPlugin);
 
     app.get('/no-schema', {

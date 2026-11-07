@@ -54,6 +54,7 @@ const upAuthConfig: AuthenticationConfig = {
         passwordField: 'password',
         isVerifiedField: 'is_active',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -537,6 +538,7 @@ describe('POST /auth/register/verify/otp', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
           },
         },
       };

@@ -37,6 +37,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };

@@ -6,15 +6,12 @@ import {UpAuthProviderConfig} from '@/interfaces/config';
 
 export default fp(
   async (fastify: FastifyInstance) => {
-    const authentication = fastify.appConfig?.authentication;
+    const authentication = fastify.appConfig.authentication;
 
-    if (
-      authentication?.enabled &&
-      authentication.provider?.type === 'up-auth'
-    ) {
+    if (authentication.enabled && authentication.provider.type === 'up-auth') {
       const upConfig = authentication.provider.config as UpAuthProviderConfig;
       await fastify.register(fastifyJwt, {
-        secret: upConfig.jwtSecret || 'this-will-never-be-used',
+        secret: upConfig.jwtSecret as string,
       });
 
       fastify.decorateRequest(
@@ -26,8 +23,8 @@ export default fp(
         },
       );
     } else if (
-      authentication?.enabled &&
-      authentication.provider?.type === 'api-key'
+      authentication.enabled &&
+      authentication.provider.type === 'api-key'
     ) {
       const apiKey = (authentication.provider.config as {key: string}).key;
 

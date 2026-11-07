@@ -59,6 +59,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -642,6 +643,7 @@ describe('POST /auth/register', () => {
             usernameField: 'username',
             passwordField: 'secret',
           },
+          jwtSecret: 'this-will-never-be-used',
         },
       },
     };
@@ -760,6 +762,7 @@ describe('POST /auth/register', () => {
               passwordField: 'password',
               isVerifiedField: 'is_active',
             },
+            jwtSecret: 'this-will-never-be-used',
           },
         },
       };
@@ -800,6 +803,7 @@ describe('POST /auth/register', () => {
               passwordField: 'password',
               isVerifiedField: 'is_active',
             },
+            jwtSecret: 'this-will-never-be-used',
           },
         },
       };

@@ -4,6 +4,8 @@ import {describe, expect, it} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {AuthenticationConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 // Minimal resolved config that enables the up-auth engine. Standalone plugin
@@ -34,6 +36,7 @@ const upAuthFixture = (): ResolvedAppConfig =>
             usernameField: 'email',
             passwordField: 'password',
           },
+          jwtSecret: 'this-will-never-be-used',
         },
       },
     },
@@ -134,6 +137,7 @@ describe('Auth Plugin — up-auth engine', () => {
 
   it('should reject invalid JWT via authenticate()', async () => {
     const app = Fastify();
+    app.appConfig = upAuthFixture();
     app.get('/test', async (req, reply) => {
       try {
         await req.authenticate();
@@ -321,5 +325,40 @@ describe('Auth Plugin — unknown provider type', () => {
 
     // JWT should not be registered since it's not up-auth
     expect(app.jwt).toBeUndefined();
+  });
+});
+
+describe('Auth Plugin — disabled auth', () => {
+  it('registers no JWT and authenticate() always rejects', async () => {
+    const app = Fastify();
+    app.appConfig = resolveConfig(
+      {
+        application: {name: 'test'},
+        data: {models: {}},
+        authentication: {enabled: false},
+      },
+      {mode: 'dev'},
+    );
+
+    app.get('/test', async (req, reply) => {
+      try {
+        await req.authenticate();
+        return reply.send({ok: true});
+      } catch {
+        return reply.status(401).send({ok: false});
+      }
+    });
+
+    await app.register(authPlugin);
+    await app.ready();
+
+    expect(app.jwt).toBeUndefined();
+
+    const res = await app.inject({method: 'GET', url: '/test'});
+
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ok: false});
+
+    await app.close();
   });
 });

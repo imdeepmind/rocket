@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 /**
  * Auth + SSP checks that can be performed in preValidation.
@@ -15,14 +15,14 @@ export type PreValidationCheck = 'auth' | 'ssp';
  */
 export function buildPreValidation(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   authorization: boolean,
   checks: PreValidationCheck[] = ['auth'],
 ): (request: FastifyRequest, reply: FastifyReply) => Promise<void | undefined> {
   return async (request, reply) => {
     if (
       checks.includes('auth') &&
-      config.authentication?.enabled &&
+      config.authentication.enabled &&
       authorization
     ) {
       try {

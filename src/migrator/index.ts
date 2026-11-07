@@ -4,9 +4,14 @@ import * as path from 'path';
 
 import {resolveModelField} from '@/lib/config/resolve';
 
-import {AppConfig, DBEngine, ModelConfig} from '@/interfaces/config';
+import {
+  DBEngine,
+  ResolvedAppConfig,
+  ResolvedModelConfig,
+  ResolvedModelRelationConfig,
+} from '@/interfaces/config';
 
-function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
+function injectTimestamps(model: ResolvedModelConfig, engine: DBEngine): void {
   if (!model.timestamps) return;
 
   const nowDefault =
@@ -31,7 +36,7 @@ function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
 
 function generateRelations(
   modelName: string,
-  relations: NonNullable<ModelConfig['relations']>,
+  relations: Record<string, ResolvedModelRelationConfig>,
 ): string {
   return Object.entries(relations)
     .map(([relationName, rel]) => {
@@ -49,7 +54,7 @@ function generateRelations(
 
 function generateSchemaFile(
   modelName: string,
-  config: ModelConfig,
+  config: ResolvedModelConfig,
   engine: DBEngine,
 ): string {
   // inject timestamps into the model config in-memory
@@ -168,7 +173,7 @@ function generateSchemaFile(
     })
     .join(',\n');
 
-  const indexes = Object.entries(config.indexes ?? {})
+  const indexes = Object.entries(config.indexes)
     .map(([idxName, idx]) => {
       const cols = idx.fields.map(c => `t.${c}`).join(', ');
       return idx.unique
@@ -178,7 +183,7 @@ function generateSchemaFile(
     .join(',\n');
 
   const relations =
-    config.relations && Object.keys(config.relations).length > 0
+    Object.keys(config.relations).length > 0
       ? generateRelations(modelName, config.relations)
       : '';
 
@@ -220,7 +225,7 @@ ${columns}
 }
 
 async function generateMigrationSQL(
-  configs: Array<{name: string; model: ModelConfig}>,
+  configs: Array<{name: string; model: ResolvedModelConfig}>,
   engine: DBEngine,
   dbUrl: string,
 ): Promise<void> {
@@ -280,7 +285,7 @@ async function generateMigrationSQL(
   }
 }
 
-const migrateDatabase = async (config: AppConfig) => {
+const migrateDatabase = async (config: ResolvedAppConfig) => {
   const engine = config.infrastructure.database.engine;
   const models = Object.entries(config.data.models).map(([name, model]) => ({
     name,
