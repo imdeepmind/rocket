@@ -11,6 +11,7 @@ import {
 
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
+import {DUMMY_PASSWORD_HASH} from '@/constants';
 
 export function registerLoginRoute(
   app: FastifyInstance,
@@ -81,18 +82,13 @@ function registerLoginEndpoint(
       const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
       const res = await app.db.query(query, [username]);
 
-      if (res.rows.length === 0) {
-        return reply
-          .status(401)
-          .send(app.buildResponse(401, 'Invalid username or password', null));
-      }
-
-      const user = res.rows[0] as Record<string, unknown>;
-      const hashedPassword = user[passwordField] as string;
+      const user = res.rows[0] as Record<string, unknown> | undefined;
+      const hashedPassword =
+        (user?.[passwordField] as string) || DUMMY_PASSWORD_HASH;
 
       const isMatch = await compare(String(password), hashedPassword);
 
-      if (!isMatch) {
+      if (!user || !isMatch) {
         return reply
           .status(401)
           .send(app.buildResponse(401, 'Invalid username or password', null));
