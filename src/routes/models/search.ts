@@ -1,16 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  getApiAuthorization,
-  getApiBypassSecret,
-  getEffectiveQueries,
-  shouldApiBeEnabled,
-} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 import {buildAllQueryProperties} from '@/lib/schema/query';
 import {
@@ -21,83 +11,35 @@ import {getPublicFields} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {applyFilters} from '@/lib/sql/filters';
 
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+import {
+  ModelConfig,
+  ModelFieldConfig,
+  ResolvedAppConfig,
+} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerSearchRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const searchableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.apis?.includes('search'),
+      f.apis.includes('search'),
     );
 
     for (const [fieldName, field] of searchableFields) {
-      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.search`;
-
-      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
-        continue;
-
-      const defaultAuthorization = getApiAuthorization(
+      const targets = getApiRouteTargets(
         config,
-        defaultApiIdentifier,
-      );
-      const defaultBypassSecret = getApiBypassSecret(
-        config,
-        defaultApiIdentifier,
-      );
-
-      registerSearchEndpoint(
-        app,
-        config,
-        modelName,
-        fieldName,
-        field,
-        model,
-        defaultVariant,
-        defaultApiIdentifier,
-        defaultAuthorization,
-        undefined,
-        defaultBypassSecret,
-      );
-
-      const baseIdentifier = buildApiIdentifier(
         'model',
-        defaultVariant,
         modelName,
         fieldName,
         'search',
       );
-      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      for (const variant of additionalVariants) {
-        const variantApiIdentifier = buildApiIdentifier(
-          'model',
-          variant,
-          modelName,
-          fieldName,
-          'search',
-        );
-
-        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-        const variantAuthorization = getApiAuthorization(
-          config,
-          variantApiIdentifier,
-        );
-
-        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-        const variantBypassSecret = getApiBypassSecret(
-          config,
-          variantApiIdentifier,
-        );
-
+      for (const {identifier, variant, policy} of targets) {
         registerSearchEndpoint(
           app,
           config,
@@ -106,10 +48,8 @@ export function registerSearchRoutes(
           field,
           model,
           variant,
-          variantApiIdentifier,
-          variantAuthorization,
-          variantTags,
-          variantBypassSecret,
+          identifier,
+          policy,
         );
       }
     }
@@ -118,16 +58,14 @@ export function registerSearchRoutes(
 
 function registerSearchEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   fieldName: string,
   field: ModelFieldConfig,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
@@ -135,10 +73,7 @@ function registerSearchEndpoint(
     model,
     modelName,
     config,
-    authorization,
-    apiIdentifier,
-    routeTags,
-    bypassSecret,
+    policy,
   );
 
   const path = `/${variant}/${modelName}/search/${fieldName}`;
@@ -148,7 +83,7 @@ function registerSearchEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -160,7 +95,7 @@ function registerSearchEndpoint(
       const queryParams = request.query as Record<string, unknown>;
       const tableName = modelName;
 
-      const publicFields = getPublicFields(model, bypassSecret);
+      const publicFields = getPublicFields(model, policy.bypassSecret);
       const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
       let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
@@ -245,26 +180,23 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   modelName: string,
-  config: AppConfig,
-  authorization: boolean,
-  apiIdentifier: string,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
-  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const effectiveQueries = policy.supportedQueries;
   const queryProperties: Record<string, object> = {
     [`${fieldName}_search`]: {
       type: 'string',
       description: `Search pattern to match against ${fieldName}`,
     },
-    ...buildAllQueryProperties(model, effectiveQueries, bypassSecret),
+    ...buildAllQueryProperties(model, effectiveQueries, policy.bypassSecret),
   };
 
-  const excludeSecret = !bypassSecret;
+  const excludeSecret = !policy.bypassSecret;
   const schema: Record<string, unknown> = {
     summary: `Search ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
     description: `Search ${modelName} records from the database using a LIKE pattern on ${fieldName}`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
+    tags: policy.tags,
     querystring: {
       type: 'object',
       properties: queryProperties,
@@ -297,7 +229,7 @@ function generateSchema(
     ),
   };
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

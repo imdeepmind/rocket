@@ -10,10 +10,11 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {registerLoginRoute} from '@/routes/auth/login';
 
 import {
-  AppConfig,
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
@@ -97,28 +98,31 @@ async function createAuthApp(
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
+      ...(apis ? {apis} : {}),
+      ...(apiVariants ? {apiVariants} : {}),
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-    ...(apis ? {apis} : {}),
-    ...(apiVariants ? {apiVariants} : {}),
-  };
+    {mode: 'dev'},
+  );
   app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerLoginRoute(app, config);
+    registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;
@@ -130,19 +134,22 @@ async function createAuthAppWithMfa(
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-  };
+    {mode: 'dev'},
+  );
   app.appConfig = config as ResolvedAppConfig;
 
   const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
@@ -170,7 +177,7 @@ async function createAuthAppWithMfa(
   await app.register(otpPlugin);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerLoginRoute(app, config);
+    registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;

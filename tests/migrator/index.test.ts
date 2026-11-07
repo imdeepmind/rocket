@@ -650,6 +650,18 @@ describe('migrateDatabase', () => {
 
     await migrateDatabase(config);
 
+    // Injected timestamp fields must be dense: route registration reads
+    // `field.apis` and friends after the migrator has run.
+    const injected = config.data.models.records.fields;
+    expect(injected.created_at.apis).toEqual([]);
+    expect(injected.created_at.query).toEqual([]);
+    expect(injected.created_at.aggregations).toEqual([]);
+    expect(injected.created_at.primaryKey).toBe(false);
+    expect(injected.created_at.autoIncrement).toBe(false);
+    expect(injected.created_at.unique).toBe(false);
+    expect(injected.created_at.secret).toBe(false);
+    expect(injected.updated_at.apis).toEqual([]);
+
     const writeFileSyncMock = vi.mocked(fs.writeFileSync);
     const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
 

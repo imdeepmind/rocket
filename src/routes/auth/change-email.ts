@@ -1,17 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
-  AppConfig,
   ModelConfig,
+  ResolvedAppConfig,
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
@@ -19,61 +15,31 @@ import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEmailChangeRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider!
-    .config as UpAuthProviderConfig;
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
+
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
   const {model, idField, usernameField, isVerifiedField} = upConfig.userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.emailChange`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerEmailChangeEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    authModelConfig,
-    idField,
-    usernameField,
-    isVerifiedField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'emailChange',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'emailChange',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerEmailChangeEndpoint(
       app,
       config,
@@ -83,15 +49,15 @@ export function registerEmailChangeRoute(
       usernameField,
       isVerifiedField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerEmailChangeEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   authModelConfig: ModelConfig,
   idField: string,
@@ -99,12 +65,12 @@ function registerEmailChangeEndpoint(
   isVerifiedField: string | undefined,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
-    routeTags,
+    policy,
   );
 
   const path = `/${variant}/auth/user/email`;
@@ -197,7 +163,7 @@ function registerEmailChangeEndpoint(
 function generateSchema(
   usernameField: string,
   model: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ) {
   const bodySchema = {
     type: 'object',
@@ -224,7 +190,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Change email for ${capitalizeFirstLetter(model)}`,
     description: `Updates the email address for the authenticated user in the "${model}" table and sends an OTP to the new email.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

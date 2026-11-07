@@ -1,95 +1,65 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerForgotPasswordRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
 
   const {model, usernameField} = (
-    config.authentication!.provider!.config as UpAuthProviderConfig
+    authentication.provider.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.forgotPassword`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerForgotPasswordEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    usernameField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'forgotPassword',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'forgotPassword',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerForgotPasswordEndpoint(
       app,
       config,
       model,
       usernameField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerForgotPasswordEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   usernameField: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
-    routeTags,
+    policy,
   );
 
   const path = `/${variant}/auth/forgot-password`;
@@ -140,7 +110,7 @@ function registerForgotPasswordEndpoint(
 function generateSchema(
   usernameField: string,
   model: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ) {
   const bodySchema = {
     type: 'object',
@@ -167,7 +137,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Forgot password for ${capitalizeFirstLetter(model)}`,
     description: "Sends an OTP to the user's email for password reset.",
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
   };

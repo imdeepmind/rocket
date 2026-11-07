@@ -1,15 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  getApiAuthorization,
-  getApiBypassSecret,
-  shouldApiBeEnabled,
-} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   generateJSONValidationSchema,
   stripAdditionalPostFields,
@@ -21,108 +12,52 @@ import {
 import {getPublicFields} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {AppConfig, ModelBody, ModelConfig} from '@/interfaces/config';
+import {ModelBody, ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerPostRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
-    const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.unknown.insert`;
-
-    if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName)) continue;
-
-    const defaultAuthorization = getApiAuthorization(
+    const targets = getApiRouteTargets(
       config,
-      defaultApiIdentifier,
-    );
-    const defaultBypassSecret = getApiBypassSecret(
-      config,
-      defaultApiIdentifier,
-    );
-
-    registerPostEndpoint(
-      app,
-      config,
-      modelName,
-      model,
-      defaultVariant,
-      defaultApiIdentifier,
-      defaultAuthorization,
-      undefined,
-      defaultBypassSecret,
-    );
-
-    const baseIdentifier = buildApiIdentifier(
       'model',
-      defaultVariant,
       modelName,
       'unknown',
       'insert',
     );
-    const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-    for (const variant of additionalVariants) {
-      const variantApiIdentifier = buildApiIdentifier(
-        'model',
-        variant,
-        modelName,
-        'unknown',
-        'insert',
-      );
-
-      if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-      const variantAuthorization = getApiAuthorization(
-        config,
-        variantApiIdentifier,
-      );
-
-      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-      const variantBypassSecret = getApiBypassSecret(
-        config,
-        variantApiIdentifier,
-      );
-
+    for (const {identifier, variant, policy} of targets) {
       registerPostEndpoint(
         app,
         config,
         modelName,
         model,
         variant,
-        variantApiIdentifier,
-        variantAuthorization,
-        variantTags,
-        variantBypassSecret,
+        identifier,
+        policy,
       );
     }
   }
 }
-
 function registerPostEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
     modelName,
     config,
-    authorization,
-    routeTags,
-    bypassSecret,
+    policy,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -132,7 +67,7 @@ function registerPostEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -149,7 +84,7 @@ function registerPostEndpoint(
       });
 
       const publicFieldNames = new Set(
-        getPublicFields(model, bypassSecret).map(([name]) => name),
+        getPublicFields(model, policy.bypassSecret).map(([name]) => name),
       );
       const responseBody: ModelBody = {};
       for (const [key, value] of Object.entries(body)) {
@@ -193,10 +128,8 @@ function registerPostEndpoint(
 function generateSchema(
   model: ModelConfig,
   modelName: string,
-  config: AppConfig,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
   const bodySchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
@@ -207,19 +140,19 @@ function generateSchema(
   const responseSchema = generateJSONValidationSchema(model, {
     ignorePrimaryKey: true,
     additionalProperties: false,
-    excludeSecretFields: !bypassSecret,
+    excludeSecretFields: !policy.bypassSecret,
     excludeTimestamps: true,
   });
 
   const schema: Record<string, unknown> = {
     summary: `Create a new ${capitalizeFirstLetter(modelName)} record`,
     description: `Create a new ${capitalizeFirstLetter(modelName)} record in the database`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Insert'],
+    tags: policy.tags,
     body: bodySchema,
     response: getResponseStructureSchema([201], responseSchema, responseSchema),
   };
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

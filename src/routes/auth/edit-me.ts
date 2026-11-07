@@ -1,10 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {isManagedTimestampField} from '@/lib/schema/fields';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
@@ -12,9 +8,9 @@ import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
-  AppConfig,
   ModelBody,
   ModelConfig,
+  ResolvedAppConfig,
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
@@ -22,15 +18,17 @@ import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditMeRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const authConfig = (
-    config.authentication!.provider!.config as UpAuthProviderConfig
-  ).userModel;
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
+
+  const authConfig = (authentication.provider.config as UpAuthProviderConfig)
+    .userModel;
   const {model, idField, usernameField, passwordField, isVerifiedField} =
     authConfig;
 
@@ -38,48 +36,15 @@ export function registerEditMeRoute(
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.editMe`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerEditMeEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    authModelConfig,
-    idField,
-    usernameField,
-    passwordField,
-    isVerifiedField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'editMe',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'editMe',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerEditMeEndpoint(
       app,
       config,
@@ -90,15 +55,15 @@ export function registerEditMeRoute(
       passwordField,
       isVerifiedField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerEditMeEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   authModelConfig: ModelConfig,
   idField: string,
@@ -107,7 +72,7 @@ function registerEditMeEndpoint(
   isVerifiedField: string | undefined,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
@@ -116,7 +81,7 @@ function registerEditMeEndpoint(
     usernameField,
     passwordField,
     isVerifiedField,
-    routeTags,
+    policy,
   );
 
   const path = `/${variant}/auth/user/me`;
@@ -225,8 +190,8 @@ function generateSchema(
   idField: string,
   usernameField: string,
   passwordField: string,
-  isVerifiedField?: string,
-  routeTags?: string[],
+  isVerifiedField: string | undefined,
+  policy: ResolvedApiPolicy,
 ) {
   const protectedFields = new Set(
     [idField, usernameField, passwordField, isVerifiedField].filter(Boolean),
@@ -259,7 +224,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Edit authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${usernameField}, ${passwordField}, or ${isVerifiedField}.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

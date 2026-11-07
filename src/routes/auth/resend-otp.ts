@@ -1,28 +1,26 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 function registerResendOtpBase(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   path: string,
   action: 'login' | 'register' | 'forgotPassword',
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider!
-    .config as UpAuthProviderConfig;
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
+
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
   const {model, usernameField} = upConfig.userModel;
 
   const authModelConfig = models[model];
@@ -31,46 +29,15 @@ function registerResendOtpBase(
 
   const operation = `resendOtp${capitalizeFirstLetter(action)}`;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.${operation}`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerResendOtpEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    usernameField,
-    action,
-    path,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     operation,
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      operation,
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerResendOtpEndpoint(
       app,
       config,
@@ -79,28 +46,28 @@ function registerResendOtpBase(
       action,
       path,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerResendOtpEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   usernameField: string,
   action: string,
   path: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
-    routeTags,
+    policy,
   );
 
   const routePath = `/${variant}${path}`;
@@ -150,21 +117,21 @@ function registerResendOtpEndpoint(
 
 export function registerLoginResendOtpRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerResendOtpBase(app, config, '/auth/login/resend/otp', 'login');
 }
 
 export function registerRegistrationResendOtpRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerResendOtpBase(app, config, '/auth/register/resend/otp', 'register');
 }
 
 export function registerForgotPasswordResendOtpRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerResendOtpBase(
     app,
@@ -178,7 +145,7 @@ function generateSchema(
   usernameField: string,
   model: string,
   action: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ) {
   const bodySchema = {
     type: 'object',
@@ -205,7 +172,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Resend OTP for ${capitalizeFirstLetter(model)} ${action}`,
     description: `Resends an OTP to the user's email for ${action}.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'OTP'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
   };

@@ -1,16 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  getApiAuthorization,
-  getApiBypassSecret,
-  getEffectiveQueries,
-  shouldApiBeEnabled,
-} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {stripManagedTimestampProperties} from '@/lib/schema/body';
 import {isManagedTimestampField} from '@/lib/schema/fields';
 import {buildAllQueryProperties} from '@/lib/schema/query';
@@ -24,87 +14,35 @@ import {applyFilters} from '@/lib/sql/filters';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
 import {
-  AppConfig,
   ModelBody,
   ModelConfig,
   ModelFieldConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerEditRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const editableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.apis?.includes('edit'),
+      f.apis.includes('edit'),
     );
 
     for (const [fieldName, field] of editableFields) {
-      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.edit`;
-
-      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
-        continue;
-
-      const defaultAuthorization = getApiAuthorization(
+      const targets = getApiRouteTargets(
         config,
-        defaultApiIdentifier,
-      );
-      const defaultBypassSecret = getApiBypassSecret(
-        config,
-        defaultApiIdentifier,
-      );
-
-      registerEditEndpoint(
-        app,
-        config,
-        modelName,
-        fieldName,
-        field,
-        model,
-        defaultVariant,
-        defaultApiIdentifier,
-        defaultAuthorization,
-        undefined,
-        defaultBypassSecret,
-      );
-
-      const baseIdentifier = buildApiIdentifier(
         'model',
-        defaultVariant,
         modelName,
         fieldName,
         'edit',
       );
-      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      for (const variant of additionalVariants) {
-        const variantApiIdentifier = buildApiIdentifier(
-          'model',
-          variant,
-          modelName,
-          fieldName,
-          'edit',
-        );
-
-        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-        const variantAuthorization = getApiAuthorization(
-          config,
-          variantApiIdentifier,
-        );
-
-        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-        const variantBypassSecret = getApiBypassSecret(
-          config,
-          variantApiIdentifier,
-        );
-
+      for (const {identifier, variant, policy} of targets) {
         registerEditEndpoint(
           app,
           config,
@@ -113,10 +51,8 @@ export function registerEditRoutes(
           field,
           model,
           variant,
-          variantApiIdentifier,
-          variantAuthorization,
-          variantTags,
-          variantBypassSecret,
+          identifier,
+          policy,
         );
       }
     }
@@ -125,24 +61,22 @@ export function registerEditRoutes(
 
 function registerEditEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   fieldName: string,
   field: ModelFieldConfig,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
   const isUnique = field.primaryKey || field.unique;
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
-  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const effectiveQueries = policy.supportedQueries;
   const queryProperties = isUnique
     ? {}
-    : buildAllQueryProperties(model, effectiveQueries, bypassSecret);
+    : buildAllQueryProperties(model, effectiveQueries, policy.bypassSecret);
 
   const bodyProperties: Record<string, object> = {};
   const allBodyFieldNames: string[] = [];
@@ -160,7 +94,7 @@ function registerEditEndpoint(
   }
 
   const publicFieldNames = new Set(
-    getPublicFields(model, bypassSecret).map(([name]) => name),
+    getPublicFields(model, policy.bypassSecret).map(([name]) => name),
   );
 
   const buildRouteSchema = (method: 'PATCH' | 'PUT') => {
@@ -196,7 +130,7 @@ function registerEditEndpoint(
     const schema: Record<string, unknown> = {
       summary: `${method === 'PATCH' ? 'Partial' : 'Complete'} edit of ${capitalizeFirstLetter(modelName)} record(s) by ${fieldName}`,
       description: `${method} update on records from the database by ${fieldName}`,
-      tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Update'],
+      tags: policy.tags,
       params: {
         type: 'object',
         properties: {
@@ -212,7 +146,7 @@ function registerEditEndpoint(
       response: getResponseStructureSchema([200], responseDataSchema),
     };
 
-    const security = buildSecurityArray(config, authorization);
+    const security = buildSecurityArray(config, policy.authorization);
 
     if (security.length > 0) {
       schema.security = security;
@@ -338,7 +272,7 @@ function registerEditEndpoint(
     {
       schema: buildRouteSchema('PATCH'),
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -354,7 +288,7 @@ function registerEditEndpoint(
     {
       schema: buildRouteSchema('PUT'),
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },

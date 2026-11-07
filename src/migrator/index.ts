@@ -2,6 +2,8 @@ import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {resolveModelField} from '@/lib/config/resolve';
+
 import {AppConfig, DBEngine, ModelConfig} from '@/interfaces/config';
 
 function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
@@ -11,19 +13,19 @@ function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
     engine === 'sqlite' ? {raw: "(datetime('now'))"} : {raw: 'now()'};
 
   if (!('created_at' in model.fields)) {
-    model.fields.created_at = {
+    model.fields.created_at = resolveModelField({
       type: 'datetime',
       nullable: false,
       default: nowDefault,
-    };
+    });
   }
 
   if (!('updated_at' in model.fields)) {
-    model.fields.updated_at = {
+    model.fields.updated_at = resolveModelField({
       type: 'datetime',
       nullable: false,
       default: nowDefault,
-    };
+    });
   }
 }
 
