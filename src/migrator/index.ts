@@ -2,34 +2,41 @@ import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {AppConfig, DBEngine, ModelConfig} from '@/interfaces/config';
+import {resolveModelField} from '@/lib/config/resolve';
 
-function injectTimestamps(model: ModelConfig, engine: DBEngine): void {
+import {
+  DBEngine,
+  ResolvedAppConfig,
+  ResolvedModelConfig,
+  ResolvedModelRelationConfig,
+} from '@/interfaces/config';
+
+function injectTimestamps(model: ResolvedModelConfig, engine: DBEngine): void {
   if (!model.timestamps) return;
 
   const nowDefault =
     engine === 'sqlite' ? {raw: "(datetime('now'))"} : {raw: 'now()'};
 
   if (!('created_at' in model.fields)) {
-    model.fields.created_at = {
+    model.fields.created_at = resolveModelField({
       type: 'datetime',
       nullable: false,
       default: nowDefault,
-    };
+    });
   }
 
   if (!('updated_at' in model.fields)) {
-    model.fields.updated_at = {
+    model.fields.updated_at = resolveModelField({
       type: 'datetime',
       nullable: false,
       default: nowDefault,
-    };
+    });
   }
 }
 
 function generateRelations(
   modelName: string,
-  relations: NonNullable<ModelConfig['relations']>,
+  relations: Record<string, ResolvedModelRelationConfig>,
 ): string {
   return Object.entries(relations)
     .map(([relationName, rel]) => {
@@ -47,7 +54,7 @@ function generateRelations(
 
 function generateSchemaFile(
   modelName: string,
-  config: ModelConfig,
+  config: ResolvedModelConfig,
   engine: DBEngine,
 ): string {
   // inject timestamps into the model config in-memory
@@ -166,7 +173,7 @@ function generateSchemaFile(
     })
     .join(',\n');
 
-  const indexes = Object.entries(config.indexes ?? {})
+  const indexes = Object.entries(config.indexes)
     .map(([idxName, idx]) => {
       const cols = idx.fields.map(c => `t.${c}`).join(', ');
       return idx.unique
@@ -176,7 +183,7 @@ function generateSchemaFile(
     .join(',\n');
 
   const relations =
-    config.relations && Object.keys(config.relations).length > 0
+    Object.keys(config.relations).length > 0
       ? generateRelations(modelName, config.relations)
       : '';
 
@@ -218,7 +225,7 @@ ${columns}
 }
 
 async function generateMigrationSQL(
-  configs: Array<{name: string; model: ModelConfig}>,
+  configs: Array<{name: string; model: ResolvedModelConfig}>,
   engine: DBEngine,
   dbUrl: string,
 ): Promise<void> {
@@ -278,7 +285,7 @@ async function generateMigrationSQL(
   }
 }
 
-const migrateDatabase = async (config: AppConfig) => {
+const migrateDatabase = async (config: ResolvedAppConfig) => {
   const engine = config.infrastructure.database.engine;
   const models = Object.entries(config.data.models).map(([name, model]) => ({
     name,

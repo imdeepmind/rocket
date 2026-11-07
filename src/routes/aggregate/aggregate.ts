@@ -1,102 +1,48 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getApiAuthorization, getEffectiveAggregations} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   buildSecurityArray,
   getResponseStructureSchema,
 } from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {Aggregation, AppConfig} from '@/interfaces/config';
+import {Aggregation, ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerAggregateRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const aggregatableFields = Object.entries(model.fields).filter(
-      ([, f]) => f.aggregations && f.aggregations.length > 0,
+      ([, f]) => f.aggregations.length > 0,
     );
 
     for (const [fieldName, field] of aggregatableFields) {
-      // Register default variant endpoint
-      const defaultApiIdentifier = `aggregate${getVariantSegment(config)}.${modelName}.${fieldName}.getAggregation`;
-
-      if (config.apis?.[defaultApiIdentifier]?.enabled !== false) {
-        const defaultAuthorization = getApiAuthorization(
-          config,
-          defaultApiIdentifier,
-        );
-        const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-        const defaultAggregations =
-          getEffectiveAggregations(config, defaultApiIdentifier) ??
-          field.aggregations!;
-
-        registerAggregateEndpoint(
-          app,
-          config,
-          modelName,
-          fieldName,
-          defaultAggregations,
-          defaultVariant,
-          defaultApiIdentifier,
-          defaultAuthorization,
-          defaultTags,
-        );
-      }
-
-      // Register additional variant endpoints
-      const baseIdentifier = buildApiIdentifier(
+      const targets = getApiRouteTargets(
+        config,
         'aggregate',
-        defaultVariant,
         modelName,
         fieldName,
         'getAggregation',
       );
-      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      for (const variant of additionalVariants) {
-        const variantApiIdentifier = buildApiIdentifier(
-          'aggregate',
-          variant,
-          modelName,
-          fieldName,
-          'getAggregation',
-        );
-
-        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-        const variantAuthorization = getApiAuthorization(
-          config,
-          variantApiIdentifier,
-        );
-
-        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-        const variantAggregations =
-          getEffectiveAggregations(config, variantApiIdentifier) ??
-          field.aggregations!;
+      for (const {identifier, variant, policy} of targets) {
+        const aggregations = policy.supportedAggregations ?? field.aggregations;
 
         registerAggregateEndpoint(
           app,
           config,
           modelName,
           fieldName,
-          variantAggregations,
+          aggregations,
           variant,
-          variantApiIdentifier,
-          variantAuthorization,
-          variantTags,
+          identifier,
+          policy,
         );
       }
     }
@@ -108,14 +54,13 @@ export function registerAggregateRoutes(
  */
 function registerAggregateEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   fieldName: string,
   aggregations: Aggregation[],
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   // Build path with variant prefix
   const path = `/${variant}/${modelName}/aggregation/${fieldName}`;
@@ -125,8 +70,7 @@ function registerAggregateEndpoint(
     fieldName,
     modelName,
     aggregations,
-    authorization,
-    routeTags,
+    policy,
   );
 
   app.get(
@@ -134,7 +78,7 @@ function registerAggregateEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -240,19 +184,18 @@ function registerAggregateEndpoint(
 }
 
 function generateSchema(
-  config: AppConfig,
+  config: ResolvedAppConfig,
   fieldName: string,
   modelName: string,
   aggregations: Aggregation[],
-  authorization: boolean,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ) {
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   const schema: Record<string, unknown> = {
     summary: `Aggregate ${fieldName} on ${capitalizeFirstLetter(modelName)}`,
     description: `Get aggregation data for ${fieldName} in ${modelName}`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
+    tags: policy.tags,
     querystring: {
       type: 'object',
       properties: {

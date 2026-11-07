@@ -1,11 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getApiAuthorization, shouldApiBeEnabled} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   buildSecurityArray,
   getResponseStructureSchema,
@@ -13,73 +8,35 @@ import {
 import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+import {
+  ModelConfig,
+  ModelFieldConfig,
+  ResolvedAppConfig,
+} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const deletableFields = Object.entries(model.fields).filter(([, f]) =>
-      f.apis?.includes('delete'),
+      f.apis.includes('delete'),
     );
 
     for (const [fieldName, field] of deletableFields) {
-      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.delete`;
-
-      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
-        continue;
-
-      const defaultAuthorization = getApiAuthorization(
+      const targets = getApiRouteTargets(
         config,
-        defaultApiIdentifier,
-      );
-
-      registerDeleteEndpoint(
-        app,
-        config,
-        modelName,
-        fieldName,
-        field,
-        model,
-        defaultVariant,
-        defaultApiIdentifier,
-        defaultAuthorization,
-      );
-
-      const baseIdentifier = buildApiIdentifier(
         'model',
-        defaultVariant,
         modelName,
         fieldName,
         'delete',
       );
-      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      for (const variant of additionalVariants) {
-        const variantApiIdentifier = buildApiIdentifier(
-          'model',
-          variant,
-          modelName,
-          fieldName,
-          'delete',
-        );
-
-        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-        const variantAuthorization = getApiAuthorization(
-          config,
-          variantApiIdentifier,
-        );
-
-        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+      for (const {identifier, variant, policy} of targets) {
         registerDeleteEndpoint(
           app,
           config,
@@ -88,26 +45,23 @@ export function registerDeleteRoutes(
           field,
           model,
           variant,
-          variantApiIdentifier,
-          variantAuthorization,
-          variantTags,
+          identifier,
+          policy,
         );
       }
     }
   }
 }
-
 function registerDeleteEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   fieldName: string,
   field: ModelFieldConfig,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
@@ -115,8 +69,7 @@ function registerDeleteEndpoint(
     model,
     modelName,
     config,
-    authorization,
-    routeTags,
+    policy,
   );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
@@ -126,7 +79,7 @@ function registerDeleteEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -164,16 +117,15 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   modelName: string,
-  config: AppConfig,
-  authorization: boolean,
-  routeTags?: string[],
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
   const schema: Record<string, unknown> = {
     summary: `Delete ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
     description: `Delete records from ${capitalizeFirstLetter(modelName)} table where ${fieldName} matches the provided value`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Delete'],
+    tags: policy.tags,
     params: {
       type: 'object',
       properties: {
@@ -188,7 +140,7 @@ function generateSchema(
     response: getResponseStructureSchema([204], {}),
   };
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

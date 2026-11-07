@@ -1,9 +1,11 @@
 /**
  * Recursively resolves environment variables in the configuration object.
- * If a string starts with 'env:', it's replaced with the value of the environment variable.
- * This function modifies the object in-place.
+ * If a string starts with 'env:', it's replaced with the value of the
+ * environment variable.
+ *
+ * Pure: the input is never modified; a new resolved structure is returned.
  * @param config The configuration object to resolve.
- * @returns The configuration object with environment variables resolved.
+ * @returns A new configuration object with environment variables resolved.
  */
 export function resolveEnvVars<T>(config: T): T {
   if (typeof config === 'string') {
@@ -26,18 +28,16 @@ export function resolveEnvVars<T>(config: T): T {
   }
 
   if (Array.isArray(config)) {
-    for (let i = 0; i < config.length; i++) {
-      config[i] = resolveEnvVars(config[i]);
-    }
-    return config;
+    return config.map(value => resolveEnvVars(value)) as unknown as T;
   }
 
   if (config !== null && typeof config === 'object') {
     const obj = config as Record<string, unknown>;
+    const resolved: Record<string, unknown> = {};
     for (const key of Object.keys(obj)) {
-      obj[key] = resolveEnvVars(obj[key]);
+      resolved[key] = resolveEnvVars(obj[key]);
     }
-    return config;
+    return resolved as unknown as T;
   }
 
   return config;

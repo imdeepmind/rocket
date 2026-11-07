@@ -4,6 +4,20 @@ import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 import {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import otpPlugin from '@/plugin/otp';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
+import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
+
+const resolvedConfig = (raw: AppConfigInput): ResolvedAppConfig =>
+  resolveConfig(
+    {
+      ...raw,
+      application: {name: 'test', ...raw.application},
+      data: raw.data ?? {models: {}},
+    },
+    {mode: 'dev'},
+  );
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface MockCache {
@@ -70,6 +84,7 @@ describe('OTP Plugin', () => {
   describe('Plugin Registration', () => {
     it('should decorate fastify with otp service', async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
 
@@ -86,6 +101,7 @@ describe('OTP Plugin', () => {
   describe('sendOTPForVerification', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -161,14 +177,14 @@ describe('OTP Plugin', () => {
     });
 
     it('should not warn when a cache is configured', async () => {
-      (app as any).appConfig = {
+      (app as any).appConfig = resolvedConfig({
         infrastructure: {
           cache: {
             engine: 'redis',
             connection: {url: 'redis://localhost:6379'},
           },
         },
-      };
+      });
       const warnSpy = vi.spyOn(app.log, 'warn');
 
       await (app as any).otp.sendOTPForVerification('test@example.com');
@@ -200,6 +216,7 @@ describe('OTP Plugin', () => {
   describe('verify', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -296,6 +313,7 @@ describe('OTP Plugin', () => {
   describe('Error Handling', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -340,6 +358,7 @@ describe('OTP Plugin', () => {
   describe('Integration Tests', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);

@@ -1,6 +1,6 @@
-import {getAPIFromUniqueIdentifier} from '@/lib/config/identifier';
+import {getGeneratedApiIdentifiers} from '@/lib/config/route-registry';
 
-import {AppConfig, WebhookConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, WebhookConfig} from '@/interfaces/config';
 
 function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   const errors: string[] = [];
@@ -25,29 +25,24 @@ function validateWebhookConstraints(webhooks: WebhookConfig[]): string[] {
   return errors;
 }
 
-function validateApisConstraints(config: AppConfig): string[] {
+function validateApisConstraints(config: ResolvedAppConfig): string[] {
   const errors: string[] = [];
 
+  // Sparse-input compatibility: `validateConfig` also accepts legacy shapes.
   const apisConfigurations = config.apis ?? {};
   const keys = Object.keys(apisConfigurations);
+  const generatedIdentifiers = getGeneratedApiIdentifiers(config);
 
   for (const key of keys) {
     const parts = key.split('.');
 
-    if (parts[0] === 'custom') {
-      if (parts.length === 5) {
-        const endpointConfig = getAPIFromUniqueIdentifier(config, key);
-
-        if (!endpointConfig) {
-          errors.push(`apis/${key}: custom endpoint not found`);
-          continue;
-        }
-      } else {
-        errors.push(`apis/${key}: invalid key format`);
-        continue;
-      }
-    } else if (parts.length !== 5) {
+    if (parts.length !== 5) {
       errors.push(`apis/${key}: invalid key format`);
+      continue;
+    }
+
+    if (!generatedIdentifiers.has(key)) {
+      errors.push(`apis/${key}: does not match any generated API route`);
       continue;
     }
 
@@ -65,7 +60,7 @@ function validateApisConstraints(config: AppConfig): string[] {
 
     // validate the authorization, true only when auth is enabled
     const authorization = apisConfigurations[key]?.authorization;
-    if (authorization && !config.authentication?.enabled) {
+    if (authorization && !config.authentication.enabled) {
       errors.push(
         `apis/${key}/authorization: authorization is only allowed when auth is enabled`,
       );

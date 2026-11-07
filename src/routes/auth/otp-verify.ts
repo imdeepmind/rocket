@@ -1,30 +1,32 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {AppConfig, ModelBody, UpAuthProviderConfig} from '@/interfaces/config';
+import {
+  ModelBody,
+  ResolvedAppConfig,
+  UpAuthProviderConfig,
+} from '@/interfaces/config';
 
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 function registerOtpVerifyBase(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   path: string,
   action: 'login' | 'register' | 'forgotPassword',
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider
-    .config as UpAuthProviderConfig;
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
+
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
   const {model, usernameField} = upConfig.userModel;
 
   const authModelConfig = models[model];
@@ -33,47 +35,15 @@ function registerOtpVerifyBase(
 
   const operation = `otpVerify${capitalizeFirstLetter(action)}`;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.${operation}`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerOtpVerifyEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    usernameField,
-    upConfig,
-    action,
-    path,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     operation,
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      operation,
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerOtpVerifyEndpoint(
       app,
       config,
@@ -83,15 +53,15 @@ function registerOtpVerifyBase(
       action,
       path,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerOtpVerifyEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   usernameField: string,
   upConfig: UpAuthProviderConfig,
@@ -99,13 +69,13 @@ function registerOtpVerifyEndpoint(
   path: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     usernameField,
     model,
     action,
-    routeTags,
+    policy,
   );
 
   const routePath = `/${variant}${path}`;
@@ -238,14 +208,14 @@ function registerOtpVerifyEndpoint(
 
 export function registerLoginOtpVerifyRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerOtpVerifyBase(app, config, '/auth/login/verify/otp', 'login');
 }
 
 export function registerRegistrationOtpVerifyRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerOtpVerifyBase(app, config, '/auth/register/verify/otp', 'register');
 }
@@ -254,7 +224,7 @@ function generateSchema(
   usernameField: string,
   model: string,
   action: 'login' | 'register' | 'forgotPassword',
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ) {
   const isForgotPassword = action === 'forgotPassword';
 
@@ -308,7 +278,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Verify OTP for ${capitalizeFirstLetter(model)} ${action}`,
     description: `Verifies the OTP sent to the user's email during ${action}.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'OTP'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
   };
@@ -317,7 +287,7 @@ function generateSchema(
 
 export function registerForgotPasswordOtpVerifyRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   registerOtpVerifyBase(
     app,

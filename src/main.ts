@@ -6,21 +6,21 @@ import {Command} from 'commander';
 
 import {startServer} from '@/server';
 
-import {resolveEnvVars} from '@/lib/config/env';
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
+import {redactConfig} from '@/lib/config/redact';
 import {showWelcomeScreen} from '@/lib/server/welcome';
 
 import {CLIOptions} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {AppConfigInput} from '@/interfaces/config';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
 
 /**
  * Load Config
  */
-function loadConfig(configPath: string): AppConfig {
+function loadConfig(configPath: string): AppConfigInput {
   const raw = fs.readFileSync(configPath, 'utf-8');
-  const config = JSON.parse(raw);
-  return resolveEnvVars(config);
+  return JSON.parse(raw) as AppConfigInput;
 }
 
 /**
@@ -51,8 +51,33 @@ program
   )
   .option('-v, --verbose', 'Enable verbose logging', false)
   .option('--migrate', 'Run database migrations', false)
+  .option(
+    '--print-config',
+    'Resolve, validate and print the configuration, then exit',
+    false,
+  )
   .action(async (options: CLIOptions) => {
-    const {config, port, mode, verbose, migrate} = options;
+    const {config, port, mode, verbose, migrate, printConfig} = options;
+
+    // load the config; env vars and defaults are resolved by the pipeline
+    const loadedConfig = loadConfig(config);
+
+    // Set NODE_ENV based on mode
+    process.env.NODE_ENV = mode === 'prod' ? 'production' : 'development';
+
+    if (printConfig) {
+      try {
+        const resolved = resolveAndValidateConfig(loadedConfig, mode);
+        console.log(JSON.stringify(redactConfig(resolved), null, 2));
+      } catch (err) {
+        console.error(
+          chalk.red('Invalid configuration:'),
+          (err as Error).message,
+        );
+        process.exit(1);
+      }
+      return;
+    }
 
     // Fastify log cannot be used here as Fastify instance does not exist
     console.log(chalk.blue('Starting server with:'));
@@ -61,12 +86,6 @@ program
     console.log(chalk.blue(`Mode: ${mode}`));
     console.log(chalk.blue(`Verbose: ${verbose}`));
     console.log(chalk.blue(`Migrate: ${migrate}`));
-
-    // load the config, also resolve the env vars
-    const loadedConfig = loadConfig(config);
-
-    // Set NODE_ENV based on mode
-    process.env.NODE_ENV = mode === 'prod' ? 'production' : 'development';
     const {app, routes} = await startServer(
       loadedConfig,
       port,
@@ -88,7 +107,7 @@ program
     // Start listening
     try {
       await app.listen({port, host: '0.0.0.0'});
-      showWelcomeScreen(loadedConfig, port, routes);
+      showWelcomeScreen(app.appConfig, port, routes);
     } catch (err) {
       console.error(chalk.red('Failed to start server:'), err);
       process.exit(1);

@@ -9,6 +9,7 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
+import {resolveConfig} from '@/lib/config/resolve';
 import {
   registerErrorHandler,
   registerNotFoundHandler,
@@ -17,10 +18,10 @@ import {
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 
 import {
-  AppConfig,
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {
@@ -59,6 +60,7 @@ const upAuthConfig: AuthenticationConfig = {
         passwordField: 'password',
         isVerifiedField: 'is_active',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -87,22 +89,25 @@ async function createChangeEmailApp(
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
+      ...(apis ? {apis} : {}),
+      ...(apiVariants ? {apiVariants} : {}),
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-    ...(apis ? {apis} : {}),
-    ...(apiVariants ? {apiVariants} : {}),
-  };
-  app.appConfig = config;
+    {mode: 'dev'},
+  );
+  app.appConfig = config as ResolvedAppConfig;
 
   const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
   (app as any).cache = {
@@ -132,7 +137,7 @@ async function createChangeEmailApp(
   registerNotFoundHandler(app);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerEmailChangeRoute(app, config);
+    registerEmailChangeRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;
@@ -336,6 +341,7 @@ describe('PATCH /auth/user/email', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
           },
         },
       };

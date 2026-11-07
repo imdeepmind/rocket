@@ -9,27 +9,27 @@ export default fp(
     const swaggerConfig = docsConfig.openapi;
     const components: Record<string, unknown> = {};
 
-    if (
-      authentication?.enabled &&
-      authentication?.provider.type === 'up-auth'
-    ) {
-      components['securitySchemes'] = {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      };
-    }
+    if (authentication.enabled) {
+      const provider = authentication.provider;
+      if (provider.type === 'up-auth') {
+        components['securitySchemes'] = {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        };
+      }
 
-    if (authentication?.enabled && authentication.provider.type === 'api-key') {
-      components['securitySchemes'] = {
-        apiKeyAuth: {
-          type: 'apiKey',
-          name: 'x-api-key',
-          in: 'header',
-        },
-      };
+      if (provider.type === 'api-key') {
+        components['securitySchemes'] = {
+          apiKeyAuth: {
+            type: 'apiKey',
+            name: 'x-api-key',
+            in: 'header',
+          },
+        };
+      }
     }
 
     await fastify.register(swagger, {

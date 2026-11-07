@@ -2,7 +2,7 @@ import '@fastify/jwt';
 import 'fastify';
 
 import {DatabaseQuery, StructuredResponse} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -32,7 +32,7 @@ declare module 'fastify' {
     ) => StructuredResponse<T, R>;
     cache: import('@/plugin/cache').ICache;
     jwt: import('@fastify/jwt').JWT;
-    appConfig: AppConfig;
+    appConfig: ResolvedAppConfig;
     callWebhook: (
       trigger: 'request' | 'response',
       request: import('fastify').FastifyRequest,

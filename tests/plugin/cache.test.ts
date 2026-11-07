@@ -4,7 +4,9 @@ import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 
 import cachePlugin from '@/plugin/cache';
 
-import {AppConfig, CacheDbConfig} from '@/interfaces/config';
+import {resolveConfig} from '@/lib/config/resolve';
+
+import {CacheDbConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 // Mock ioredis
 vi.mock('ioredis', () => {
@@ -39,7 +41,10 @@ describe('cache plugin', () => {
   describe('NodeCache', () => {
     it('uses node-cache when no cache config is provided', async () => {
       app = Fastify();
-      app.appConfig = {} as unknown as AppConfig;
+      app.appConfig = resolveConfig(
+        {application: {name: 'test'}, data: {models: {}}},
+        {mode: 'dev'},
+      );
       await app.register(cachePlugin);
       await app.ready();
 
@@ -49,7 +54,10 @@ describe('cache plugin', () => {
 
     it('performs node-cache operations', async () => {
       app = Fastify();
-      app.appConfig = {} as unknown as AppConfig;
+      app.appConfig = resolveConfig(
+        {application: {name: 'test'}, data: {models: {}}},
+        {mode: 'dev'},
+      );
       await app.register(cachePlugin);
       await app.ready();
 
@@ -83,7 +91,7 @@ describe('cache plugin', () => {
       };
       app.appConfig = {
         infrastructure: {cache: mockConfig},
-      } as unknown as AppConfig;
+      } as unknown as ResolvedAppConfig;
 
       // Need to setup vi.mocked so we can control the instance methods properly,
       // but since we mocked the constructor we can intercept via vi.mocked

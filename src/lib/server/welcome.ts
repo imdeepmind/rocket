@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 export interface RouteInfo {
   method: string;
@@ -84,7 +84,7 @@ const MODEL_COLORS = [
 ];
 
 export function showWelcomeScreen(
-  config: AppConfig,
+  config: ResolvedAppConfig,
   port: number,
   routes: RouteInfo[],
 ) {
@@ -108,12 +108,12 @@ export function showWelcomeScreen(
     ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
     : chalk.gray('Disabled');
 
-  const cacheDbStatus = config.infrastructure.cache
-    ? chalk.magenta(config.infrastructure.cache.engine.toUpperCase())
-    : chalk.gray('Disabled');
+  const cacheDbStatus = chalk.magenta(
+    config.infrastructure.cache.engine.toUpperCase(),
+  );
 
   const rateLimit = config.application.rateLimit;
-  const rateLimitStatus = rateLimit?.enabled
+  const rateLimitStatus = rateLimit.enabled
     ? chalk.green(`${rateLimit.max} req / ${rateLimit.timeWindow}`)
     : chalk.gray('Disabled');
 

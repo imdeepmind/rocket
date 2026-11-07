@@ -8,9 +8,10 @@ import {
   type MockInstance,
 } from 'vitest';
 
+import {resolveConfig} from '@/lib/config/resolve';
 import {RouteInfo, showWelcomeScreen} from '@/lib/server/welcome';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 describe('welcome utility', () => {
   let consoleSpy: MockInstance<(...args: unknown[]) => void>;
@@ -23,47 +24,50 @@ describe('welcome utility', () => {
     vi.restoreAllMocks();
   });
 
-  const mockConfig: AppConfig = {
-    application: {
-      name: 'Test App',
-      logLevel: 'info',
-    },
-    docs: {
-      openapi: {
-        enabled: true,
-        path: '/docs',
-        info: {
-          title: 'Rocket API',
-          description: 'Test API',
-          version: '1.0.0',
-        },
+  const mockConfig = resolveConfig(
+    {
+      application: {
+        name: 'Test App',
+        logLevel: 'info',
       },
-    },
-    infrastructure: {
-      database: {
-        engine: 'sqlite',
-        connection: {
-          url: ':memory:',
-        },
-      },
-    },
-    data: {
-      models: {
-        User: {
-          fields: {
-            id: {type: 'integer', primaryKey: true},
-            name: {type: 'string'},
-          },
-        },
-        Post: {
-          fields: {
-            id: {type: 'integer', primaryKey: true},
-            title: {type: 'string'},
+      docs: {
+        openapi: {
+          enabled: true,
+          path: '/docs',
+          info: {
+            title: 'Rocket API',
+            description: 'Test API',
+            version: '1.0.0',
           },
         },
       },
+      infrastructure: {
+        database: {
+          engine: 'sqlite',
+          connection: {
+            url: ':memory:',
+          },
+        },
+      },
+      data: {
+        models: {
+          User: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              name: {type: 'string'},
+            },
+          },
+          Post: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              title: {type: 'string'},
+            },
+          },
+        },
+      },
     },
-  };
+    {mode: 'dev'},
+  );
 
   const mockRoutes: RouteInfo[] = [
     {method: 'GET', url: '/users'},
@@ -83,6 +87,7 @@ describe('welcome utility', () => {
     expect(output).toContain('http://0.0.0.0:3000');
     expect(output).toContain('http://0.0.0.0:3000/docs');
     expect(output).toContain('SQLITE');
+    expect(output).toContain('MEMORY');
     expect(output).toContain('User');
     expect(output).toContain('Post');
     expect(output).toContain('/users');
@@ -94,7 +99,7 @@ describe('welcome utility', () => {
   });
 
   test('showWelcomeScreen handles disabled swagger', () => {
-    const disabledSwaggerConfig: AppConfig = {
+    const disabledSwaggerConfig: ResolvedAppConfig = {
       ...mockConfig,
       docs: {
         openapi: {...mockConfig.docs.openapi, enabled: false},
@@ -110,12 +115,14 @@ describe('welcome utility', () => {
   });
 
   test('showWelcomeScreen handles different database engines', () => {
-    const pgConfig: AppConfig = {
+    const pgConfig: ResolvedAppConfig = {
       ...mockConfig,
       infrastructure: {
+        ...mockConfig.infrastructure,
         database: {
           engine: 'postgres',
           connection: {url: 'postgresql://localhost'},
+          timeout: 10000,
         },
       },
     };
@@ -141,18 +148,18 @@ describe('welcome utility', () => {
   });
 
   test('showWelcomeScreen handles cache and rateLimit', () => {
-    const fullConfig: AppConfig = {
+    const fullConfig: ResolvedAppConfig = {
       ...mockConfig,
       infrastructure: {
         ...mockConfig.infrastructure,
         cache: {
           engine: 'redis',
           connection: {url: 'redis://localhost'},
+          timeout: 10000,
         },
       },
       application: {
-        name: 'Test App',
-        logLevel: 'info',
+        ...mockConfig.application,
         rateLimit: {
           enabled: true,
           max: 100,
@@ -171,11 +178,10 @@ describe('welcome utility', () => {
   });
 
   test('showWelcomeScreen handles disabled rateLimit', () => {
-    const disabledRateLimitConfig: AppConfig = {
+    const disabledRateLimitConfig: ResolvedAppConfig = {
       ...mockConfig,
       application: {
-        name: 'Test App',
-        logLevel: 'info',
+        ...mockConfig.application,
         rateLimit: {
           enabled: false,
           max: 100,

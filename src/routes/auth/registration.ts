@@ -1,10 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   generateJSONValidationSchema,
   stripAdditionalPostFields,
@@ -12,9 +8,9 @@ import {
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
 import {
-  AppConfig,
   ModelBody,
   ModelConfig,
+  ResolvedAppConfig,
   UpAuthProviderConfig,
 } from '@/interfaces/config';
 
@@ -23,14 +19,16 @@ import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerRegistrationRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
-  const upConfig = config.authentication!.provider
-    .config as UpAuthProviderConfig;
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
+
+  const upConfig = authentication.provider.config as UpAuthProviderConfig;
   const {model, passwordField} = upConfig.userModel;
   const requiresOtp = !!upConfig.userModel.isVerifiedField;
   const isVerifiedField = upConfig.userModel.isVerifiedField;
@@ -39,48 +37,15 @@ export function registerRegistrationRoute(
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.registration`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerRegistrationEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    authModelConfig,
-    passwordField,
-    isVerifiedField,
-    requiresOtp,
-    upConfig,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'registration',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'registration',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerRegistrationEndpoint(
       app,
       config,
@@ -91,15 +56,15 @@ export function registerRegistrationRoute(
       requiresOtp,
       upConfig,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerRegistrationEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   authModelConfig: ModelConfig,
   passwordField: string,
@@ -108,7 +73,7 @@ function registerRegistrationEndpoint(
   upConfig: UpAuthProviderConfig,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
@@ -116,7 +81,7 @@ function registerRegistrationEndpoint(
     model,
     requiresOtp,
     isVerifiedField,
-    routeTags,
+    policy,
   );
 
   const path = `/${variant}/auth/register`;
@@ -209,9 +174,9 @@ function generateSchema(
   authModelConfig: ModelConfig,
   passwordField: string,
   model: string,
-  requiresOtp?: boolean,
-  isVerifiedField?: string,
-  routeTags?: string[],
+  requiresOtp: boolean | undefined,
+  isVerifiedField: string | undefined,
+  policy: ResolvedApiPolicy,
 ) {
   const bodyModelConfig =
     requiresOtp && isVerifiedField
@@ -260,7 +225,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Register a new ${capitalizeFirstLetter(model)} user`,
     description: `Creates a new user record in the "${model}" table. The password is hashed with bcrypt before being persisted.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Register'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
   };

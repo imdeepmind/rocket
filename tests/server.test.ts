@@ -13,6 +13,8 @@ import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
 import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
@@ -319,14 +321,18 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(9);
+    // db, cache, response, ssp, webhook, auth (always), swagger, swagger-ui,
+    // and the /api prefix
+    expect(mockApp.register).toHaveBeenCalledTimes(10);
 
     const prefixCall = mockApp.register.mock.calls.find(
       ([, opts]) => opts?.prefix === '/api',
     );
     expect(prefixCall).toBeDefined();
 
-    expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
+    expect(migrateDatabase).toHaveBeenCalledWith(
+      resolveConfig(mockConfig, {mode: 'dev'}),
+    );
     expect(registerRoutes).toHaveBeenCalled();
   });
 
@@ -344,7 +350,8 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    // db, cache, response, ssp, webhook, auth (always), and the /api prefix
+    expect(mockApp.register).toHaveBeenCalledTimes(7);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -356,7 +363,7 @@ describe('Server', () => {
 
     expect(registerRoutes).toHaveBeenCalledWith(
       expect.any(Object),
-      noModelsConfig,
+      resolveConfig(noModelsConfig, {mode: 'prod'}),
     );
     expect(mockApp.register).toHaveBeenCalledWith(
       expect.any(Function),
@@ -674,6 +681,7 @@ describe('Server', () => {
                 usernameField: 'email',
                 passwordField: 'password',
               },
+              jwtSecret: 'this-will-never-be-used',
             },
           },
         },

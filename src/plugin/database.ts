@@ -63,7 +63,7 @@ function makeQueryExecutor(
 export default fp(async (fastify: FastifyInstance) => {
   const dbConfig = fastify.appConfig.infrastructure.database;
   let dbInstance: DatabaseQuery;
-  const timeout = dbConfig.timeout ?? 10000;
+  const timeout = dbConfig.timeout;
 
   if (dbConfig.engine === 'postgres') {
     const pool = new Pool({

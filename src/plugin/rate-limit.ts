@@ -8,7 +8,7 @@ export default fp(
   async (fastify: FastifyInstance) => {
     const config = fastify.appConfig.application.rateLimit;
 
-    const windowMs = parseDuration(config!.timeWindow);
+    const windowMs = parseDuration(config.timeWindow);
 
     class CustomCacheStore {
       constructor(private options: unknown) {}

@@ -1,4 +1,4 @@
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 export const getResponseStructureSchema = (
   codes: number[],
@@ -51,22 +51,24 @@ export const getResponseStructureSchema = (
  * Build the security array for the schema based on authentication config.
  */
 export function buildSecurityArray(
-  config: AppConfig,
+  config: ResolvedAppConfig,
   authorization: boolean,
 ): Array<{[key: string]: string[]}> {
   const security: Array<{[key: string]: string[]}> = [];
 
   if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'up-auth' &&
+    config.authentication.enabled &&
+    config.authentication.enabled &&
+    config.authentication.provider.type === 'up-auth' &&
     authorization
   ) {
     security.push({bearerAuth: []});
   }
 
   if (
-    config.authentication?.enabled &&
-    config.authentication?.provider.type === 'api-key' &&
+    config.authentication.enabled &&
+    config.authentication.enabled &&
+    config.authentication.provider.type === 'api-key' &&
     authorization
   ) {
     security.push({apiKeyAuth: []});

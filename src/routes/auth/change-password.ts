@@ -1,74 +1,43 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerChangePasswordRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
 
   const {model, idField, passwordField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    authentication.provider.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.changePassword`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerChangePasswordEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    idField,
-    passwordField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'changePassword',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'changePassword',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerChangePasswordEndpoint(
       app,
       config,
@@ -76,23 +45,23 @@ export function registerChangePasswordRoute(
       idField,
       passwordField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerChangePasswordEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   idField: string,
   passwordField: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model, routeTags);
+  const schema: Record<string, unknown> = generateSchema(model, policy);
 
   const path = `/${variant}/auth/change-password`;
 
@@ -175,7 +144,7 @@ function registerChangePasswordEndpoint(
   );
 }
 
-function generateSchema(model: string, routeTags?: string[]) {
+function generateSchema(model: string, policy: ResolvedApiPolicy) {
   const bodySchema = {
     type: 'object',
     required: ['existingPassword', 'newPassword'],
@@ -202,7 +171,7 @@ function generateSchema(model: string, routeTags?: string[]) {
   const schema: Record<string, unknown> = {
     summary: `Change password for ${capitalizeFirstLetter(model)}`,
     description: `Changes the password for an authenticated user in the "${model}" table.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

@@ -5,7 +5,7 @@ import {
   getResponseStructureSchema,
 } from '@/lib/schema/response';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 // test cases for getResponseStructureSchema
 test('should get response structure schema', () => {
@@ -137,7 +137,7 @@ test('run getResponseStructureSchema with no rowSchema', () => {
 });
 
 // test cases for buildSecurityArray
-const baseConfig: AppConfig = {
+const baseConfig = {
   application: {name: 'test', logLevel: 'info'},
   docs: {
     openapi: {
@@ -153,7 +153,7 @@ const baseConfig: AppConfig = {
     },
   },
   data: {models: {}},
-};
+} as unknown as ResolvedAppConfig;
 
 const upAuthUserModel = {
   model: 'user',
@@ -163,67 +163,67 @@ const upAuthUserModel = {
 };
 
 test('should return empty array when authentication is disabled', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: false,
       provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, true)).toEqual([]);
 });
 
 test('should return empty array when authentication is disabled and authorization is false', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: false,
       provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, false)).toEqual([]);
 });
 
 test('should return bearerAuth when provider is up-auth and authorization is true', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: true,
       provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, true)).toEqual([{bearerAuth: []}]);
 });
 
 test('should return apiKeyAuth when provider is api-key and authorization is true', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: true,
       provider: {type: 'api-key', config: {key: 'test-key'}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, true)).toEqual([{apiKeyAuth: []}]);
 });
 
 test('should return empty array when authorization is false even if auth is enabled', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: true,
       provider: {type: 'up-auth', config: {userModel: upAuthUserModel}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, false)).toEqual([]);
 });
 
 test('should return empty array when authorization is false with api-key provider', () => {
-  const config: AppConfig = {
+  const config = {
     ...baseConfig,
     authentication: {
       enabled: true,
       provider: {type: 'api-key', config: {key: 'test-key'}},
     },
-  };
+  } as unknown as ResolvedAppConfig;
   expect(buildSecurityArray(config, false)).toEqual([]);
 });

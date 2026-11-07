@@ -5,13 +5,15 @@ import authPlugin from '@/plugin/auth';
 import databasePlugin from '@/plugin/database';
 import responsePlugin from '@/plugin/response';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {registerMeRoute} from '@/routes/auth/me';
 
 import {
-  AppConfig,
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
@@ -41,6 +43,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -64,28 +67,31 @@ async function createMeApp(
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
+      ...(apis ? {apis} : {}),
+      ...(apiVariants ? {apiVariants} : {}),
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-    ...(apis ? {apis} : {}),
-    ...(apiVariants ? {apiVariants} : {}),
-  };
-  app.appConfig = config;
+    {mode: 'dev'},
+  );
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerMeRoute(app, config);
+    registerMeRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;
