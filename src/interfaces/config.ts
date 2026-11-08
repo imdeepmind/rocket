@@ -104,6 +104,17 @@ export interface RateLimitConfig {
   timeWindow: string;
 }
 
+export interface CorsConfig {
+  enabled: boolean;
+  origins?: string[];
+  methods?: (HTTPMethod | 'HEAD')[];
+  allowedHeaders?: string[];
+  exposedHeaders?: string[];
+  credentials?: boolean;
+  maxAge?: number;
+  routes?: string[];
+}
+
 export interface ModelFieldConfig {
   type: DataType;
   primaryKey?: boolean;
@@ -148,6 +159,7 @@ export interface ApplicationConfig {
   name: string;
   logLevel: LogLevel;
   rateLimit?: RateLimitConfig;
+  cors?: CorsConfig;
   dangerouslyOverrideDefaultVariant?: string;
   magicVariables?: Record<string, string | number | boolean>;
 }
@@ -276,9 +288,10 @@ export type DocsInfoConfig = DocsConfig['openapi']['info'];
  */
 export interface ApplicationConfigInput extends Omit<
   Partial<ApplicationConfig>,
-  'rateLimit'
+  'rateLimit' | 'cors'
 > {
   rateLimit?: Partial<RateLimitConfig>;
+  cors?: Partial<CorsConfig>;
 }
 
 export interface DocsConfigInput extends Omit<Partial<DocsConfig>, 'openapi'> {
@@ -321,6 +334,17 @@ export interface AppConfigInput {
   apiVariants?: Record<string, ApiVariantEntry>;
 }
 
+export interface ResolvedCorsConfig {
+  enabled: boolean;
+  origins: string[];
+  methods: (HTTPMethod | 'HEAD')[];
+  allowedHeaders: string[];
+  exposedHeaders: string[];
+  credentials: boolean;
+  maxAge: number;
+  routes: string[];
+}
+
 /**
  * Dense, consumer-facing configuration produced by `resolveConfig`.
  */
@@ -328,6 +352,7 @@ export interface ResolvedApplicationConfig {
   name: string;
   logLevel: LogLevel;
   rateLimit: RateLimitConfig;
+  cors: ResolvedCorsConfig;
   dangerouslyOverrideDefaultVariant: string;
   magicVariables: Record<string, string | number | boolean>;
 }

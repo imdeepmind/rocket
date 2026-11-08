@@ -7,6 +7,7 @@ import cachePlugin, {
   NODE_CACHE_OTP_WARNING,
 } from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
+import corsPlugin from '@/plugin/cors';
 import dbPlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
@@ -123,6 +124,11 @@ export async function startServer(
   // config-driven rate limit
   if (resolvedConfig.application.rateLimit.enabled) {
     await app.register(rateLimitPlugin);
+  }
+
+  // config-driven cors
+  if (resolvedConfig.application.cors.enabled) {
+    await app.register(corsPlugin);
   }
 
   await app.register(responsePlugin);
