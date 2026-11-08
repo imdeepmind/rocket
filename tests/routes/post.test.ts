@@ -1,6 +1,10 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
+import {
+  ApisConfig,
+  AuthenticationConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 import {
   pgClientQueryMock,
@@ -194,6 +198,78 @@ describe('test post api', () => {
         'INSERT INTO "posts" ("title") VALUES ($1);',
         ['Hello'],
       );
+
+      await fastify.close();
+    });
+  });
+
+  describe('server-side params', () => {
+    const sspModel: Record<string, ModelConfig> = {
+      todos: {
+        fields: {
+          id: {type: 'integer', primaryKey: true, autoIncrement: true},
+          title: {type: 'string'},
+          authorId: {type: 'integer', nullable: false},
+        },
+      },
+    };
+
+    const sspApis: ApisConfig = {
+      'model.v1.todos.unknown.insert': {
+        enabled: true,
+        authorization: true,
+        serverSideParams: [{type: 'body', name: 'authorId', value: '[userId]'}],
+      },
+    };
+
+    test('injects [userId] into the body and overrides client values', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        sspModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/todos/',
+        headers: {authorization: `Bearer ${token}`},
+        // The client tries to impersonate another user; the server value wins.
+        payload: {title: 'Alice todo', authorId: 999},
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toEqual({
+        title: 'Alice todo',
+        authorId: 7,
+      });
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'INSERT INTO "todos" ("title", "authorId") VALUES ($1, $2);',
+        ['Alice todo', 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('returns 401 before injecting when auth fails', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        sspModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/todos/',
+        payload: {title: 'Alice todo'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
 
       await fastify.close();
     });

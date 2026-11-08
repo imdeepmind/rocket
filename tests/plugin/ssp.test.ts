@@ -749,3 +749,110 @@ describe('ssp plugin – onRoute hook', () => {
     await app.ready();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests for the production lifecycle: SSP must run in preHandler
+// ---------------------------------------------------------------------------
+describe('ssp plugin – lifecycle', () => {
+  it('injects a query SSP after auth+validation so it survives to the handler', async () => {
+    const app = Fastify();
+    app.appConfig = resolvedConfig({
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [
+            {type: 'query', name: 'authorId_eq', value: '[userId]'},
+          ],
+        },
+      },
+    });
+    await app.register(sspPlugin);
+
+    app.addHook('preHandler', async request => {
+      app.enforceSSP(request);
+    });
+
+    app.get('/test', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {page: {type: 'integer'}, authorId_eq: {type: 'string'}},
+          additionalProperties: false,
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      preValidation: async request => {
+        request.user = {id: '42', email: 'test@example.com'};
+      },
+      handler: async (request: FastifyRequest) => ({query: request.query}),
+    });
+
+    await app.ready();
+
+    const res = await app.inject({
+      method: 'GET',
+      // A client-supplied value for a server-side param must not win.
+      url: '/test?page=1&authorId_eq=999',
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().query).toEqual({page: 1, authorId_eq: '42'});
+
+    await app.close();
+  });
+
+  it('injects a body SSP after validation so it survives to the handler', async () => {
+    const app = Fastify();
+    app.appConfig = resolvedConfig({
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: [
+            {type: 'body', name: 'authorId', value: '[userId]'},
+          ],
+        },
+      },
+    });
+    await app.register(sspPlugin);
+
+    app.addHook('preHandler', async request => {
+      app.enforceSSP(request);
+    });
+
+    app.post('/test', {
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            title: {type: 'string'},
+            authorId: {type: 'integer'},
+          },
+          required: ['title', 'authorId'],
+          additionalProperties: false,
+        },
+      },
+      config: {apiIdentifier: 'test-api'},
+      preValidation: async request => {
+        request.user = {id: '42', email: 'test@example.com'};
+      },
+      handler: async (request: FastifyRequest) => ({body: request.body}),
+    });
+
+    await app.ready();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/test',
+      // A client-supplied value for a server-side param must not win.
+      payload: {title: 'write regression tests', authorId: 999},
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().body).toEqual({
+      title: 'write regression tests',
+      authorId: '42',
+    });
+
+    await app.close();
+  });
+});

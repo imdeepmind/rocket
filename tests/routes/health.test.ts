@@ -81,7 +81,7 @@ async function createHealthApp(
 
   await app.register(
     async apiApp => {
-      apiApp.addHook('preValidation', async request => {
+      apiApp.addHook('preHandler', async request => {
         apiApp.enforceSSP(request);
       });
       registerHealthRoute(apiApp, resolvedConfig);

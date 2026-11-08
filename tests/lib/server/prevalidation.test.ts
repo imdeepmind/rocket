@@ -12,7 +12,6 @@ describe('buildPreValidation', () => {
       message,
       data,
     })),
-    enforceSSP: vi.fn(),
     ...overrides,
   });
 
@@ -77,7 +76,7 @@ describe('buildPreValidation', () => {
 
   // --- default checks: ['auth'] ---
 
-  test('default checks: calls authenticate but not enforceSSP when auth succeeds', async () => {
+  test('default checks: calls authenticate when auth succeeds', async () => {
     const app = buildMockApp();
     const request = buildMockRequest();
     const reply = buildMockReply();
@@ -86,7 +85,6 @@ describe('buildPreValidation', () => {
     await handler(request as never, reply as never);
 
     expect(request.authenticate).toHaveBeenCalledTimes(1);
-    expect(app.enforceSSP).not.toHaveBeenCalled();
     expect(reply.status).not.toHaveBeenCalled();
     expect(reply.send).not.toHaveBeenCalled();
   });
@@ -106,7 +104,6 @@ describe('buildPreValidation', () => {
     expect(reply.send).toHaveBeenCalledWith(
       app.buildResponse(401, 'Invalid or expired authentication token', null),
     );
-    expect(app.enforceSSP).not.toHaveBeenCalled();
   });
 
   test('default checks: skips auth when auth is disabled', async () => {
@@ -118,7 +115,6 @@ describe('buildPreValidation', () => {
     await handler(request as never, reply as never);
 
     expect(request.authenticate).not.toHaveBeenCalled();
-    expect(app.enforceSSP).not.toHaveBeenCalled();
   });
 
   test('default checks: skips auth when authorization is false', async () => {
@@ -130,12 +126,11 @@ describe('buildPreValidation', () => {
     await handler(request as never, reply as never);
 
     expect(request.authenticate).not.toHaveBeenCalled();
-    expect(app.enforceSSP).not.toHaveBeenCalled();
   });
 
   // --- single checks ---
 
-  test('auth only: calls authenticate but not enforceSSP', async () => {
+  test('auth only: calls authenticate', async () => {
     const app = buildMockApp();
     const request = buildMockRequest();
     const reply = buildMockReply();
@@ -146,21 +141,6 @@ describe('buildPreValidation', () => {
     await handler(request as never, reply as never);
 
     expect(request.authenticate).toHaveBeenCalledTimes(1);
-    expect(app.enforceSSP).not.toHaveBeenCalled();
-  });
-
-  test('ssp only: skips auth, calls enforceSSP', async () => {
-    const app = buildMockApp();
-    const request = buildMockRequest();
-    const reply = buildMockReply();
-
-    const handler = buildPreValidation(app as never, authEnabledConfig, true, [
-      'ssp',
-    ]);
-    await handler(request as never, reply as never);
-
-    expect(request.authenticate).not.toHaveBeenCalled();
-    expect(app.enforceSSP).toHaveBeenCalledWith(request);
   });
 
   test('default checks should be auth only', async () => {
@@ -172,7 +152,6 @@ describe('buildPreValidation', () => {
     await handler(request as never, reply as never);
 
     expect(request.authenticate).toHaveBeenCalledTimes(1);
-    expect(app.enforceSSP).not.toHaveBeenCalled();
   });
 
   test('auth fails with 401 when api-key provider is used', async () => {
@@ -194,6 +173,5 @@ describe('buildPreValidation', () => {
 
     expect(request.authenticate).toHaveBeenCalledTimes(1);
     expect(reply.status).toHaveBeenCalledWith(401);
-    expect(app.enforceSSP).not.toHaveBeenCalled();
   });
 });

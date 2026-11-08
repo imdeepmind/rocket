@@ -157,7 +157,10 @@ export async function startServer(
   // register all config-driven routes under /api prefix (swagger excluded)
   await app.register(
     async app => {
-      app.addHook('preValidation', async request => {
+      // Must run in preHandler: auth (route-level preValidation) has populated
+      // request.user, and AJV validation has finished, so injected values are
+      // neither resolved against an empty user nor stripped as unknown keys.
+      app.addHook('preHandler', async request => {
         app.enforceSSP(request);
       });
 

@@ -89,6 +89,11 @@ export async function createTestApp(
   await fastify.register(authPlugin);
 
   if (Object.keys(models).length > 0 || apis || customEndpoints) {
+    // Mirror the production lifecycle in startServer: SSP injection runs in
+    // preHandler so auth has populated request.user and AJV has validated.
+    fastify.addHook('preHandler', async request => {
+      fastify.enforceSSP(request);
+    });
     registerRoutes(fastify, appConfig);
   }
   await fastify.ready();

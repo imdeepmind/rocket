@@ -1,6 +1,10 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
+import {
+  ApisConfig,
+  AuthenticationConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -556,6 +560,83 @@ describe('test get-all api', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.data).toHaveLength(1);
+      await fastify.close();
+    });
+  });
+
+  describe('server-side params', () => {
+    const sspModel: Record<string, ModelConfig> = {
+      todos: {
+        fields: {
+          id: {type: 'integer', primaryKey: true},
+          title: {type: 'string'},
+          authorId: {type: 'integer', query: ['eq']},
+        },
+      },
+    };
+
+    const sspApis: ApisConfig = {
+      'model.v1.todos.unknown.getAll': {
+        enabled: true,
+        authorization: true,
+        serverSideParams: [
+          {type: 'query', name: 'authorId_eq', value: '[userId]'},
+        ],
+      },
+    };
+
+    test('injects [userId] as a query filter and overrides client values', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, title: 'Alice todo', authorId: 7}],
+          rowCount: 1,
+        }) // SELECT
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(
+        pgConfig,
+        sspModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'GET',
+        // The client tries to widen the scope; the server value must win.
+        url: '/v1/todos/?authorId_eq=999',
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'SELECT "id", "title", "authorId" FROM "todos" WHERE "authorId" = $1 LIMIT $2 OFFSET $3;',
+        [7, 20, 0],
+      );
+
+      await fastify.close();
+    });
+
+    test('returns 401 before injecting when auth fails', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        sspModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/todos/',
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
       await fastify.close();
     });
   });
