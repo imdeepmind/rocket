@@ -6,8 +6,15 @@ import {
   pgClientQueryMock,
   pgConnectMock,
   pgQueryMock,
+  sqliteExecMock,
+  sqliteRunMock,
 } from '@tests/helpers/db-mocks';
-import {createTestApp, mockModels, pgConfig} from '@tests/helpers/test-app';
+import {
+  createTestApp,
+  mockModels,
+  pgConfig,
+  sqliteConfig,
+} from '@tests/helpers/test-app';
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
@@ -30,6 +37,8 @@ describe('test post api', () => {
     // Clear mock state between tests so call assertions are isolated
     pgQueryMock.mockClear();
     pgClientQueryMock.mockClear();
+    sqliteRunMock.mockClear();
+    sqliteExecMock.mockClear();
   });
 
   describe('happy path', () => {
@@ -364,6 +373,122 @@ describe('test post api', () => {
       });
       expect(response.body).not.toContain('23505');
       expect(response.body).not.toContain('duplicate key');
+
+      await fastify.close();
+    });
+
+    test('should return 409 on unique violation with SQLite', async () => {
+      const fastify = await createTestApp(sqliteConfig, mockModels);
+      const constraintError = Object.assign(
+        new Error('UNIQUE constraint failed: users.email'),
+        {code: 'SQLITE_CONSTRAINT_UNIQUE'},
+      );
+      sqliteRunMock.mockImplementationOnce(() => {
+        throw constraintError;
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'taken@example.com'},
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        code: 409,
+        message: 'Email already exists',
+        data: null,
+      });
+      expect(response.body).not.toContain('SQLITE_CONSTRAINT');
+      expect(response.body).not.toContain('UNIQUE constraint failed');
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
+
+      await fastify.close();
+    });
+
+    test('should return 400 on foreign key violation with SQLite', async () => {
+      const fastify = await createTestApp(sqliteConfig, mockModels);
+      const constraintError = Object.assign(
+        new Error('FOREIGN KEY constraint failed'),
+        {code: 'SQLITE_CONSTRAINT_FOREIGNKEY'},
+      );
+      sqliteRunMock.mockImplementationOnce(() => {
+        throw constraintError;
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: 'The request references a record that does not exist',
+        data: null,
+      });
+      expect(response.body).not.toContain('SQLITE_CONSTRAINT');
+      expect(response.body).not.toContain('FOREIGN KEY');
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
+
+      await fastify.close();
+    });
+
+    test('should return 400 on not-null violation with SQLite', async () => {
+      const fastify = await createTestApp(sqliteConfig, mockModels);
+      const constraintError = Object.assign(
+        new Error('NOT NULL constraint failed: users.name'),
+        {code: 'SQLITE_CONSTRAINT_NOTNULL'},
+      );
+      sqliteRunMock.mockImplementationOnce(() => {
+        throw constraintError;
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: 'A required field is missing',
+        data: null,
+      });
+      expect(response.body).not.toContain('SQLITE_CONSTRAINT');
+      expect(response.body).not.toContain('NOT NULL');
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
+
+      await fastify.close();
+    });
+
+    test('should return 400 on check constraint violation with SQLite', async () => {
+      const fastify = await createTestApp(sqliteConfig, mockModels);
+      const constraintError = Object.assign(
+        new Error('CHECK constraint failed: age >= 0'),
+        {code: 'SQLITE_CONSTRAINT_CHECK'},
+      );
+      sqliteRunMock.mockImplementationOnce(() => {
+        throw constraintError;
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/v1/users/',
+        payload: {name: 'Test', email: 'test@example.com'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        code: 400,
+        message: 'The provided data violates a database constraint',
+        data: null,
+      });
+      expect(response.body).not.toContain('SQLITE_CONSTRAINT');
+      expect(response.body).not.toContain('CHECK constraint failed');
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
 
       await fastify.close();
     });

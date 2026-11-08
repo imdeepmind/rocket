@@ -18,7 +18,8 @@ export interface DatabaseQuery {
 }
 
 export interface DatabaseErrorLike {
-  code: string;
+  code?: string;
+  name?: string;
   message?: unknown;
   detail?: unknown;
 }

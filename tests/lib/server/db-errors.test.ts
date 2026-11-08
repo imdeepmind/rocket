@@ -32,6 +32,20 @@ describe('isDatabaseError', () => {
     expect(isDatabaseError({code: 'SQLITE_CONSTRAINT_UNIQUE'})).toBe(true);
     expect(isDatabaseError({code: 'SQLITE_BUSY'})).toBe(true);
   });
+
+  test('should recognize SqliteError by name or constraint message', () => {
+    expect(isDatabaseError({name: 'SqliteError'})).toBe(true);
+    expect(isDatabaseError(new Error('FOREIGN KEY constraint failed'))).toBe(
+      true,
+    );
+    expect(isDatabaseError(new Error('NOT NULL constraint failed: name'))).toBe(
+      true,
+    );
+    expect(
+      isDatabaseError(new Error('CHECK constraint failed: age >= 0')),
+    ).toBe(true);
+    expect(isDatabaseError(new Error('near "SELEC": syntax error'))).toBe(true);
+  });
 });
 
 describe('describeDatabaseError', () => {
@@ -171,16 +185,68 @@ describe('describeDatabaseError', () => {
     });
   });
 
-  test('should map other SQLite constraint violations to 400', () => {
+  test('should map SQLite foreign key violations to 400 with a friendly message', () => {
     expect(
       describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_FOREIGNKEY')),
+    ).toEqual({
+      statusCode: 400,
+      message: 'The request references a record that does not exist',
+    });
+    expect(
+      describeDatabaseError(
+        sqliteError('SQLITE_CONSTRAINT', 'FOREIGN KEY constraint failed'),
+      ),
+    ).toEqual({
+      statusCode: 400,
+      message: 'The request references a record that does not exist',
+    });
+  });
+
+  test('should map SQLite not-null violations to 400 with a friendly message', () => {
+    expect(
+      describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_NOTNULL')),
+    ).toEqual({
+      statusCode: 400,
+      message: 'A required field is missing',
+    });
+    expect(
+      describeDatabaseError(
+        sqliteError(
+          'SQLITE_CONSTRAINT',
+          'NOT NULL constraint failed: users.name',
+        ),
+      ),
+    ).toEqual({
+      statusCode: 400,
+      message: 'A required field is missing',
+    });
+  });
+
+  test('should map SQLite check constraint violations to 400', () => {
+    expect(
+      describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_CHECK')),
     ).toEqual({
       statusCode: 400,
       message: 'The provided data violates a database constraint',
     });
     expect(
-      describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_NOTNULL')),
+      describeDatabaseError(
+        sqliteError('SQLITE_CONSTRAINT', 'CHECK constraint failed: age >= 0'),
+      ),
     ).toEqual({
+      statusCode: 400,
+      message: 'The provided data violates a database constraint',
+    });
+  });
+
+  test('should map other SQLite constraint violations to 400', () => {
+    expect(
+      describeDatabaseError(sqliteError('SQLITE_CONSTRAINT_TRIGGER')),
+    ).toEqual({
+      statusCode: 400,
+      message: 'The provided data violates a database constraint',
+    });
+    expect(describeDatabaseError(sqliteError('SQLITE_CONSTRAINT'))).toEqual({
       statusCode: 400,
       message: 'The provided data violates a database constraint',
     });
@@ -203,6 +269,16 @@ describe('describeDatabaseError', () => {
       message: 'Internal Server Error',
     });
     expect(describeDatabaseError(sqliteError('SQLITE_ERROR'))).toEqual({
+      statusCode: 500,
+      message: 'Internal Server Error',
+    });
+    expect(
+      describeDatabaseError(
+        Object.assign(new Error('near "SELEC": syntax error'), {
+          name: 'SqliteError',
+        }),
+      ),
+    ).toEqual({
       statusCode: 500,
       message: 'Internal Server Error',
     });
