@@ -3,6 +3,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {stripManagedTimestampProperties} from '@/lib/schema/body';
 import {isManagedTimestampField} from '@/lib/schema/fields';
+import {normalizeSchemaForAjv} from '@/lib/schema/normalize';
 import {buildAllQueryProperties} from '@/lib/schema/query';
 import {
   buildSecurityArray,
@@ -101,7 +102,7 @@ function registerEditEndpoint(
     let finalBodySchema: Record<string, unknown>;
 
     if (model.validation) {
-      finalBodySchema = {...model.validation};
+      finalBodySchema = normalizeSchemaForAjv(model.validation);
       stripManagedTimestampProperties(finalBodySchema);
       if (method === 'PATCH') {
         delete finalBodySchema.required;
