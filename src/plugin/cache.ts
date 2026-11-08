@@ -18,6 +18,7 @@ export interface ICache {
   delete(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
   clear(): Promise<void>;
+  ping(): Promise<void>;
   raw: Redis | NodeCache;
 }
 
@@ -85,6 +86,9 @@ export default fp(
         async clear() {
           await redis.flushdb();
         },
+        async ping() {
+          await redis.ping();
+        },
         raw: redis,
       };
 
@@ -118,6 +122,11 @@ export default fp(
         },
         async clear() {
           nodeCache.flushAll();
+        },
+        async ping() {
+          const probeKey = '__healthcheck_probe__';
+          nodeCache.set(probeKey, 1, 1);
+          nodeCache.del(probeKey);
         },
         raw: nodeCache,
       };

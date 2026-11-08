@@ -73,6 +73,11 @@ export const DEFAULT_DB_TIMEOUT = 10000;
 
 export const DEFAULT_CACHE_TIMEOUT = 10000;
 
+export const DEFAULT_HEALTH_CHECK = {
+  enabled: true,
+  path: '/health',
+} as const;
+
 export const DEFAULT_SQLITE_URL = './database.db';
 
 /** Database filled in when `infrastructure.database` is absent in dev. */
@@ -163,6 +168,10 @@ export function resolveApplication(
     dangerouslyOverrideDefaultVariant:
       input.dangerouslyOverrideDefaultVariant || DEFAULT_VARIANT,
     magicVariables: input.magicVariables ? clone(input.magicVariables) : {},
+    healthCheck: {
+      enabled: input.healthCheck?.enabled ?? DEFAULT_HEALTH_CHECK.enabled,
+      path: input.healthCheck?.path ?? DEFAULT_HEALTH_CHECK.path,
+    },
   };
 }
 

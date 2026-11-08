@@ -77,6 +77,8 @@ describe('cache plugin', () => {
       await app.cache.set('key', 'val');
       await app.cache.clear();
       expect(await app.cache.get('key')).toBeNull();
+
+      await expect(app.cache.ping()).resolves.toBeUndefined();
     });
   });
 
@@ -206,6 +208,9 @@ describe('cache plugin', () => {
       // clear
       await app.cache.clear();
       expect(mockFlushDb).toHaveBeenCalled();
+
+      // ping
+      await expect(app.cache.ping()).resolves.toBeUndefined();
     });
   });
 });

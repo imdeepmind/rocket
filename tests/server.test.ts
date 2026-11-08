@@ -34,6 +34,7 @@ import {
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerHealthRoute} from '@/routes/health';
 import {registerRoutes} from '@/routes/index';
 
 import {Mode} from '@/interfaces';
@@ -99,6 +100,10 @@ vi.mock('@/migrator/index', () => ({
 
 vi.mock('@/routes/index', () => ({
   registerRoutes: vi.fn(),
+}));
+
+vi.mock('@/routes/health', () => ({
+  registerHealthRoute: vi.fn(),
 }));
 
 vi.mock('@/routes/auth/registration', () => ({
@@ -334,6 +339,7 @@ describe('Server', () => {
       resolveConfig(mockConfig, {mode: 'dev'}),
     );
     expect(registerRoutes).toHaveBeenCalled();
+    expect(registerHealthRoute).toHaveBeenCalled();
   });
 
   it('should skip migration when migrate is false', async () => {

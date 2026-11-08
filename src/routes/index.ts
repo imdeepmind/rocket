@@ -45,3 +45,5 @@ export function registerRoutes(
   // custom endpoints
   registerCustomEndpointRoutes(app, config);
 }
+
+export {registerHealthRoute} from '@/routes/health';

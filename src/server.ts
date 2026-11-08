@@ -42,6 +42,7 @@ import {
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerHealthRoute} from '@/routes/health';
 
 import {Mode} from '@/interfaces';
 import {AppConfigInput, UpAuthProviderConfig} from '@/interfaces/config';
@@ -161,6 +162,7 @@ export async function startServer(
       });
 
       registerRoutes(app, resolvedConfig);
+      registerHealthRoute(app, resolvedConfig);
 
       // register auth routes (only when up-auth is configured and enabled)
       if (

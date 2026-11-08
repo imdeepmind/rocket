@@ -38,6 +38,10 @@
     "dangerouslyOverrideDefaultVariant": "test",
     "magicVariables": {
       "defaultOrg": "rocket-oss"
+    },
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health"
     }
   },
   "docs": {
