@@ -3,15 +3,20 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 import {ResolvedAppConfig} from '@/interfaces/config';
 
 /**
- * Auth + SSP checks that can be performed in preValidation.
+ * Checks that can be performed in preValidation.
+ *
+ * SSP injection is deliberately not supported here: `preValidation` runs
+ * before AJV validation and before the route-level auth hook populates
+ * `request.user`, so injected params would be stripped by `removeAdditional`
+ * and `[userId]` / `[userEmail]` would resolve to `undefined`. SSP must run
+ * in the global `preHandler` hook instead (see `src/server.ts`).
  */
-export type PreValidationCheck = 'auth' | 'ssp';
+export type PreValidationCheck = 'auth';
 
 /**
  * Build a preValidation handler that runs the specified checks.
  *
  *   - 'auth': authenticate the request if auth is enabled + authorization flag is set
- *   - 'ssp':  enforce single-session-policy
  */
 export function buildPreValidation(
   app: FastifyInstance,
@@ -38,9 +43,6 @@ export function buildPreValidation(
             ),
           );
       }
-    }
-    if (checks.includes('ssp')) {
-      app.enforceSSP(request);
     }
   };
 }

@@ -681,13 +681,13 @@ describe('Server', () => {
     expect(handlerOrder).toBeLessThan(firstRegisterOrder);
   });
 
-  it('should call enforceSSP in the global preValidation hook', async () => {
+  it('should call enforceSSP in the global preHandler hook', async () => {
     const {app} = await startServer(mockConfig, 3000, 'dev');
     const mockApp = app as MockedApp;
 
-    const preValidationHooks = mockApp.getHook('preValidation');
-    expect(preValidationHooks).toBeDefined();
-    expect(preValidationHooks!.length).toBeGreaterThan(0);
+    const preHandlerHooks = mockApp.getHook('preHandler');
+    expect(preHandlerHooks).toBeDefined();
+    expect(preHandlerHooks!.length).toBeGreaterThan(0);
 
     const mockRequest = {
       routeOptions: {config: {apiIdentifier: 'test'}},
@@ -697,7 +697,7 @@ describe('Server', () => {
     };
     const enforceSSP = vi.fn();
     (mockApp as unknown as Record<string, unknown>).enforceSSP = enforceSSP;
-    for (const hook of preValidationHooks!) {
+    for (const hook of preHandlerHooks!) {
       await (hook as (...args: unknown[]) => unknown)(mockRequest);
     }
 
