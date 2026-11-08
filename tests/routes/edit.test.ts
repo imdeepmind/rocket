@@ -298,6 +298,121 @@ describe('test edit api', () => {
     });
   });
 
+  describe('custom validation with datetime fields', () => {
+    const datetimeValidationModel: Record<string, ModelConfig> = {
+      tasks: {
+        validation: {
+          type: 'object',
+          properties: {
+            title: {type: 'string'},
+            dueAt: {type: 'date-time'},
+          },
+        },
+        fields: {
+          id: {
+            type: 'integer',
+            primaryKey: true,
+            apis: ['edit'],
+          },
+          title: {type: 'string'},
+          dueAt: {type: 'datetime'},
+        },
+      },
+    };
+
+    test('should accept a valid date-time in PATCH request', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const fastify = await createTestApp(pgConfig, datetimeValidationModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/tasks/id/1',
+        payload: {dueAt: '2026-08-01T10:00:00Z'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({dueAt: '2026-08-01T10:00:00Z'});
+
+      await fastify.close();
+    });
+
+    test('should reject an invalid date-time in PATCH request', async () => {
+      const fastify = await createTestApp(pgConfig, datetimeValidationModel);
+
+      const response = await fastify.inject({
+        method: 'PATCH',
+        url: '/v1/tasks/id/1',
+        payload: {dueAt: 'not-a-date'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('should reject an invalid date-time in PUT request', async () => {
+      const fastify = await createTestApp(pgConfig, datetimeValidationModel);
+
+      const response = await fastify.inject({
+        method: 'PUT',
+        url: '/v1/tasks/id/1',
+        payload: {dueAt: 'not-a-date'},
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+  });
+
+  describe('custom validation schema mutation', () => {
+    test('should preserve managed timestamp properties in the loaded config', async () => {
+      const validationModel: Record<string, ModelConfig> = {
+        users: {
+          validation: {
+            type: 'object',
+            properties: {
+              name: {type: 'string'},
+              created_at: {type: 'datetime'},
+              updated_at: {type: 'datetime'},
+            },
+            required: ['name', 'created_at', 'updated_at'],
+          },
+          fields: {
+            id: {type: 'integer', primaryKey: true, apis: ['edit']},
+            name: {type: 'string'},
+            created_at: {type: 'datetime'},
+            updated_at: {type: 'datetime'},
+          },
+        },
+      };
+
+      const fastify = await createTestApp(pgConfig, validationModel);
+
+      const resolvedValidation = fastify.appConfig.data.models.users
+        .validation as {
+        properties: Record<string, unknown>;
+        required: string[];
+      };
+
+      expect(resolvedValidation.properties).toHaveProperty('created_at');
+      expect(resolvedValidation.properties).toHaveProperty('updated_at');
+      expect(resolvedValidation.required).toEqual([
+        'name',
+        'created_at',
+        'updated_at',
+      ]);
+
+      await fastify.close();
+    });
+  });
+
   describe('enum field validation', () => {
     const enumEditModel: Record<string, ModelConfig> = {
       tasks: {
