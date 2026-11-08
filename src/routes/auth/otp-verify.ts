@@ -115,6 +115,21 @@ function registerOtpVerifyEndpoint(
           .send(app.buildResponse(401, 'Invalid or expired OTP', null));
       }
 
+      let hashedPassword: string | undefined;
+      if (action === 'forgotPassword') {
+        const newPassword = (request.body as Record<string, string>)
+          .newPassword;
+        /* c8 ignore start */
+        if (!newPassword) {
+          throw Object.assign(new Error('newPassword is required'), {
+            statusCode: 400,
+            body: app.buildResponse(400, 'newPassword is required', null),
+          });
+        }
+        /* c8 ignore stop */
+        hashedPassword = await hash(String(newPassword));
+      }
+
       const selectQuery = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
 
       let tx;
@@ -149,19 +164,7 @@ function registerOtpVerifyEndpoint(
         }
 
         if (action === 'forgotPassword') {
-          const newPassword = (request.body as Record<string, string>)
-            .newPassword;
-          /* c8 ignore start */
-          if (!newPassword) {
-            throw Object.assign(new Error('newPassword is required'), {
-              statusCode: 400,
-              body: app.buildResponse(400, 'newPassword is required', null),
-            });
-          }
-          /* c8 ignore stop */
-
           const {passwordField} = upConfig.userModel;
-          const hashedPassword = await hash(String(newPassword));
           const updatedAtClause = buildUpdatedAtClause(
             config.data.models[model],
             config.infrastructure.database.engine,
