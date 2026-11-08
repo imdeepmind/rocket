@@ -74,6 +74,10 @@ test('minimal dev config resolves every section densely', () => {
       maxAge: 86400,
       routes: [],
     },
+    healthCheck: {
+      enabled: true,
+      path: '/health',
+    },
   });
 
   // docs enabled in dev
@@ -523,6 +527,26 @@ test('full rateLimit and magicVariables pass through', () => {
   });
   expect(config.application.dangerouslyOverrideDefaultVariant).toBe('v2');
   expect(config.application.magicVariables).toEqual(magicVariables);
+});
+
+test('healthCheck resolution uses defaults or accepts overrides', () => {
+  const custom = resolveConfig(
+    devInput({
+      application: {
+        name: 'rocket',
+        healthCheck: {
+          enabled: false,
+          path: '/custom-health',
+        },
+      },
+    }),
+    {mode: 'dev'},
+  );
+
+  expect(custom.application.healthCheck).toEqual({
+    enabled: false,
+    path: '/custom-health',
+  });
 });
 
 test('partial docs fill from mode + application name', () => {

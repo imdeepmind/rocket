@@ -155,6 +155,11 @@ export interface DataConfig {
   models: Record<string, ModelConfig>;
 }
 
+export interface HealthCheckConfig {
+  enabled?: boolean;
+  path?: string;
+}
+
 export interface ApplicationConfig {
   name: string;
   logLevel: LogLevel;
@@ -162,6 +167,7 @@ export interface ApplicationConfig {
   cors?: CorsConfig;
   dangerouslyOverrideDefaultVariant?: string;
   magicVariables?: Record<string, string | number | boolean>;
+  healthCheck?: HealthCheckConfig;
 }
 
 export interface WebhookConfig {
@@ -355,6 +361,10 @@ export interface ResolvedApplicationConfig {
   cors: ResolvedCorsConfig;
   dangerouslyOverrideDefaultVariant: string;
   magicVariables: Record<string, string | number | boolean>;
+  healthCheck: {
+    enabled: boolean;
+    path: string;
+  };
 }
 
 export interface ResolvedDocsConfig {

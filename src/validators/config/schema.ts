@@ -103,6 +103,14 @@ const applicationSchema = {
         anyOf: [{type: 'string'}, {type: 'number'}, {type: 'boolean'}],
       },
     },
+    healthCheck: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        enabled: {type: 'boolean'},
+        path: {type: 'string', minLength: 1},
+      },
+    },
   },
 };
 

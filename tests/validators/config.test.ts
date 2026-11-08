@@ -1877,6 +1877,22 @@ describe('validateInvalidApplicationConfig', () => {
       patch: {magicVariables: {tenant: null}},
       expected: '/application/magicVariables/tenant must be string',
     },
+    {
+      name: 'healthCheck enabled not boolean',
+      patch: {healthCheck: {enabled: 'yes'}},
+      expected: '/application/healthCheck/enabled must be boolean',
+    },
+    {
+      name: 'healthCheck path empty string',
+      patch: {healthCheck: {path: ''}},
+      expected:
+        '/application/healthCheck/path must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'healthCheck additional property',
+      patch: {healthCheck: {unknownProp: true}},
+      expected: '/application/healthCheck must NOT have additional properties',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1940,6 +1956,22 @@ describe('validateValidApplicationConfig', () => {
         name: 'Test App',
         logLevel: 'info',
         magicVariables: {tenant: 'acme', maxRetries: 3, isProduction: true},
+      },
+    },
+    {
+      name: 'healthCheck with enabled and path',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        healthCheck: {enabled: true, path: '/health'},
+      },
+    },
+    {
+      name: 'healthCheck disabled',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        healthCheck: {enabled: false},
       },
     },
   ])('Scenario: $name . should return', ({patch}) => {

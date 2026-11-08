@@ -74,6 +74,7 @@ describe('rate-limit plugin', () => {
       delete: vi.fn().mockResolvedValue(undefined),
       has: vi.fn().mockResolvedValue(false),
       clear: vi.fn().mockResolvedValue(undefined),
+      ping: vi.fn().mockResolvedValue(undefined),
       raw: {} as unknown as NodeCache,
     };
   });
@@ -188,6 +189,7 @@ describe('rate-limit plugin', () => {
         delete: vi.fn().mockResolvedValue(undefined),
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
+        ping: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -229,6 +231,7 @@ describe('rate-limit plugin', () => {
         delete: vi.fn().mockResolvedValue(undefined),
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
+        ping: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -258,6 +261,7 @@ describe('rate-limit plugin', () => {
         delete: vi.fn().mockResolvedValue(undefined),
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
+        ping: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -297,6 +301,7 @@ describe('rate-limit plugin', () => {
         delete: vi.fn().mockResolvedValue(undefined),
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
+        ping: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
