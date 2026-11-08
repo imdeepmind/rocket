@@ -611,6 +611,34 @@ describe('POST /auth/register', () => {
       expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
       await app.close();
     });
+
+    test('serializes concurrent registration requests on SQLite without transaction collision', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels, sqliteConfig);
+      sqliteExecMock.mockClear();
+
+      const [res1, res2] = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: '/v1/auth/register',
+          payload: {email: 'user1@example.com', password: 'secret1'},
+        }),
+        app.inject({
+          method: 'POST',
+          url: '/v1/auth/register',
+          payload: {email: 'user2@example.com', password: 'secret2'},
+        }),
+      ]);
+
+      expect(res1.statusCode).toBe(201);
+      expect(res2.statusCode).toBe(201);
+      expect(sqliteExecMock.mock.calls.map(c => c[0])).toEqual([
+        'BEGIN',
+        'COMMIT',
+        'BEGIN',
+        'COMMIT',
+      ]);
+      await app.close();
+    });
   });
 
   // -------------------------------------------------------------------------

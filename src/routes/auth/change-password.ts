@@ -91,42 +91,41 @@ function registerChangePasswordEndpoint(
 
       const selectQuery = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
 
+      const res = await app.db.query(selectQuery, [userId]);
+
+      if (res.rows.length === 0) {
+        throw Object.assign(new Error('User not found'), {
+          statusCode: 404,
+          body: app.buildResponse(404, 'User not found', null),
+        });
+      }
+
+      const user = res.rows[0] as Record<string, unknown>;
+      const currentHashedPassword = user[passwordField] as string;
+
+      const isMatch = await compare(
+        String(existingPassword),
+        currentHashedPassword,
+      );
+      if (!isMatch) {
+        throw Object.assign(new Error('Invalid existing password'), {
+          statusCode: 401,
+          body: app.buildResponse(401, 'Invalid existing password', null),
+        });
+      }
+
+      const newHashedPassword = await hash(String(newPassword));
+
+      const updatedAtClause = buildUpdatedAtClause(
+        config.data.models[model],
+        config.infrastructure.database.engine,
+      );
+      const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
+
       let tx;
       try {
         tx = await app.db.beginTransaction();
-
-        const res = await tx.query(selectQuery, [userId]);
-
-        if (res.rows.length === 0) {
-          throw Object.assign(new Error('User not found'), {
-            statusCode: 404,
-            body: app.buildResponse(404, 'User not found', null),
-          });
-        }
-
-        const user = res.rows[0] as Record<string, unknown>;
-        const currentHashedPassword = user[passwordField] as string;
-
-        const isMatch = await compare(
-          String(existingPassword),
-          currentHashedPassword,
-        );
-        if (!isMatch) {
-          throw Object.assign(new Error('Invalid existing password'), {
-            statusCode: 401,
-            body: app.buildResponse(401, 'Invalid existing password', null),
-          });
-        }
-
-        const newHashedPassword = await hash(String(newPassword));
-
-        const updatedAtClause = buildUpdatedAtClause(
-          config.data.models[model],
-          config.infrastructure.database.engine,
-        );
-        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
         await tx.query(updateQuery, [newHashedPassword, userId]);
-
         await tx.commit();
 
         return reply.status(200).send(
