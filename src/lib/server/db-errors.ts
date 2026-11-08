@@ -55,7 +55,6 @@ function getStringField(
 }
 
 function isSqliteConnectionCode(code: string): boolean {
-  if (!code) return false;
   return SQLITE_CONNECTION_CODES.some(
     prefix => code === prefix || code.startsWith(`${prefix}_`),
   );
@@ -114,10 +113,7 @@ function buildUniqueViolationMessage(fields: string[]): string {
 }
 
 export function isDatabaseError(err: unknown): boolean {
-  if (typeof err !== 'object' || err === null) return false;
-
-  const errorObj = err as {code?: unknown; name?: unknown; message?: unknown};
-  const code = typeof errorObj.code === 'string' ? errorObj.code : undefined;
+  const code = getCode(err);
 
   if (code) {
     if (code.startsWith('SQLITE_')) return true;
@@ -126,12 +122,16 @@ export function isDatabaseError(err: unknown): boolean {
     }
   }
 
+  if (typeof err !== 'object' || err === null) return false;
+
+  const errorObj = err as {name?: unknown; message?: unknown};
   if (errorObj.name === 'SqliteError') return true;
 
-  if (typeof errorObj.message === 'string') {
-    if (/(constraint failed|syntax error)/i.test(errorObj.message)) {
-      return true;
-    }
+  if (
+    typeof errorObj.message === 'string' &&
+    /(constraint failed|syntax error)/i.test(errorObj.message)
+  ) {
+    return true;
   }
 
   return false;
