@@ -5,6 +5,8 @@ import {Pool} from 'pg';
 
 import {DatabaseQuery} from '@/interfaces';
 
+import {AsyncMutex} from '@/utils/mutex';
+
 function normalizeSqliteParams(sql: string): string {
   return sql.replace(/\$(\d+)/g, '?');
 }
@@ -63,7 +65,7 @@ function makeQueryExecutor(
 export default fp(async (fastify: FastifyInstance) => {
   const dbConfig = fastify.appConfig.infrastructure.database;
   let dbInstance: DatabaseQuery;
-  const timeout = dbConfig.timeout ?? 10000;
+  const timeout = dbConfig.timeout;
 
   if (dbConfig.engine === 'postgres') {
     const pool = new Pool({
@@ -112,6 +114,7 @@ export default fp(async (fastify: FastifyInstance) => {
     };
   } else if (dbConfig.engine === 'sqlite') {
     const sqlite = new Database(dbConfig.connection.url, {timeout});
+    const txMutex = new AsyncMutex();
 
     const sqliteQueryFn = async (sql: string, params: unknown[]) => {
       const normalizedSql = normalizeSqliteParams(sql);
@@ -141,7 +144,27 @@ export default fp(async (fastify: FastifyInstance) => {
         sqlite.close();
       },
       beginTransaction: async () => {
-        sqlite.exec('BEGIN');
+        const unlock = await txMutex.acquire();
+        try {
+          sqlite.exec('BEGIN');
+        } catch (err) {
+          unlock();
+          throw err;
+        }
+
+        let isFinished = false;
+        const endTransaction = (action: 'COMMIT' | 'ROLLBACK') => {
+          if (isFinished) {
+            return;
+          }
+          isFinished = true;
+          try {
+            sqlite.exec(action);
+          } finally {
+            unlock();
+          }
+        };
+
         return {
           query: makeQueryExecutor(async (sql, params) => {
             const normalizedSql = normalizeSqliteParams(sql);
@@ -165,13 +188,15 @@ export default fp(async (fastify: FastifyInstance) => {
             );
           }),
           commit: async () => {
-            sqlite.exec('COMMIT');
+            endTransaction('COMMIT');
           },
           rollback: async () => {
-            sqlite.exec('ROLLBACK');
+            endTransaction('ROLLBACK');
           },
           release: () => {
-            // SQLite is single-connection, nothing to release
+            if (!isFinished) {
+              endTransaction('ROLLBACK');
+            }
           },
         };
       },

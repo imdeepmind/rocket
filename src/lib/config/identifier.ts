@@ -1,11 +1,7 @@
-import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
-
-export function getVariantSegment(config: AppConfig): string {
-  return `.${config.application.dangerouslyOverrideDefaultVariant ?? 'v1'}`;
-}
+import {CustomEndpointConfig} from '@/interfaces/config';
 
 export function getAPIFromUniqueIdentifier(
-  config: AppConfig,
+  config: {customEndpoints?: Record<string, CustomEndpointConfig>},
   identifier: string,
 ): CustomEndpointConfig | null {
   const parts = identifier.split('.');
@@ -43,21 +39,6 @@ export function parseApiIdentifier(identifier: string): {
     field: parts[3],
     operation: parts[4],
   };
-}
-
-/**
- * Get additional variants for a given API identifier.
- * Looks up config.apiVariants and returns array of variant names.
- * @param config The application configuration
- * @param baseIdentifier The base identifier (with 'default' as variant placeholder)
- * @returns Array of additional variant names, empty array if none found
- */
-export function getAdditionalVariants(
-  config: AppConfig,
-  baseIdentifier: string,
-): string[] {
-  const variantEntry = config.apiVariants?.[baseIdentifier];
-  return variantEntry?.variants ?? [];
 }
 
 /**

@@ -3,7 +3,7 @@ import {describe, expect, test, vi} from 'vitest';
 
 import databasePlugin from '@/plugin/database';
 
-import {DatabaseConfig} from '@/interfaces/config';
+import {DatabaseConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 
@@ -33,7 +33,7 @@ describe('database plugin', () => {
       },
       infrastructure: {database: dbConfig},
       data: {models: {}},
-    };
+    } as ResolvedAppConfig;
     return fastify;
   }
 
@@ -455,6 +455,137 @@ describe('database plugin', () => {
 
       expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
       expect(sqliteExecMock).not.toHaveBeenCalledWith('COMMIT');
+
+      await fastify.close();
+    });
+
+    test('serializes concurrent SQLite transactions in FIFO order', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock.mockClear();
+
+      let tx2Resolved = false;
+
+      const tx1 = await fastify.db.beginTransaction();
+      expect(sqliteExecMock).toHaveBeenCalledWith('BEGIN');
+      expect(sqliteExecMock).toHaveBeenCalledTimes(1);
+
+      // Start tx2 while tx1 is still in flight
+      const tx2Promise = fastify.db.beginTransaction().then(tx => {
+        tx2Resolved = true;
+        return tx;
+      });
+
+      // Allow microtasks to run and verify tx2 has not yet acquired or called BEGIN
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(tx2Resolved).toBe(false);
+      expect(sqliteExecMock).toHaveBeenCalledTimes(1);
+
+      // Finish tx1
+      await tx1.commit();
+      tx1.release();
+
+      expect(sqliteExecMock).toHaveBeenNthCalledWith(2, 'COMMIT');
+
+      // Now tx2 should resolve
+      const tx2 = await tx2Promise;
+      expect(tx2Resolved).toBe(true);
+      expect(sqliteExecMock).toHaveBeenNthCalledWith(3, 'BEGIN');
+
+      await tx2.commit();
+      tx2.release();
+
+      expect(sqliteExecMock).toHaveBeenNthCalledWith(4, 'COMMIT');
+
+      await fastify.close();
+    });
+
+    test('release() automatically rolls back if transaction was uncommitted', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock.mockClear();
+
+      const tx = await fastify.db.beginTransaction();
+      expect(sqliteExecMock).toHaveBeenCalledWith('BEGIN');
+
+      // Release without commit or rollback
+      tx.release();
+      expect(sqliteExecMock).toHaveBeenCalledWith('ROLLBACK');
+
+      // Verify next transaction can proceed immediately
+      const nextTx = await fastify.db.beginTransaction();
+      await nextTx.commit();
+      nextTx.release();
+
+      expect(sqliteExecMock).toHaveBeenLastCalledWith('COMMIT');
+
+      await fastify.close();
+    });
+
+    test('commit, rollback, and release are idempotent on SQLite transaction', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock.mockClear();
+
+      const tx = await fastify.db.beginTransaction();
+      await tx.commit();
+      await tx.commit(); // second commit is a no-op
+      await tx.rollback(); // rollback after commit is a no-op
+      tx.release(); // release after commit is a no-op
+
+      expect(sqliteExecMock.mock.calls.map(c => c[0])).toEqual([
+        'BEGIN',
+        'COMMIT',
+      ]);
+
+      await fastify.close();
+    });
+
+    test('handles BEGIN error and releases lock for subsequent transactions', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock.mockImplementationOnce(() => {
+        throw new Error('BEGIN failed');
+      });
+
+      await expect(fastify.db.beginTransaction()).rejects.toThrow(
+        'BEGIN failed',
+      );
+
+      // Next transaction should acquire and succeed without deadlock
+      const tx = await fastify.db.beginTransaction();
+      await tx.commit();
+      tx.release();
+
+      await fastify.close();
+    });
+
+    test('handles commit failure and releases lock', async () => {
+      const fastify = buildApp(sqliteConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      sqliteExecMock
+        .mockImplementationOnce(() => {}) // BEGIN
+        .mockImplementationOnce(() => {
+          throw new Error('COMMIT failed');
+        });
+
+      const tx = await fastify.db.beginTransaction();
+      await expect(tx.commit()).rejects.toThrow('COMMIT failed');
+
+      // Lock should have been released in finally
+      const tx2 = await fastify.db.beginTransaction();
+      await tx2.commit();
+      tx2.release();
 
       await fastify.close();
     });

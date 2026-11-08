@@ -8,6 +8,8 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {
   registerForgotPasswordResendOtpRoute,
   registerLoginResendOtpRoute,
@@ -15,10 +17,10 @@ import {
 } from '@/routes/auth/resend-otp';
 
 import {
-  AppConfig,
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
@@ -48,6 +50,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -72,22 +75,25 @@ async function createResendOtpApp(
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
+      ...(apis ? {apis} : {}),
+      ...(apiVariants ? {apiVariants} : {}),
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-    ...(apis ? {apis} : {}),
-    ...(apiVariants ? {apiVariants} : {}),
-  };
-  app.appConfig = config;
+    {mode: 'dev'},
+  );
+  app.appConfig = config as ResolvedAppConfig;
 
   const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
   (app as any).cache = {
@@ -115,11 +121,11 @@ async function createResendOtpApp(
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
     if (action === 'login') {
-      registerLoginResendOtpRoute(app, config);
+      registerLoginResendOtpRoute(app, config as ResolvedAppConfig);
     } else if (action === 'register') {
-      registerRegistrationResendOtpRoute(app, config);
+      registerRegistrationResendOtpRoute(app, config as ResolvedAppConfig);
     } else {
-      registerForgotPasswordResendOtpRoute(app, config);
+      registerForgotPasswordResendOtpRoute(app, config as ResolvedAppConfig);
     }
   }
   await app.ready();

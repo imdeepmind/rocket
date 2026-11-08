@@ -88,6 +88,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -116,6 +117,7 @@ describe('test index-route api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual({
         id: 42,
         name: 'Alice',
@@ -728,6 +730,7 @@ describe('test index-route api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data.data).toEqual({
         id: 42,
         name: 'Alice',

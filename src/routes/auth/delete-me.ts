@@ -1,93 +1,63 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerDeleteMeRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
 
   const {model, idField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    authentication.provider.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.deleteMe`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerDeleteMeEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    idField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'deleteMe',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'deleteMe',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerDeleteMeEndpoint(
       app,
       config,
       model,
       idField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerDeleteMeEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   idField: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model, routeTags);
+  const schema: Record<string, unknown> = generateSchema(model, policy);
 
   const path = `/${variant}/auth/user/me`;
 
@@ -145,7 +115,7 @@ function registerDeleteMeEndpoint(
   );
 }
 
-function generateSchema(model: string, routeTags?: string[]) {
+function generateSchema(model: string, policy: ResolvedApiPolicy) {
   const responseSchema = getResponseStructureSchema([200], {
     type: 'object',
     properties: {
@@ -156,7 +126,7 @@ function generateSchema(model: string, routeTags?: string[]) {
   const schema: Record<string, unknown> = {
     summary: `Delete authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Permanently deletes the currently authenticated user from the "${model}" table.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: policy.tags,
     response: responseSchema,
     security: [{bearerAuth: []}],
   };

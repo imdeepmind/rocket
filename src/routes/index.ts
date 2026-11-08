@@ -9,7 +9,7 @@ import {registerIndexRoutes} from '@/routes/models/index-route';
 import {registerPostRoutes} from '@/routes/models/post';
 import {registerSearchRoutes} from '@/routes/models/search';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 /**
  * Register all config-driven model routes on the Fastify instance.
@@ -27,7 +27,10 @@ import {AppConfig} from '@/interfaces/config';
  *
  *   - CUSTOM_ENDPOINTS (custom endpoints)
  */
-export function registerRoutes(app: FastifyInstance, config: AppConfig): void {
+export function registerRoutes(
+  app: FastifyInstance,
+  config: ResolvedAppConfig,
+): void {
   // models
   registerIndexRoutes(app, config);
   registerSearchRoutes(app, config);
@@ -42,3 +45,5 @@ export function registerRoutes(app: FastifyInstance, config: AppConfig): void {
   // custom endpoints
   registerCustomEndpointRoutes(app, config);
 }
+
+export {registerHealthRoute} from '@/routes/health';

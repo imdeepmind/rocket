@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 
 import {
   buildApiIdentifier,
-  getAdditionalVariants,
   getAPIFromUniqueIdentifier,
   parseApiIdentifier,
 } from '@/lib/config/identifier';
@@ -150,110 +149,6 @@ describe('parseApiIdentifier', () => {
       field: 'unknown',
       operation: 'myEndpoint',
     });
-  });
-});
-
-describe('getAdditionalVariants', () => {
-  it('should return variants array when identifier exists in apiVariants', () => {
-    const config: Partial<AppConfig> = {
-      apiVariants: {
-        'aggregate.default.users.id.getAggregation': {
-          variants: ['admin', 'public'],
-        },
-      },
-    };
-    const result = getAdditionalVariants(
-      config as AppConfig,
-      'aggregate.default.users.id.getAggregation',
-    );
-    expect(result).toEqual(['admin', 'public']);
-  });
-
-  it('should return single variant in array', () => {
-    const config: Partial<AppConfig> = {
-      apiVariants: {
-        'aggregate.default.posts.views.getAggregation': {
-          variants: ['admin'],
-        },
-      },
-    };
-    const result = getAdditionalVariants(
-      config as AppConfig,
-      'aggregate.default.posts.views.getAggregation',
-    );
-    expect(result).toEqual(['admin']);
-  });
-
-  it('should return empty array when identifier does not exist', () => {
-    const config: Partial<AppConfig> = {
-      apiVariants: {
-        'aggregate.default.users.id.getAggregation': {
-          variants: ['admin'],
-        },
-      },
-    };
-    const result = getAdditionalVariants(
-      config as AppConfig,
-      'aggregate.default.posts.id.getAggregation',
-    );
-    expect(result).toEqual([]);
-  });
-
-  it('should return empty array when apiVariants is undefined', () => {
-    const config: Partial<AppConfig> = {};
-    const result = getAdditionalVariants(
-      config as AppConfig,
-      'aggregate.default.users.id.getAggregation',
-    );
-    expect(result).toEqual([]);
-  });
-
-  it('should return empty array when apiVariants is empty object', () => {
-    const config: Partial<AppConfig> = {
-      apiVariants: {},
-    };
-    const result = getAdditionalVariants(
-      config as AppConfig,
-      'aggregate.default.users.id.getAggregation',
-    );
-    expect(result).toEqual([]);
-  });
-
-  it('should handle multiple different identifiers', () => {
-    const config: Partial<AppConfig> = {
-      apiVariants: {
-        'aggregate.default.users.id.getAggregation': {
-          variants: ['admin'],
-        },
-        'aggregate.default.posts.views.getAggregation': {
-          variants: ['public', 'readonly'],
-        },
-        'model.default.users.unknown.search': {
-          variants: ['v2'],
-        },
-      },
-    };
-
-    expect(
-      getAdditionalVariants(
-        config as AppConfig,
-        'aggregate.default.users.id.getAggregation',
-      ),
-    ).toEqual(['admin']);
-
-    expect(
-      getAdditionalVariants(
-        config as AppConfig,
-        'aggregate.default.posts.views.getAggregation',
-      ),
-    ).toEqual(['public', 'readonly']);
-
-    expect(
-      getAdditionalVariants(
-        config as AppConfig,
-        'model.default.users.unknown.search',
-      ),
-    ).toEqual(['v2']);
   });
 });
 

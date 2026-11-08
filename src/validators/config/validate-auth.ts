@@ -25,6 +25,12 @@ function validateAuthConstraints(config: AppConfig): string[] {
     return errors;
   }
 
+  // Disabled auth resolves to `{enabled: false}` (never has a provider);
+  // nothing to validate in that branch of the resolved union.
+  if (!authentication.enabled) {
+    return errors;
+  }
+
   const providerType = authentication.provider?.type;
   const providerConfig = authentication.provider?.config;
 
@@ -71,11 +77,6 @@ function validateAuthConstraints(config: AppConfig): string[] {
     }
 
     if (upConfig.mfaRequired) {
-      if (!config.infrastructure?.cache) {
-        errors.push(
-          '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
-        );
-      }
       if (!config.integrations?.email) {
         errors.push(
           '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',

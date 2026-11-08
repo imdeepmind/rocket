@@ -7,11 +7,14 @@ import Fastify, {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator/index';
-import cachePlugin from '@/plugin/cache';
+import cachePlugin, {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
+import corsPlugin from '@/plugin/cors';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
+
+import {resolveConfig} from '@/lib/config/resolve';
 
 import {registerEmailChangeRoute} from '@/routes/auth/change-email';
 import {registerChangePasswordRoute} from '@/routes/auth/change-password';
@@ -31,6 +34,7 @@ import {
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerHealthRoute} from '@/routes/health';
 import {registerRoutes} from '@/routes/index';
 
 import {Mode} from '@/interfaces';
@@ -55,6 +59,7 @@ vi.mock('fastify', () => {
     }),
     getHook: (name: string) => storedHooks[name],
     setErrorHandler: vi.fn(),
+    setNotFoundHandler: vi.fn(),
     listen: vi.fn(),
     close: vi.fn(),
     post: vi.fn(),
@@ -65,11 +70,13 @@ vi.mock('fastify', () => {
     log: {
       error: vi.fn(),
       info: vi.fn(),
+      warn: vi.fn(),
     },
-    buildResponse: vi.fn((statusCode, message, data, meta) => ({
+    buildResponse: vi.fn((statusCode, message, data) => ({
+      code: statusCode,
       statusCode,
       message,
-      meta,
+      data,
     })),
     set appConfig(val: AppConfig) {
       appConfig = val;
@@ -93,6 +100,10 @@ vi.mock('@/migrator/index', () => ({
 
 vi.mock('@/routes/index', () => ({
   registerRoutes: vi.fn(),
+}));
+
+vi.mock('@/routes/health', () => ({
+  registerHealthRoute: vi.fn(),
 }));
 
 vi.mock('@/routes/auth/registration', () => ({
@@ -177,6 +188,7 @@ type MockedApp = FastifyInstance & {
   addHook: ReturnType<typeof vi.fn>;
   getHook: (name: string) => unknown[] | undefined;
   setErrorHandler: ReturnType<typeof vi.fn>;
+  setNotFoundHandler: ReturnType<typeof vi.fn>;
   listen: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
@@ -187,6 +199,7 @@ type MockedApp = FastifyInstance & {
   log: {
     error: ReturnType<typeof vi.fn>;
     info: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
   };
   buildResponse: ReturnType<typeof vi.fn>;
 };
@@ -209,6 +222,14 @@ describe('Server', () => {
     migrate: boolean = false,
   ) => {
     await startServer(mockConfig, 3000, mode, verbose, migrate);
+  };
+
+  const runLastOnListenHook = async () => {
+    const hooks = mockApp.getHook('onListen');
+    const hook = hooks?.[hooks.length - 1];
+    if (hook) {
+      await (hook as () => unknown)();
+    }
   };
 
   it('should initialize fastify with correct logger based on configuration', async () => {
@@ -305,15 +326,20 @@ describe('Server', () => {
   it('should register plugins and routes', async () => {
     await runStart('dev', false, true);
 
-    expect(mockApp.register).toHaveBeenCalledTimes(9);
+    // db, cache, response, ssp, webhook, auth (always), swagger, swagger-ui,
+    // and the /api prefix
+    expect(mockApp.register).toHaveBeenCalledTimes(10);
 
     const prefixCall = mockApp.register.mock.calls.find(
       ([, opts]) => opts?.prefix === '/api',
     );
     expect(prefixCall).toBeDefined();
 
-    expect(migrateDatabase).toHaveBeenCalledWith(mockConfig);
+    expect(migrateDatabase).toHaveBeenCalledWith(
+      resolveConfig(mockConfig, {mode: 'dev'}),
+    );
     expect(registerRoutes).toHaveBeenCalled();
+    expect(registerHealthRoute).toHaveBeenCalled();
   });
 
   it('should skip migration when migrate is false', async () => {
@@ -330,7 +356,8 @@ describe('Server', () => {
     } as unknown as AppConfig;
     await startServer(disabledSwaggerConfig, 3000, 'prod');
 
-    expect(mockApp.register).toHaveBeenCalledTimes(6);
+    // db, cache, response, ssp, webhook, auth (always), and the /api prefix
+    expect(mockApp.register).toHaveBeenCalledTimes(7);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -342,7 +369,7 @@ describe('Server', () => {
 
     expect(registerRoutes).toHaveBeenCalledWith(
       expect.any(Object),
-      noModelsConfig,
+      resolveConfig(noModelsConfig, {mode: 'prod'}),
     );
     expect(mockApp.register).toHaveBeenCalledWith(
       expect.any(Function),
@@ -412,11 +439,42 @@ describe('Server', () => {
       );
     });
 
-    it('should process Integrity violations (23xxx) as 400', () => {
+    it('should map Unique violations (23505) to 409 without leaking driver details', () => {
       const err = createError('Unique constraint violation', '23505');
       errorHandler(err, mockReq, mockReply);
 
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 409,
+          message: 'A record with this value already exists',
+        }),
+      );
+    });
+
+    it('should include the offending column in unique violation messages', () => {
+      const err = createError('Unique constraint violation', '23505');
+      (err as unknown as Record<string, unknown>).detail =
+        'Key (email)=(user@example.com) already exists.';
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({message: 'Email already exists'}),
+      );
+    });
+
+    it('should map other Integrity violations (23xxx) to 400', () => {
+      const err = createError('Foreign key violation', '23503');
+      errorHandler(err, mockReq, mockReply);
+
       expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The request references a record that does not exist',
+        }),
+      );
     });
 
     it('should process Connection exceptions (08xxx) as 503', () => {
@@ -431,6 +489,102 @@ describe('Server', () => {
       errorHandler(err, mockReq, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 500,
+          message: 'Internal Server Error',
+        }),
+      );
+    });
+
+    it('should map SQLite unique violations to 409 without leaking driver details', () => {
+      const err = createError(
+        'UNIQUE constraint failed: users.username',
+        'SQLITE_CONSTRAINT_UNIQUE',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 409,
+          message: 'Username already exists',
+        }),
+      );
+    });
+
+    it('should map SQLite foreign key violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'FOREIGN KEY constraint failed',
+        'SQLITE_CONSTRAINT_FOREIGNKEY',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The request references a record that does not exist',
+        }),
+      );
+    });
+
+    it('should map SQLite not-null violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'NOT NULL constraint failed: users.name',
+        'SQLITE_CONSTRAINT_NOTNULL',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'A required field is missing',
+        }),
+      );
+    });
+
+    it('should map SQLite check constraint violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'CHECK constraint failed: age >= 0',
+        'SQLITE_CONSTRAINT_CHECK',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The provided data violates a database constraint',
+        }),
+      );
+    });
+
+    it('should map SQLite busy/locked connection exceptions to 503', () => {
+      const err = createError('database is locked', 'SQLITE_BUSY');
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(503);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 503,
+          message: 'The service is temporarily unavailable',
+        }),
+      );
+    });
+
+    it('should map generic SQLite errors to 500 without leaking driver details', () => {
+      const err = createError('near "SELEC": syntax error', 'SQLITE_ERROR');
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 500,
+          message: 'Internal Server Error',
+        }),
+      );
     });
 
     it('should respect incoming status code if specified, provided it is valid HTTP', () => {
@@ -457,24 +611,40 @@ describe('Server', () => {
       });
     });
 
-    it('should pass validation errors in metadata payload', () => {
-      // Create a mock validation error block conforming to fastify's validation structure
+    it('should default to 500 when a body error has no status code', () => {
+      const err = createError('Business error');
+      (err as unknown as Record<string, unknown>).body = {
+        code: 500,
+        message: 'Business error',
+        data: null,
+      };
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        code: 500,
+        message: 'Business error',
+        data: null,
+      });
+    });
+
+    it('should format validation errors as standard 400 envelope without leaking internals', () => {
       const validationPayload = [
         {message: 'field required'},
       ] as unknown as FastifyError['validation'];
       const err = createError(
         'Validation failed',
-        undefined,
+        'FST_ERR_VALIDATION',
         400,
         validationPayload,
       );
       errorHandler(err, mockReq, mockReply);
 
+      expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          meta: expect.objectContaining({
-            validation: [{message: 'field required'}],
-          }),
+          statusCode: 400,
+          message: 'Validation failed',
         }),
       );
     });
@@ -491,6 +661,24 @@ describe('Server', () => {
     const {app, routes} = await startServer(mockConfig, 3000, 'dev');
     expect(app).toBe(mockApp);
     expect(Array.isArray(routes)).toBe(true);
+  });
+
+  it('should install the error handler before registering any routes', async () => {
+    await startServer(mockConfig, 3000, 'dev');
+
+    const handlerOrder = mockApp.setErrorHandler.mock.invocationCallOrder[0];
+    const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
+
+    expect(handlerOrder).toBeLessThan(firstRegisterOrder);
+  });
+
+  it('should install the not-found handler before registering any routes', async () => {
+    await startServer(mockConfig, 3000, 'dev');
+
+    const handlerOrder = mockApp.setNotFoundHandler.mock.invocationCallOrder[0];
+    const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
+
+    expect(handlerOrder).toBeLessThan(firstRegisterOrder);
   });
 
   it('should call enforceSSP in the global preValidation hook', async () => {
@@ -574,6 +762,61 @@ describe('Server', () => {
     });
   });
 
+  describe('CORS Configuration', () => {
+    it('should register cors plugin when cors is configured and enabled', async () => {
+      const configWithCors: AppConfig = {
+        ...mockConfig,
+        application: {
+          name: 'Test App',
+          logLevel: 'info',
+          cors: {
+            enabled: true,
+            origins: ['https://app.example.com'],
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithCors, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeDefined();
+    });
+
+    it('should not register cors plugin when cors is not configured', async () => {
+      const registerMock = mockApp.register;
+      await startServer(mockConfig, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeUndefined();
+    });
+
+    it('should not register cors plugin when cors enabled is false', async () => {
+      const configWithDisabledCors: AppConfig = {
+        ...mockConfig,
+        application: {
+          name: 'Test App',
+          logLevel: 'info',
+          cors: {
+            enabled: false,
+          },
+        },
+      };
+
+      const registerMock = mockApp.register;
+      await startServer(configWithDisabledCors, 3000, 'dev');
+
+      const corsRegistration = registerMock.mock.calls.find(
+        (call: unknown[]) => call[0] === corsPlugin,
+      );
+      expect(corsRegistration).toBeUndefined();
+    });
+  });
+
   describe('Authentication Configuration', () => {
     it('should register auth plugin when auth is configured', async () => {
       const configWithAuth: AppConfig = {
@@ -589,6 +832,7 @@ describe('Server', () => {
                 usernameField: 'email',
                 passwordField: 'password',
               },
+              jwtSecret: 'this-will-never-be-used',
             },
           },
         },
@@ -640,6 +884,108 @@ describe('Server', () => {
       await startServer(configWithMfa, 3000, 'dev');
 
       expect(registerMock).toHaveBeenCalledWith(otpPlugin);
+    });
+
+    it('should warn when mfaRequired is enabled without a cache', async () => {
+      const configWithMfa: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithMfa, 3000, 'dev');
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should warn when isVerifiedField is configured without a cache', async () => {
+      const configWithVerification: AppConfig = {
+        ...mockConfig,
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
+              jwtSecret: 'test-secret',
+            },
+          },
+        },
+      };
+
+      await startServer(configWithVerification, 3000, 'dev');
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should not warn when a cache is configured', async () => {
+      const configWithRedis: AppConfig = {
+        ...mockConfig,
+        infrastructure: {
+          ...mockConfig.infrastructure,
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+        integrations: {
+          email: {
+            provider: 'dummy',
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              jwtSecret: 'test-secret',
+              mfaRequired: true,
+            },
+          },
+        },
+      };
+
+      await startServer(configWithRedis, 3000, 'dev');
+
+      expect(mockApp.log.warn).not.toHaveBeenCalled();
     });
 
     it('should register auth routes conditionally based on config', async () => {

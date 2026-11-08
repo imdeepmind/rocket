@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import communicatePlugin from '@/plugin/communicate';
 
-import {AppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 describe('communicate plugin', () => {
   let app: FastifyInstance;
@@ -26,7 +26,7 @@ describe('communicate plugin', () => {
           provider: 'dummy',
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
 
     await app.register(communicatePlugin);
     await app.ready();
@@ -44,7 +44,7 @@ describe('communicate plugin', () => {
           provider: 'dummy',
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
 
     await app.register(communicatePlugin);
     await app.ready();
@@ -72,7 +72,7 @@ describe('communicate plugin', () => {
           provider: 'other' as unknown as 'dummy',
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
 
     await app.register(communicatePlugin);
     await app.ready();

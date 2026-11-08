@@ -3,29 +3,34 @@ import fp from 'fastify-plugin';
 import Redis from 'ioredis';
 import NodeCache from 'node-cache';
 
+import {ResolvedAppConfig} from '@/interfaces/config';
+
+export const NODE_CACHE_OTP_WARNING =
+  'No cache configured; OTPs are stored in node-cache (in-memory). OTPs are not shared across processes and will be lost on restart.';
+
+export function isRedisCacheConfigured(config: ResolvedAppConfig): boolean {
+  return config.infrastructure.cache.engine === 'redis';
+}
+
 export interface ICache {
   get<T = unknown>(key: string): Promise<T | null>;
   set<T = unknown>(key: string, value: T, ttlSeconds?: number): Promise<void>;
   delete(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
   clear(): Promise<void>;
+  ping(): Promise<void>;
   raw: Redis | NodeCache;
 }
 
 export default fp(
   async (fastify: FastifyInstance) => {
     let cacheWrapper: ICache;
-    const cacheConfig = fastify.appConfig?.infrastructure?.cache;
+    const cacheConfig = fastify.appConfig.infrastructure.cache;
 
-    if (
-      cacheConfig &&
-      cacheConfig.engine === 'redis' &&
-      cacheConfig.connection &&
-      cacheConfig.connection.url
-    ) {
+    if (cacheConfig.engine === 'redis') {
       // Use Redis
       const redis = new Redis(cacheConfig.connection.url, {
-        connectTimeout: cacheConfig.timeout ?? 5000,
+        connectTimeout: cacheConfig.timeout,
         retryStrategy: times => Math.min(times * 50, 2000),
         maxRetriesPerRequest: 3,
       });
@@ -81,6 +86,9 @@ export default fp(
         async clear() {
           await redis.flushdb();
         },
+        async ping() {
+          await redis.ping();
+        },
         raw: redis,
       };
 
@@ -114,6 +122,11 @@ export default fp(
         },
         async clear() {
           nodeCache.flushAll();
+        },
+        async ping() {
+          const probeKey = '__healthcheck_probe__';
+          nodeCache.set(probeKey, 1, 1);
+          nodeCache.del(probeKey);
         },
         raw: nodeCache,
       };

@@ -1,15 +1,18 @@
-import {AppConfig} from '@/interfaces/config';
+import {AppConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import validateSchema, {ajv} from './schema';
 import validateApisConstraints from './validate-apis';
 import validateAuthConstraints from './validate-auth';
 import validateCacheDbConstraints from './validate-cache-db';
+import validateCorsConstraints from './validate-cors';
 import validateCustomAPIs from './validate-custom-apis';
 import validateIndexes from './validate-index';
 import validateModelValidation from './validate-model';
 import validateRelations from './validate-relations';
 
-export function validateConfig(input: AppConfig) {
+export function validateConfig<T extends AppConfig | ResolvedAppConfig>(
+  input: T,
+): T {
   const valid = validateSchema(input);
 
   const ajvErrors: string[] = valid
@@ -22,8 +25,9 @@ export function validateConfig(input: AppConfig) {
         ...validateIndexes(input as AppConfig),
         ...validateRelations(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
+        ...validateCorsConstraints(input as AppConfig),
         ...validateCustomAPIs(input as AppConfig),
-        ...validateApisConstraints(input as AppConfig),
+        ...validateApisConstraints(input as ResolvedAppConfig),
         ...validateAuthConstraints(input as AppConfig),
       ]
     : [];

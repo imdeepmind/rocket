@@ -8,6 +8,16 @@
             "max": 1000,
             "timeWindow": "15m"
         },
+        "cors": {
+            "enabled": true,
+            "origins": ["https://app.example.com", "http://localhost:5173"],
+            "methods": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+            "allowedHeaders": ["Authorization", "Content-Type"],
+            "exposedHeaders": ["x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"],
+            "credentials": false,
+            "maxAge": 86400,
+            "routes": ["/api/*"]
+        },
         "magicVariables": {
             "defaultOrg": "rocket-oss"
         }
@@ -40,13 +50,6 @@
                 "url": "./database.db"
             },
             "timeout": 10000
-        },
-        "cache": {
-            "engine": "redis",
-            "connection": {
-                "url": "redis://localhost:6379"
-            },
-            "timeout": 5000
         }
     },
     "authentication": {

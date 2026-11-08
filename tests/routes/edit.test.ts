@@ -21,6 +21,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -120,6 +121,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
       expect(response.json().message).toBe(
         'Successfully updated records in the users table',
@@ -570,6 +572,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
 
       const updateCall = pgClientQueryMock.mock.calls.find(
@@ -625,6 +628,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
 
       const updateCall = pgClientQueryMock.mock.calls.find(
@@ -672,6 +676,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
 
       const updateCall = pgClientQueryMock.mock.calls.find(
@@ -710,6 +715,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
 
       const updateCall = pgClientQueryMock.mock.calls.find(
@@ -1018,6 +1024,7 @@ describe('test edit api', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.json()).not.toHaveProperty('raw_data');
       expect(response.json().data).toEqual({name: 'Bob'});
 
       await fastify.close();

@@ -1,14 +1,13 @@
-import Fastify, {
-  FastifyError,
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest,
-} from 'fastify';
+import Fastify, {FastifyInstance} from 'fastify';
 
 import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
-import cachePlugin from '@/plugin/cache';
+import cachePlugin, {
+  isRedisCacheConfigured,
+  NODE_CACHE_OTP_WARNING,
+} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
+import corsPlugin from '@/plugin/cors';
 import dbPlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
@@ -17,6 +16,11 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
+import {
+  registerErrorHandler,
+  registerNotFoundHandler,
+} from '@/lib/server/error-handler';
 import {RouteInfo} from '@/lib/server/welcome';
 
 import {registerRoutes} from '@/routes';
@@ -38,11 +42,10 @@ import {
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerHealthRoute} from '@/routes/health';
 
 import {Mode} from '@/interfaces';
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
-
-import {validateConfig} from '@/validators/config';
+import {AppConfigInput, UpAuthProviderConfig} from '@/interfaces/config';
 
 export interface StartServerResult {
   app: FastifyInstance;
@@ -50,20 +53,20 @@ export interface StartServerResult {
 }
 
 export async function startServer(
-  config: AppConfig,
+  config: AppConfigInput,
   port: number,
   mode: Mode,
   verbose: boolean = false,
   migrate: boolean = false,
 ): Promise<StartServerResult> {
-  // validate the schema
-  config = validateConfig(config);
+  // resolve env vars, defaults, and validate in a single pipeline
+  const resolvedConfig = resolveAndValidateConfig(config, mode);
 
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: verbose ? 'debug' : config.application.logLevel,
+      level: verbose ? 'debug' : resolvedConfig.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {
@@ -74,7 +77,27 @@ export async function startServer(
     },
   });
 
-  app.appConfig = config;
+  app.appConfig = resolvedConfig;
+
+  const auth =
+    resolvedConfig.authentication.enabled &&
+    resolvedConfig.authentication.provider?.type === 'up-auth'
+      ? (resolvedConfig.authentication.provider.config as UpAuthProviderConfig)
+      : undefined;
+  const usesAccountOtp = Boolean(
+    auth?.mfaRequired || auth?.userModel?.isVerifiedField,
+  );
+
+  if (usesAccountOtp && !isRedisCacheConfigured(resolvedConfig)) {
+    app.addHook('onListen', () => {
+      app.log.warn(NODE_CACHE_OTP_WARNING);
+    });
+  }
+
+  // Must be installed before routes are registered, otherwise Fastify keeps
+  // the default error handler for those routes.
+  registerErrorHandler(app);
+  registerNotFoundHandler(app);
 
   // Track each registered route
   app.addHook('onRoute', routeOptions => {
@@ -95,38 +118,40 @@ export async function startServer(
   await app.register(cachePlugin);
 
   // config-driven integrations (email)
-  if (config.integrations?.email) {
+  if (resolvedConfig.integrations?.email) {
     await app.register(communicatePlugin);
   }
 
   // config-driven rate limit
-  if (config.application.rateLimit?.enabled) {
+  if (resolvedConfig.application.rateLimit.enabled) {
     await app.register(rateLimitPlugin);
+  }
+
+  // config-driven cors
+  if (resolvedConfig.application.cors.enabled) {
+    await app.register(corsPlugin);
   }
 
   await app.register(responsePlugin);
   await app.register(sspPlugin);
   await app.register(webhookPlugin);
-  if (config.authentication) {
-    await app.register(authPlugin);
-  }
+  await app.register(authPlugin);
   // config-driven OTP (required for MFA or forgot-password)
   if (
-    config.authentication?.provider.type === 'up-auth' &&
-    ((config.authentication.provider.config as {mfaRequired?: boolean})
-      ?.mfaRequired ||
-      config.integrations?.email)
+    resolvedConfig.authentication.enabled &&
+    auth?.mfaRequired !== undefined &&
+    resolvedConfig.integrations?.email
   ) {
     await app.register(otpPlugin);
   }
   // register swagger
-  if (config.docs.openapi.enabled) {
+  if (resolvedConfig.docs.openapi.enabled) {
     await app.register(swaggerPlugin);
   }
 
   // migrate the db based on config
   if (migrate) {
-    await migrateDatabase(config);
+    await migrateDatabase(resolvedConfig);
   }
 
   // register all config-driven routes under /api prefix (swagger excluded)
@@ -136,90 +161,43 @@ export async function startServer(
         app.enforceSSP(request);
       });
 
-      registerRoutes(app, config);
+      registerRoutes(app, resolvedConfig);
+      registerHealthRoute(app, resolvedConfig);
 
       // register auth routes (only when up-auth is configured and enabled)
       if (
-        config.authentication?.enabled &&
-        config.authentication?.provider?.type === 'up-auth'
+        resolvedConfig.authentication.enabled &&
+        resolvedConfig.authentication.provider.type === 'up-auth'
       ) {
-        const upConfig = config.authentication.provider
+        const upConfig = resolvedConfig.authentication.provider
           .config as UpAuthProviderConfig;
 
-        registerRegistrationRoute(app, config);
-        registerLoginRoute(app, config);
-        registerChangePasswordRoute(app, config);
-        registerMeRoute(app, config);
-        registerDeleteMeRoute(app, config);
-        registerEditMeRoute(app, config);
+        registerRegistrationRoute(app, resolvedConfig);
+        registerLoginRoute(app, resolvedConfig);
+        registerChangePasswordRoute(app, resolvedConfig);
+        registerMeRoute(app, resolvedConfig);
+        registerDeleteMeRoute(app, resolvedConfig);
+        registerEditMeRoute(app, resolvedConfig);
 
-        if (config.integrations?.email) {
-          registerForgotPasswordRoute(app, config);
-          registerForgotPasswordOtpVerifyRoute(app, config);
-          registerForgotPasswordResendOtpRoute(app, config);
+        if (resolvedConfig.integrations?.email) {
+          registerForgotPasswordRoute(app, resolvedConfig);
+          registerForgotPasswordOtpVerifyRoute(app, resolvedConfig);
+          registerForgotPasswordResendOtpRoute(app, resolvedConfig);
         }
 
         if (upConfig.mfaRequired) {
-          registerLoginOtpVerifyRoute(app, config);
-          registerLoginResendOtpRoute(app, config);
+          registerLoginOtpVerifyRoute(app, resolvedConfig);
+          registerLoginResendOtpRoute(app, resolvedConfig);
         }
 
         if (upConfig.userModel.isVerifiedField) {
-          registerRegistrationOtpVerifyRoute(app, config);
-          registerRegistrationResendOtpRoute(app, config);
-          registerEmailChangeRoute(app, config);
+          registerRegistrationOtpVerifyRoute(app, resolvedConfig);
+          registerRegistrationResendOtpRoute(app, resolvedConfig);
+          registerEmailChangeRoute(app, resolvedConfig);
         }
       }
     },
     {prefix: '/api'},
-  );
-
-  // Global error handler
-  app.setErrorHandler(
-    (
-      err: FastifyError & {code?: string},
-      req: FastifyRequest,
-      reply: FastifyReply,
-    ) => {
-      req.log.error(err);
-
-      const errRecord = err as unknown as Record<string, unknown>;
-      if (errRecord.body) {
-        reply
-          .status((errRecord.statusCode as number) || 500)
-          .send(errRecord.body);
-        return;
-      }
-
-      // Default from Fastify or fallback
-      let statusCode: number = err.statusCode || 500;
-
-      // If this looks like a Postgres DatabaseError, classify 4xx vs 5xx
-      if (err.code) {
-        const code = err.code;
-        // Data & integrity errors (invalid data, constraint violations) → 4xx
-        // Common classes:
-        // - 22xxx: data exceptions (e.g. invalid_text_representation, numeric_value_out_of_range)
-        // - 23xxx: integrity constraint violations (e.g. unique_violation, foreign_key_violation)
-        if (code.startsWith('22') || code.startsWith('23')) {
-          statusCode = 400;
-        }
-        // Connection exceptions (08xxx) → 5xx (service unavailable)
-        else if (code.startsWith('08')) {
-          statusCode = 503;
-        } else {
-          statusCode = statusCode >= 400 && statusCode < 600 ? statusCode : 500;
-        }
-      }
-
-      const payload = app.buildResponse(statusCode, err.message, null, {
-        error: err.name,
-        code: err.code,
-        ...(err.validation ? {validation: err.validation} : {}),
-      });
-
-      reply.status(statusCode).send(payload);
-    },
   );
 
   return {app, routes};

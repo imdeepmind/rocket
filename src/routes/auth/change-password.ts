@@ -1,74 +1,43 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerChangePasswordRoute(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
 
   const {model, idField, passwordField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    authentication.provider.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.changePassword`;
-
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-  registerChangePasswordEndpoint(
-    app,
+  const targets = getApiRouteTargets(
     config,
-    model,
-    idField,
-    passwordField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
     'auth',
-    defaultVariant,
     model,
     'unknown',
     'changePassword',
   );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'changePassword',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+  for (const {identifier, variant, policy} of targets) {
     registerChangePasswordEndpoint(
       app,
       config,
@@ -76,23 +45,23 @@ export function registerChangePasswordRoute(
       idField,
       passwordField,
       variant,
-      variantApiIdentifier,
-      variantTags,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerChangePasswordEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   idField: string,
   passwordField: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
-  const schema: Record<string, unknown> = generateSchema(model, routeTags);
+  const schema: Record<string, unknown> = generateSchema(model, policy);
 
   const path = `/${variant}/auth/change-password`;
 
@@ -122,42 +91,41 @@ function registerChangePasswordEndpoint(
 
       const selectQuery = `SELECT * FROM "${model}" WHERE "${idField}" = $1 LIMIT 1;`;
 
+      const res = await app.db.query(selectQuery, [userId]);
+
+      if (res.rows.length === 0) {
+        throw Object.assign(new Error('User not found'), {
+          statusCode: 404,
+          body: app.buildResponse(404, 'User not found', null),
+        });
+      }
+
+      const user = res.rows[0] as Record<string, unknown>;
+      const currentHashedPassword = user[passwordField] as string;
+
+      const isMatch = await compare(
+        String(existingPassword),
+        currentHashedPassword,
+      );
+      if (!isMatch) {
+        throw Object.assign(new Error('Invalid existing password'), {
+          statusCode: 401,
+          body: app.buildResponse(401, 'Invalid existing password', null),
+        });
+      }
+
+      const newHashedPassword = await hash(String(newPassword));
+
+      const updatedAtClause = buildUpdatedAtClause(
+        config.data.models[model],
+        config.infrastructure.database.engine,
+      );
+      const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
+
       let tx;
       try {
         tx = await app.db.beginTransaction();
-
-        const res = await tx.query(selectQuery, [userId]);
-
-        if (res.rows.length === 0) {
-          throw Object.assign(new Error('User not found'), {
-            statusCode: 404,
-            body: app.buildResponse(404, 'User not found', null),
-          });
-        }
-
-        const user = res.rows[0] as Record<string, unknown>;
-        const currentHashedPassword = user[passwordField] as string;
-
-        const isMatch = await compare(
-          String(existingPassword),
-          currentHashedPassword,
-        );
-        if (!isMatch) {
-          throw Object.assign(new Error('Invalid existing password'), {
-            statusCode: 401,
-            body: app.buildResponse(401, 'Invalid existing password', null),
-          });
-        }
-
-        const newHashedPassword = await hash(String(newPassword));
-
-        const updatedAtClause = buildUpdatedAtClause(
-          config.data.models[model],
-          config.infrastructure.database.engine,
-        );
-        const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${idField}" = $2;`;
         await tx.query(updateQuery, [newHashedPassword, userId]);
-
         await tx.commit();
 
         return reply.status(200).send(
@@ -175,7 +143,7 @@ function registerChangePasswordEndpoint(
   );
 }
 
-function generateSchema(model: string, routeTags?: string[]) {
+function generateSchema(model: string, policy: ResolvedApiPolicy) {
   const bodySchema = {
     type: 'object',
     required: ['existingPassword', 'newPassword'],
@@ -202,7 +170,7 @@ function generateSchema(model: string, routeTags?: string[]) {
   const schema: Record<string, unknown> = {
     summary: `Change password for ${capitalizeFirstLetter(model)}`,
     description: `Changes the password for an authenticated user in the "${model}" table.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Password'],
+    tags: policy.tags,
     body: bodySchema,
     response: responseSchema,
     security: [{bearerAuth: []}],

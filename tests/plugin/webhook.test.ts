@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import webhookPlugin from '@/plugin/webhook';
 
-import {AppConfig, WebhookConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, WebhookConfig} from '@/interfaces/config';
 
 describe('webhook plugin', () => {
   beforeEach(() => {
@@ -17,7 +17,9 @@ describe('webhook plugin', () => {
 
   it('webhook plugin decorates fastify with callWebhook', async () => {
     const app = Fastify();
-    app.appConfig = {application: {logLevel: 'silent'}} as unknown as AppConfig;
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -26,7 +28,9 @@ describe('webhook plugin', () => {
 
   it('should not call webhook if apiIdentifier is missing', async () => {
     const app = Fastify();
-    app.appConfig = {application: {logLevel: 'silent'}} as unknown as AppConfig;
+    app.appConfig = {
+      application: {logLevel: 'silent'},
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -55,7 +59,7 @@ describe('webhook plugin', () => {
           webhooks: [],
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -90,7 +94,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -147,7 +151,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -190,7 +194,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -225,7 +229,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -260,7 +264,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -311,7 +315,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 
@@ -353,7 +357,7 @@ describe('webhook plugin', () => {
           webhooks: webhookConfigs,
         },
       },
-    } as unknown as AppConfig;
+    } as unknown as ResolvedAppConfig;
     await app.register(webhookPlugin);
     await app.ready();
 

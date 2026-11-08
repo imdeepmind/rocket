@@ -1,11 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getApiAuthorization} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   buildSecurityArray,
   getResponseStructureSchema,
@@ -17,76 +12,32 @@ import {
   handleSql,
 } from '@/routes/custom-endpoints/handlers/sql';
 
-import {AppConfig, CustomEndpointConfig} from '@/interfaces/config';
+import {CustomEndpointConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 export function registerCustomEndpointRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
-  const customEndpoints = config.customEndpoints;
-
-  if (!customEndpoints) return;
-
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+  const {customEndpoints} = config;
 
   for (const [name, endpoint] of Object.entries(customEndpoints)) {
-    const defaultApiIdentifier = `custom${getVariantSegment(config)}.all.unknown.${name}`;
-
-    if (config.apis?.[defaultApiIdentifier]?.enabled === false) continue;
-
-    const defaultAuthorization = getApiAuthorization(
+    const targets = getApiRouteTargets(
       config,
-      defaultApiIdentifier,
-    );
-    const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-
-    registerCustomEndpoint(
-      app,
-      config,
-      name,
-      endpoint,
-      defaultVariant,
-      defaultApiIdentifier,
-      defaultAuthorization,
-      defaultTags,
-    );
-
-    const baseIdentifier = buildApiIdentifier(
       'custom',
-      defaultVariant,
       'all',
       'unknown',
       name,
     );
-    const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-    for (const variant of additionalVariants) {
-      const variantApiIdentifier = buildApiIdentifier(
-        'custom',
-        variant,
-        'all',
-        'unknown',
-        name,
-      );
-
-      if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-      const variantAuthorization = getApiAuthorization(
-        config,
-        variantApiIdentifier,
-      );
-      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-
+    for (const {identifier, variant, policy} of targets) {
       registerCustomEndpoint(
         app,
         config,
         name,
         endpoint,
         variant,
-        variantApiIdentifier,
-        variantAuthorization,
-        variantTags,
+        identifier,
+        policy,
       );
     }
   }
@@ -94,20 +45,14 @@ export function registerCustomEndpointRoutes(
 
 function registerCustomEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   name: string,
   endpoint: CustomEndpointConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): void {
-  const {schema, routePathSuffix} = generateSchema(
-    config,
-    endpoint,
-    authorization,
-    routeTags,
-  );
+  const {schema, routePathSuffix} = generateSchema(config, endpoint, policy);
   const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
 
   app.route({
@@ -115,7 +60,7 @@ function registerCustomEndpoint(
     url: routePath,
     schema,
     config: {apiIdentifier},
-    preValidation: buildPreValidation(app, config, authorization),
+    preValidation: buildPreValidation(app, config, policy.authorization),
     preHandler: async request => {
       await app.callWebhook('request', request, null);
     },
@@ -140,10 +85,9 @@ function registerCustomEndpoint(
 }
 
 function generateSchema(
-  config: AppConfig,
+  config: ResolvedAppConfig,
   endpoint: CustomEndpointConfig,
-  authorization: boolean,
-  routeTags?: string[],
+  policy: ResolvedApiPolicy,
 ): {
   schema: Record<string, unknown>;
   routePathSuffix: string;
@@ -151,7 +95,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Custom Endpoint: ${endpoint.path}`,
     description: endpoint.description,
-    tags: routeTags ?? ['Custom Endpoints'],
+    tags: policy.tags,
   };
 
   let routePathSuffix = '';
@@ -179,7 +123,7 @@ function generateSchema(
     },
   });
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

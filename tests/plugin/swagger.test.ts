@@ -3,31 +3,37 @@ import {describe, expect, it} from 'vitest';
 
 import swaggerPlugin from '@/plugin/swagger';
 
+import {resolveConfig} from '@/lib/config/resolve';
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 
-const baseConfig = {
-  application: {name: 'test', logLevel: 'error'},
-  docs: {
-    openapi: {
-      enabled: true,
-      path: '/docs',
-      info: {
-        title: 'Test API',
-        description: 'Test description',
-        version: '1.0.0',
+import {ResolvedAppConfig} from '@/interfaces/config';
+
+const baseConfig: ResolvedAppConfig = resolveConfig(
+  {
+    application: {name: 'test', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: true,
+        path: '/docs',
+        info: {
+          title: 'Test API',
+          description: 'Test description',
+          version: '1.0.0',
+        },
       },
     },
+    infrastructure: {
+      database: {engine: 'sqlite', connection: {url: ':memory:'}},
+    },
+    data: {models: {}},
   },
-  infrastructure: {
-    database: {engine: 'sqlite', connection: {url: ':memory:'}},
-  },
-  data: {models: {}},
-};
+  {mode: 'dev'},
+);
 
 describe('Swagger Plugin', () => {
   it('should register swagger UI at the configured path', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -40,7 +46,7 @@ describe('Swagger Plugin', () => {
 
   it('should serve OpenAPI spec with correct info', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -56,7 +62,7 @@ describe('Swagger Plugin', () => {
 
   it('should include bearerAuth security scheme when up-auth is enabled', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     app.appConfig.authentication = {
       enabled: true,
       provider: {
@@ -70,7 +76,7 @@ describe('Swagger Plugin', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -89,7 +95,7 @@ describe('Swagger Plugin', () => {
 
   it('should include apiKeyAuth security scheme when api-key is enabled', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     app.appConfig.authentication = {
       enabled: true,
       provider: {
@@ -98,7 +104,7 @@ describe('Swagger Plugin', () => {
           key: 'test-key',
         },
       },
-    };
+    } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -117,7 +123,7 @@ describe('Swagger Plugin', () => {
 
   it('should not include security schemes when auth is not configured', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     await app.register(swaggerPlugin);
     await app.ready();
 
@@ -131,7 +137,7 @@ describe('Swagger Plugin', () => {
 
   it('should exclude managed timestamp fields from POST request body schemas', async () => {
     const app = Fastify();
-    app.appConfig = structuredClone(baseConfig) as typeof app.appConfig;
+    app.appConfig = structuredClone(baseConfig);
     app.appConfig.data.models = {
       posts: {
         fields: {
@@ -141,7 +147,7 @@ describe('Swagger Plugin', () => {
           updated_at: {type: 'datetime'},
         },
       },
-    };
+    } as unknown as ResolvedAppConfig['data']['models'];
     const bodySchema = generateJSONValidationSchema(
       app.appConfig.data.models.posts,
       {

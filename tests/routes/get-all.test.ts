@@ -37,6 +37,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -78,6 +79,7 @@ describe('test get-all api', () => {
         total: 2,
         totalPages: 1,
       });
+      expect(body).not.toHaveProperty('raw_data');
 
       await fastify.close();
     });

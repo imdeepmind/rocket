@@ -10,14 +10,19 @@ import databasePlugin from '@/plugin/database';
 import otpPlugin from '@/plugin/otp';
 import responsePlugin from '@/plugin/response';
 
+import {resolveConfig} from '@/lib/config/resolve';
+
 import {registerLoginRoute} from '@/routes/auth/login';
 
 import {
-  AppConfig,
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
+
+import * as hashUtils from '@/utils/hash';
+import {DUMMY_PASSWORD_HASH} from '@/constants';
 
 import {pgQueryMock} from '@tests/helpers/db-mocks';
 
@@ -46,6 +51,35 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
+    },
+  },
+};
+
+const authModelsWithVerified: Record<string, ModelConfig> = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', nullable: false},
+      password: {type: 'string', nullable: false},
+      isVerified: {type: 'boolean', default: false},
+    },
+  },
+};
+
+const upAuthConfigWithVerified: AuthenticationConfig = {
+  enabled: true,
+  provider: {
+    type: 'up-auth',
+    config: {
+      userModel: {
+        model: 'users',
+        idField: 'id',
+        usernameField: 'email',
+        passwordField: 'password',
+        isVerifiedField: 'isVerified',
+      },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -69,28 +103,31 @@ async function createAuthApp(
   apiVariants?: Record<string, {variants: string[]}>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
+      ...(apis ? {apis} : {}),
+      ...(apiVariants ? {apiVariants} : {}),
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-    ...(apis ? {apis} : {}),
-    ...(apiVariants ? {apiVariants} : {}),
-  };
-  app.appConfig = config;
+    {mode: 'dev'},
+  );
+  app.appConfig = config as ResolvedAppConfig;
   await app.register(databasePlugin);
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerLoginRoute(app, config);
+    registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;
@@ -102,20 +139,23 @@ async function createAuthAppWithMfa(
   dbConfig: DatabaseConfig = pgConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
-  const config: AppConfig = {
-    application: {name: 'Test App', logLevel: 'error'},
-    docs: {
-      openapi: {
-        enabled: false,
-        path: '/docs',
-        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+  const config = resolveConfig(
+    {
+      application: {name: 'Test App', logLevel: 'error'},
+      docs: {
+        openapi: {
+          enabled: false,
+          path: '/docs',
+          info: {title: 'Test', description: 'Test', version: '1.0.0'},
+        },
       },
+      infrastructure: {database: dbConfig},
+      data: {models},
+      authentication,
     },
-    infrastructure: {database: dbConfig},
-    data: {models},
-    authentication,
-  };
-  app.appConfig = config;
+    {mode: 'dev'},
+  );
+  app.appConfig = config as ResolvedAppConfig;
 
   const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
   (app as any).cache = {
@@ -142,7 +182,7 @@ async function createAuthAppWithMfa(
   await app.register(otpPlugin);
 
   if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    registerLoginRoute(app, config);
+    registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
   return app;
@@ -260,6 +300,7 @@ describe('POST /auth/login', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
             tokenExpiration: '2h',
           },
         },
@@ -350,6 +391,7 @@ describe('POST /auth/login', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
             mfaRequired: true,
           },
         },
@@ -394,6 +436,7 @@ describe('POST /auth/login', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
             mfaRequired: true,
           },
         },
@@ -423,8 +466,10 @@ describe('POST /auth/login', () => {
   });
 
   describe('unhappy path', () => {
-    test('should return 401 if user is not found', async () => {
+    test('should return 401 if user is not found and invoke password compare with dummy hash', async () => {
       const app = await createAuthApp(upAuthConfig);
+
+      const compareSpy = vi.spyOn(hashUtils, 'compare');
 
       // Mock DB: no user
       pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
@@ -436,7 +481,12 @@ describe('POST /auth/login', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().message).toBe('Invalid username or password');
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'Invalid username or password',
+        data: null,
+      });
+      expect(compareSpy).toHaveBeenCalledWith('any', DUMMY_PASSWORD_HASH);
       await app.close();
     });
 
@@ -452,7 +502,9 @@ describe('POST /auth/login', () => {
       });
 
       // Mock bcrypt: password mismatch
-      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      const compareSpy = vi
+        .spyOn(hashUtils, 'compare')
+        .mockResolvedValue(false as never);
 
       const response = await app.inject({
         method: 'POST',
@@ -461,7 +513,55 @@ describe('POST /auth/login', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().message).toBe('Invalid username or password');
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'Invalid username or password',
+        data: null,
+      });
+      expect(compareSpy).toHaveBeenCalledWith(
+        'wrong_password',
+        'hashed_password',
+      );
+      await app.close();
+    });
+
+    test('should have comparable response times between unknown user and wrong password (prevent timing attack)', async () => {
+      const app = await createAuthApp(upAuthConfig);
+      const realHash = await hashUtils.hash('correct-password');
+
+      // 1. Unknown user request with real bcrypt comparison
+      pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+      const startUnknown = performance.now();
+      const resUnknown = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'unknown@example.com', password: 'test-password-123'},
+      });
+      const timeUnknown = performance.now() - startUnknown;
+
+      // 2. Existing user with wrong password
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{id: 1, email: 'user@example.com', password: realHash}],
+        rowCount: 1,
+      });
+      const startWrongPw = performance.now();
+      const resWrongPw = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'user@example.com', password: 'test-password-123'},
+      });
+      const timeWrongPw = performance.now() - startWrongPw;
+
+      expect(resUnknown.statusCode).toBe(401);
+      expect(resWrongPw.statusCode).toBe(401);
+      expect(resUnknown.json()).toEqual(resWrongPw.json());
+
+      // Latency difference should be within measurement noise (both run 10 rounds of bcrypt)
+      // When bcrypt was skipped, timeUnknown was ~18ms vs ~87ms (70ms diff).
+      // With dummy hash compare, diff is small (well within 35ms even on loaded environments).
+      const diff = Math.abs(timeUnknown - timeWrongPw);
+      expect(diff).toBeLessThan(40);
+
       await app.close();
     });
   });
@@ -535,6 +635,383 @@ describe('POST /auth/login', () => {
       });
 
       expect(response.statusCode).toBe(404);
+      await app.close();
+    });
+  });
+
+  describe('isVerifiedField verification', () => {
+    test('should reject login with 401 when user is not verified (isVerified is false)', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: false,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'User is not verified',
+        data: null,
+      });
+
+      await app.close();
+    });
+
+    test('should reject login with 401 when isVerified is 0', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: 0,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'User is not verified',
+        data: null,
+      });
+
+      await app.close();
+    });
+
+    test('should reject login with 401 when isVerified is null', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: null,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'User is not verified',
+        data: null,
+      });
+
+      await app.close();
+    });
+
+    test('should return 200 and JWT when isVerified is true', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('Login successful');
+      expect(body.data.accessToken).toBeDefined();
+
+      await app.close();
+    });
+
+    test('should return 200 and JWT when isVerified is 1', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: 1,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('Login successful');
+      expect(body.data.accessToken).toBeDefined();
+
+      await app.close();
+    });
+
+    test('should return 401 Invalid username or password when password does not match, even for unverified user', async () => {
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: false,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'wrong_password'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe('Invalid username or password');
+
+      await app.close();
+    });
+
+    test('should return 401 User is not verified when mfaRequired is true and user is unverified', async () => {
+      const mfaAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+              isVerifiedField: 'isVerified',
+            },
+            jwtSecret: 'this-will-never-be-used',
+            mfaRequired: true,
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(
+        mfaAuthConfig,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: false,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'User is not verified',
+        data: null,
+      });
+
+      await app.close();
+    });
+
+    test('should succeed and send OTP when mfaRequired is true and user is verified', async () => {
+      const mfaAuthConfig: AuthenticationConfig = {
+        enabled: true,
+        provider: {
+          type: 'up-auth',
+          config: {
+            userModel: {
+              model: 'users',
+              idField: 'id',
+              usernameField: 'email',
+              passwordField: 'password',
+              isVerifiedField: 'isVerified',
+            },
+            jwtSecret: 'this-will-never-be-used',
+            mfaRequired: true,
+          },
+        },
+      };
+      const app = await createAuthAppWithMfa(
+        mfaAuthConfig,
+        authModelsWithVerified,
+      );
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.message).toBe('Login successful. OTP sent to your email.');
+      expect(body.data.requiresMfa).toBe(true);
+      expect(typeof body.data.ulid).toBe('string');
+
+      await app.close();
+    });
+
+    test('should allow login when isVerifiedField is not configured, even if user record has isVerified false', async () => {
+      const app = await createAuthApp(upAuthConfig, authModels);
+
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: false,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.accessToken).toBeDefined();
+
+      await app.close();
+    });
+
+    test('should reject unverified user on API variant endpoint', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: false,
+          },
+        ],
+        rowCount: 1,
+      });
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const app = await createAuthApp(
+        upAuthConfigWithVerified,
+        authModelsWithVerified,
+        pgConfig,
+        undefined,
+        {
+          'auth.v1.users.unknown.login': {
+            variants: ['admin'],
+          },
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/login',
+        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        code: 401,
+        message: 'User is not verified',
+        data: null,
+      });
+
       await app.close();
     });
   });

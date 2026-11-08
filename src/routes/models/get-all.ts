@@ -1,16 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  getApiAuthorization,
-  getApiBypassSecret,
-  getEffectiveQueries,
-  shouldApiBeEnabled,
-} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 import {buildAllQueryProperties} from '@/lib/schema/query';
 import {
@@ -21,85 +11,34 @@ import {getPublicFields} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {applyFilters} from '@/lib/sql/filters';
 
-import {AppConfig, ModelConfig} from '@/interfaces/config';
+import {ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerGetAllRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
-    const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.unknown.getAll`;
-
-    if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName)) continue;
-
-    const defaultAuthorization = getApiAuthorization(
+    const targets = getApiRouteTargets(
       config,
-      defaultApiIdentifier,
-    );
-    const defaultBypassSecret = getApiBypassSecret(
-      config,
-      defaultApiIdentifier,
-    );
-
-    registerGetAllEndpoint(
-      app,
-      config,
-      modelName,
-      model,
-      defaultVariant,
-      defaultApiIdentifier,
-      defaultAuthorization,
-      undefined,
-      defaultBypassSecret,
-    );
-
-    const baseIdentifier = buildApiIdentifier(
       'model',
-      defaultVariant,
       modelName,
       'unknown',
       'getAll',
     );
-    const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-    for (const variant of additionalVariants) {
-      const variantApiIdentifier = buildApiIdentifier(
-        'model',
-        variant,
-        modelName,
-        'unknown',
-        'getAll',
-      );
-
-      if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-      const variantAuthorization = getApiAuthorization(
-        config,
-        variantApiIdentifier,
-      );
-
-      const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-      const variantBypassSecret = getApiBypassSecret(
-        config,
-        variantApiIdentifier,
-      );
-
+    for (const {identifier, variant, policy} of targets) {
       registerGetAllEndpoint(
         app,
         config,
         modelName,
         model,
         variant,
-        variantApiIdentifier,
-        variantAuthorization,
-        variantTags,
-        variantBypassSecret,
+        identifier,
+        policy,
       );
     }
   }
@@ -107,23 +46,18 @@ export function registerGetAllRoutes(
 
 function registerGetAllEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     model,
     modelName,
     config,
-    authorization,
-    apiIdentifier,
-    routeTags,
-    bypassSecret,
+    policy,
   );
 
   const path = `/${variant}/${modelName}/`;
@@ -133,7 +67,7 @@ function registerGetAllEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -145,7 +79,7 @@ function registerGetAllEndpoint(
       const queryParams = request.query as Record<string, unknown>;
       const tableName = modelName;
 
-      const publicFields = getPublicFields(model, bypassSecret);
+      const publicFields = getPublicFields(model, policy.bypassSecret);
       const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
       let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
@@ -210,7 +144,6 @@ function registerGetAllEndpoint(
                 totalPages: Math.ceil(total / limit),
               },
             },
-            res,
           ),
         );
       } catch (err) {
@@ -225,58 +158,49 @@ function registerGetAllEndpoint(
 function generateSchema(
   model: ModelConfig,
   modelName: string,
-  config: AppConfig,
-  authorization: boolean,
-  apiIdentifier: string,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
-  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const effectiveQueries = policy.supportedQueries;
   const queryProperties = buildAllQueryProperties(
     model,
     effectiveQueries,
-    bypassSecret,
+    policy.bypassSecret,
   );
-  const excludeSecret = !bypassSecret;
+  const excludeSecret = !policy.bypassSecret;
 
   const schema: Record<string, unknown> = {
     summary: `Get all ${capitalizeFirstLetter(modelName)} records`,
     description: `Get all ${modelName} records from the database`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
+    tags: policy.tags,
     querystring: {
       type: 'object',
       properties: queryProperties,
       additionalProperties: false,
     },
-    response: getResponseStructureSchema(
-      [200],
-      {
-        type: 'object',
-        properties: {
-          data: {
-            type: 'array',
-            items: generateJSONValidationSchema(model, {
-              excludeSecretFields: excludeSecret,
-            }),
-          },
-          pagination: {
-            type: 'object',
-            properties: {
-              page: {type: 'integer'},
-              limit: {type: 'integer'},
-              total: {type: 'integer'},
-              totalPages: {type: 'integer'},
-            },
+    response: getResponseStructureSchema([200], {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: generateJSONValidationSchema(model, {
+            excludeSecretFields: excludeSecret,
+          }),
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: {type: 'integer'},
+            limit: {type: 'integer'},
+            total: {type: 'integer'},
+            totalPages: {type: 'integer'},
           },
         },
       },
-      generateJSONValidationSchema(model, {
-        excludeSecretFields: excludeSecret,
-      }),
-    ),
+    }),
   };
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

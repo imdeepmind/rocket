@@ -52,6 +52,7 @@ const upAuthConfig: AuthenticationConfig = {
         usernameField: 'email',
         passwordField: 'password',
       },
+      jwtSecret: 'this-will-never-be-used',
     },
   },
 };
@@ -331,6 +332,7 @@ describe('test delete api', () => {
               usernameField: 'email',
               passwordField: 'password',
             },
+            jwtSecret: 'this-will-never-be-used',
           },
         },
       };

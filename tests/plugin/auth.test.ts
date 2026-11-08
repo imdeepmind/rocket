@@ -4,11 +4,48 @@ import {describe, expect, it} from 'vitest';
 
 import authPlugin from '@/plugin/auth';
 
-import {AuthenticationConfig} from '@/interfaces/config';
+import {resolveConfig} from '@/lib/config/resolve';
+
+import {AuthenticationConfig, ResolvedAppConfig} from '@/interfaces/config';
+
+// Minimal resolved config that enables the up-auth engine. Standalone plugin
+// tests need an explicit fixture because the plugin no longer registers JWT
+// when auth is absent/disabled.
+const upAuthFixture = (): ResolvedAppConfig =>
+  ({
+    application: {name: 'test', logLevel: 'error'},
+    docs: {
+      openapi: {
+        enabled: false,
+        path: '/docs',
+        info: {title: 'Test', description: 'Test', version: '1.0.0'},
+      },
+    },
+    infrastructure: {
+      database: {engine: 'postgres', connection: {url: ':memory:'}},
+    },
+    data: {models: {}},
+    authentication: {
+      enabled: true,
+      provider: {
+        type: 'up-auth',
+        config: {
+          userModel: {
+            model: 'users',
+            idField: 'id',
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+          jwtSecret: 'this-will-never-be-used',
+        },
+      },
+    },
+  }) as unknown as ResolvedAppConfig;
 
 describe('Auth Plugin — up-auth engine', () => {
   it('should register @fastify/jwt and expose jwt decorator', async () => {
     const app = Fastify();
+    app.appConfig = upAuthFixture();
     await app.register(authPlugin);
     await app.ready();
 
@@ -19,6 +56,7 @@ describe('Auth Plugin — up-auth engine', () => {
 
   it('should be able to sign and verify a token', async () => {
     const app = Fastify();
+    app.appConfig = upAuthFixture();
     await app.register(authPlugin);
     await app.ready();
 
@@ -61,7 +99,7 @@ describe('Auth Plugin — up-auth engine', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig;
     await app.register(authPlugin);
     await app.ready();
 
@@ -80,6 +118,7 @@ describe('Auth Plugin — up-auth engine', () => {
 
   it('should expose authenticate() that verifies JWT', async () => {
     const app = Fastify();
+    app.appConfig = upAuthFixture();
     await app.register(authPlugin);
     await app.ready();
 
@@ -98,6 +137,7 @@ describe('Auth Plugin — up-auth engine', () => {
 
   it('should reject invalid JWT via authenticate()', async () => {
     const app = Fastify();
+    app.appConfig = upAuthFixture();
     app.get('/test', async (req, reply) => {
       try {
         await req.authenticate();
@@ -143,7 +183,7 @@ describe('Auth Plugin — api-key engine', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig;
 
     app.get('/test', async (req, reply) => {
       await req.authenticate();
@@ -186,7 +226,7 @@ describe('Auth Plugin — api-key engine', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig;
 
     app.get('/test', async (req, reply) => {
       try {
@@ -233,7 +273,7 @@ describe('Auth Plugin — api-key engine', () => {
           },
         },
       },
-    };
+    } as ResolvedAppConfig;
 
     app.get('/test', async (req, reply) => {
       try {
@@ -279,11 +319,46 @@ describe('Auth Plugin — unknown provider type', () => {
           config: {},
         },
       } as unknown as AuthenticationConfig,
-    };
+    } as ResolvedAppConfig;
     await app.register(authPlugin);
     await app.ready();
 
     // JWT should not be registered since it's not up-auth
     expect(app.jwt).toBeUndefined();
+  });
+});
+
+describe('Auth Plugin — disabled auth', () => {
+  it('registers no JWT and authenticate() always rejects', async () => {
+    const app = Fastify();
+    app.appConfig = resolveConfig(
+      {
+        application: {name: 'test'},
+        data: {models: {}},
+        authentication: {enabled: false},
+      },
+      {mode: 'dev'},
+    );
+
+    app.get('/test', async (req, reply) => {
+      try {
+        await req.authenticate();
+        return reply.send({ok: true});
+      } catch {
+        return reply.status(401).send({ok: false});
+      }
+    });
+
+    await app.register(authPlugin);
+    await app.ready();
+
+    expect(app.jwt).toBeUndefined();
+
+    const res = await app.inject({method: 'GET', url: '/test'});
+
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ok: false});
+
+    await app.close();
   });
 });

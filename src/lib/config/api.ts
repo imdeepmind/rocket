@@ -1,75 +1,145 @@
+import {buildApiIdentifier, parseApiIdentifier} from '@/lib/config/identifier';
+import {deriveApiTags} from '@/lib/config/tags';
+
 import {
   Aggregation,
-  AppConfig,
   QueryOperation,
+  ResolvedAppConfig,
+  ServerSideParamConfig,
   UpAuthProviderConfig,
+  WebhookConfig,
 } from '@/interfaces/config';
 
 /**
- * Get the effective query operations for an API endpoint.
- * If the API config specifies supportedQueries, they restrict which
- * query operations are available. Returns undefined if no override.
+ * Fully resolved policy for a single generated API endpoint.
+ *
+ * Scalar fields (`enabled`, `tags`, `authorization`, `bypassSecret`) inherit
+ * from the base (default-variant) API override when the variant does not set
+ * them. List fields (`webhooks`, `serverSideParams`, `supported*`) never
+ * inherit.
  */
-export function getEffectiveQueries(
-  config: AppConfig,
-  apiIdentifier: string,
-): QueryOperation[] | undefined {
-  return config.apis?.[apiIdentifier]?.supportedQueries;
+export interface ResolvedApiPolicy {
+  enabled: boolean;
+  tags: string[];
+  authorization: boolean;
+  bypassSecret: boolean;
+  webhooks: WebhookConfig[];
+  serverSideParams: ServerSideParamConfig[];
+  supportedQueries: QueryOperation[] | undefined;
+  supportedAggregations: Aggregation[] | undefined;
+}
+
+export interface ApiRouteTarget {
+  identifier: string;
+  variant: string;
+  policy: ResolvedApiPolicy;
+}
+
+function getAuthModel(config: ResolvedAppConfig): string | null {
+  const {authentication} = config;
+
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return null;
+  }
+
+  return (authentication.provider.config as UpAuthProviderConfig).userModel
+    .model;
 }
 
 /**
- * Get the effective aggregations for an API endpoint.
- * If the API config specifies supportedAggregations, they override
- * the field-level aggregations. Returns undefined if no override.
+ * Resolve the effective policy for one API identifier.
+ *
+ * Rules:
+ *   - explicit `enabled` wins; otherwise CRUD APIs of the auth user model are
+ *     off; otherwise on
+ *   - `authorization` explicit wins, else the global auth flag
+ *   - `bypassSecret` explicit or `false`
+ *   - `webhooks` / `serverSideParams` configured or `[]`
+ *   - `supportedQueries` / `supportedAggregations` stay `undefined` when absent
+ *   - scalar fields inherit base → variant
  */
-export function getEffectiveAggregations(
-  config: AppConfig,
-  apiIdentifier: string,
-): Aggregation[] | undefined {
-  return config.apis?.[apiIdentifier]?.supportedAggregations;
+export function resolveApiPolicy(
+  config: ResolvedAppConfig,
+  identifier: string,
+): ResolvedApiPolicy {
+  const parsed = parseApiIdentifier(identifier);
+  const defaultVariant = config.application.dangerouslyOverrideDefaultVariant;
+
+  const baseIdentifier = parsed
+    ? buildApiIdentifier(
+        parsed.module,
+        defaultVariant,
+        parsed.model,
+        parsed.field,
+        parsed.operation,
+      )
+    : identifier;
+
+  const override = config.apis[identifier];
+  const baseOverride = config.apis[baseIdentifier];
+
+  const authModelDefaultOff =
+    parsed?.module === 'model' && parsed.model === getAuthModel(config);
+
+  const enabled =
+    override?.enabled ?? baseOverride?.enabled ?? !authModelDefaultOff;
+
+  return {
+    enabled,
+    tags: override?.tags ?? baseOverride?.tags ?? deriveApiTags(identifier),
+    authorization:
+      override?.authorization ??
+      baseOverride?.authorization ??
+      config.authentication.enabled,
+    bypassSecret: override?.bypassSecret ?? baseOverride?.bypassSecret ?? false,
+    webhooks: override?.webhooks ?? [],
+    serverSideParams: override?.serverSideParams ?? [],
+    supportedQueries: override?.supportedQueries,
+    supportedAggregations: override?.supportedAggregations,
+  };
 }
 
 /**
- * Get whether the API endpoint requires authorization.
- * Falls back to the global authentication.enabled flag.
+ * Enumerate the default + configured-variant route targets for an API, in
+ * registration order. Targets whose policy resolves to disabled are omitted.
  */
-export function getApiAuthorization(
-  config: AppConfig,
-  apiIdentifier: string,
-): boolean {
-  return (
-    config.apis?.[apiIdentifier]?.authorization ??
-    config.authentication?.enabled ??
-    false
+export function getApiRouteTargets(
+  config: ResolvedAppConfig,
+  module: string,
+  model: string,
+  field: string,
+  operation: string,
+): ApiRouteTarget[] {
+  const defaultVariant = config.application.dangerouslyOverrideDefaultVariant;
+  const defaultIdentifier = buildApiIdentifier(
+    module,
+    defaultVariant,
+    model,
+    field,
+    operation,
   );
-}
 
-/**
- * Get whether the API endpoint bypasses secret field protection.
- */
-export function getApiBypassSecret(
-  config: AppConfig,
-  apiIdentifier: string,
-): boolean {
-  return config.apis?.[apiIdentifier]?.bypassSecret ?? false;
-}
+  const variants = [
+    defaultVariant,
+    ...(config.apiVariants[defaultIdentifier]?.variants ?? []),
+  ];
 
-export function shouldApiBeEnabled(
-  config: AppConfig,
-  apiIdentifier: string,
-  modelName: string,
-): boolean {
-  const authModel =
-    config.authentication?.provider?.type === 'up-auth'
-      ? (config.authentication.provider.config as UpAuthProviderConfig)
-          .userModel.model
-      : null;
+  const targets: ApiRouteTarget[] = [];
 
-  const apiEnabled = config.apis?.[apiIdentifier]?.enabled;
+  for (const variant of new Set(variants)) {
+    const identifier = buildApiIdentifier(
+      module,
+      variant,
+      model,
+      field,
+      operation,
+    );
+    const policy = resolveApiPolicy(config, identifier);
 
-  if (apiEnabled === false) return false;
+    if (policy.enabled) {
+      targets.push({identifier, variant, policy});
+    }
+  }
 
-  if (modelName === authModel) return apiEnabled === true;
-
-  return true;
+  return targets;
 }

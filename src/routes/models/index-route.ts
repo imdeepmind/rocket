@@ -1,16 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  getApiAuthorization,
-  getApiBypassSecret,
-  getEffectiveQueries,
-  shouldApiBeEnabled,
-} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 import {buildAllQueryProperties} from '@/lib/schema/query';
 import {
@@ -21,83 +11,35 @@ import {getPublicFields, mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {applyFilters} from '@/lib/sql/filters';
 
-import {AppConfig, ModelConfig, ModelFieldConfig} from '@/interfaces/config';
+import {
+  ModelConfig,
+  ModelFieldConfig,
+  ResolvedAppConfig,
+} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
 export function registerIndexRoutes(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
 ): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
 
   for (const [modelName, model] of Object.entries(models)) {
     const indexFields = Object.entries(model.fields).filter(([, f]) => {
-      return f.primaryKey || f.unique || f.apis?.includes('index');
+      return f.primaryKey || f.unique || f.apis.includes('index');
     });
 
     for (const [fieldName, field] of indexFields) {
-      const defaultApiIdentifier = `model${getVariantSegment(config)}.${modelName}.${fieldName}.index`;
-
-      if (!shouldApiBeEnabled(config, defaultApiIdentifier, modelName))
-        continue;
-
-      const defaultAuthorization = getApiAuthorization(
+      const targets = getApiRouteTargets(
         config,
-        defaultApiIdentifier,
-      );
-      const defaultBypassSecret = getApiBypassSecret(
-        config,
-        defaultApiIdentifier,
-      );
-
-      registerIndexEndpoint(
-        app,
-        config,
-        modelName,
-        fieldName,
-        field,
-        model,
-        defaultVariant,
-        defaultApiIdentifier,
-        defaultAuthorization,
-        undefined,
-        defaultBypassSecret,
-      );
-
-      const baseIdentifier = buildApiIdentifier(
         'model',
-        defaultVariant,
         modelName,
         fieldName,
         'index',
       );
-      const additionalVariants = getAdditionalVariants(config, baseIdentifier);
 
-      for (const variant of additionalVariants) {
-        const variantApiIdentifier = buildApiIdentifier(
-          'model',
-          variant,
-          modelName,
-          fieldName,
-          'index',
-        );
-
-        if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-        const variantAuthorization = getApiAuthorization(
-          config,
-          variantApiIdentifier,
-        );
-
-        const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-        const variantBypassSecret = getApiBypassSecret(
-          config,
-          variantApiIdentifier,
-        );
-
+      for (const {identifier, variant, policy} of targets) {
         registerIndexEndpoint(
           app,
           config,
@@ -106,10 +48,8 @@ export function registerIndexRoutes(
           field,
           model,
           variant,
-          variantApiIdentifier,
-          variantAuthorization,
-          variantTags,
-          variantBypassSecret,
+          identifier,
+          policy,
         );
       }
     }
@@ -118,32 +58,20 @@ export function registerIndexRoutes(
 
 function registerIndexEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   modelName: string,
   fieldName: string,
   field: ModelFieldConfig,
   model: ModelConfig,
   variant: string,
   apiIdentifier: string,
-  authorization: boolean,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
   const {
     schema,
     isUnique,
   }: {schema: Record<string, unknown>; isUnique: boolean | undefined} =
-    generateSchema(
-      fieldName,
-      field,
-      model,
-      modelName,
-      config,
-      authorization,
-      apiIdentifier,
-      routeTags,
-      bypassSecret,
-    );
+    generateSchema(fieldName, field, model, modelName, config, policy);
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
 
@@ -152,7 +80,7 @@ function registerIndexEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, authorization),
+      preValidation: buildPreValidation(app, config, policy.authorization),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -165,7 +93,7 @@ function registerIndexEndpoint(
       const params = request.params as Record<string, unknown>;
       const tableName = modelName;
 
-      const publicFields = getPublicFields(model, bypassSecret);
+      const publicFields = getPublicFields(model, policy.bypassSecret);
       const columns = publicFields.map(([name]) => `"${name}"`).join(', ');
       let query = `SELECT ${columns} FROM "${tableName}"`;
       const values: unknown[] = [];
@@ -247,7 +175,6 @@ function registerIndexEndpoint(
               200,
               `Successfully retrieved records from the ${tableName} table`,
               responsePayload,
-              res,
             ),
           );
       } catch (err) {
@@ -265,21 +192,18 @@ function generateSchema(
   field: ModelFieldConfig,
   model: ModelConfig,
   modelName: string,
-  config: AppConfig,
-  authorization: boolean,
-  apiIdentifier: string,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
   const isUnique = field.primaryKey || field.unique;
   const fieldSchemaType = mapDataTypeToJsonSchema(field.type);
 
-  const effectiveQueries = getEffectiveQueries(config, apiIdentifier);
+  const effectiveQueries = policy.supportedQueries;
   const queryProperties = isUnique
     ? {}
-    : buildAllQueryProperties(model, effectiveQueries, bypassSecret);
+    : buildAllQueryProperties(model, effectiveQueries, policy.bypassSecret);
 
-  const excludeSecret = !bypassSecret;
+  const excludeSecret = !policy.bypassSecret;
   const responseSchemaProperties: Record<string, object> = {
     data: isUnique
       ? {
@@ -311,7 +235,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Get ${capitalizeFirstLetter(modelName)} record(s) by ${fieldName}`,
     description: `Get ${modelName} record(s) from the database by ${fieldName}`,
-    tags: routeTags ?? [capitalizeFirstLetter(modelName), 'Read'],
+    tags: policy.tags,
     params: {
       type: 'object',
       properties: {
@@ -322,16 +246,10 @@ function generateSchema(
       },
       required: [fieldName],
     },
-    response: getResponseStructureSchema(
-      [200],
-      {
-        type: 'object',
-        properties: responseSchemaProperties,
-      },
-      generateJSONValidationSchema(model, {
-        excludeSecretFields: excludeSecret,
-      }),
-    ),
+    response: getResponseStructureSchema([200], {
+      type: 'object',
+      properties: responseSchemaProperties,
+    }),
   };
 
   if (Object.keys(queryProperties).length > 0) {
@@ -342,7 +260,7 @@ function generateSchema(
     };
   }
 
-  const security = buildSecurityArray(config, authorization);
+  const security = buildSecurityArray(config, policy.authorization);
 
   if (security.length > 0) {
     schema.security = security;

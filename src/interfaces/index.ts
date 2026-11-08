@@ -7,15 +7,20 @@ export interface CLIOptions {
   mode: Mode;
   verbose: boolean;
   migrate: boolean;
+  printConfig: boolean;
 }
 
-export {DatabaseQuery, TransactionClient} from './database';
+export {
+  ClassifiedDatabaseError,
+  DatabaseErrorLike,
+  DatabaseQuery,
+  TransactionClient,
+} from './database';
 
-export interface StructuredResponse<T = unknown, R = unknown> {
+export interface StructuredResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
-  raw_data?: R;
 }
 
 export interface WebhookPayload {

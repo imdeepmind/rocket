@@ -5,6 +5,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
+import {redactConfig} from '@/lib/config/redact';
+
 // Setup Mock for Commander
 const mockAction = vi.fn();
 const mockParse = vi.fn();
@@ -254,5 +257,132 @@ describe('main.ts CLI', () => {
     await mockAction({config: 'test.json'});
 
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+  it('prints the resolved config and exits before starting the server', async () => {
+    await import('@/main');
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        application: {name: 'Print Test'},
+        data: {
+          models: {
+            users: {
+              fields: {
+                id: {type: 'integer', primaryKey: true},
+              },
+            },
+          },
+        },
+        infrastructure: {
+          database: {
+            engine: 'postgres',
+            connection: {url: 'postgresql://user:pass@localhost:5432/rocket'},
+          },
+        },
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'id',
+                passwordField: 'id',
+              },
+              jwtSecret: 'super-secret-jwt-signing-key-value',
+            },
+          },
+        },
+      }),
+    );
+
+    await mockAction({
+      config: 'test.json',
+      port: 3000,
+      mode: 'dev',
+      verbose: false,
+      migrate: false,
+      printConfig: true,
+    });
+
+    expect(startServer).not.toHaveBeenCalled();
+
+    const printed = logSpy.mock.calls.map(call => String(call[0])).join('\n');
+    const resolved = JSON.parse(printed) as {
+      application: {logLevel: string; rateLimit: {enabled: boolean}};
+      infrastructure: {database: {connection: {url: string}}};
+      authentication: {provider: {config: {jwtSecret: string}}};
+    };
+
+    expect(resolved.application.logLevel).toBe('info');
+    expect(resolved.application.rateLimit.enabled).toBe(false);
+    expect(resolved.infrastructure.database.connection.url).toBe(
+      'postgresql://***:***@localhost:5432/rocket',
+    );
+    expect(resolved.authentication.provider.config.jwtSecret).toBe('***');
+
+    // Golden: the printed document is exactly the resolved, validated,
+    // redacted configuration.
+    const rawConfig = JSON.parse(
+      vi.mocked(fs.readFileSync).mock.results[0].value as string,
+    );
+    const expected = redactConfig(resolveAndValidateConfig(rawConfig, 'dev'));
+    expect(resolved).toEqual(JSON.parse(JSON.stringify(expected)));
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('prints invalid config errors and exits with 1', async () => {
+    await import('@/main');
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as unknown as (
+        code?: string | number | null,
+      ) => never);
+
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        data: {
+          models: {
+            users: {
+              fields: {
+                id: {type: 'integer'},
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    await mockAction({
+      config: 'test.json',
+      port: 3000,
+      mode: 'dev',
+      verbose: false,
+      migrate: false,
+      printConfig: true,
+    });
+
+    expect(startServer).not.toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Invalid configuration:',
+      expect.stringContaining("required property 'name'"),
+    );
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

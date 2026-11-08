@@ -1,7 +1,22 @@
 import Fastify, {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 
+import {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import otpPlugin from '@/plugin/otp';
+
+import {resolveConfig} from '@/lib/config/resolve';
+
+import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
+
+const resolvedConfig = (raw: AppConfigInput): ResolvedAppConfig =>
+  resolveConfig(
+    {
+      ...raw,
+      application: {name: 'test', ...raw.application},
+      data: raw.data ?? {models: {}},
+    },
+    {mode: 'dev'},
+  );
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -69,6 +84,7 @@ describe('OTP Plugin', () => {
   describe('Plugin Registration', () => {
     it('should decorate fastify with otp service', async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
 
@@ -85,6 +101,7 @@ describe('OTP Plugin', () => {
   describe('sendOTPForVerification', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -151,6 +168,30 @@ describe('OTP Plugin', () => {
       expect(otpMatch![1]).toMatch(/^\d{6}$/);
     });
 
+    it('should warn when OTP is stored without a configured cache', async () => {
+      const warnSpy = vi.spyOn(app.log, 'warn');
+
+      await (app as any).otp.sendOTPForVerification('test@example.com');
+
+      expect(warnSpy).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should not warn when a cache is configured', async () => {
+      (app as any).appConfig = resolvedConfig({
+        infrastructure: {
+          cache: {
+            engine: 'redis',
+            connection: {url: 'redis://localhost:6379'},
+          },
+        },
+      });
+      const warnSpy = vi.spyOn(app.log, 'warn');
+
+      await (app as any).otp.sendOTPForVerification('test@example.com');
+
+      expect(warnSpy).not.toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
     it('should handle multiple OTPs for different emails', async () => {
       const email1 = 'user1@example.com';
       const email2 = 'user2@example.com';
@@ -175,6 +216,7 @@ describe('OTP Plugin', () => {
   describe('verify', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -271,6 +313,7 @@ describe('OTP Plugin', () => {
   describe('Error Handling', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);
@@ -315,6 +358,7 @@ describe('OTP Plugin', () => {
   describe('Integration Tests', () => {
     beforeEach(async () => {
       app = Fastify();
+      (app as any).appConfig = resolvedConfig({});
       (app as any).cache = cacheMock;
       (app as any).communicate = communicateMock;
       await app.register(otpPlugin);

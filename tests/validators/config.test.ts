@@ -1,11 +1,17 @@
+import * as fs from 'fs';
+
 import {describe, expect, it, vi} from 'vitest';
+
+import {resolveConfig} from '@/lib/config/resolve';
 
 import {
   ApisConfig,
   AppConfig,
+  AuthProvider,
   CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
+  ResolvedAppConfig,
 } from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
@@ -54,7 +60,7 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => {
   };
 };
 
-const validBaseConfig: AppConfig = {
+const rawBaseConfig: AppConfig = {
   application: {
     name: 'Test App',
     logLevel: 'info',
@@ -73,6 +79,12 @@ const validBaseConfig: AppConfig = {
   infrastructure: {database: getDefaultDatabaseConfig()},
   data: {models: getDefaultModelConfig()},
 };
+
+// Validation runs on the resolved (dense) configuration, mirroring what the
+// pipeline feeds it in production.
+const validBaseConfig: ResolvedAppConfig = resolveConfig(rawBaseConfig, {
+  mode: 'dev',
+});
 
 describe('validateInvalidDocsConfig', () => {
   it.each([
@@ -1865,6 +1877,22 @@ describe('validateInvalidApplicationConfig', () => {
       patch: {magicVariables: {tenant: null}},
       expected: '/application/magicVariables/tenant must be string',
     },
+    {
+      name: 'healthCheck enabled not boolean',
+      patch: {healthCheck: {enabled: 'yes'}},
+      expected: '/application/healthCheck/enabled must be boolean',
+    },
+    {
+      name: 'healthCheck path empty string',
+      patch: {healthCheck: {path: ''}},
+      expected:
+        '/application/healthCheck/path must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'healthCheck additional property',
+      patch: {healthCheck: {unknownProp: true}},
+      expected: '/application/healthCheck must NOT have additional properties',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config: AppConfig = {
       ...validBaseConfig,
@@ -1928,6 +1956,22 @@ describe('validateValidApplicationConfig', () => {
         name: 'Test App',
         logLevel: 'info',
         magicVariables: {tenant: 'acme', maxRetries: 3, isProduction: true},
+      },
+    },
+    {
+      name: 'healthCheck with enabled and path',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        healthCheck: {enabled: true, path: '/health'},
+      },
+    },
+    {
+      name: 'healthCheck disabled',
+      patch: {
+        name: 'Test App',
+        logLevel: 'info',
+        healthCheck: {enabled: false},
       },
     },
   ])('Scenario: $name . should return', ({patch}) => {
@@ -3207,8 +3251,7 @@ describe('validateCacheDbConfig', () => {
     {
       name: 'engine as invalid value',
       patch: {engine: 'memcached', connection: {url: 'redis://localhost:6379'}},
-      expected:
-        '/infrastructure/cache/engine must be equal to one of the allowed values',
+      expected: '/infrastructure/cache must match exactly one schema in oneOf',
     },
     {
       name: 'connection url with invalid format (http)',
@@ -3376,7 +3419,7 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'invalid data response cannot be used when triggerOnRequest is true',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'model.v1.users.unknown.insert': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3388,7 +3431,7 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/webhooks/0: data response cannot be used when triggerOnRequest is true',
+        'apis/model.v1.users.unknown.insert/webhooks/0: data response cannot be used when triggerOnRequest is true',
     },
     {
       name: 'custom endpoint key not found',
@@ -3404,7 +3447,7 @@ describe('validateInvalidmodelConfig', () => {
         },
       },
       expected:
-        'apis/custom.v1.all.unknown.nonexistent: custom endpoint not found',
+        'apis/custom.v1.all.unknown.nonexistent: does not match any generated API route',
     },
     {
       name: 'custom endpoint key invalid format',
@@ -3424,12 +3467,12 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'supportedQueries on non-model api',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'aggregate.v1.posts.title.getAggregation': {
           supportedQueries: ['lt', 'gt'],
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
+        'apis/aggregate.v1.posts.title.getAggregation/supportedQueries: supportedQueries is only allowed on model APIs (keys starting with "model.")',
     },
     {
       name: 'supportedAggregations on non-aggregate api',
@@ -3454,12 +3497,12 @@ describe('validateInvalidmodelConfig', () => {
     {
       name: 'supportedAggregations with aggregation not supported by any field',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
+        'aggregate.v1.posts.title.getAggregation': {
           supportedAggregations: ['avg'],
         },
       },
       expected:
-        'apis/aggregate.v1.users.id.getAggregation/supportedAggregations: "avg" is not supported by any field in model "users"',
+        'apis/aggregate.v1.posts.title.getAggregation/supportedAggregations: "avg" is not supported by any field in model "posts"',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -3478,27 +3521,7 @@ describe('validateValidmodelConfig', () => {
     {
       name: 'valid model',
       patch: {
-        'aggregate.v1.users.id.getAggregation': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
-        'model.v1.users.id.delete': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
-        'model.v1.users.id.edit': {
+        'model.v1.users.id.index': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3518,16 +3541,6 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.users.id.index': {
-          webhooks: [
-            {
-              url: 'https://google.com',
-              data: ['query', 'body', 'params', 'response'],
-              triggerOnRequest: false,
-              triggerOnResponse: true,
-            },
-          ],
-        },
         'model.v1.users.unknown.insert': {
           webhooks: [
             {
@@ -3538,7 +3551,7 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.users.id.search': {
+        'model.v1.posts.title.search': {
           webhooks: [
             {
               url: 'https://google.com',
@@ -3548,11 +3561,19 @@ describe('validateValidmodelConfig', () => {
             },
           ],
         },
-        'model.v1.posts.user_id.index': {
-          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
-        },
         'aggregate.v1.posts.title.getAggregation': {
+          webhooks: [
+            {
+              url: 'https://google.com',
+              data: ['query', 'body', 'params', 'response'],
+              triggerOnRequest: false,
+              triggerOnResponse: true,
+            },
+          ],
           supportedAggregations: ['count'],
+        },
+        'model.v1.posts.unknown.getAll': {
+          supportedQueries: ['eq', 'in', 'lt', 'gt', 'sort'],
         },
       },
     },
@@ -3579,7 +3600,7 @@ describe('validateInvalidAuthConfig', () => {
           },
         },
       },
-      expected: '/authentication/enabled must be boolean',
+      expected: '/authentication must match exactly one schema in oneOf',
     },
     {
       name: 'invalid provider type',
@@ -3984,29 +4005,6 @@ describe('validateInvalidAuthConfig', () => {
       expected: '/authentication/provider/config/mfaRequired must be boolean',
     },
     {
-      name: 'mfaRequired true but no cache configured',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/mfaRequired: cache must be configured when mfaRequired is true',
-    },
-    {
       name: 'mfaRequired true but no communicate configured',
       patch: {
         authentication: {
@@ -4235,7 +4233,32 @@ describe('validateValidAuthConfig', () => {
         cache: {
           engine: 'redis' as const,
           connection: {url: 'redis://localhost:6379'},
+          timeout: 10000,
         },
+        integrations: {email: {provider: 'dummy' as const}},
+      },
+    },
+    {
+      name: 'valid up-auth auth config with mfaRequired true and node-cache fallback',
+      patch: {
+        authentication: {
+          enabled: true,
+          provider: {
+            type: 'up-auth',
+            config: {
+              userModel: {
+                model: 'users',
+                idField: 'id',
+                usernameField: 'name',
+                passwordField: 'name',
+              },
+              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+              mfaRequired: true,
+            },
+          },
+        },
+      },
+      extra: {
         integrations: {email: {provider: 'dummy' as const}},
       },
     },
@@ -4266,7 +4289,9 @@ describe('validateValidAuthConfig', () => {
   ])('Scenario: $name . should return', ({patch, extra}) => {
     const base = {...validBaseConfig};
     if (extra) {
-      base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      if (extra.cache) {
+        base.infrastructure = {...base.infrastructure, cache: extra.cache};
+      }
       base.integrations = extra.integrations;
     }
     const config = {
@@ -4288,9 +4313,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
         enabled: true,
         provider: {
           type: 'up-auth',
-          config: undefined as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          config: undefined as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4327,9 +4350,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4366,9 +4387,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4405,9 +4424,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 789,
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4445,9 +4462,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               isVerifiedField: 123,
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4474,9 +4489,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
               passwordField: 'name',
             },
             jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as NonNullable<
-            NonNullable<typeof validBaseConfig.authentication>['provider']
-          >['config'],
+          } as unknown as AuthProvider['config'],
         },
       },
     };
@@ -4609,13 +4622,7 @@ describe('validateInvalidAuthorizationConfig', () => {
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
-      authentication: {
-        enabled: false,
-        provider: {
-          type: 'api-key',
-          config: {key: '1234'},
-        },
-      },
+      authentication: {enabled: false},
       apis: {
         'model.v1.posts.unknown.getAll': {
           authorization: patch.authorization,
@@ -4863,5 +4870,98 @@ describe('validateSchemaKeyword', () => {
     );
 
     spy.mockRestore();
+  });
+});
+
+// ----- Resolved-config union & density cases -----
+
+describe('validateResolvedConfigShapes', () => {
+  it('validates a resolved memory-cache infrastructure', () => {
+    const config: ResolvedAppConfig = resolveConfig(
+      {
+        ...rawBaseConfig,
+        infrastructure: {database: getDefaultDatabaseConfig()},
+      },
+      {mode: 'dev'},
+    );
+
+    expect(config.infrastructure.cache).toEqual({engine: 'memory'});
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('validates a resolved redis-cache infrastructure', () => {
+    const config: ResolvedAppConfig = resolveConfig(
+      {
+        ...rawBaseConfig,
+        infrastructure: {
+          database: getDefaultDatabaseConfig(),
+          cache: {engine: 'redis', connection: {url: 'redis://localhost:6379'}},
+        },
+      },
+      {mode: 'dev'},
+    );
+
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('validates the resolved disabled-auth shape', () => {
+    const config: ResolvedAppConfig = {
+      ...validBaseConfig,
+      authentication: {enabled: false},
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('rejects disabled auth that carries a provider', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {
+        enabled: false,
+        provider: {type: 'api-key', config: {key: '1234'}},
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match exactly one schema in oneOf',
+    );
+  });
+
+  it('rejects enabled auth without a provider', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {enabled: true},
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match exactly one schema in oneOf',
+    );
+  });
+
+  it('validates the resolved example configuration', () => {
+    const raw = JSON.parse(
+      fs.readFileSync(
+        new URL('../../example_config.json', import.meta.url),
+        'utf-8',
+      ),
+    ) as AppConfig;
+
+    const resolved = resolveConfig(raw, {mode: 'dev'});
+
+    expect(validateConfig(resolved as unknown as AppConfig)).toBe(resolved);
+  });
+
+  it('validates a resolved minimal configuration', () => {
+    const resolved = resolveConfig(
+      {
+        application: {name: 'Minimal App'},
+        data: {models: getDefaultModelConfig()},
+      },
+      {mode: 'dev'},
+    );
+
+    expect(() =>
+      validateConfig(resolved as unknown as AppConfig),
+    ).not.toThrow();
   });
 });

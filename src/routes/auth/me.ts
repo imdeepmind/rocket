@@ -1,106 +1,59 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {getApiBypassSecret} from '@/lib/config/api';
-import {
-  buildApiIdentifier,
-  getAdditionalVariants,
-  getVariantSegment,
-} from '@/lib/config/identifier';
+import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {generateJSONValidationSchema} from '@/lib/schema/body';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {getPublicFields} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {AppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
-export function registerMeRoute(app: FastifyInstance, config: AppConfig): void {
+export function registerMeRoute(
+  app: FastifyInstance,
+  config: ResolvedAppConfig,
+): void {
   const {models} = config.data;
-  const defaultVariant =
-    config.application.dangerouslyOverrideDefaultVariant ?? 'v1';
+
+  const {authentication} = config;
+  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+    return;
+  }
 
   const {model, idField} = (
-    config.authentication!.provider.config as UpAuthProviderConfig
+    authentication.provider.config as UpAuthProviderConfig
   ).userModel;
 
   const authModelConfig = models[model];
 
   if (!authModelConfig) return;
 
-  const defaultApiIdentifier = `auth${getVariantSegment(config)}.${model}.unknown.me`;
+  const targets = getApiRouteTargets(config, 'auth', model, 'unknown', 'me');
 
-  if (config.apis?.[defaultApiIdentifier]?.enabled === false) return;
-
-  const defaultTags = config.apis?.[defaultApiIdentifier]?.tags;
-  const defaultBypassSecret = getApiBypassSecret(config, defaultApiIdentifier);
-
-  registerMeEndpoint(
-    app,
-    config,
-    model,
-    idField,
-    defaultVariant,
-    defaultApiIdentifier,
-    defaultTags,
-    defaultBypassSecret,
-  );
-
-  const baseIdentifier = buildApiIdentifier(
-    'auth',
-    defaultVariant,
-    model,
-    'unknown',
-    'me',
-  );
-  const additionalVariants = getAdditionalVariants(config, baseIdentifier);
-
-  for (const variant of additionalVariants) {
-    const variantApiIdentifier = buildApiIdentifier(
-      'auth',
-      variant,
-      model,
-      'unknown',
-      'me',
-    );
-
-    if (config.apis?.[variantApiIdentifier]?.enabled === false) continue;
-
-    const variantTags = config.apis?.[variantApiIdentifier]?.tags;
-    const variantBypassSecret = getApiBypassSecret(
-      config,
-      variantApiIdentifier,
-    );
-
+  for (const {identifier, variant, policy} of targets) {
     registerMeEndpoint(
       app,
       config,
       model,
       idField,
       variant,
-      variantApiIdentifier,
-      variantTags,
-      variantBypassSecret,
+      identifier,
+      policy,
     );
   }
 }
 
 function registerMeEndpoint(
   app: FastifyInstance,
-  config: AppConfig,
+  config: ResolvedAppConfig,
   model: string,
   idField: string,
   variant: string,
   apiIdentifier: string,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  policy: ResolvedApiPolicy,
 ): void {
-  const schema: Record<string, unknown> = generateSchema(
-    model,
-    config,
-    routeTags,
-    bypassSecret,
-  );
+  const schema: Record<string, unknown> = generateSchema(model, config, policy);
 
   const path = `/${variant}/auth/user/me`;
 
@@ -124,7 +77,10 @@ function registerMeEndpoint(
       }
 
       const authModelConfig = config.data.models[model];
-      const publicFields = getPublicFields(authModelConfig, bypassSecret);
+      const publicFields = getPublicFields(
+        authModelConfig,
+        policy.bypassSecret,
+      );
       const columns = [
         ...new Set([idField, ...publicFields.map(([name]) => name)]),
       ]
@@ -153,15 +109,14 @@ function registerMeEndpoint(
 
 function generateSchema(
   model: string,
-  config: AppConfig,
-  routeTags?: string[],
-  bypassSecret?: boolean,
+  config: ResolvedAppConfig,
+  policy: ResolvedApiPolicy,
 ) {
   const authModelConfig = config.data.models[model];
 
   const dataSchema = authModelConfig
     ? generateJSONValidationSchema(authModelConfig, {
-        excludeSecretFields: !bypassSecret,
+        excludeSecretFields: !policy.bypassSecret,
       })
     : {type: 'object', additionalProperties: true};
 
@@ -170,7 +125,7 @@ function generateSchema(
   const schema: Record<string, unknown> = {
     summary: `Get authenticated user profile for ${capitalizeFirstLetter(model)}`,
     description: `Returns the profile of the currently authenticated user from the "${model}" table.`,
-    tags: routeTags ?? [capitalizeFirstLetter(model), 'Auth', 'Profile'],
+    tags: policy.tags,
     response: responseSchema,
     security: [{bearerAuth: []}],
   };
