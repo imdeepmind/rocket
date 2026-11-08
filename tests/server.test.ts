@@ -491,6 +491,96 @@ describe('Server', () => {
       );
     });
 
+    it('should map SQLite unique violations to 409 without leaking driver details', () => {
+      const err = createError(
+        'UNIQUE constraint failed: users.username',
+        'SQLITE_CONSTRAINT_UNIQUE',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 409,
+          message: 'Username already exists',
+        }),
+      );
+    });
+
+    it('should map SQLite foreign key violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'FOREIGN KEY constraint failed',
+        'SQLITE_CONSTRAINT_FOREIGNKEY',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The request references a record that does not exist',
+        }),
+      );
+    });
+
+    it('should map SQLite not-null violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'NOT NULL constraint failed: users.name',
+        'SQLITE_CONSTRAINT_NOTNULL',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'A required field is missing',
+        }),
+      );
+    });
+
+    it('should map SQLite check constraint violations to 400 without leaking driver details', () => {
+      const err = createError(
+        'CHECK constraint failed: age >= 0',
+        'SQLITE_CONSTRAINT_CHECK',
+      );
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'The provided data violates a database constraint',
+        }),
+      );
+    });
+
+    it('should map SQLite busy/locked connection exceptions to 503', () => {
+      const err = createError('database is locked', 'SQLITE_BUSY');
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(503);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 503,
+          message: 'The service is temporarily unavailable',
+        }),
+      );
+    });
+
+    it('should map generic SQLite errors to 500 without leaking driver details', () => {
+      const err = createError('near "SELEC": syntax error', 'SQLITE_ERROR');
+      errorHandler(err, mockReq, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 500,
+          message: 'Internal Server Error',
+        }),
+      );
+    });
+
     it('should respect incoming status code if specified, provided it is valid HTTP', () => {
       const err = createError('Custom 422 object', '99999', 422);
       errorHandler(err, mockReq, mockReply);

@@ -114,11 +114,27 @@ function buildUniqueViolationMessage(fields: string[]): string {
 
 export function isDatabaseError(err: unknown): boolean {
   const code = getCode(err);
-  if (!code) return false;
 
-  if (code.startsWith('SQLITE_')) return true;
+  if (code) {
+    if (code.startsWith('SQLITE_')) return true;
+    if (code.length === 5 && DATABASE_SQLSTATE_CLASSES.has(code.slice(0, 2))) {
+      return true;
+    }
+  }
 
-  return code.length === 5 && DATABASE_SQLSTATE_CLASSES.has(code.slice(0, 2));
+  if (typeof err !== 'object' || err === null) return false;
+
+  const errorObj = err as {name?: unknown; message?: unknown};
+  if (errorObj.name === 'SqliteError') return true;
+
+  if (
+    typeof errorObj.message === 'string' &&
+    /(constraint failed|syntax error)/i.test(errorObj.message)
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -131,7 +147,8 @@ export function describeDatabaseError(
   if (!isDatabaseError(err)) return null;
 
   const error = err as DatabaseErrorLike;
-  const {code} = error;
+  const code = getCode(err) ?? '';
+  const message = getStringField(error, 'message');
 
   const uniqueFields = getUniqueViolationFields(error, code);
   if (uniqueFields !== null) {
@@ -141,49 +158,64 @@ export function describeDatabaseError(
     };
   }
 
-  if (code === '23503') {
+  // Foreign key violations
+  if (
+    code === '23503' ||
+    code === 'SQLITE_CONSTRAINT_FOREIGNKEY' ||
+    /FOREIGN KEY constraint failed/i.test(message)
+  ) {
     return {
       statusCode: 400,
       message: 'The request references a record that does not exist',
     };
   }
 
-  if (code === '23502') {
+  // Not null violations
+  if (
+    code === '23502' ||
+    code === 'SQLITE_CONSTRAINT_NOTNULL' ||
+    /NOT NULL constraint failed/i.test(message)
+  ) {
     return {statusCode: 400, message: 'A required field is missing'};
   }
 
-  if (isSqliteConnectionCode(code)) {
+  // Check violations
+  if (
+    code === '23514' ||
+    code === 'SQLITE_CONSTRAINT_CHECK' ||
+    /CHECK constraint failed/i.test(message)
+  ) {
+    return {
+      statusCode: 400,
+      message: 'The provided data violates a database constraint',
+    };
+  }
+
+  // Connection / busy exceptions
+  if (
+    isSqliteConnectionCode(code) ||
+    (code.length === 5 && code.slice(0, 2) === '08')
+  ) {
     return {
       statusCode: 503,
       message: 'The service is temporarily unavailable',
     };
   }
 
-  if (code.startsWith('SQLITE_CONSTRAINT')) {
+  // Generic or other constraint violations
+  if (
+    code.startsWith('SQLITE_CONSTRAINT') ||
+    (code.length === 5 && code.slice(0, 2) === '23')
+  ) {
     return {
       statusCode: 400,
       message: 'The provided data violates a database constraint',
     };
   }
 
-  const errorClass = code.slice(0, 2);
-
-  if (errorClass === '23') {
-    return {
-      statusCode: 400,
-      message: 'The provided data violates a database constraint',
-    };
-  }
-
-  if (errorClass === '22') {
+  // Data exceptions
+  if (code.length === 5 && code.slice(0, 2) === '22') {
     return {statusCode: 400, message: 'The provided data is invalid'};
-  }
-
-  if (errorClass === '08') {
-    return {
-      statusCode: 503,
-      message: 'The service is temporarily unavailable',
-    };
   }
 
   return {statusCode: 500, message: 'Internal Server Error'};
