@@ -24,11 +24,11 @@ export default fp(
             if (sp.type === type) {
               if (
                 typeof sp.value === 'string' &&
-                sp.value.startsWith('[') &&
-                sp.value.endsWith(']') &&
-                sp.value.length > 2
+                sp.value.startsWith('[[') &&
+                sp.value.endsWith(']]') &&
+                sp.value.length > 4
               ) {
-                const varName = sp.value.slice(1, -1);
+                const varName = sp.value.slice(2, -2);
                 const customVal =
                   fastify.appConfig.application.magicVariables[varName];
                 if (customVal !== undefined) {

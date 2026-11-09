@@ -1,39 +1,26 @@
-export type PlaceholderDelimiter = '@@' | '$$' | '&&' | '^^';
+export type PlaceholderSource = 'query' | 'body' | 'path' | 'header';
 
 export type PlaceholderToken = {
-  delimiter: PlaceholderDelimiter;
+  source: PlaceholderSource;
   name: string;
   type: string;
+  raw: string;
 };
 
 export function parseQueryPlaceholders(sql: string): PlaceholderToken[] {
-  const delims = ['@@', '$$', '&&', '^^'];
-  const positions: {pos: number; type: string}[] = [];
+  const placeholders: PlaceholderToken[] = [];
+  const regex =
+    /\[\[(query|body|path|header)\.([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\]\]/g;
+  let match: RegExpExecArray | null;
 
-  delims.forEach(d => {
-    let pos = sql.indexOf(d);
-    while (pos !== -1) {
-      positions.push({pos, type: d});
-      pos = sql.indexOf(d, pos + 2);
-    }
-  });
-
-  positions.sort((a, b) => a.pos - b.pos);
-
-  const result: PlaceholderToken[] = [];
-  for (let i = 0; i < positions.length; i += 2) {
-    const start = positions[i];
-    const end = positions[i + 1];
-
-    if (!end || start.type !== end.type) continue;
-
-    const varString = sql.substring(start.pos + 2, end.pos);
-    const parts = varString.split(':');
-    result.push({
-      delimiter: start.type as PlaceholderDelimiter,
-      name: parts[0],
-      type: parts[1] ?? '',
+  while ((match = regex.exec(sql)) !== null) {
+    placeholders.push({
+      source: match[1] as PlaceholderSource,
+      name: match[2],
+      type: match[3],
+      raw: match[0],
     });
   }
-  return result;
+
+  return placeholders;
 }

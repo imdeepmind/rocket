@@ -19,7 +19,7 @@ describe('test custom-endpoints api', () => {
       },
       handler: {
         type: 'sql' as const,
-        sql: 'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
+        sql: 'SELECT * FROM users WHERE status = [[query.status:string]] AND age >= [[query.minAge:integer]];',
       },
     },
     updateUser: {
@@ -36,7 +36,7 @@ describe('test custom-endpoints api', () => {
       },
       handler: {
         type: 'sql' as const,
-        sql: 'UPDATE users SET name = @@name:string@@ WHERE id = $$id:integer$$;',
+        sql: 'UPDATE users SET name = [[body.name:string]] WHERE id = [[path.id:integer]];',
       },
     },
   };
@@ -121,7 +121,7 @@ describe('test custom-endpoints api', () => {
           validation: {},
           handler: {
             type: 'sql' as const,
-            sql: 'INSERT INTO test (b, t, d, dec, dt) VALUES (@@b:boolean@@, @@t:text@@, @@d:datetime@@, @@dec:decimal@@, @@dt:date@@);',
+            sql: 'INSERT INTO test (b, t, d, dec, dt) VALUES ([[body.b:boolean]], [[body.t:text]], [[body.d:datetime]], [[body.dec:decimal]], [[body.dt:date]]);',
           },
         },
       };
@@ -228,7 +228,7 @@ describe('test custom-endpoints api', () => {
           validation: {},
           handler: {
             type: 'sql' as const,
-            sql: 'SELECT * FROM users WHERE status = &&status:string&&;',
+            sql: 'SELECT * FROM users WHERE status = [[query.status:string]];',
           },
         },
       });
@@ -265,7 +265,7 @@ describe('test custom-endpoints api', () => {
           validation: {},
           handler: {
             type: 'sql' as const,
-            sql: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+            sql: 'SELECT * FROM users WHERE id = [[body.id:integer]];',
           },
         },
       });
@@ -407,16 +407,16 @@ describe('test custom-endpoints api', () => {
   });
 
   describe('parsing edge cases', () => {
-    test('should handle mismatched delimiters gracefully', async () => {
+    test('should handle unclosed placeholder delimiters gracefully', async () => {
       const mismatchedEndpoints = {
         mismatched: {
           method: 'GET' as const,
           path: '/mismatched',
-          description: 'Test mismatched delimiters',
+          description: 'Test unclosed placeholder delimiter',
           validation: {},
           handler: {
             type: 'sql' as const,
-            sql: 'SELECT * FROM users WHERE id = $$id:integer@@;',
+            sql: 'SELECT * FROM users WHERE id = [[id:integer;',
           },
         },
       };
@@ -449,7 +449,7 @@ describe('test custom-endpoints api', () => {
           handler: {
             type: 'sql' as const,
             // Using a type that is not in the DataType union but bypasses simple regex
-            sql: 'SELECT * FROM users WHERE name = &&name:unknown&&;',
+            sql: 'SELECT * FROM users WHERE name = [[query.name:unknown]];',
           },
         },
       };
@@ -509,7 +509,7 @@ describe('test custom-endpoints api', () => {
           description: 'Get user by id without explicit validation in config',
           handler: {
             type: 'sql' as const,
-            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+            sql: 'SELECT * FROM users WHERE id = [[path.id:integer]];',
           },
         },
       };

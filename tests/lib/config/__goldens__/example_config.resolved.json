@@ -2,6 +2,11 @@
   "application": {
     "name": "Rocket OSS",
     "logLevel": "debug",
+    "rateLimit": {
+      "enabled": true,
+      "max": 1000,
+      "timeWindow": "15m"
+    },
     "cors": {
       "enabled": true,
       "origins": [
@@ -29,11 +34,6 @@
       "routes": [
         "/api/*"
       ]
-    },
-    "rateLimit": {
-      "enabled": true,
-      "max": 1000,
-      "timeWindow": "15m"
     },
     "dangerouslyOverrideDefaultVariant": "test",
     "magicVariables": {
@@ -348,13 +348,23 @@
         {
           "type": "query",
           "name": "orgId",
-          "value": "[defaultOrg]"
+          "value": "[[defaultOrg]]"
         }
       ]
     },
     "model.test.users.unknown.getAll": {
       "supportedQueries": [
         "eq"
+      ]
+    },
+    "model.test.posts.unknown.insert": {
+      "authorization": true,
+      "serverSideParams": [
+        {
+          "type": "body",
+          "name": "userId",
+          "value": "[[userId]]"
+        }
       ]
     },
     "model.test.users.id.index": {
@@ -388,7 +398,25 @@
       },
       "handler": {
         "type": "sql",
-        "sql": "SELECT * FROM USERS WHERE id = $$id:integer$$;"
+        "sql": "SELECT * FROM USERS WHERE id = [[path.id:integer]];"
+      }
+    },
+    "searchUsersByEmail": {
+      "method": "GET",
+      "path": "/search-users",
+      "description": "Searches users by email query parameter.",
+      "handler": {
+        "type": "sql",
+        "sql": "SELECT * FROM users WHERE email = [[query.email:string]];"
+      }
+    },
+    "updatePostTitle": {
+      "method": "PUT",
+      "path": "/posts-title",
+      "description": "Updates post title by path id and body title.",
+      "handler": {
+        "type": "sql",
+        "sql": "UPDATE posts SET title = [[body.title:string]] WHERE id = [[path.id:integer]];"
       }
     }
   },

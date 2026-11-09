@@ -5,58 +5,120 @@ import {parseQueryPlaceholders} from '@/lib/sql/placeholders';
 describe('parseQueryPlaceholders', () => {
   it('should parse a single path query placeholder', () => {
     const result = parseQueryPlaceholders(
-      'SELECT * FROM users WHERE id = $$id:integer$$',
+      'SELECT * FROM users WHERE id = [[path.id:integer]]',
     );
-    expect(result).toEqual([{delimiter: '$$', name: 'id', type: 'integer'}]);
+    expect(result).toEqual([
+      {
+        source: 'path',
+        name: 'id',
+        type: 'integer',
+        raw: '[[path.id:integer]]',
+      },
+    ]);
   });
 
   it('should parse a single query query placeholder', () => {
     const result = parseQueryPlaceholders(
-      'SELECT * FROM users WHERE name = &&name:string&&',
+      'SELECT * FROM users WHERE name = [[query.name:string]]',
     );
-    expect(result).toEqual([{delimiter: '&&', name: 'name', type: 'string'}]);
+    expect(result).toEqual([
+      {
+        source: 'query',
+        name: 'name',
+        type: 'string',
+        raw: '[[query.name:string]]',
+      },
+    ]);
   });
 
   it('should parse a single body query placeholder', () => {
     const result = parseQueryPlaceholders(
-      'INSERT INTO users (name) VALUES (@@name:string@@)',
+      'INSERT INTO users (name) VALUES ([[body.name:string]])',
     );
-    expect(result).toEqual([{delimiter: '@@', name: 'name', type: 'string'}]);
+    expect(result).toEqual([
+      {
+        source: 'body',
+        name: 'name',
+        type: 'string',
+        raw: '[[body.name:string]]',
+      },
+    ]);
+  });
+
+  it('should parse a single header query placeholder', () => {
+    const result = parseQueryPlaceholders(
+      'SELECT * FROM users WHERE api_key = [[header.x-api-key:string]]',
+    );
+    expect(result).toEqual([
+      {
+        source: 'header',
+        name: 'x-api-key',
+        type: 'string',
+        raw: '[[header.x-api-key:string]]',
+      },
+    ]);
+  });
+
+  it('should not parse unprefixed or magic placeholders', () => {
+    const result = parseQueryPlaceholders(
+      'SELECT * FROM orders WHERE user_id = [[userId]] AND org = [[magic.org:string]]',
+    );
+    expect(result).toEqual([]);
   });
 
   it('should parse multiple query placeholders of different types', () => {
     const sql =
-      'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&';
+      'SELECT * FROM users WHERE id = [[path.id:integer]] AND name = [[query.name:string]]';
     const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([
-      {delimiter: '$$', name: 'id', type: 'integer'},
-      {delimiter: '&&', name: 'name', type: 'string'},
+      {
+        source: 'path',
+        name: 'id',
+        type: 'integer',
+        raw: '[[path.id:integer]]',
+      },
+      {
+        source: 'query',
+        name: 'name',
+        type: 'string',
+        raw: '[[query.name:string]]',
+      },
     ]);
   });
 
   it('should parse query placeholders with hyphens and underscores in names', () => {
     const result = parseQueryPlaceholders(
-      'SELECT * FROM $$user-id:integer$$ WHERE &&my_field:string&& = ?',
+      'SELECT * FROM [[path.user-id:integer]] WHERE [[query.my_field:string]] = ?',
     );
     expect(result).toEqual([
-      {delimiter: '$$', name: 'user-id', type: 'integer'},
-      {delimiter: '&&', name: 'my_field', type: 'string'},
+      {
+        source: 'path',
+        name: 'user-id',
+        type: 'integer',
+        raw: '[[path.user-id:integer]]',
+      },
+      {
+        source: 'query',
+        name: 'my_field',
+        type: 'string',
+        raw: '[[query.my_field:string]]',
+      },
     ]);
   });
 
   it('should parse all supported data types', () => {
-    const sql = `SELECT
-      $$a:integer$$,
-      $$b:string$$,
-      $$c:boolean$$,
-      $$d:text$$,
-      $$e:datetime$$,
-      $$f:decimal$$,
-      $$g:date$$,
-      $$h:json$$,
-      $$i:enum$$,
-      $$j:uuid$$,
-      $$k:ulid$$
+    const sql = `SELECT 
+      [[path.a:integer]], 
+      [[path.b:string]], 
+      [[path.c:boolean]], 
+      [[path.d:text]], 
+      [[path.e:datetime]], 
+      [[path.f:decimal]], 
+      [[path.g:date]], 
+      [[path.h:json]], 
+      [[path.i:enum]], 
+      [[path.j:uuid]], 
+      [[path.k:ulid]] 
     FROM test`;
     const result = parseQueryPlaceholders(sql);
     expect(result).toHaveLength(11);
@@ -75,14 +137,7 @@ describe('parseQueryPlaceholders', () => {
 
   it('should skip unclosed query placeholders', () => {
     const result = parseQueryPlaceholders(
-      'SELECT * FROM users WHERE id = $$id:integer',
-    );
-    expect(result).toEqual([]);
-  });
-
-  it('should skip mismatched delimiter pairs', () => {
-    const result = parseQueryPlaceholders(
-      'SELECT * FROM users WHERE id = $$id:integer@@',
+      'SELECT * FROM users WHERE id = [[path.id:integer',
     );
     expect(result).toEqual([]);
   });
@@ -92,53 +147,44 @@ describe('parseQueryPlaceholders', () => {
     expect(result).toEqual([]);
   });
 
+  it('should return empty array for SQL with PostgreSQL dollar-quotes or text search', () => {
+    const result = parseQueryPlaceholders(
+      "SELECT * FROM articles WHERE to_tsvector('english', body) @@ to_tsquery('rocket') AND $$quote$$ = 1",
+    );
+    expect(result).toEqual([]);
+  });
+
   it('should handle empty string', () => {
     const result = parseQueryPlaceholders('');
     expect(result).toEqual([]);
   });
 
-  it('should handle mixed valid and invalid query placeholders', () => {
+  it('should handle unclosed placeholder followed by a valid one', () => {
     const sql =
-      'SELECT * FROM $$valid:int$$ WHERE x = @@unclosed:string AND y = &&ok:bool&&';
+      'SELECT * FROM [[unclosed WHERE x = [[path.valid:integer]] AND y = [[query.ok:boolean]]';
     const result = parseQueryPlaceholders(sql);
-    expect(result).toEqual([{delimiter: '$$', name: 'valid', type: 'int'}]);
+    expect(result).toEqual([
+      {
+        source: 'path',
+        name: 'valid',
+        type: 'integer',
+        raw: '[[path.valid:integer]]',
+      },
+      {
+        source: 'query',
+        name: 'ok',
+        type: 'boolean',
+        raw: '[[query.ok:boolean]]',
+      },
+    ]);
   });
 
   it('should handle adjacent query placeholders', () => {
-    const sql = 'SELECT * FROM $$a:int$$, $$b:int$$';
+    const sql = 'SELECT * FROM [[path.a:integer]], [[path.b:integer]]';
     const result = parseQueryPlaceholders(sql);
     expect(result).toEqual([
-      {delimiter: '$$', name: 'a', type: 'int'},
-      {delimiter: '$$', name: 'b', type: 'int'},
-    ]);
-  });
-
-  it('should extract type as empty string when no type specified', () => {
-    const result = parseQueryPlaceholders('SELECT * FROM $$name$$');
-    expect(result).toEqual([{delimiter: '$$', name: 'name', type: ''}]);
-  });
-
-  it('should take only the first type when multiple colons present', () => {
-    const result = parseQueryPlaceholders('SELECT * FROM $$name:int:extra$$');
-    expect(result).toEqual([{delimiter: '$$', name: 'name', type: 'int'}]);
-  });
-
-  it('should parse a single header query placeholder', () => {
-    const result = parseQueryPlaceholders(
-      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^',
-    );
-    expect(result).toEqual([
-      {delimiter: '^^', name: 'x-api-key', type: 'string'},
-    ]);
-  });
-
-  it('should parse header query placeholders alongside other delimiters', () => {
-    const sql =
-      'SELECT * FROM users WHERE id = $$id:integer$$ AND key = ^^x-api-key:string^^';
-    const result = parseQueryPlaceholders(sql);
-    expect(result).toEqual([
-      {delimiter: '$$', name: 'id', type: 'integer'},
-      {delimiter: '^^', name: 'x-api-key', type: 'string'},
+      {source: 'path', name: 'a', type: 'integer', raw: '[[path.a:integer]]'},
+      {source: 'path', name: 'b', type: 'integer', raw: '[[path.b:integer]]'},
     ]);
   });
 });
