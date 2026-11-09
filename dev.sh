@@ -20,6 +20,9 @@ case "${1:-help}" in
   cserve)
     npm run coverage && cd coverage && npx http-server
     ;;
+  e2e)
+    npm run test:e2e
+    ;;
   *)
     echo "Usage: ./dev.sh <operation>"
     echo ""
@@ -28,6 +31,7 @@ case "${1:-help}" in
     echo "  coverage  Run test suite with coverage"
     echo "  test      Run tests"
     echo "  check     Compile + coverage + lint"
+    echo "  e2e       Run Playwright E2E API tests"
     echo "  db        Start redis and db containers"
     echo "  csserve   Serve coverage report via HTTP"
     exit 1

@@ -1,0 +1,40 @@
+{
+  "application": {
+    "name": "Rocket E2E",
+    "logLevel": "warn",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health"
+    }
+  },
+  "docs": {
+    "openapi": {
+      "enabled": true,
+      "path": "/api/docs"
+    }
+  },
+  "infrastructure": {
+    "database": {
+      "engine": "sqlite",
+      "connection": {
+        "url": "./e2e/.data/test.db"
+      }
+    }
+  },
+  "data": {
+    "models": {
+      "users": {
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true,
+            "nullable": false
+          }
+        }
+      }
+    }
+  },
+  "apis": {}
+}
+

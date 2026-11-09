@@ -143,3 +143,10 @@ agent_memory/
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Playwright
+/test-results/
+/playwright-report/
+/e2e/.data/
+/e2e/*.db*
+

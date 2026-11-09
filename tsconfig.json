@@ -10,12 +10,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@tests/*": ["tests/*"]
+      "@tests/*": ["tests/*"],
+      "@e2e/*": ["e2e/*"]
     }
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
     "src/constants.ts"
   ],
   "tsc-alias": {
