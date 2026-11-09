@@ -14,7 +14,7 @@ module.exports = {
       rules: {
         'header-match-issue': ({ header }) => {
           // type(scope): #<NUMBER>: message
-          const regex = /^(feat|chore|ci|bug|refactor|test)\([a-z-]+\): #\d+: .+/;
+          const regex = /^(feat|chore|ci|bug|refactor|test)\([a-z0-9-]+\): #\d+: .+/;
           return [
             regex.test(header),
             `Commit message must follow the convention: type(scope): #<NUMBER>: message (e.g. feat(auth): #123: add token refresh)\nNumber refers to the GitHub issue.\nTypes: feat, chore, ci, bug, refactor, test`,

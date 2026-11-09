@@ -21,7 +21,10 @@
     "pretest": "npm run compile",
     "posttest": "npm run lint:check",
     "commitlint": "commitlint --edit",
-    "generate:sql": "drizzle-kit push"
+    "generate:sql": "drizzle-kit push",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui-port 0",
+    "test:e2e:report": "playwright show-report"
   },
   "repository": {
     "type": "git",
@@ -39,6 +42,7 @@
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@playwright/test": "^1.65.0",
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jsonwebtoken": "^9.0.10",

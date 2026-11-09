@@ -3,3 +3,7 @@ dist
 package-lock.json
 .vscode
 docs/
+playwright-report/
+test-results/
+e2e/.data/
+e2e/*.db*
