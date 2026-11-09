@@ -55,18 +55,19 @@ function interpolateQuery(
   const values: unknown[] = [];
   let paramIndex = 1;
 
-  const regex = /(\$\$|@@|&&|\^\^)([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\1/g;
+  const regex =
+    /\[\[(path|body|query|header)\.([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)\]\]/g;
 
-  const sql = queryTemplate.replace(regex, (_, typeSymbol, name, type) => {
+  const sql = queryTemplate.replace(regex, (_, source, name, type) => {
     let val: unknown;
 
-    if (typeSymbol === '$$') {
+    if (source === 'path') {
       val = params[name];
       if (val === undefined) throw new Error(`Missing path param: "${name}"`);
-    } else if (typeSymbol === '@@') {
+    } else if (source === 'body') {
       val = body[name];
       if (val === undefined) throw new Error(`Missing body param: "${name}"`);
-    } else if (typeSymbol === '&&') {
+    } else if (source === 'query') {
       val = query[name];
       if (val === undefined) throw new Error(`Missing query param: "${name}"`);
     } else {
@@ -97,17 +98,17 @@ export function buildSqlEndpoint(
 
   const placeholders = parseQueryPlaceholders(sql);
 
-  for (const {delimiter, name, type} of placeholders) {
-    if (delimiter === '^^') continue;
+  for (const {source, name, type} of placeholders) {
+    if (source === 'header') continue;
 
     const jsonSchema = {
       ...mapDataTypeToJsonSchema(type as DataType),
-      description: `Custom ${delimiter === '@@' ? 'body' : delimiter === '&&' ? 'query' : 'path'} parameter`,
+      description: `Custom ${source} parameter`,
     };
 
-    if (delimiter === '$$') {
+    if (source === 'path') {
       paramsProperties[name] = jsonSchema;
-    } else if (delimiter === '&&') {
+    } else if (source === 'query') {
       queryProperties[name] = jsonSchema;
     } else {
       bodyProperties[name] = jsonSchema;

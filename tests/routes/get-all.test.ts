@@ -580,7 +580,7 @@ describe('test get-all api', () => {
         enabled: true,
         authorization: true,
         serverSideParams: [
-          {type: 'query', name: 'authorId_eq', value: '[userId]'},
+          {type: 'query', name: 'authorId_eq', value: '[[userId]]'},
         ],
       },
     };

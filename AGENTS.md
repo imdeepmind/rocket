@@ -5,7 +5,7 @@ Config-driven REST API framework. TypeScript, Fastify 5, PostgreSQL/SQLite, Vite
 ## Commands
 
 | Command | Action |
-|---|---|
+| --- | --- |
 | `./dev.sh dev` | Run dev server with `--config example_config.json` |
 | `./dev.sh coverage` | Full test suite with coverage |
 | `./dev.sh test` | Run tests |
@@ -57,9 +57,10 @@ Examples: `feat/#86-migrate-commit-msg`, `bug/#92-fix-auth-refresh`, `refactor/#
 Flow:
 
 1. Create a branch from the default branch: `git switch -c feat/#86-migrate-commit-msg`.
-2. Commit using the commit convention: `git commit -m "chore(ci): #86: migrate commit convention from JIRA to GitHub Issues"`.
-3. Push the branch (quote `#` in shell commands): `git push -u origin 'feat/#86-migrate-commit-msg'`.
-4. Open a PR that references the issue.
+2. Wait for the developer to review and test your changes.
+3. Commit using the commit convention: `git commit -m "chore(ci): #86: migrate commit convention from JIRA to GitHub Issues"`.
+4. Push the branch (quote `#` in shell commands): `git push -u origin 'feat/#86-migrate-commit-msg'`.
+5. Open a PR that references the issue.
 
 ## Architecture essentials
 

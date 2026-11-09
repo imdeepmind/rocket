@@ -2117,7 +2117,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         '/customEndpoints/test/handler/sql: only DQL and DML queries are allowed',
     },
     {
-      name: 'GET method with body query placeholders (@@)',
+      name: 'GET method with body query placeholders',
       patch: {
         customEndpoints: {
           test: {
@@ -2127,13 +2127,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = @@id:integer@@;',
+              sql: 'SELECT * FROM users WHERE id = [[body.id:integer]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: body query placeholders (@@) are not allowed for GET method',
+        '/customEndpoints/test/handler/sql: body query placeholders are not allowed for GET method',
     },
     {
       name: 'Invalid body variable name',
@@ -2146,13 +2146,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'UPDATE users SET name = @@first name:string@@;',
+              sql: 'UPDATE users SET name = [[body.first name:string]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder name "first name" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "first name" for body parameter',
     },
     {
       name: 'Invalid path variable name',
@@ -2165,13 +2165,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = $$id!:integer$$;',
+              sql: 'SELECT * FROM users WHERE id = [[path.id!:integer]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder name "id!" for path ($$) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "id!" for path parameter',
     },
     {
       name: 'Invalid query variable name',
@@ -2184,16 +2184,16 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE country = &&country space:string&&;',
+              sql: 'SELECT * FROM users WHERE country = [[query.country space:string]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder name "country space" for query (&&) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "country space" for query parameter',
     },
     {
-      name: 'Mixed delimiters ($$id&&)',
+      name: 'Legacy query placeholders',
       patch: {
         customEndpoints: {
           test: {
@@ -2203,16 +2203,16 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = $$id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: mixed query placeholder delimiters "$$" and "&&"',
+        '/customEndpoints/test/handler/sql: legacy query placeholders (@@, $$, &&, ^^) are not allowed, use [[source.name:type]] instead',
     },
     {
-      name: 'Unclosed delimiter (@@id@)',
+      name: 'Unclosed delimiter ([[id)',
       patch: {
         customEndpoints: {
           test: {
@@ -2222,13 +2222,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'UPDATE users SET name = @@id@;',
+              sql: 'UPDATE users SET name = [[id;',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: unclosed query placeholder delimiter "@@"',
+        '/customEndpoints/test/handler/sql: unclosed query placeholder delimiter "[["',
     },
     {
       name: 'Multiple datatype declarations',
@@ -2241,13 +2241,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = $$id:integer:string$$;',
+              sql: 'SELECT * FROM users WHERE id = [[path.id:integer:string]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder format "id:integer:string", multiple types provided',
+        '/customEndpoints/test/handler/sql: invalid query placeholder format "path.id:integer:string", multiple types provided',
     },
     {
       name: 'Invalid datatype in variable',
@@ -2260,13 +2260,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'UPDATE users SET name = @@name:varchar@@;',
+              sql: 'UPDATE users SET name = [[body.name:varchar]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder type "varchar" for body (@@) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder type "varchar" for body parameter',
     },
     {
       name: 'Missing datatype in variable',
@@ -2279,13 +2279,13 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'UPDATE users SET name = @@name@@;',
+              sql: 'UPDATE users SET name = [[body.name]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body (@@) parameter',
+        '/customEndpoints/test/handler/sql: missing data type for query placeholder "name" in body parameter',
     },
     {
       name: 'Invalid header variable name',
@@ -2298,13 +2298,70 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE key = ^^x api key:string^^;',
+              sql: 'SELECT * FROM users WHERE key = [[header.x api key:string]];',
             },
           },
         },
       },
       expected:
-        '/customEndpoints/test/handler/sql: invalid query placeholder name "x api key" for header (^^) parameter',
+        '/customEndpoints/test/handler/sql: invalid query placeholder name "x api key" for header parameter',
+    },
+    {
+      name: 'Invalid query placeholder source',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = [[foo.bar:string]];',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder source "foo"',
+    },
+    {
+      name: 'Unprefixed query placeholder / magic variable in custom SQL',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = [[userId]];',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder format "userId", expected [[source.name:type]]',
+    },
+    {
+      name: 'Magic source query placeholder in custom SQL',
+      patch: {
+        customEndpoints: {
+          test: {
+            method: 'GET' as const,
+            path: '/test',
+            description: 'test',
+            validation: {},
+            handler: {
+              type: 'sql',
+              sql: 'SELECT * FROM users WHERE key = [[magic.foo:string]];',
+            },
+          },
+        },
+      },
+      expected:
+        '/customEndpoints/test/handler/sql: invalid query placeholder source "magic"',
     },
     {
       name: 'invalid webhook url',
@@ -2317,7 +2374,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2347,7 +2404,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2377,7 +2434,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2407,7 +2464,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2437,7 +2494,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2467,7 +2524,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2498,7 +2555,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&id:integer&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.id:integer]];',
             },
           },
         },
@@ -2612,7 +2669,7 @@ describe('validateValidCustomEndpointsConfig', () => {
             },
             handler: {
               type: 'sql',
-              sql: 'INSERT INTO users (id, name, is_active) VALUES ($$id:integer$$, @@name:string@@, @@active:boolean@@);',
+              sql: 'INSERT INTO users (id, name, is_active) VALUES ([[path.id:integer]], [[body.name:string]], [[body.active:boolean]]);',
             },
           },
         },
@@ -2632,7 +2689,7 @@ describe('validateValidCustomEndpointsConfig', () => {
             },
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = $$id:integer$$ AND name = &&name:string&&;',
+              sql: 'SELECT * FROM users WHERE id = [[path.id:integer]] AND name = [[query.name:string]];',
             },
           },
         },
@@ -2649,7 +2706,7 @@ describe('validateValidCustomEndpointsConfig', () => {
             validation: {},
             handler: {
               type: 'sql',
-              sql: 'SELECT * FROM users WHERE id = &&user-id:integer&& AND name = &&user_name:string&&;',
+              sql: 'SELECT * FROM users WHERE id = [[query.user-id:integer]] AND name = [[query.user_name:string]];',
             },
           },
         },
@@ -4780,7 +4837,7 @@ describe('validateCustomEndpointsConfig', () => {
           },
           handler: {
             type: 'sql',
-            sql: 'SELECT * FROM users WHERE id = $$id:integer$$;',
+            sql: 'SELECT * FROM users WHERE id = [[path.id:integer]];',
           },
         },
       },
@@ -4830,6 +4887,7 @@ describe('validateCustomEndpointsConfig', () => {
       },
     };
 
+    const originalErrors = ajv.errors;
     const spy = vi.spyOn(ajv, 'validateSchema').mockReturnValue(false);
     ajv.errors = null;
 
@@ -4838,6 +4896,7 @@ describe('validateCustomEndpointsConfig', () => {
     );
 
     spy.mockRestore();
+    ajv.errors = originalErrors;
   });
 });
 
@@ -4949,6 +5008,28 @@ describe('validateResolvedConfigShapes', () => {
     const resolved = resolveConfig(raw, {mode: 'dev'});
 
     expect(validateConfig(resolved as unknown as AppConfig)).toBe(resolved);
+  });
+
+  it('allows PostgreSQL dollar-quotes and full-text search operators in customEndpoints SQL', () => {
+    const raw = {
+      ...rawBaseConfig,
+      customEndpoints: {
+        searchArticles: {
+          method: 'GET' as const,
+          path: '/articles',
+          description: 'Search articles',
+          validation: {},
+          handler: {
+            type: 'sql' as const,
+            sql: "SELECT * FROM articles WHERE to_tsvector('english', body) @@ to_tsquery('rocket') AND id = [[query.id:integer]];",
+          },
+        },
+      },
+    };
+    const resolved = resolveConfig(raw, {mode: 'dev'});
+    expect(() =>
+      validateConfig(resolved as unknown as AppConfig),
+    ).not.toThrow();
   });
 
   it('validates a resolved minimal configuration', () => {

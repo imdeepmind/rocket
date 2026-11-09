@@ -218,7 +218,9 @@ describe('test post api', () => {
       'model.v1.todos.unknown.insert': {
         enabled: true,
         authorization: true,
-        serverSideParams: [{type: 'body', name: 'authorId', value: '[userId]'}],
+        serverSideParams: [
+          {type: 'body', name: 'authorId', value: '[[userId]]'},
+        ],
       },
     };
 

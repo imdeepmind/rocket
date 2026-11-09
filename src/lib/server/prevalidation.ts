@@ -8,7 +8,7 @@ import {ResolvedAppConfig} from '@/interfaces/config';
  * SSP injection is deliberately not supported here: `preValidation` runs
  * before AJV validation and before the route-level auth hook populates
  * `request.user`, so injected params would be stripped by `removeAdditional`
- * and `[userId]` / `[userEmail]` would resolve to `undefined`. SSP must run
+ * and `[[userId]]` / `[[userEmail]]` would resolve to `undefined`. SSP must run
  * in the global `preHandler` hook instead (see `src/server.ts`).
  */
 export type PreValidationCheck = 'auth';

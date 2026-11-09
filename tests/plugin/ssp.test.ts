@@ -236,10 +236,10 @@ describe('ssp plugin', () => {
     expect(request.params).toEqual(['param1', 'param2']);
   });
 
-  it('should replace [userId] magic variable with request.user.id', async () => {
+  it('should replace [[userId]] magic variable with request.user.id', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'ownerId', value: '[userId]'},
+      {type: 'query', name: 'ownerId', value: '[[userId]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -268,10 +268,42 @@ describe('ssp plugin', () => {
     expect(request.query).toEqual({ownerId: 42});
   });
 
-  it('should replace [userEmail] magic variable with request.user.email', async () => {
+  it('should not treat legacy single bracket [userId] as magic variable', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'body', name: 'user_email', value: '[userEmail]'},
+      {type: 'query', name: 'ownerId', value: '[userId]'},
+    ];
+
+    app.appConfig = resolvedConfig({
+      application: {logLevel: 'silent'},
+      apis: {
+        'test-api': {
+          serverSideParams: ssps,
+        },
+      },
+    });
+    await app.register(sspPlugin);
+    await app.ready();
+
+    const request = {
+      query: {},
+      user: {id: 42, email: 'test@example.com'},
+      routeOptions: {
+        config: {
+          apiIdentifier: 'test-api',
+        },
+      },
+    } as unknown as FastifyRequest;
+
+    app.enforceSSP(request);
+
+    expect(request.query).toEqual({ownerId: '[userId]'});
+  });
+
+  it('should replace [[userEmail]] magic variable with request.user.email', async () => {
+    const app = Fastify();
+    const ssps: ServerSideParamConfig[] = [
+      {type: 'body', name: 'user_email', value: '[[userEmail]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -303,7 +335,7 @@ describe('ssp plugin', () => {
   it('should handle missing request.user when magic variables are used', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'ownerId', value: '[userId]'},
+      {type: 'query', name: 'ownerId', value: '[[userId]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -334,7 +366,7 @@ describe('ssp plugin', () => {
   it('should replace custom magic variable from application.magicVariables', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'org', value: '[defaultOrg]'},
+      {type: 'query', name: 'org', value: '[[defaultOrg]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -368,9 +400,9 @@ describe('ssp plugin', () => {
   it('should support string, number, and boolean custom magic variables', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'strVal', value: '[myString]'},
-      {type: 'query', name: 'numVal', value: '[myNumber]'},
-      {type: 'query', name: 'boolVal', value: '[myBool]'},
+      {type: 'query', name: 'strVal', value: '[[myString]]'},
+      {type: 'query', name: 'numVal', value: '[[myNumber]]'},
+      {type: 'query', name: 'boolVal', value: '[[myBool]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -401,10 +433,10 @@ describe('ssp plugin', () => {
     expect(request.query).toEqual({strVal: 'hello', numVal: 42, boolVal: true});
   });
 
-  it('custom magic variable should override built-in [userId]', async () => {
+  it('custom magic variable should override built-in [[userId]]', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'ownerId', value: '[userId]'},
+      {type: 'query', name: 'ownerId', value: '[[userId]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -439,7 +471,7 @@ describe('ssp plugin', () => {
   it('unknown bracket variable should fall back to literal value', async () => {
     const app = Fastify();
     const ssps: ServerSideParamConfig[] = [
-      {type: 'query', name: 'unknown', value: '[notDefinedAnywhere]'},
+      {type: 'query', name: 'unknown', value: '[[notDefinedAnywhere]]'},
     ];
 
     app.appConfig = resolvedConfig({
@@ -464,7 +496,7 @@ describe('ssp plugin', () => {
 
     app.enforceSSP(request);
 
-    expect(request.query).toEqual({unknown: '[notDefinedAnywhere]'});
+    expect(request.query).toEqual({unknown: '[[notDefinedAnywhere]]'});
   });
 
   it('should handle apiIdentifier not found in apis config', async () => {
@@ -761,7 +793,7 @@ describe('ssp plugin – lifecycle', () => {
       apis: {
         'test-api': {
           serverSideParams: [
-            {type: 'query', name: 'authorId_eq', value: '[userId]'},
+            {type: 'query', name: 'authorId_eq', value: '[[userId]]'},
           ],
         },
       },
@@ -808,7 +840,7 @@ describe('ssp plugin – lifecycle', () => {
       apis: {
         'test-api': {
           serverSideParams: [
-            {type: 'body', name: 'authorId', value: '[userId]'},
+            {type: 'body', name: 'authorId', value: '[[userId]]'},
           ],
         },
       },

@@ -14,9 +14,9 @@ describe('buildSqlEndpoint', () => {
     expect(result.routePath).toBe('');
   });
 
-  it('should detect path params ($$)', () => {
+  it('should detect path params', () => {
     const result = buildSqlEndpoint(
-      'SELECT * FROM users WHERE id = $$id:integer$$;',
+      'SELECT * FROM users WHERE id = [[path.id:integer]];',
       'GET',
     );
     expect(result.params).toBeDefined();
@@ -24,9 +24,9 @@ describe('buildSqlEndpoint', () => {
     expect(result.routePath).toBe('/:id');
   });
 
-  it('should detect body params (@@)', () => {
+  it('should detect body params', () => {
     const result = buildSqlEndpoint(
-      'UPDATE users SET name = @@name:string@@ WHERE id = @@id:integer@@;',
+      'UPDATE users SET name = [[body.name:string]] WHERE id = [[body.id:integer]];',
       'POST',
     );
     expect(result.body).toBeDefined();
@@ -35,9 +35,9 @@ describe('buildSqlEndpoint', () => {
     expect(result.routePath).toBe('');
   });
 
-  it('should detect query params (&&)', () => {
+  it('should detect query params', () => {
     const result = buildSqlEndpoint(
-      'SELECT * FROM users WHERE status = &&status:string&& AND age >= &&minAge:integer&&;',
+      'SELECT * FROM users WHERE status = [[query.status:string]] AND age >= [[query.minAge:integer]];',
       'GET',
     );
     expect(result.querystring).toBeDefined();
@@ -48,15 +48,15 @@ describe('buildSqlEndpoint', () => {
 
   it('should not add body schema for GET method', () => {
     const result = buildSqlEndpoint(
-      'SELECT * FROM users WHERE id = @@id:integer@@;',
+      'SELECT * FROM users WHERE id = [[body.id:integer]];',
       'GET',
     );
     expect(result.body).toBeUndefined();
   });
 
-  it('should handle mismatched delimiters gracefully', () => {
+  it('should handle unclosed placeholder delimiters gracefully', () => {
     const result = buildSqlEndpoint(
-      'SELECT * FROM users WHERE id = $$id:integer@@;',
+      'SELECT * FROM users WHERE id = [[path.id:integer;',
       'GET',
     );
     expect(result.params).toBeUndefined();
@@ -65,9 +65,9 @@ describe('buildSqlEndpoint', () => {
     expect(result.routePath).toBe('');
   });
 
-  it('should skip header query placeholders (^^) without building schema', () => {
+  it('should skip header query placeholders without building schema', () => {
     const result = buildSqlEndpoint(
-      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^ AND id = $$id:integer$$;',
+      'SELECT * FROM users WHERE api_key = [[header.x-api-key:string]] AND id = [[path.id:integer]];',
       'GET',
     );
     expect(result.params).toBeDefined();
@@ -119,7 +119,7 @@ describe('handleSql', () => {
     });
   });
 
-  it('should extract path params with $$delimiter', async () => {
+  it('should extract path params with [[path.id:integer]]', async () => {
     const app = mockApp();
     app.db.query = vi.fn().mockResolvedValue({rows: [{id: 42}], changes: 0});
     const reply = mockReply();
@@ -128,7 +128,7 @@ describe('handleSql', () => {
       app as never,
       {params: {id: 42}, query: {}, body: {}} as never,
       reply as never,
-      'SELECT * FROM users WHERE id = $$id:integer$$;',
+      'SELECT * FROM users WHERE id = [[path.id:integer]];',
     );
 
     expect(app.db.query).toHaveBeenCalledWith(
@@ -143,7 +143,7 @@ describe('handleSql', () => {
     });
   });
 
-  it('should extract body params with @@delimiter', async () => {
+  it('should extract body params with [[body.name:string]]', async () => {
     const app = mockApp();
     app.db.query = vi.fn().mockResolvedValue({rows: [], changes: 1});
     const reply = mockReply();
@@ -152,7 +152,7 @@ describe('handleSql', () => {
       app as never,
       {params: {}, query: {}, body: {name: 'Jane', id: 1}} as never,
       reply as never,
-      'UPDATE users SET name = @@name:string@@ WHERE id = @@id:integer@@;',
+      'UPDATE users SET name = [[body.name:string]] WHERE id = [[body.id:integer]];',
     );
 
     expect(app.db.query).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe('handleSql', () => {
     expect(reply.status).toHaveBeenCalledWith(200);
   });
 
-  it('should extract query params with &&delimiter', async () => {
+  it('should extract query params with [[query.status:string]]', async () => {
     const app = mockApp();
     app.db.query = vi
       .fn()
@@ -173,7 +173,7 @@ describe('handleSql', () => {
       app as never,
       {params: {}, query: {status: 'active'}, body: {}} as never,
       reply as never,
-      'SELECT * FROM users WHERE status = &&status:string&&;',
+      'SELECT * FROM users WHERE status = [[query.status:string]];',
     );
 
     expect(app.db.query).toHaveBeenCalledWith(
@@ -192,7 +192,7 @@ describe('handleSql', () => {
         app as never,
         {params: {}, query: {}, body: {}} as never,
         reply as never,
-        'SELECT * FROM users WHERE id = $$id:integer$$;',
+        'SELECT * FROM users WHERE id = [[path.id:integer]];',
       ),
     ).rejects.toThrow('Missing path param: "id"');
   });
@@ -206,7 +206,7 @@ describe('handleSql', () => {
         app as never,
         {params: {}, query: {}, body: {}} as never,
         reply as never,
-        'UPDATE users SET name = @@name:string@@;',
+        'UPDATE users SET name = [[body.name:string]];',
       ),
     ).rejects.toThrow('Missing body param: "name"');
   });
@@ -220,12 +220,12 @@ describe('handleSql', () => {
         app as never,
         {params: {}, query: {}, body: {}} as never,
         reply as never,
-        'SELECT * FROM users WHERE status = &&status:string&&;',
+        'SELECT * FROM users WHERE status = [[query.status:string]];',
       ),
     ).rejects.toThrow('Missing query param: "status"');
   });
 
-  it('should extract header params with ^^delimiter', async () => {
+  it('should extract header params with [[header.x-api-key:string]]', async () => {
     const app = mockApp();
     app.db.query = vi.fn().mockResolvedValue({rows: [{id: 1}], changes: 0});
     const reply = mockReply();
@@ -239,7 +239,7 @@ describe('handleSql', () => {
         headers: {'x-api-key': 'secret-123'},
       } as never,
       reply as never,
-      'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^;',
+      'SELECT * FROM users WHERE api_key = [[header.x-api-key:string]];',
     );
 
     expect(app.db.query).toHaveBeenCalledWith(
@@ -262,7 +262,7 @@ describe('handleSql', () => {
         body: {},
       } as never,
       reply as never,
-      'SELECT * FROM users WHERE data = $$filter:json$$;',
+      'SELECT * FROM users WHERE data = [[path.filter:json]];',
     );
 
     const values = app.db.query.mock.calls[0][1];
@@ -279,7 +279,7 @@ describe('handleSql', () => {
         app as never,
         {params: {}, query: {}, body: {}, headers: {}} as never,
         reply as never,
-        'SELECT * FROM users WHERE api_key = ^^x-api-key:string^^;',
+        'SELECT * FROM users WHERE api_key = [[header.x-api-key:string]];',
       ),
     ).rejects.toThrow('Missing header param: "x-api-key"');
   });
@@ -310,7 +310,7 @@ describe('handleSql', () => {
         body: {},
       } as never,
       reply as never,
-      'INSERT INTO test VALUES ($$id:integer$$, $$b:boolean$$, $$s:string$$, $$t:text$$, $$dt:datetime$$, $$dec:decimal$$, $$d:date$$, $$j:json$$, $$e:enum$$, $$u:uuid$$, $$l:ulid$$);',
+      'INSERT INTO test VALUES ([[path.id:integer]], [[path.b:boolean]], [[path.s:string]], [[path.t:text]], [[path.dt:datetime]], [[path.dec:decimal]], [[path.d:date]], [[path.j:json]], [[path.e:enum]], [[path.u:uuid]], [[path.l:ulid]]);',
     );
 
     const values = app.db.query.mock.calls[0][1];
@@ -336,7 +336,7 @@ describe('handleSql', () => {
       app as never,
       {params: {flag: 'true'}, query: {}, body: {}} as never,
       reply as never,
-      'SELECT * FROM users WHERE active = $$flag:boolean$$;',
+      'SELECT * FROM users WHERE active = [[path.flag:boolean]];',
     );
 
     let callArgs = app.db.query.mock.calls[0][1];
@@ -348,7 +348,7 @@ describe('handleSql', () => {
       app as never,
       {params: {flag: 'false'}, query: {}, body: {}} as never,
       reply2 as never,
-      'SELECT * FROM users WHERE active = $$flag:boolean$$;',
+      'SELECT * FROM users WHERE active = [[path.flag:boolean]];',
     );
 
     callArgs = app.db.query.mock.calls[1][1];
@@ -365,7 +365,7 @@ describe('handleSql', () => {
       app as never,
       {params: {id: 42}, query: {}, body: {}} as never,
       reply as never,
-      'SELECT * FROM users WHERE id = $$id:unknown$$;',
+      'SELECT * FROM users WHERE id = [[path.id:unknown]];',
     );
 
     const values = app.db.query.mock.calls[0][1];
