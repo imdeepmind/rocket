@@ -272,7 +272,12 @@ function registerEditEndpoint(
     {
       schema: buildRouteSchema('PATCH'),
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, policy.authorization),
+      preValidation: buildPreValidation(
+        app,
+        config,
+        policy.authorization,
+        policy.roles,
+      ),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
@@ -288,7 +293,12 @@ function registerEditEndpoint(
     {
       schema: buildRouteSchema('PUT'),
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, policy.authorization),
+      preValidation: buildPreValidation(
+        app,
+        config,
+        policy.authorization,
+        policy.roles,
+      ),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },

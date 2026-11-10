@@ -13,6 +13,7 @@ import {
   ModelFieldConfig,
   ModelIndexConfig,
   ModelRelationConfig,
+  RbacConfig,
   ResolvedApiKeyProvider,
   ResolvedAppConfig,
   ResolvedApplicationConfig,
@@ -103,6 +104,9 @@ export const DEFAULT_MODEL_FIELD = {
 
 /** Resolved authentication shape when auth is absent or disabled. */
 export const DEFAULT_AUTH_DISABLED = {enabled: false} as const;
+
+/** Resolved RBAC shape when rbac is absent or disabled. */
+export const DEFAULT_RBAC_DISABLED = {enabled: false} as const;
 
 /** Default variant segment when `dangerouslyOverrideDefaultVariant` is unset. */
 export const DEFAULT_VARIANT = 'v1';
@@ -419,6 +423,18 @@ export function resolveWebhook(webhook: WebhookConfig): WebhookConfig {
 }
 
 // ---------------------------------------------------------------------------
+// RBAC
+// ---------------------------------------------------------------------------
+
+export function resolveRbac(input?: RbacConfig): RbacConfig {
+  if (!input || input.enabled !== true) {
+    return {...DEFAULT_RBAC_DISABLED};
+  }
+
+  return clone(input);
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -451,6 +467,7 @@ export function resolveConfig(
     authentication: resolveAuthentication(raw.authentication),
     integrations: raw.integrations ? clone(raw.integrations) : {},
     apiVariants: raw.apiVariants ? clone(raw.apiVariants) : {},
+    rbac: resolveRbac(raw.rbac),
   };
 
   return config;

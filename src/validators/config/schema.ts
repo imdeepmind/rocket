@@ -529,6 +529,15 @@ const apisSchema = {
         authorization: {
           type: 'boolean',
         },
+        roles: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+          uniqueItems: true,
+          minItems: 1,
+        },
         bypassSecret: {
           type: 'boolean',
         },
@@ -694,6 +703,90 @@ const apiVariantsSchema = {
   additionalProperties: false,
 };
 
+const roleSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    description: {
+      type: 'string',
+    },
+    includes: {
+      type: 'array',
+      items: {
+        type: 'string',
+        minLength: 1,
+      },
+      uniqueItems: true,
+    },
+  },
+};
+
+const rolesSchema = {
+  type: 'object',
+  minProperties: 1,
+  patternProperties: {
+    '^[a-zA-Z0-9_:-]+$': roleSchema,
+  },
+  additionalProperties: false,
+};
+
+const rbacSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['enabled'],
+      properties: {
+        enabled: {const: false},
+        modelName: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        roleField: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        defaultRole: {
+          type: 'string',
+          minLength: 1,
+        },
+        roles: {
+          type: 'object',
+          patternProperties: {
+            '^[a-zA-Z0-9_:-]+$': roleSchema,
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['enabled', 'modelName', 'roleField', 'defaultRole', 'roles'],
+      properties: {
+        enabled: {const: true},
+        modelName: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        roleField: {
+          type: 'string',
+          isEntityName: true,
+          minLength: 1,
+        },
+        defaultRole: {
+          type: 'string',
+          minLength: 1,
+        },
+        roles: rolesSchema,
+      },
+    },
+  ],
+};
+
 const schema = {
   type: 'object',
   required: ['application', 'data'],
@@ -719,6 +812,7 @@ const schema = {
     authentication: authenticationSchema,
     integrations: integrationsSchema,
     apiVariants: apiVariantsSchema,
+    rbac: rbacSchema,
   },
 };
 

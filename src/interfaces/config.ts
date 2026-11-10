@@ -227,6 +227,7 @@ export interface ApisConfig {
     webhooks?: WebhookConfig[];
     serverSideParams?: ServerSideParamConfig[];
     authorization?: boolean;
+    roles?: string[];
     bypassSecret?: boolean;
     supportedAggregations?: Aggregation[];
     supportedQueries?: QueryOperation[];
@@ -267,6 +268,19 @@ export type AuthProvider = UpAuthProvider | ApiKeyProvider;
 export interface AuthenticationConfig {
   enabled: boolean;
   provider?: AuthProvider;
+}
+
+export interface RoleConfig {
+  description?: string;
+  includes?: string[];
+}
+
+export interface RbacConfig {
+  enabled: boolean;
+  modelName?: string;
+  roleField?: string;
+  defaultRole?: string;
+  roles?: Record<string, RoleConfig>;
 }
 
 export interface EmailConfig {
@@ -338,6 +352,7 @@ export interface AppConfigInput {
   authentication?: AuthenticationConfigInput;
   integrations?: IntegrationsConfig;
   apiVariants?: Record<string, ApiVariantEntry>;
+  rbac?: RbacConfig;
 }
 
 export interface ResolvedCorsConfig {
@@ -473,6 +488,7 @@ export interface ResolvedAppConfig {
   authentication: ResolvedAuthenticationConfig;
   integrations: IntegrationsConfig;
   apiVariants: Record<string, ApiVariantEntry>;
+  rbac: RbacConfig;
 }
 
 /**
@@ -481,11 +497,12 @@ export interface ResolvedAppConfig {
  */
 export interface AppConfig extends Omit<
   AppConfigInput,
-  'application' | 'docs' | 'infrastructure' | 'data' | 'authentication'
+  'application' | 'docs' | 'infrastructure' | 'data' | 'authentication' | 'rbac'
 > {
   application: ApplicationConfig;
   docs: DocsConfig;
   infrastructure: InfrastructureConfig;
   data: DataConfig;
   authentication?: AuthenticationConfig;
+  rbac?: RbacConfig;
 }

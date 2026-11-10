@@ -163,6 +163,28 @@
             ],
             "aggregations": [],
             "default": true
+          },
+          "role": {
+            "type": "enum",
+            "primaryKey": false,
+            "autoIncrement": false,
+            "nullable": false,
+            "unique": false,
+            "secret": false,
+            "apis": [],
+            "query": [
+              "eq"
+            ],
+            "aggregations": [],
+            "default": "viewer",
+            "values": [
+              "admin",
+              "lead_editor",
+              "editor:senior",
+              "editor:junior",
+              "auditor",
+              "viewer"
+            ]
           }
         },
         "indexes": {
@@ -335,6 +357,9 @@
         }
       ],
       "authorization": true,
+      "roles": [
+        "admin"
+      ],
       "tags": [
         "Users",
         "Aggregations"
@@ -353,12 +378,16 @@
       ]
     },
     "model.test.users.unknown.getAll": {
+      "authorization": true,
       "supportedQueries": [
         "eq"
       ]
     },
     "model.test.posts.unknown.insert": {
       "authorization": true,
+      "roles": [
+        "editor:*"
+      ],
       "serverSideParams": [
         {
           "type": "body",
@@ -368,9 +397,20 @@
       ]
     },
     "model.test.users.id.index": {
+      "authorization": true,
+      "roles": [
+        "*"
+      ],
       "supportedQueries": [
         "eq",
         "sort"
+      ]
+    },
+    "custom.test.all.unknown.updatePostTitle": {
+      "authorization": true,
+      "roles": [
+        "editor:senior",
+        "admin"
       ]
     },
     "aggregate.test.users.email.getAggregation": {
@@ -448,6 +488,48 @@
       "variants": [
         "admin"
       ]
+    }
+  },
+  "rbac": {
+    "enabled": true,
+    "modelName": "users",
+    "roleField": "role",
+    "defaultRole": "viewer",
+    "roles": {
+      "admin": {
+        "description": "Administrator with full system access",
+        "includes": [
+          "*"
+        ]
+      },
+      "lead_editor": {
+        "description": "Manages editorial workflows and all editor tiers",
+        "includes": [
+          "editor:*"
+        ]
+      },
+      "editor:senior": {
+        "description": "Senior editor with publishing rights",
+        "includes": [
+          "editor:junior",
+          "viewer"
+        ]
+      },
+      "editor:junior": {
+        "description": "Junior editor with drafting rights",
+        "includes": [
+          "viewer"
+        ]
+      },
+      "auditor": {
+        "description": "Compliance auditor with read-only access",
+        "includes": [
+          "viewer"
+        ]
+      },
+      "viewer": {
+        "description": "Read-only access to published content"
+      }
     }
   }
 }
