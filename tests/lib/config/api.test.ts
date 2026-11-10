@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import {describe, expect, test} from 'vitest';
 
 import {getApiRouteTargets, resolveApiPolicy} from '@/lib/config/api';
@@ -56,6 +59,32 @@ const resolve = (
   apiVariants: Record<string, ApiVariantEntry> = {},
 ): ResolvedAppConfig =>
   resolveConfig(baseInput(apis, apiVariants), {mode: 'dev'});
+
+const rbacBaseInput = (
+  apis: AppConfigInput['apis'] = {},
+  apiVariants: Record<string, ApiVariantEntry> = {},
+): AppConfigInput => ({
+  ...baseInput(apis, apiVariants),
+  rbac: {
+    enabled: true,
+    modelName: 'users',
+    roleField: 'role',
+    defaultRole: 'viewer',
+    roles: {
+      admin: {includes: ['*']},
+      lead_editor: {includes: ['editor:*']},
+      'editor:senior': {includes: ['editor:junior', 'viewer']},
+      'editor:junior': {includes: ['viewer']},
+      viewer: {},
+    },
+  },
+});
+
+const resolveWithRbac = (
+  apis: AppConfigInput['apis'] = {},
+  apiVariants: Record<string, ApiVariantEntry> = {},
+): ResolvedAppConfig =>
+  resolveConfig(rbacBaseInput(apis, apiVariants), {mode: 'dev'});
 
 describe('resolveApiPolicy', () => {
   test('derives defaults for a plain model API', () => {
@@ -229,6 +258,139 @@ describe('resolveApiPolicy', () => {
 
     expect(policy.enabled).toBe(true);
     expect(policy.tags).toEqual([]);
+  });
+
+  test('roles stays undefined when no roles are specified on the API', () => {
+    const config = resolveWithRbac();
+    const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
+    expect(policy.roles).toBeUndefined();
+  });
+
+  test('roles expands concrete roles and namespaced wildcards when RBAC is enabled', () => {
+    const config = resolveWithRbac({
+      'model.v1.posts.title.search': {
+        roles: ['editor:*', 'viewer'],
+      },
+    });
+    const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
+    expect(policy.roles).toEqual(
+      new Set(['editor:senior', 'editor:junior', 'viewer']),
+    );
+  });
+
+  test('roles expands universal wildcard "*" to all declared roles', () => {
+    const config = resolveWithRbac({
+      'model.v1.posts.title.search': {
+        roles: ['*'],
+      },
+    });
+    const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
+    expect(policy.roles).toEqual(
+      new Set([
+        'admin',
+        'lead_editor',
+        'editor:senior',
+        'editor:junior',
+        'viewer',
+      ]),
+    );
+  });
+
+  test('variant inherits roles from base override when not explicitly set', () => {
+    const config = resolveWithRbac(
+      {
+        'model.v1.posts.title.search': {
+          roles: ['editor:*'],
+        },
+      },
+      {'model.v1.posts.title.search': {variants: ['custom']}},
+    );
+    const policy = resolveApiPolicy(config, 'model.custom.posts.title.search');
+    expect(policy.roles).toEqual(new Set(['editor:senior', 'editor:junior']));
+  });
+
+  test('variant explicit roles override base roles', () => {
+    const config = resolveWithRbac(
+      {
+        'model.v1.posts.title.search': {
+          roles: ['editor:*'],
+        },
+        'model.custom.posts.title.search': {
+          roles: ['admin'],
+        },
+      },
+      {'model.v1.posts.title.search': {variants: ['custom']}},
+    );
+    const policy = resolveApiPolicy(config, 'model.custom.posts.title.search');
+    expect(policy.roles).toEqual(new Set(['admin']));
+  });
+
+  test('roles stays undefined when RBAC is disabled even if apis has roles', () => {
+    const config = resolve({
+      'model.v1.posts.title.search': {
+        roles: ['admin'],
+      },
+    });
+    const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
+    expect(policy.roles).toBeUndefined();
+  });
+
+  test('resolves example_config.json with variety of wildcard and concrete roles', () => {
+    const raw = JSON.parse(
+      fs.readFileSync(path.resolve('example_config.json'), 'utf-8'),
+    ) as AppConfigInput;
+    const config = resolveConfig(raw, {mode: 'dev'});
+
+    // 1. Exact role
+    const adminPolicy = resolveApiPolicy(
+      config,
+      'aggregate.admin.users.id.getAggregation',
+    );
+    expect(adminPolicy.roles).toEqual(new Set(['admin']));
+
+    // 2. Namespaced wildcard "editor:*" -> expands to editor:senior, editor:junior
+    const insertPolicy = resolveApiPolicy(
+      config,
+      'model.test.posts.unknown.insert',
+    );
+    expect(insertPolicy.roles).toEqual(
+      new Set(['editor:senior', 'editor:junior']),
+    );
+
+    // 3. Universal wildcard "*" -> expands to all declared roles
+    const indexPolicy = resolveApiPolicy(config, 'model.test.users.id.index');
+    expect(indexPolicy.roles).toEqual(
+      new Set([
+        'admin',
+        'lead_editor',
+        'editor:senior',
+        'editor:junior',
+        'auditor',
+        'viewer',
+      ]),
+    );
+
+    // 4. Multiple concrete roles
+    const customPolicy = resolveApiPolicy(
+      config,
+      'custom.test.all.unknown.updatePostTitle',
+    );
+    expect(customPolicy.roles).toEqual(new Set(['editor:senior', 'admin']));
+
+    // 5. Authorized endpoint with no roles specified -> undefined
+    const getAllPolicy = resolveApiPolicy(
+      config,
+      'model.test.users.unknown.getAll',
+    );
+    expect(getAllPolicy.authorization).toBe(true);
+    expect(getAllPolicy.roles).toBeUndefined();
+
+    // 6. Public endpoint with no authorization -> undefined
+    const publicPolicy = resolveApiPolicy(
+      config,
+      'aggregate.test.users.email.getAggregation',
+    );
+    expect(publicPolicy.roles).toBeUndefined();
   });
 });
 
