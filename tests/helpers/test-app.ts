@@ -21,6 +21,7 @@ import {
   CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
+  RbacConfig,
   ResolvedAppConfig,
 } from '@/interfaces/config';
 
@@ -51,6 +52,7 @@ export async function createTestApp(
   customEndpoints?: Record<string, CustomEndpointConfig>,
   authentication?: AuthenticationConfig,
   apiVariants?: Record<string, {variants: string[]}>,
+  rbac?: RbacConfig,
 ): Promise<FastifyInstance> {
   const inputConfig = {
     application: {name: 'Test App', logLevel: 'error' as const},
@@ -67,6 +69,7 @@ export async function createTestApp(
     customEndpoints,
     authentication,
     apiVariants,
+    rbac,
   };
 
   // Route tests exercise the resolved (dense) configuration in dev mode,

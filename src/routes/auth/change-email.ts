@@ -80,7 +80,7 @@ function registerEmailChangeEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, true, ['auth']),
+      preValidation: buildPreValidation(app, config, true),
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userPayload = request.user as Record<string, unknown>;

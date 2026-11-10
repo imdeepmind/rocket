@@ -70,7 +70,7 @@ function registerChangePasswordEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, true, ['auth']),
+      preValidation: buildPreValidation(app, config, true),
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const {existingPassword, newPassword} = request.body as Record<
