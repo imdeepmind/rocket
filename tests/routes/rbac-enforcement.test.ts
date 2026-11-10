@@ -20,11 +20,15 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
           type: 'integer',
           primaryKey: true,
           autoIncrement: true,
-          apis: ['delete'],
+          apis: ['delete', 'edit', 'index'],
         },
-        name: {type: 'string', nullable: false},
-        email: {type: 'string', nullable: false},
-        role: {type: 'string', nullable: true},
+        name: {
+          type: 'string',
+          nullable: false,
+          apis: ['edit', 'search'],
+        },
+        email: {type: 'string', nullable: false, apis: ['edit']},
+        role: {type: 'string', nullable: true, apis: ['edit']},
       },
     },
   };
@@ -61,6 +65,9 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
         includes: ['editor:junior'],
       },
       'editor:junior': {},
+      auditor: {
+        includes: ['viewer'],
+      },
       viewer: {},
     },
   };
@@ -76,6 +83,16 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
       authorization: true,
       roles: ['editor:*'],
     },
+    'model.v1.users.id.edit': {
+      enabled: true,
+      authorization: true,
+      roles: ['editor:senior', 'admin'],
+    },
+    'model.v1.users.name.search': {
+      enabled: true,
+      authorization: true,
+      roles: ['auditor', 'admin'],
+    },
     'model.v1.users.id.delete': {
       enabled: true,
       authorization: true,
@@ -90,6 +107,11 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
       authorization: true,
       roles: ['admin'],
     },
+    'custom.v1.all.unknown.wildcard': {
+      enabled: true,
+      authorization: true,
+      roles: ['*'],
+    },
   };
 
   const customEndpoints: Record<string, CustomEndpointConfig> = {
@@ -102,12 +124,23 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
         sql: 'SELECT 1 as value;',
       },
     },
+    wildcard: {
+      description: 'Wildcard endpoint accessible by any authenticated role',
+      method: 'GET',
+      path: '/wildcard',
+      handler: {
+        type: 'sql',
+        sql: 'SELECT 1 as value;',
+      },
+    },
   };
 
   let app: FastifyInstance;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    pgClientQueryMock.mockReset();
+    pgQueryMock.mockReset();
   });
 
   describe('Model CRUD route authorization', () => {
@@ -385,6 +418,530 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
 
       expect(response.statusCode).toBe(200);
     });
+
+    test('returns 403 Forbidden when user has unauthorized role for PUT edit', async () => {
+      const token = app.jwt.sign({
+        id: 20,
+        email: 'junior@example.com',
+        role: 'editor:junior',
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Updated Name',
+          email: 'updated@example.com',
+          role: 'editor:junior',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().message).toBe(
+        'Forbidden: Insufficient permissions',
+      );
+    });
+
+    test('returns 200 when user has editor:senior role for PUT edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 21,
+        email: 'senior@example.com',
+        role: 'editor:senior',
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Senior Update',
+          email: 'senior@example.com',
+          role: 'editor:senior',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({
+        name: 'Senior Update',
+        email: 'senior@example.com',
+        role: 'editor:senior',
+      });
+    });
+
+    test('returns 200 when user has array roles and at least one is authorized for PUT edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 22,
+        email: 'multi@example.com',
+        roles: ['guest', 'editor:senior'],
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Multi Role Update',
+          email: 'multi@example.com',
+          role: 'editor:senior',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    test('returns 403 when user has array roles and none are authorized for PUT edit', async () => {
+      const token = app.jwt.sign({
+        id: 23,
+        email: 'multi-fail@example.com',
+        roles: ['guest', 'viewer'],
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Multi Role Fail',
+          email: 'fail@example.com',
+          role: 'viewer',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    test('returns 403 Forbidden when user has viewer role for PATCH edit', async () => {
+      const token = app.jwt.sign({
+        id: 24,
+        email: 'viewer@example.com',
+        role: 'viewer',
+      });
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Patch Attempt',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    test('returns 200 when user has admin role for PATCH edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 25,
+        email: 'admin@example.com',
+        role: 'admin',
+      });
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Admin Patch',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Admin Patch'});
+    });
+
+    test('returns 403 Forbidden when user has unauthorized role for PUT edit', async () => {
+      const token = app.jwt.sign({
+        id: 20,
+        email: 'junior@example.com',
+        role: 'editor:junior',
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Updated Name',
+          email: 'updated@example.com',
+          role: 'editor:junior',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().message).toBe(
+        'Forbidden: Insufficient permissions',
+      );
+    });
+
+    test('returns 200 when user has editor:senior role for PUT edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 21,
+        email: 'senior@example.com',
+        role: 'editor:senior',
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Senior Update',
+          email: 'senior@example.com',
+          role: 'editor:senior',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({
+        name: 'Senior Update',
+        email: 'senior@example.com',
+        role: 'editor:senior',
+      });
+    });
+
+    test('returns 200 when user has array roles and at least one is authorized for PUT edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 22,
+        email: 'multi@example.com',
+        roles: ['guest', 'editor:senior'],
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Multi Role Update',
+          email: 'multi@example.com',
+          role: 'editor:senior',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    test('returns 403 when user has array roles and none are authorized for PUT edit', async () => {
+      const token = app.jwt.sign({
+        id: 23,
+        email: 'multi-fail@example.com',
+        roles: ['guest', 'viewer'],
+      });
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Multi Role Fail',
+          email: 'fail@example.com',
+          role: 'viewer',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    test('returns 403 Forbidden when user has viewer role for PATCH edit', async () => {
+      const token = app.jwt.sign({
+        id: 24,
+        email: 'viewer@example.com',
+        role: 'viewer',
+      });
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Patch Attempt',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    test('returns 200 when user has admin role for PATCH edit', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 25,
+        email: 'admin@example.com',
+        role: 'admin',
+      });
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/v1/users/id/1',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        payload: {
+          name: 'Admin Patch',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual({name: 'Admin Patch'});
+    });
+  });
+
+  describe('Model Search route authorization', () => {
+    beforeEach(async () => {
+      app = await createTestApp(
+        pgConfig,
+        usersModel,
+        apisConfig,
+        customEndpoints,
+        upAuthConfig,
+        undefined,
+        rbacConfig,
+      );
+    });
+
+    test('returns 401 Unauthorized when unauthenticated request calls search route', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe(
+        'Invalid or expired authentication token',
+      );
+    });
+
+    test('returns 403 Forbidden when user lacks auditor or admin role on search route', async () => {
+      const token = app.jwt.sign({
+        id: 30,
+        email: 'viewer@example.com',
+        role: 'viewer',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().message).toBe(
+        'Forbidden: Insufficient permissions',
+      );
+    });
+
+    test('returns 200 when user has auditor role on search route', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 31,
+        email: 'auditor@example.com',
+        role: 'auditor',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([
+        {id: 1, name: 'Alice', email: 'alice@example.com'},
+      ]);
+    });
+
+    test('returns 200 when user has inherited admin role on search route', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 32,
+        email: 'admin@example.com',
+        role: 'admin',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('Model Search route authorization', () => {
+    beforeEach(async () => {
+      app = await createTestApp(
+        pgConfig,
+        usersModel,
+        apisConfig,
+        customEndpoints,
+        upAuthConfig,
+        undefined,
+        rbacConfig,
+      );
+    });
+
+    test('returns 401 Unauthorized when unauthenticated request calls search route', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe(
+        'Invalid or expired authentication token',
+      );
+    });
+
+    test('returns 403 Forbidden when user lacks auditor or admin role on search route', async () => {
+      const token = app.jwt.sign({
+        id: 30,
+        email: 'viewer@example.com',
+        role: 'viewer',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().message).toBe(
+        'Forbidden: Insufficient permissions',
+      );
+    });
+
+    test('returns 200 when user has auditor role on search route', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 31,
+        email: 'auditor@example.com',
+        role: 'auditor',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.data).toEqual([
+        {id: 1, name: 'Alice', email: 'alice@example.com'},
+      ]);
+    });
+
+    test('returns 200 when user has inherited admin role on search route', async () => {
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({rows: [{total: 1}]}) // COUNT
+        .mockResolvedValueOnce({
+          rows: [{id: 1, name: 'Alice', email: 'alice@example.com'}],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      const token = app.jwt.sign({
+        id: 32,
+        email: 'admin@example.com',
+        role: 'admin',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/users/search/name?name_search=Alice',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
   });
 
   describe('Custom endpoints authorization', () => {
@@ -433,6 +990,38 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/v1/custom-endpoints/summary',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    test('returns 401 Unauthorized on wildcard custom endpoint when unauthenticated', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/wildcard',
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    test('returns 200 on wildcard custom endpoint for any authenticated user role', async () => {
+      pgQueryMock.mockResolvedValueOnce({
+        rows: [{value: 1}],
+        rowCount: 1,
+      });
+
+      const token = app.jwt.sign({
+        id: 33,
+        email: 'viewer@example.com',
+        role: 'viewer',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/wildcard',
         headers: {
           authorization: `Bearer ${token}`,
         },
