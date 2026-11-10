@@ -83,7 +83,12 @@ function registerSearchEndpoint(
     {
       schema,
       config: {apiIdentifier},
-      preValidation: buildPreValidation(app, config, policy.authorization),
+      preValidation: buildPreValidation(
+        app,
+        config,
+        policy.authorization,
+        policy.roles,
+      ),
       preHandler: async request => {
         await app.callWebhook('request', request, null);
       },
