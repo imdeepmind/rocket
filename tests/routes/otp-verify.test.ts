@@ -22,6 +22,7 @@ import {
   AuthenticationConfig,
   DatabaseConfig,
   ModelConfig,
+  RbacConfig,
   ResolvedAppConfig,
 } from '@/interfaces/config';
 
@@ -76,6 +77,7 @@ async function createOtpApp(
   dbConfig: DatabaseConfig = pgConfig,
   apis?: Record<string, {enabled: boolean}>,
   apiVariants?: Record<string, {variants: string[]}>,
+  rbac?: RbacConfig,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const config = resolveConfig(
@@ -93,6 +95,7 @@ async function createOtpApp(
       authentication,
       ...(apis ? {apis} : {}),
       ...(apiVariants ? {apiVariants} : {}),
+      ...(rbac ? {rbac} : {}),
     },
     {mode: 'dev'},
   );
@@ -230,6 +233,294 @@ describe('POST /auth/login/verify/otp', () => {
       >;
       expect(decoded.id).toBe(1);
       expect(decoded.email).toBe('alice@example.com');
+
+      await app.close();
+    });
+  });
+
+  describe('RBAC JWT role embedding', () => {
+    const rbacEnabledConfig: RbacConfig = {
+      enabled: true,
+      modelName: 'users',
+      roleField: 'role',
+      defaultRole: 'viewer',
+      roles: {
+        admin: {},
+        editor: {},
+        viewer: {},
+      },
+    };
+
+    test('should embed single role in JWT token when RBAC is enabled', async () => {
+      const app = await createOtpApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        undefined,
+        rbacEnabledConfig,
+      );
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed_password',
+              role: 'admin',
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.data.accessToken).toBeDefined();
+
+      const decoded = jwt.verify(
+        body.data.accessToken,
+        'this-will-never-be-used',
+      ) as Record<string, unknown>;
+      expect(decoded.id).toBe(1);
+      expect(decoded.email).toBe('alice@example.com');
+      expect(decoded.role).toBe('admin');
+      expect(decoded.roles).toBeUndefined();
+
+      await app.close();
+    });
+
+    test('should embed roles array in JWT token when user has an array of roles', async () => {
+      const app = await createOtpApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        undefined,
+        rbacEnabledConfig,
+      );
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed_password',
+              role: ['editor', 'viewer'],
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const decoded = jwt.verify(
+        body.data.accessToken,
+        'this-will-never-be-used',
+      ) as Record<string, unknown>;
+      expect(decoded.roles).toEqual(['editor', 'viewer']);
+      expect(decoded.role).toBeUndefined();
+
+      await app.close();
+    });
+
+    test('should fall back to defaultRole when user role is null', async () => {
+      const app = await createOtpApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        undefined,
+        rbacEnabledConfig,
+      );
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed_password',
+              role: null,
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const decoded = jwt.verify(
+        body.data.accessToken,
+        'this-will-never-be-used',
+      ) as Record<string, unknown>;
+      expect(decoded.role).toBe('viewer');
+      expect(decoded.roles).toBeUndefined();
+
+      await app.close();
+    });
+
+    test('should query separate modelName when distinct from userModel.model', async () => {
+      const separateModelRbac: RbacConfig = {
+        enabled: true,
+        modelName: 'user_roles',
+        roleField: 'role',
+        defaultRole: 'viewer',
+        roles: {
+          admin: {},
+          viewer: {},
+        },
+      };
+
+      const app = await createOtpApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        undefined,
+        separateModelRbac,
+      );
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          // SELECT FROM users
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed_password',
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          // SELECT FROM user_roles
+          rows: [
+            {
+              id: 1,
+              role: 'admin',
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const decoded = jwt.verify(
+        body.data.accessToken,
+        'this-will-never-be-used',
+      ) as Record<string, unknown>;
+      expect(decoded.role).toBe('admin');
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'SELECT * FROM "user_roles" WHERE "id" = $1 LIMIT 1;',
+        [1],
+      );
+
+      await app.close();
+    });
+
+    test('should not embed role or roles when RBAC is disabled', async () => {
+      const app = await createOtpApp(
+        upAuthConfig,
+        authModels,
+        pgConfig,
+        undefined,
+        undefined,
+        {enabled: false},
+      );
+
+      const sendResponse =
+        await app.otp.sendOTPForVerification('alice@example.com');
+      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
+
+      pgClientQueryMock
+        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 1,
+              email: 'alice@example.com',
+              password: 'hashed_password',
+              role: 'admin',
+            },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
+
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/login/verify/otp',
+        payload: {ulid, otp: '000000', email: 'alice@example.com'},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const decoded = jwt.verify(
+        body.data.accessToken,
+        'this-will-never-be-used',
+      ) as Record<string, unknown>;
+      expect(decoded.role).toBeUndefined();
+      expect(decoded.roles).toBeUndefined();
 
       await app.close();
     });

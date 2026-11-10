@@ -1,6 +1,7 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
+import {extractJwtRolePayload} from '@/lib/rbac';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
@@ -183,9 +184,25 @@ function registerOtpVerifyEndpoint(
 
         const user = res.rows[0] as Record<string, unknown>;
 
+        let rbacUser = user;
+        if (
+          config.rbac?.enabled &&
+          config.rbac.modelName &&
+          config.rbac.modelName !== model
+        ) {
+          const rbacQuery = `SELECT * FROM "${config.rbac.modelName}" WHERE "${upConfig.userModel.idField}" = $1 LIMIT 1;`;
+          const rbacRes = await tx.query(rbacQuery, [
+            user[upConfig.userModel.idField],
+          ]);
+          rbacUser = (rbacRes.rows[0] as Record<string, unknown>) ?? user;
+        }
+
+        const rolePayload = extractJwtRolePayload(rbacUser, config.rbac);
+
         const payload = {
           id: user[upConfig.userModel.idField],
           [usernameField]: user[usernameField],
+          ...rolePayload,
         };
 
         const token = app.jwt.sign(payload, {
