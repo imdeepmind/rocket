@@ -101,6 +101,9 @@ test('minimal dev config resolves every section densely', () => {
   // authentication disabled
   expect(config.authentication).toEqual({enabled: false});
 
+  // rbac disabled
+  expect(config.rbac).toEqual({enabled: false});
+
   // pass-through sections
   expect(config.apis).toEqual({});
   expect(config.customEndpoints).toEqual({});
@@ -839,6 +842,44 @@ test('customEndpoints, integrations and apiVariants pass through', () => {
   expect(emptyConfig.customEndpoints).toEqual({});
   expect(emptyConfig.integrations).toEqual({});
   expect(emptyConfig.apiVariants).toEqual({});
+  expect(emptyConfig.rbac).toEqual({enabled: false});
+});
+
+test('rbac defaults to disabled when absent or explicitly disabled', () => {
+  expect(resolveConfig(devInput(), {mode: 'dev'}).rbac).toEqual({
+    enabled: false,
+  });
+  expect(
+    resolveConfig(devInput({rbac: {enabled: false}}), {mode: 'dev'}).rbac,
+  ).toEqual({enabled: false});
+});
+
+test('rbac resolves densely when enabled', () => {
+  const rbacInput: AppConfigInput['rbac'] = {
+    enabled: true,
+    modelName: 'users',
+    roleField: 'role',
+    defaultRole: 'viewer',
+    roles: {
+      admin: {description: 'Full access', includes: ['*']},
+      viewer: {description: 'Read only'},
+    },
+  };
+
+  const config = resolveConfig(devInput({rbac: rbacInput}), {mode: 'dev'});
+  expect(config.rbac).toEqual(rbacInput);
+  expect(config.rbac).not.toBe(rbacInput);
+  if (!config.rbac.enabled) throw new Error('expected rbac to be enabled');
+  expect(config.rbac.roles).not.toBe(rbacInput.roles);
+});
+
+test('rbac clones when partial enabled config is provided', () => {
+  const config = resolveConfig(devInput({rbac: {enabled: true}}), {
+    mode: 'dev',
+  });
+  expect(config.rbac).toEqual({
+    enabled: true,
+  });
 });
 
 test('apis values are cloned, other sections clone as well', () => {

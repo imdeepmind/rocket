@@ -69,6 +69,25 @@
             }
         }
     },
+    "rbac": {
+        "enabled": true,
+        "modelName": "users",
+        "roleField": "role",
+        "defaultRole": "viewer",
+        "roles": {
+            "admin": {
+                "description": "Administrator with full system access",
+                "includes": ["*"]
+            },
+            "editor": {
+                "description": "Editor with access to edit posts and content",
+                "includes": ["viewer"]
+            },
+            "viewer": {
+                "description": "Read-only access to published content"
+            }
+        }
+    },
     "integrations": {
         "email": {
             "provider": "dummy"
@@ -112,6 +131,13 @@
                     "isActive": {
                         "type": "boolean",
                         "default": true,
+                        "query": ["eq"]
+                    },
+                    "role": {
+                        "type": "enum",
+                        "values": ["admin", "editor", "viewer"],
+                        "default": "viewer",
+                        "nullable": false,
                         "query": ["eq"]
                     }
                 },
@@ -245,6 +271,7 @@
                 }
             ],
             "authorization": true,
+            "roles": ["admin"],
             "tags": ["Users", "Aggregations"],
             "serverSideParams": [
                 {
@@ -264,6 +291,7 @@
         },
         "model.test.posts.unknown.insert": {
             "authorization": true,
+            "roles": ["admin", "editor"],
             "serverSideParams": [
                 {
                     "type": "body",

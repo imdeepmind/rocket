@@ -163,6 +163,25 @@
             ],
             "aggregations": [],
             "default": true
+          },
+          "role": {
+            "type": "enum",
+            "primaryKey": false,
+            "autoIncrement": false,
+            "nullable": false,
+            "unique": false,
+            "secret": false,
+            "apis": [],
+            "query": [
+              "eq"
+            ],
+            "aggregations": [],
+            "default": "viewer",
+            "values": [
+              "admin",
+              "editor",
+              "viewer"
+            ]
           }
         },
         "indexes": {
@@ -335,6 +354,9 @@
         }
       ],
       "authorization": true,
+      "roles": [
+        "admin"
+      ],
       "tags": [
         "Users",
         "Aggregations"
@@ -359,6 +381,10 @@
     },
     "model.test.posts.unknown.insert": {
       "authorization": true,
+      "roles": [
+        "admin",
+        "editor"
+      ],
       "serverSideParams": [
         {
           "type": "body",
@@ -448,6 +474,29 @@
       "variants": [
         "admin"
       ]
+    }
+  },
+  "rbac": {
+    "enabled": true,
+    "modelName": "users",
+    "roleField": "role",
+    "defaultRole": "viewer",
+    "roles": {
+      "admin": {
+        "description": "Administrator with full system access",
+        "includes": [
+          "*"
+        ]
+      },
+      "editor": {
+        "description": "Editor with access to edit posts and content",
+        "includes": [
+          "viewer"
+        ]
+      },
+      "viewer": {
+        "description": "Read-only access to published content"
+      }
     }
   }
 }
