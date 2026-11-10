@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import chalk from 'chalk';
 import {Command} from 'commander';
 
+import migrateDatabase from '@/migrator';
 import {startServer} from '@/server';
 
 import {resolveAndValidateConfig} from '@/lib/config/pipeline';
@@ -52,12 +53,18 @@ program
   .option('-v, --verbose', 'Enable verbose logging', false)
   .option('--migrate', 'Run database migrations', false)
   .option(
+    '--migrate-only',
+    'Run database migrations and exit immediately',
+    false,
+  )
+  .option(
     '--print-config',
     'Resolve, validate and print the configuration, then exit',
     false,
   )
   .action(async (options: CLIOptions) => {
-    const {config, port, mode, verbose, migrate, printConfig} = options;
+    const {config, port, mode, verbose, migrate, migrateOnly, printConfig} =
+      options;
 
     // load the config; env vars and defaults are resolved by the pipeline
     const loadedConfig = loadConfig(config);
@@ -77,6 +84,23 @@ program
         process.exit(1);
       }
       return;
+    }
+
+    if (migrateOnly) {
+      let migrationFailed = false;
+      try {
+        const resolved = resolveAndValidateConfig(loadedConfig, mode);
+        console.log(chalk.blue('Running database migrations...'));
+        await migrateDatabase(resolved);
+        console.log(chalk.green('Database migrations completed successfully.'));
+      } catch (err) {
+        migrationFailed = true;
+        console.error(
+          chalk.red('Migration failed:'),
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+      process.exit(migrationFailed ? 1 : 0);
     }
 
     // Fastify log cannot be used here as Fastify instance does not exist

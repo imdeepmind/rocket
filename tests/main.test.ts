@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+import migrateDatabase from '@/migrator';
 import {startServer} from '@/server';
 
 import {resolveAndValidateConfig} from '@/lib/config/pipeline';
@@ -33,6 +34,10 @@ vi.mock('commander', () => ({
 }));
 
 // Setup other Mocks
+vi.mock('../src/migrator', () => ({
+  default: vi.fn(),
+}));
+
 vi.mock('../src/server', () => ({
   startServer: vi.fn(),
 }));
@@ -99,6 +104,11 @@ describe('main.ts CLI', () => {
     expect(mockCommandObj.option).toHaveBeenCalledWith(
       '--migrate',
       'Run database migrations',
+      false,
+    );
+    expect(mockCommandObj.option).toHaveBeenCalledWith(
+      '--migrate-only',
+      'Run database migrations and exit immediately',
       false,
     );
     expect(mockCommandObj.action).toHaveBeenCalled();
@@ -381,6 +391,224 @@ describe('main.ts CLI', () => {
       'Invalid configuration:',
       expect.stringContaining("required property 'name'"),
     );
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('runs database migrations and exits with 0 when --migrate-only is provided', async () => {
+    await import('@/main');
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockAppConfig = {
+      application: {name: 'Migrate Test'},
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+            },
+          },
+        },
+      },
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://user:pass@localhost:5432/rocket'},
+        },
+      },
+    };
+
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockAppConfig));
+    vi.mocked(migrateDatabase).mockResolvedValue(undefined);
+
+    await expect(
+      mockAction({
+        config: 'test.json',
+        port: 3000,
+        mode: 'dev',
+        verbose: false,
+        migrate: false,
+        migrateOnly: true,
+        printConfig: false,
+      }),
+    ).rejects.toThrow('process.exit: 0');
+
+    expect(startServer).not.toHaveBeenCalled();
+    expect(migrateDatabase).toHaveBeenCalledTimes(1);
+    expect(logSpy).toHaveBeenCalledWith('Running database migrations...');
+    expect(logSpy).toHaveBeenCalledWith(
+      'Database migrations completed successfully.',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('logs error and exits with 1 when migrateDatabase throws during --migrate-only', async () => {
+    await import('@/main');
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockAppConfig = {
+      application: {name: 'Migrate Fail Test'},
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+            },
+          },
+        },
+      },
+      infrastructure: {
+        database: {
+          engine: 'sqlite',
+          connection: {url: './test.db'},
+        },
+      },
+    };
+
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockAppConfig));
+    vi.mocked(migrateDatabase).mockRejectedValue(
+      new Error('Drizzle push failed'),
+    );
+
+    await expect(
+      mockAction({
+        config: 'test.json',
+        port: 3000,
+        mode: 'dev',
+        verbose: false,
+        migrate: false,
+        migrateOnly: true,
+        printConfig: false,
+      }),
+    ).rejects.toThrow('process.exit: 1');
+
+    expect(startServer).not.toHaveBeenCalled();
+    expect(migrateDatabase).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Migration failed:',
+      'Drizzle push failed',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('logs error and exits with 1 when configuration resolution fails during --migrate-only', async () => {
+    await import('@/main');
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        data: {
+          models: {
+            users: {
+              fields: {
+                id: {type: 'integer'},
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    await expect(
+      mockAction({
+        config: 'test.json',
+        port: 3000,
+        mode: 'dev',
+        verbose: false,
+        migrate: false,
+        migrateOnly: true,
+        printConfig: false,
+      }),
+    ).rejects.toThrow('process.exit: 1');
+
+    expect(startServer).not.toHaveBeenCalled();
+    expect(migrateDatabase).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Migration failed:',
+      expect.stringContaining("required property 'name'"),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('logs non-Error string and exits with 1 when non-Error thrown during --migrate-only', async () => {
+    await import('@/main');
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockAppConfig = {
+      application: {name: 'Migrate String Fail'},
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+            },
+          },
+        },
+      },
+      infrastructure: {
+        database: {
+          engine: 'sqlite',
+          connection: {url: './test.db'},
+        },
+      },
+    };
+
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockAppConfig));
+    vi.mocked(migrateDatabase).mockRejectedValue(
+      'Fatal migration string error',
+    );
+
+    await expect(
+      mockAction({
+        config: 'test.json',
+        port: 3000,
+        mode: 'dev',
+        verbose: false,
+        migrate: false,
+        migrateOnly: true,
+        printConfig: false,
+      }),
+    ).rejects.toThrow('process.exit: 1');
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Migration failed:',
+      'Fatal migration string error',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
 
     errorSpy.mockRestore();
     exitSpy.mockRestore();
