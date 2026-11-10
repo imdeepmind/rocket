@@ -79,8 +79,20 @@
                 "description": "Administrator with full system access",
                 "includes": ["*"]
             },
-            "editor": {
-                "description": "Editor with access to edit posts and content",
+            "lead_editor": {
+                "description": "Manages editorial workflows and all editor tiers",
+                "includes": ["editor:*"]
+            },
+            "editor:senior": {
+                "description": "Senior editor with publishing rights",
+                "includes": ["editor:junior", "viewer"]
+            },
+            "editor:junior": {
+                "description": "Junior editor with drafting rights",
+                "includes": ["viewer"]
+            },
+            "auditor": {
+                "description": "Compliance auditor with read-only access",
                 "includes": ["viewer"]
             },
             "viewer": {
@@ -135,7 +147,14 @@
                     },
                     "role": {
                         "type": "enum",
-                        "values": ["admin", "editor", "viewer"],
+                        "values": [
+                            "admin",
+                            "lead_editor",
+                            "editor:senior",
+                            "editor:junior",
+                            "auditor",
+                            "viewer"
+                        ],
                         "default": "viewer",
                         "nullable": false,
                         "query": ["eq"]
@@ -287,11 +306,12 @@
             ]
         },
         "model.test.users.unknown.getAll": {
+            "authorization": true,
             "supportedQueries": ["eq"]
         },
         "model.test.posts.unknown.insert": {
             "authorization": true,
-            "roles": ["admin", "editor"],
+            "roles": ["editor:*"],
             "serverSideParams": [
                 {
                     "type": "body",
@@ -301,7 +321,13 @@
             ]
         },
         "model.test.users.id.index": {
+            "authorization": true,
+            "roles": ["*"],
             "supportedQueries": ["eq", "sort"]
+        },
+        "custom.test.all.unknown.updatePostTitle": {
+            "authorization": true,
+            "roles": ["editor:senior", "admin"]
         },
         "aggregate.test.users.email.getAggregation": {
             "supportedAggregations": ["count"]

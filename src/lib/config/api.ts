@@ -1,5 +1,6 @@
 import {buildApiIdentifier, parseApiIdentifier} from '@/lib/config/identifier';
 import {deriveApiTags} from '@/lib/config/tags';
+import {expandWildcards} from '@/lib/rbac';
 
 import {
   Aggregation,
@@ -27,6 +28,7 @@ export interface ResolvedApiPolicy {
   serverSideParams: ServerSideParamConfig[];
   supportedQueries: QueryOperation[] | undefined;
   supportedAggregations: Aggregation[] | undefined;
+  roles?: Set<string>;
 }
 
 export interface ApiRouteTarget {
@@ -84,6 +86,14 @@ export function resolveApiPolicy(
   const enabled =
     override?.enabled ?? baseOverride?.enabled ?? !authModelDefaultOff;
 
+  const rawRoles = override?.roles ?? baseOverride?.roles;
+  let roles: Set<string> | undefined;
+
+  if (rawRoles && config.rbac?.enabled && config.rbac.roles) {
+    const declaredRoles = Object.keys(config.rbac.roles);
+    roles = expandWildcards(rawRoles, declaredRoles);
+  }
+
   return {
     enabled,
     tags: override?.tags ?? baseOverride?.tags ?? deriveApiTags(identifier),
@@ -96,6 +106,7 @@ export function resolveApiPolicy(
     serverSideParams: override?.serverSideParams ?? [],
     supportedQueries: override?.supportedQueries,
     supportedAggregations: override?.supportedAggregations,
+    ...(roles !== undefined ? {roles} : {}),
   };
 }
 
