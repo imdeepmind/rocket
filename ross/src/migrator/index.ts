@@ -15,7 +15,11 @@ function injectTimestamps(model: ResolvedModelConfig, engine: DBEngine): void {
   if (!model.timestamps) return;
 
   const nowDefault =
-    engine === 'sqlite' ? {raw: "(datetime('now'))"} : {raw: 'now()'};
+    engine === 'sqlite'
+      ? {raw: "(datetime('now'))"}
+      : engine === 'mysql'
+        ? {raw: 'CURRENT_TIMESTAMP'}
+        : {raw: 'now()'};
 
   if (!('created_at' in model.fields)) {
     model.fields.created_at = resolveModelField({
@@ -99,6 +103,62 @@ function generateSchemaFile(
         if (f.primaryKey) {
           if (f.autoIncrement) {
             col += '.primaryKey({ autoIncrement: true })';
+          } else {
+            col += '.primaryKey()';
+          }
+        }
+        if (f.unique && !f.primaryKey) col += '.unique()';
+        if (f.nullable === false) col += '.notNull()';
+        if (f.default !== undefined) {
+          const def = f.default as Record<string, unknown>;
+          if (def && typeof def === 'object' && 'raw' in def) {
+            col += `.default(sql\`${def.raw}\`)`;
+          } else {
+            col += `.default(${JSON.stringify(f.default)})`;
+          }
+        }
+      } else if (engine === 'mysql') {
+        switch (f.type) {
+          case 'integer':
+            col = `int('${fName}')`;
+            break;
+          case 'string':
+            col = `varchar('${fName}', { length: 255 })`;
+            break;
+          case 'text':
+            col = `text('${fName}')`;
+            break;
+          case 'boolean':
+            col = `boolean('${fName}')`;
+            break;
+          case 'datetime':
+            col = `datetime('${fName}', { mode: 'string' })`;
+            break;
+          case 'decimal':
+            col = `double('${fName}')`;
+            break;
+          case 'date':
+            col = `date('${fName}')`;
+            break;
+          case 'json':
+            col = `json('${fName}')`;
+            break;
+          case 'enum':
+            col = `mysqlEnum('${fName}', [${(f.values as string[]).map(v => JSON.stringify(v)).join(', ')}])`;
+            break;
+          case 'uuid':
+            col = `varchar('${fName}', { length: 36 })`;
+            break;
+          case 'ulid':
+            col = `varchar('${fName}', { length: 26 })`;
+            break;
+          default:
+            col = `text('${fName}')`;
+            break;
+        }
+        if (f.primaryKey) {
+          if (f.autoIncrement) {
+            col += '.primaryKey().autoincrement()';
           } else {
             col += '.primaryKey()';
           }
@@ -212,6 +272,15 @@ export const ${modelName} = sqliteTable('${modelName}', {
 ${columns}
 }${extras ? `, (t) => [\n${extras}\n]` : ''});
 `.trim();
+  } else if (engine === 'mysql') {
+    return `
+import { mysqlTable, int, varchar, text, boolean, double, date, datetime, timestamp, json, mysqlEnum, index, uniqueIndex, foreignKey } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
+
+export const ${modelName} = mysqlTable('${modelName}', {
+${columns}
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
+`.trim();
   } else {
     return `
 import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum, uuid } from 'drizzle-orm/pg-core';
@@ -251,13 +320,20 @@ async function generateMigrationSQL(
     // write schema.ts
     fs.writeFileSync(schemaPath, schemas.join('\n'));
 
+    const dialect =
+      engine === 'postgres'
+        ? 'postgresql'
+        : engine === 'mysql'
+          ? 'mysql'
+          : 'sqlite';
+
     // write drizzle.config.ts
     fs.writeFileSync(
       configPath,
       `
       import { defineConfig } from 'drizzle-kit';
       export default defineConfig({
-        dialect: '${engine === 'postgres' ? 'postgresql' : 'sqlite'}',
+        dialect: '${dialect}',
         schema: '${schemaPath}',
         out: '${migrationsPath}',
         dbCredentials: { url: process.env.DRIZZLE_DATABASE_URL! },

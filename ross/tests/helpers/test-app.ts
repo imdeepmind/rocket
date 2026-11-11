@@ -45,6 +45,11 @@ export const sqliteConfig: DatabaseConfig = {
   connection: {url: ':memory:'},
 };
 
+export const mysqlConfig: DatabaseConfig = {
+  engine: 'mysql',
+  connection: {url: 'mysql://root:password@localhost:3306/rocket_db'},
+};
+
 export async function createTestApp(
   dbConfig: DatabaseConfig,
   models: Record<string, ModelConfig> = {},

@@ -5,9 +5,18 @@ import databasePlugin from '@/plugin/database';
 
 import {DatabaseConfig, ResolvedAppConfig} from '@/interfaces/config';
 
-import {pgConfig, sqliteConfig} from '@tests/helpers/test-app';
+import {mysqlConfig, pgConfig, sqliteConfig} from '@tests/helpers/test-app';
 
 import {
+  mysqlConnBeginTxMock,
+  mysqlConnCommitMock,
+  mysqlConnQueryMock,
+  mysqlConnReleaseMock,
+  mysqlConnRollbackMock,
+  mysqlEndMock,
+  mysqlGetConnectionMock,
+  mysqlOnMock,
+  mysqlQueryMock,
   pgClientQueryMock,
   pgClientReleaseMock,
   pgEndMock,
@@ -39,12 +48,12 @@ describe('database plugin', () => {
 
   test('throws error for unsupported engine', async () => {
     const fastify = buildApp({
-      engine: 'mysql' as DatabaseConfig['engine'],
-      connection: {url: 'mysql://localhost'},
+      engine: 'oracle' as DatabaseConfig['engine'],
+      connection: {url: 'oracle://localhost'},
     });
 
     await expect(fastify.register(databasePlugin)).rejects.toThrow(
-      'Unsupported database engine: mysql',
+      'Unsupported database engine: oracle',
     );
   });
 
@@ -587,6 +596,223 @@ describe('database plugin', () => {
       await tx2.commit();
       tx2.release();
 
+      await fastify.close();
+    });
+  });
+
+  describe('mysql engine', () => {
+    test('decorates fastify with db', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      expect(fastify.hasDecorator('db')).toBe(true);
+      await fastify.close();
+    });
+
+    test('query method returns structured response for SELECT', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      const mockRows = [{id: 1, name: 'MySQL'}];
+      mysqlQueryMock.mockResolvedValueOnce([mockRows, []]);
+
+      const result = await fastify.db.query('SELECT * FROM test');
+      expect(result).toEqual({
+        changes: 0,
+        rows: mockRows,
+      });
+      expect(mysqlQueryMock).toHaveBeenCalledWith('SELECT * FROM test', []);
+      await fastify.close();
+    });
+
+    test('query method returns changes for non-SELECT', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlQueryMock.mockResolvedValueOnce([{affectedRows: 3}, []]);
+
+      const result = await fastify.db.query(
+        'INSERT INTO test (name) VALUES ($1)',
+        ['New Record'],
+      );
+      expect(result).toEqual({
+        changes: 3,
+        rows: [],
+      });
+      expect(mysqlQueryMock).toHaveBeenCalledWith(
+        'INSERT INTO test (name) VALUES (?)',
+        ['New Record'],
+      );
+      await fastify.close();
+    });
+
+    test('query method normalizes parameters (boolean, undefined, Date)', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlQueryMock.mockResolvedValueOnce([{affectedRows: 1}, []]);
+
+      const now = new Date();
+      await fastify.db.query('INSERT INTO test VALUES ($1, $2, $3, $4)', [
+        true,
+        false,
+        undefined,
+        now,
+      ]);
+
+      expect(mysqlQueryMock).toHaveBeenCalledWith(
+        'INSERT INTO test VALUES (?, ?, ?, ?)',
+        [1, 0, null, now.toISOString()],
+      );
+      await fastify.close();
+    });
+
+    test('query handles missing affectedRows in MySQL', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlQueryMock.mockResolvedValueOnce([{}, []]);
+
+      const result = await fastify.db.query('UPDATE test SET name = ?', [
+        'Value',
+      ]);
+      expect(result).toEqual({
+        changes: 0,
+        rows: [],
+      });
+      await fastify.close();
+    });
+
+    test('throws error on DDL queries in MySQL', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      await expect(
+        fastify.db.query('CREATE TABLE test (id INT)'),
+      ).rejects.toThrow(
+        'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+      );
+      await fastify.close();
+    });
+
+    test('pool.on connection executes SET SESSION sql_mode ANSI_QUOTES', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      expect(mysqlOnMock).toHaveBeenCalledWith(
+        'connection',
+        expect.any(Function),
+      );
+      const connectionHandler = mysqlOnMock.mock.calls.find(
+        call => call[0] === 'connection',
+      )?.[1];
+
+      const queryMock = vi
+        .fn()
+        .mockImplementation((_sql: string, cb?: () => void) => {
+          if (typeof cb === 'function') cb();
+        });
+      connectionHandler({query: queryMock});
+      expect(queryMock).toHaveBeenCalledWith(
+        "SET SESSION sql_mode = CONCAT(IFNULL(@@sql_mode, ''), ',ANSI_QUOTES')",
+        expect.any(Function),
+      );
+
+      // Should handle query error safely without throwing
+      const throwingQueryMock = vi.fn().mockImplementation(() => {
+        throw new Error('fail');
+      });
+      expect(() => connectionHandler({query: throwingQueryMock})).not.toThrow();
+
+      await fastify.close();
+    });
+
+    test('closes MySQL connection on fastify onClose hook', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      await fastify.close();
+      expect(mysqlEndMock).toHaveBeenCalled();
+    });
+
+    test('beginTransaction commits transaction and releases connection', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlConnQueryMock.mockResolvedValueOnce([[{id: 1}], []]);
+
+      const tx = await fastify.db.beginTransaction();
+      expect(mysqlGetConnectionMock).toHaveBeenCalled();
+      expect(mysqlConnBeginTxMock).toHaveBeenCalled();
+
+      const selectRes = await tx.query('SELECT * FROM test');
+      expect(selectRes).toEqual({changes: 0, rows: [{id: 1}]});
+
+      await tx.commit();
+      expect(mysqlConnCommitMock).toHaveBeenCalled();
+
+      tx.release();
+      expect(mysqlConnReleaseMock).toHaveBeenCalled();
+      expect(mysqlConnRollbackMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('beginTransaction rollbacks transaction and releases connection', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlConnQueryMock.mockResolvedValueOnce([{affectedRows: 1}, []]);
+
+      const tx = await fastify.db.beginTransaction();
+      const insertRes = await tx.query('INSERT INTO test VALUES ($1)', ['x']);
+      expect(insertRes).toEqual({changes: 1, rows: []});
+
+      await tx.rollback();
+      expect(mysqlConnRollbackMock).toHaveBeenCalled();
+
+      tx.release();
+      expect(mysqlConnReleaseMock).toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('release releases connection', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      mysqlConnReleaseMock.mockClear();
+
+      const tx = await fastify.db.beginTransaction();
+      tx.release();
+
+      expect(mysqlConnReleaseMock).toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('transaction query rejects DDL', async () => {
+      const fastify = buildApp(mysqlConfig);
+      await fastify.register(databasePlugin);
+      await fastify.ready();
+
+      const tx = await fastify.db.beginTransaction();
+      await expect(tx.query('DROP TABLE users')).rejects.toThrow(
+        'DDL queries (CREATE, ALTER, DROP, etc.) are not allowed.',
+      );
+
+      tx.release();
       await fastify.close();
     });
   });

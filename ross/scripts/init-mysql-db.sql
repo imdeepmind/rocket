@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS e2e_testing;
+GRANT ALL PRIVILEGES ON e2e_testing.* TO 'devuser'@'%';
+FLUSH PRIVILEGES;

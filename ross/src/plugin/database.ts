@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
+import mysql from 'mysql2/promise';
 import {Pool} from 'pg';
 
 import {DatabaseQuery} from '@/interfaces';
@@ -197,6 +198,73 @@ export default fp(async (fastify: FastifyInstance) => {
             if (!isFinished) {
               endTransaction('ROLLBACK');
             }
+          },
+        };
+      },
+    };
+  } else if (dbConfig.engine === 'mysql') {
+    const pool = mysql.createPool(dbConfig.connection.url);
+
+    pool.on('connection', connection => {
+      if (typeof (connection as {query?: unknown}).query === 'function') {
+        try {
+          (
+            connection as unknown as {
+              query: (sql: string, cb: () => void) => unknown;
+            }
+          ).query(
+            "SET SESSION sql_mode = CONCAT(IFNULL(@@sql_mode, ''), ',ANSI_QUOTES')",
+            () => {},
+          );
+        } catch {
+          // Ignore connection configuration errors
+        }
+      }
+    });
+
+    const mysqlQueryFn = async (sql: string, params: unknown[]) => {
+      const normalizedSql = normalizeSqliteParams(sql);
+      const queryParams = params.map(normalizeSqliteValue);
+      const [result] = await pool.query(normalizedSql, queryParams);
+      if (isSelectQuery(normalizedSql)) {
+        return {changes: 0, rows: (result as unknown[]) ?? []};
+      }
+      return {
+        changes: (result as {affectedRows?: number})?.affectedRows ?? 0,
+        rows: [] as unknown[],
+      };
+    };
+
+    dbInstance = {
+      query: makeQueryExecutor(mysqlQueryFn),
+      close: async () => {
+        await pool.end();
+      },
+      beginTransaction: async () => {
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        return {
+          query: makeQueryExecutor(async (sql, params) => {
+            const normalizedSql = normalizeSqliteParams(sql);
+            const queryParams = params.map(normalizeSqliteValue);
+            const [result] = await connection.query(normalizedSql, queryParams);
+            if (isSelectQuery(normalizedSql)) {
+              return {changes: 0, rows: (result as unknown[]) ?? []};
+            }
+            return {
+              changes: (result as {affectedRows?: number})?.affectedRows ?? 0,
+              rows: [] as unknown[],
+            };
+          }),
+          commit: async () => {
+            await connection.commit();
+          },
+          rollback: async () => {
+            await connection.rollback();
+          },
+          release: () => {
+            connection.release();
           },
         };
       },

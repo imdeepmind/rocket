@@ -60,14 +60,19 @@ describe('migrateDatabase', () => {
     vi.restoreAllMocks();
   });
 
-  const getBaseConfig = (engine: 'sqlite' | 'postgres') =>
+  const getBaseConfig = (engine: 'sqlite' | 'postgres' | 'mysql') =>
     ({
       name: 'test-app',
       infrastructure: {
         database: {
           engine,
           connection: {
-            url: engine === 'sqlite' ? 'test.db' : 'postgres://db',
+            url:
+              engine === 'sqlite'
+                ? 'test.db'
+                : engine === 'mysql'
+                  ? 'mysql://localhost/db'
+                  : 'postgres://db',
           },
         },
       },
@@ -220,6 +225,117 @@ describe('migrateDatabase', () => {
       expect.objectContaining({
         stdio: 'inherit',
         env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'postgres://db'}),
+      }),
+    );
+  });
+
+  it('should generate schema file for mysql full coverage', async () => {
+    const config = getBaseConfig('mysql');
+    config.data.models = {
+      posts: {
+        timestamps: true,
+        fields: {
+          id: {type: 'integer', primaryKey: true, autoIncrement: true},
+          title: {type: 'string', unique: true, nullable: false},
+          body: {type: 'text'},
+          published: {type: 'boolean'},
+          price: {type: 'decimal'},
+          birthDate: {type: 'date'},
+          eventTime: {type: 'datetime'},
+          config: {type: 'json'},
+          level: {type: 'enum', values: ['low', 'high']},
+          idUuid: {type: 'uuid'},
+          idUlid: {type: 'ulid'},
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          unknown: {type: 'unknown_type' as any},
+        },
+        indexes: {
+          title_idx: {fields: ['title'], unique: true},
+          body_idx: {fields: ['body'], unique: false},
+        },
+        relations: {
+          author_fk: {
+            type: 'belongsTo',
+            localField: 'id',
+            foreignField: 'id',
+            model: 'users',
+            onDelete: 'cascade',
+            onUpdate: 'cascade',
+          },
+        },
+      },
+      tags: {
+        fields: {
+          slug: {type: 'string', primaryKey: true},
+          label: {type: 'string', default: 'default-label'},
+        },
+      },
+    };
+    await runMigrate(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const schemaContent = writeFileSyncMock.mock.calls[0][1] as string;
+
+    expect(schemaContent).toContain(
+      "import { mysqlTable, int, varchar, text, boolean, double, date, datetime, timestamp, json, mysqlEnum, index, uniqueIndex, foreignKey } from 'drizzle-orm/mysql-core'",
+    );
+    expect(schemaContent).toContain("export const posts = mysqlTable('posts'");
+    expect(schemaContent).toContain(
+      "id: int('id').primaryKey().autoincrement()",
+    );
+    expect(schemaContent).toContain(
+      "title: varchar('title', { length: 255 }).unique().notNull()",
+    );
+    expect(schemaContent).toContain("body: text('body')");
+    expect(schemaContent).toContain("published: boolean('published')");
+    expect(schemaContent).toContain("price: double('price')");
+    expect(schemaContent).toContain("birthDate: date('birthDate')");
+    expect(schemaContent).toContain(
+      "eventTime: datetime('eventTime', { mode: 'string' })",
+    );
+    expect(schemaContent).toContain("config: json('config')");
+    expect(schemaContent).toContain(
+      'level: mysqlEnum(\'level\', ["low", "high"])',
+    );
+    expect(schemaContent).toContain(
+      "idUuid: varchar('idUuid', { length: 36 })",
+    );
+    expect(schemaContent).toContain(
+      "idUlid: varchar('idUlid', { length: 26 })",
+    );
+    expect(schemaContent).toContain("unknown: text('unknown')");
+    expect(schemaContent).toContain(
+      "created_at: datetime('created_at', { mode: 'string' }).notNull().default(sql`CURRENT_TIMESTAMP`)",
+    );
+    expect(schemaContent).toContain(
+      "updated_at: datetime('updated_at', { mode: 'string' }).notNull().default(sql`CURRENT_TIMESTAMP`)",
+    );
+    expect(schemaContent).toContain("uniqueIndex('title_idx').on(t.title)");
+    expect(schemaContent).toContain("index('body_idx').on(t.body)");
+    expect(schemaContent).toContain(
+      "foreignKey({ name: 'author_fk', columns: [t.id], foreignColumns: [users.id] }).onDelete('cascade').onUpdate('cascade')",
+    );
+    expect(schemaContent).toContain("export const tags = mysqlTable('tags'");
+    expect(schemaContent).toContain(
+      "slug: varchar('slug', { length: 255 }).primaryKey()",
+    );
+    expect(schemaContent).toContain(
+      'label: varchar(\'label\', { length: 255 }).default("default-label")',
+    );
+
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    expect(drizzleConfigContent).toContain("dialect: 'mysql'");
+    expect(drizzleConfigContent).toContain(
+      'url: process.env.DRIZZLE_DATABASE_URL!',
+    );
+
+    expect(execSync).toHaveBeenCalledWith(
+      expect.stringContaining('npm run generate:sql -- --config='),
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining({
+          DRIZZLE_DATABASE_URL: 'mysql://localhost/db',
+        }),
       }),
     );
   });

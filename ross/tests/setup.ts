@@ -1,6 +1,10 @@
 import {vi} from 'vitest';
 
 import {
+  mysqlEndMock,
+  mysqlGetConnectionMock,
+  mysqlOnMock,
+  mysqlQueryMock,
   pgConnectMock,
   pgEndMock,
   pgQueryMock,
@@ -34,5 +38,20 @@ vi.mock('better-sqlite3', () => {
         exec: sqliteExecMock,
       };
     }),
+  };
+});
+
+vi.mock('mysql2/promise', () => {
+  const createPool = vi.fn().mockImplementation(() => ({
+    query: mysqlQueryMock,
+    end: mysqlEndMock,
+    getConnection: mysqlGetConnectionMock,
+    on: mysqlOnMock,
+  }));
+  return {
+    default: {
+      createPool,
+    },
+    createPool,
   };
 });

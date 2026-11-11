@@ -1,6 +1,6 @@
 import {HTTPMethod} from './index';
 
-export type DBEngine = 'sqlite' | 'postgres';
+export type DBEngine = 'sqlite' | 'postgres' | 'mysql';
 export type CacheDbEngine = 'redis' | 'memory';
 export type DataType =
   | 'integer'
