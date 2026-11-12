@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 case "${1:-help}" in
   dev)
-    npm run dev -- --config example_config.json
+    npm run dev -- dev -c example_config.json
     ;;
   coverage)
     npm run coverage

@@ -37,7 +37,7 @@ npm install
 Start the server using an existing configuration file:
 
 ```bash
-npm run dev -- -c example_config.json
+npm run dev -- dev -c example_config.json
 ```
 
 ### 3. API Exploration
@@ -70,7 +70,7 @@ and one model:
 ```
 
 ```bash
-npm run dev -- -c examples/01-barebone/barebone_config.json
+npm run dev -- dev -c examples/01-barebone/barebone_config.json
 ```
 
 The single model exposes `POST /api/v1/notes/`, `GET /api/v1/notes/`,
@@ -98,7 +98,7 @@ Inspect the fully resolved configuration (with secrets redacted) before
 starting the server:
 
 ```bash
-npm run dev -- -c config.json --print-config
+npm run dev -- config show -c config.json
 ```
 
 ## Technology Stack
