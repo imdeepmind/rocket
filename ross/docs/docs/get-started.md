@@ -9,10 +9,12 @@ This guide walks you through installing ROSS, creating your first configuration 
 ## Prerequisites
 
 Before getting started, ensure you have:
+
 - **Node.js** (v20.0.0 or higher)
 - **npm** (v10.0.0 or higher)
 
 Verify your installation:
+
 ```bash
 node -v
 npm -v
@@ -92,6 +94,7 @@ ross check
 ```
 
 Output:
+
 ```text
 Configuration is valid!
 ```
@@ -115,6 +118,7 @@ ross dev
 ```
 
 You will see the startup banner displaying your server address and registered routes:
+
 - **API Base URL**: `http://localhost:3000/api/v1`
 - **Swagger Documentation**: `http://localhost:3000/api/docs`
 
@@ -123,6 +127,7 @@ You will see the startup banner displaying your server address and registered ro
 ## 7. Test Your API
 
 ### Create a Task
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/tasks \
   -H "Content-Type: application/json" \
@@ -130,16 +135,19 @@ curl -X POST http://localhost:3000/api/v1/tasks \
 ```
 
 ### List Tasks
+
 ```bash
 curl http://localhost:3000/api/v1/tasks
 ```
 
 ### Get Task by ID
+
 ```bash
 curl http://localhost:3000/api/v1/tasks/id/1
 ```
 
 ### Update a Task
+
 ```bash
 curl -X PATCH http://localhost:3000/api/v1/tasks/id/1 \
   -H "Content-Type: application/json" \
@@ -147,6 +155,7 @@ curl -X PATCH http://localhost:3000/api/v1/tasks/id/1 \
 ```
 
 ### Delete a Task
+
 ```bash
 curl -X DELETE http://localhost:3000/api/v1/tasks/id/1
 ```

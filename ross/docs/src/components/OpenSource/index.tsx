@@ -11,7 +11,7 @@ export default function OpenSource(): React.JSX.Element {
           <span className={styles.windowDot} style={{ background: '#28C840' }} />
         </div>
         <div>
-          <span className={styles.commandPrompt}>$</span> npx rocket build
+          <span className={styles.commandPrompt}>$</span> ross check
         </div>
         <div className={styles.checkList}>
           <div className={`${styles.mono} ${styles.checkItem}`}>

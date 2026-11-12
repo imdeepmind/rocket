@@ -24,19 +24,24 @@ ROSS provides a subcommand-driven command line interface (`ross`) for developmen
 All commands accept an optional `-c, --config <path>` flag. When omitted, ROSS automatically locates your configuration file using the following resolution hierarchy:
 
 ### 1. Explicit CLI Flag (`-c, --config`)
+
 If `-c` or `--config` is passed, ROSS uses that exact file path. If the file does not exist, an error is thrown immediately.
+
 ```bash
 ross dev -c ./configs/custom.json
 ```
 
 ### 2. Environment Variable (`ROSS_CONFIG`)
+
 If no CLI flag is provided, ROSS checks for the `ROSS_CONFIG` environment variable.
+
 ```bash
 export ROSS_CONFIG="./configs/staging.json"
 ross dev
 ```
 
 ### 3. Auto-Discovery (Current Working Directory)
+
 If neither the flag nor the environment variable is set, ROSS searches the current working directory in the following priority order:
 
 1. `ross.json` *(recommended default)*
@@ -45,6 +50,7 @@ If neither the flag nor the environment variable is set, ROSS searches the curre
 4. `example_config.json`
 
 If none of these candidate files exist, ROSS exits with an error:
+
 ```text
 No configuration file found. Provide one via -c, --config <path> or create a ross.json in the current directory.
 ```
@@ -56,6 +62,7 @@ No configuration file found. Provide one via -c, --config <path> or create a ros
 ### `ross dev`
 
 Starts the development server. In development mode:
+
 - Displays a startup welcome banner with server URL and Swagger documentation link.
 - Prints a list of all registered models and custom API endpoints.
 - Enables Swagger UI (by default at `/api/docs`).
@@ -64,14 +71,16 @@ Starts the development server. In development mode:
 ross dev [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file (uses auto-discovery if omitted).
 - `-p, --port <number>`: Port to run the server on (default: `3000` or config setting).
 - `-H, --host <host>`: Host interface to bind to (default: `0.0.0.0`).
 - `-m, --migrate`: Automatically run database migrations before booting the server.
 - `-v, --verbose`: Enable verbose logging output.
 
-#### Examples:
+#### Examples
+
 ```bash
 # Start dev server with auto-discovered ross.json
 ross dev
@@ -90,6 +99,7 @@ ross dev -c ./my-config.json
 **Alias:** `ross serve`
 
 Starts the server in production mode.
+
 - Suppresses developer banners for clean container log output.
 - Listens for `SIGINT` and `SIGTERM` signals for graceful shutdown (drains connections and closes database pools).
 
@@ -97,13 +107,15 @@ Starts the server in production mode.
 ross start [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file.
 - `-p, --port <number>`: Port to run the server on (default: `3000`).
 - `-H, --host <host>`: Host interface to bind to (default: `0.0.0.0`).
 - `-v, --verbose`: Enable verbose logging output.
 
-#### Examples:
+#### Examples
+
 ```bash
 # Start production server
 ross start
@@ -127,11 +139,13 @@ Connects to the configured database engine (PostgreSQL, SQLite, MySQL, or MariaD
 ross migrate [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file.
 - `-v, --verbose`: Enable verbose logging output.
 
-#### Examples:
+#### Examples
+
 ```bash
 # Run migrations using auto-discovered config
 ross migrate
@@ -148,6 +162,7 @@ ross db:push -c ./production.json
 **Subcommand Alias:** `ross config check`
 
 Validates your configuration file without starting the server or connecting to external databases.
+
 - Checks JSON syntax and structure against the AJV schema.
 - Verifies model relationships, foreign keys, and indexes.
 - Validates authentication, RBAC permissions, and custom API configurations.
@@ -159,11 +174,13 @@ ross config validate [options]
 ross check [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file.
 - `-m, --mode <mode>`: Mode to validate against: `dev` or `prod` (default: `dev`).
 
-#### Examples:
+#### Examples
+
 ```bash
 # Validate local configuration
 ross check
@@ -182,12 +199,14 @@ Resolves the configuration by evaluating environment variables (`env:VAR_NAME`) 
 ross config show [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file.
 - `-m, --mode <mode>`: Mode: `dev` or `prod` (default: `dev`).
 - `--raw`: Print raw configuration with unredacted secrets.
 
-#### Examples:
+#### Examples
+
 ```bash
 # View resolved configuration with secrets redacted
 ross config show
@@ -204,6 +223,7 @@ ross config show --raw
 ### `ross routes`
 
 Prints a formatted list of all HTTP endpoints registered by the framework, including:
+
 - Auto-generated CRUD routes for each model (`GET`, `POST`, `PATCH`, `DELETE`).
 - Search and aggregate endpoints.
 - Authentication endpoints (if enabled).
@@ -213,11 +233,13 @@ Prints a formatted list of all HTTP endpoints registered by the framework, inclu
 ross routes [options]
 ```
 
-#### Options:
+#### Options
+
 - `-c, --config <path>`: Path to configuration file.
 - `-m, --mode <mode>`: Mode: `dev` or `prod` (default: `dev`).
 
-#### Examples:
+#### Examples
+
 ```bash
 # List all registered routes
 ross routes
@@ -225,4 +247,3 @@ ross routes
 # List routes for a specific config in prod mode
 ross routes -c ./api-config.json -m prod
 ```
-

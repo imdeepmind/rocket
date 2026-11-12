@@ -6,10 +6,10 @@ slug: /
 # Introduction
 
 <p align="center">
-  <img src="img/logo.png" alt="Rocket API Framework Logo" width="200" />
+  <img src="img/logo.png" alt="ROSS API Framework Logo" width="200" />
 </p>
 
-Rocket is a configuration-driven API framework designed to accelerate backend development by automating standard engineering tasks. By defining models in a structured JSON format, Rocket automatically handles database schema generation, RESTful routing, request validation, and interactive documentation.
+ROSS is a configuration-driven API framework designed to accelerate backend development by automating standard engineering tasks. By defining models in a structured JSON format, ROSS automatically handles database schema generation, RESTful routing, request validation, and interactive documentation.
 
 ## Features
 
@@ -37,7 +37,7 @@ npm install
 Start the server using an existing configuration file:
 
 ```bash
-npm run dev -- dev -c example_config.json
+ross dev -c example_config.json
 ```
 
 ### 3. API Exploration
@@ -70,7 +70,7 @@ and one model:
 ```
 
 ```bash
-npm run dev -- dev -c examples/01-barebone/barebone_config.json
+ross dev -c examples/01-barebone/barebone_config.json
 ```
 
 The single model exposes `POST /api/v1/notes/`, `GET /api/v1/notes/`,
@@ -81,7 +81,7 @@ with Swagger at `/docs`.
 
 ## Configuration defaults
 
-Rocket resolves your configuration before validating it. Only
+ROSS resolves your configuration before validating it. Only
 `application.name` and `data.models` are required — omitted sections receive
 defaults:
 
@@ -98,7 +98,7 @@ Inspect the fully resolved configuration (with secrets redacted) before
 starting the server:
 
 ```bash
-npm run dev -- config show -c config.json
+ross config show -c config.json
 ```
 
 ## Technology Stack
