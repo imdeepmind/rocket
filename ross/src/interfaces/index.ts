@@ -1,15 +1,44 @@
 export type Mode = 'dev' | 'prod';
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export interface CLIOptions {
-  config: string;
-  port: number;
-  mode: Mode;
-  verbose: boolean;
-  migrate: boolean;
-  migrateOnly?: boolean;
-  printConfig: boolean;
+export interface BaseCLIOptions {
+  config?: string;
+  verbose?: boolean;
 }
+
+export interface DevCLIOptions extends BaseCLIOptions {
+  port?: number;
+  host?: string;
+  migrate?: boolean;
+}
+
+export interface StartCLIOptions extends BaseCLIOptions {
+  port?: number;
+  host?: string;
+}
+
+export interface MigrateCLIOptions extends BaseCLIOptions {}
+
+export interface ConfigShowCLIOptions extends BaseCLIOptions {
+  mode?: Mode;
+  raw?: boolean;
+}
+
+export interface ConfigValidateCLIOptions extends BaseCLIOptions {
+  mode?: Mode;
+}
+
+export interface RoutesCLIOptions extends BaseCLIOptions {
+  mode?: Mode;
+}
+
+export type CLIOptions =
+  | DevCLIOptions
+  | StartCLIOptions
+  | MigrateCLIOptions
+  | ConfigShowCLIOptions
+  | ConfigValidateCLIOptions
+  | RoutesCLIOptions;
 
 export {
   ClassifiedDatabaseError,

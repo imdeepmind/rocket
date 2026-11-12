@@ -39,7 +39,7 @@ export default function Navbar(): React.JSX.Element {
       >
         <img
           src={logoUrl}
-          alt="Rocket Logo"
+          alt="ROSS Logo"
           width="32"
           height="32"
           style={{ objectFit: 'contain', display: 'block', borderRadius: '6px' }}

@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Rocket',
+  title: 'ROSS',
   tagline: 'Configuration-driven API framework',
   favicon: 'img/favicon.ico',
 
@@ -57,15 +57,23 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/logo.png',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
-      title: 'Rocket',
+      title: 'ROSS',
       logo: {
-        alt: 'Rocket Logo',
+        alt: 'ROSS Logo',
         src: 'img/logo.png',
       },
       items: [
+        {
+          to: '/',
+          position: 'left',
+          label: 'Home',
+          exact: true,
+        },
         {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
@@ -123,7 +131,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Rocket OSS. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} ROSS. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

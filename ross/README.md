@@ -37,7 +37,7 @@ npm install
 Start the server using an existing configuration file:
 
 ```bash
-npm run dev -- -c example_config.json
+npm run dev -- dev -c example_config.json
 ```
 
 ### 3. API Exploration
@@ -69,7 +69,7 @@ The smallest config that boots a working API is "name + one model":
 Run it:
 
 ```bash
-npm run dev -- -c examples/01-barebone/barebone_config.json
+npm run dev -- dev -c examples/01-barebone/barebone_config.json
 ```
 
 That single model gives you, on a local SQLite database:
@@ -87,7 +87,7 @@ That single model gives you, on a local SQLite database:
 Inspect the fully resolved config (with secrets redacted):
 
 ```bash
-npm run dev -- -c examples/01-barebone/barebone_config.json --print-config
+npm run dev -- config show -c examples/01-barebone/barebone_config.json
 ```
 
 ## Configuration
@@ -198,11 +198,11 @@ are filled in.
 
 #### Inspecting the resolved config
 
-`--print-config` runs the full pipeline (env resolution → defaults →
+`config show` runs the full pipeline (env resolution → defaults →
 validation), prints the resolved JSON, and exits without starting the server:
 
 ```bash
-npm run dev -- -c config.json --print-config
+npm run dev -- config show -c config.json
 ```
 
 Secrets are redacted in the output: `jwtSecret`, API keys, and credentials
