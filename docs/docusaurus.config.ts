@@ -41,7 +41,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          routeBasePath: '/', // Serve the docs at the site's root
+          routeBasePath: '/docs', // Serve the docs at /docs
           editUrl:
             'https://github.com/imdeepmind/rocket/tree/main/docs/',
         },
@@ -92,7 +92,7 @@ const config: Config = {
           items: [
             {
               label: 'Introduction',
-              to: '/',
+              to: '/docs',
             },
           ],
         },
