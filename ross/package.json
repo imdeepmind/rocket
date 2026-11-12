@@ -1,5 +1,5 @@
 {
-  "name": "ross",
+  "name": "@imdeepmind/ross",
   "version": "1.0.0",
   "description": "The open-source, configuration-driven backend API framework",
   "main": "index.js",
