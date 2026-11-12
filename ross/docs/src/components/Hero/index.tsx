@@ -12,7 +12,7 @@ export default function Hero(): React.JSX.Element {
           Open source · MIT
         </div>
         <h1 className={styles.heroTitle}>
-          Build your backend with <span style={{ color: 'var(--ross-accent)' }}>ROSS</span>
+          Build your backend with <span style={{ color: 'var(--ifm-color-primary)' }}>ROSS</span>
         </h1>
         <p className={styles.heroSubtitle}>
           The open-source, configuration-driven backend API builder. Define your
