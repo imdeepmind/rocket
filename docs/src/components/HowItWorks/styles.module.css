@@ -1,0 +1,92 @@
+.w {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-left: 32px;
+  padding-right: 32px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.howSection {
+  padding-bottom: 120px;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #FF6B85;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.035em;
+  color: #F7F7FA;
+  font-weight: 600;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.05;
+  max-width: 760px;
+  margin: 0 auto 80px;
+}
+
+.howGrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 48px 40px;
+}
+
+.howLine {
+  position: absolute;
+  top: 26px;
+  left: 16%;
+  right: 16%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+.stepCard {
+  position: relative;
+}
+
+.howStepNum {
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  margin: 0 auto 24px;
+  background: var(--ross-accent, #E11D48);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: 0 0 0 8px #08080D, 0 0 40px rgba(225, 29, 72, 0.5);
+  color: #fff;
+}
+
+.stepTitle {
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.035em;
+  color: #F7F7FA;
+  font-weight: 600;
+  font-size: 24px;
+  margin: 0 0 10px;
+}
+
+.stepDescription {
+  margin: 0 auto;
+  color: #A9A9BB;
+  max-width: 280px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .howLine {
+    display: none;
+  }
+}
+

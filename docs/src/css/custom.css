@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
 /**
  * Any CSS included here will be global. The classic template
  * bundles Infima by default. Infima is a CSS framework designed to
@@ -30,3 +32,4 @@
   --ifm-background-color: #0e1320 !important;
   --ifm-background-surface-color: #0e1320 !important;
 }
+
