@@ -43,7 +43,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/docs', // Serve the docs at /docs
           editUrl:
-            'https://github.com/imdeepmind/rocket/tree/main/docs/',
+            'https://github.com/imdeepmind/rocket/tree/main/ross/docs/',
         },
         blog: false, // Optional: disable the blog plugin
         theme: {

@@ -1,8 +1,12 @@
-# AGENTS.md — Rocket
+# AGENTS.md — Rocket Monorepo
 
-Config-driven REST API framework. TypeScript, Fastify 5, PostgreSQL/SQLite, Vitest 4.
+Repository containing two independent software projects:
+- **ROSS (`ross/`)**: Config-driven REST API framework (open-source, MIT). TypeScript, Fastify 5, PostgreSQL/SQLite, Vitest 4.
+- **Rocket (`rocket/`)**: Source-available backend deployment, hosting, and management platform (PolyForm Shield 1.0.0).
 
 ## Commands
+
+Commands can be run from the repository root via `./dev.sh` (which delegates to `ross/dev.sh`) or directly within `ross/`:
 
 | Command | Action |
 | --- | --- |

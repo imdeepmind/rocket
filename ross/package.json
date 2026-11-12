@@ -1,7 +1,7 @@
 {
-  "name": "rocket",
+  "name": "ross",
   "version": "1.0.0",
-  "description": "Some API related experiment",
+  "description": "The open-source, configuration-driven backend API framework",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -32,7 +32,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/imdeepmind/rocket/issues"

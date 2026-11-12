@@ -19,14 +19,16 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: ross/package-lock.json
       - name: Install dependencies
+        working-directory: ross
         run: npm ci
       - name: Lint commit message
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+            ./ross/node_modules/.bin/commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
           else
-            npx commitlint --from ${{ github.event.before }} --to ${{ github.event.after }} --verbose
+            ./ross/node_modules/.bin/commitlint --from ${{ github.event.before }} --to ${{ github.event.after }} --verbose
           fi
 
   lint:
@@ -39,9 +41,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: ross/package-lock.json
       - name: Install dependencies
+        working-directory: ross
         run: npm ci
       - name: Lint
+        working-directory: ross
         run: npm run lint:check
 
   build:
@@ -54,9 +59,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: ross/package-lock.json
       - name: Install dependencies
+        working-directory: ross
         run: npm ci
       - name: Type check
+        working-directory: ross
         run: npm run compile
   
   test:
@@ -69,7 +77,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: ross/package-lock.json
       - name: Install dependencies
+        working-directory: ross
         run: npm ci
       - name: Test
+        working-directory: ross
         run: npm run coverage
