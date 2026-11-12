@@ -167,7 +167,7 @@ const databaseSchema = {
   type: 'object',
   required: ['engine', 'connection'],
   properties: {
-    engine: {type: 'string', enum: ['sqlite', 'postgres']},
+    engine: {type: 'string', enum: ['sqlite', 'postgres', 'mysql']},
     connection: {
       type: 'object',
       required: ['url'],
@@ -205,6 +205,21 @@ const databaseSchema = {
             url: {
               type: 'string',
               pattern: '^postgres(ql)?:\\/\\/',
+            },
+          },
+        },
+      },
+    },
+    {
+      type: 'object',
+      properties: {
+        engine: {const: 'mysql'},
+        connection: {
+          type: 'object',
+          properties: {
+            url: {
+              type: 'string',
+              pattern: '^(mysql(2)?|mariadb):\\/\\/',
             },
           },
         },

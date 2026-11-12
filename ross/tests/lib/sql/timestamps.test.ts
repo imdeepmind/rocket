@@ -29,6 +29,10 @@ test('getUpdatedAtExpression should return sqlite datetime expression for sqlite
   expect(getUpdatedAtExpression('sqlite')).toBe("(datetime('now'))");
 });
 
+test('getUpdatedAtExpression should return CURRENT_TIMESTAMP for mysql', () => {
+  expect(getUpdatedAtExpression('mysql')).toBe('CURRENT_TIMESTAMP');
+});
+
 test('hasUpdatedAtField should return true when model has updated_at', () => {
   expect(hasUpdatedAtField(modelWithUpdatedAt)).toBe(true);
 });
@@ -50,5 +54,11 @@ test('buildUpdatedAtClause should build postgres clause', () => {
 test('buildUpdatedAtClause should build sqlite clause', () => {
   expect(buildUpdatedAtClause(modelWithUpdatedAt, 'sqlite')).toBe(
     '"updated_at" = (datetime(\'now\'))',
+  );
+});
+
+test('buildUpdatedAtClause should build mysql clause', () => {
+  expect(buildUpdatedAtClause(modelWithUpdatedAt, 'mysql')).toBe(
+    '"updated_at" = CURRENT_TIMESTAMP',
   );
 });

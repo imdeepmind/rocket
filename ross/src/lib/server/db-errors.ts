@@ -40,6 +40,18 @@ const SQLITE_CONNECTION_CODES = [
   'SQLITE_FULL',
 ];
 
+const MYSQL_CONNECTION_CODES = [
+  'ECONNREFUSED',
+  'PROTOCOL_CONNECTION_LOST',
+  'ER_CON_COUNT_ERROR',
+  'ER_ACCESS_DENIED_ERROR',
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ER_HOST_NOT_PRIVILEGED',
+  'ER_HOST_IS_BLOCKED',
+  'ER_NET_READ_ERROR',
+];
+
 function getCode(err: unknown): string | undefined {
   if (typeof err !== 'object' || err === null) return undefined;
   const code = (err as {code?: unknown}).code;
@@ -58,6 +70,10 @@ function isSqliteConnectionCode(code: string): boolean {
   return SQLITE_CONNECTION_CODES.some(
     prefix => code === prefix || code.startsWith(`${prefix}_`),
   );
+}
+
+function isMysqlConnectionCode(code: string): boolean {
+  return MYSQL_CONNECTION_CODES.includes(code);
 }
 
 function normalizeFieldList(fields: string): string[] {
@@ -99,6 +115,24 @@ function getUniqueViolationFields(
     return messageMatch ? normalizeFieldList(messageMatch[1]) : [];
   }
 
+  const mysqlUnique =
+    code === 'ER_DUP_ENTRY' || /Duplicate entry .* for key/i.test(message);
+
+  if (mysqlUnique) {
+    const match = /for key ['`]([^'`]+)['`]/i.exec(message);
+    if (match) {
+      const keyName = match[1];
+      const parts = keyName.split('.');
+      let col = parts[parts.length - 1].replace(/_unique$/i, '');
+      if (parts.length === 1 && col.includes('_')) {
+        const segments = col.split('_');
+        col = segments[segments.length - 1];
+      }
+      return [col];
+    }
+    return [];
+  }
+
   return null;
 }
 
@@ -117,6 +151,8 @@ export function isDatabaseError(err: unknown): boolean {
 
   if (code) {
     if (code.startsWith('SQLITE_')) return true;
+    if (code.startsWith('ER_')) return true;
+    if (isMysqlConnectionCode(code)) return true;
     if (code.length === 5 && DATABASE_SQLSTATE_CLASSES.has(code.slice(0, 2))) {
       return true;
     }
@@ -124,12 +160,26 @@ export function isDatabaseError(err: unknown): boolean {
 
   if (typeof err !== 'object' || err === null) return false;
 
-  const errorObj = err as {name?: unknown; message?: unknown};
+  const errorObj = err as {
+    name?: unknown;
+    message?: unknown;
+    sqlState?: unknown;
+  };
   if (errorObj.name === 'SqliteError') return true;
 
   if (
+    typeof errorObj.sqlState === 'string' &&
+    errorObj.sqlState.length === 5 &&
+    DATABASE_SQLSTATE_CLASSES.has(errorObj.sqlState.slice(0, 2))
+  ) {
+    return true;
+  }
+
+  if (
     typeof errorObj.message === 'string' &&
-    /(constraint failed|syntax error)/i.test(errorObj.message)
+    /(constraint failed|syntax error|foreign key constraint fails|duplicate entry)/i.test(
+      errorObj.message,
+    )
   ) {
     return true;
   }
@@ -162,6 +212,8 @@ export function describeDatabaseError(
   if (
     code === '23503' ||
     code === 'SQLITE_CONSTRAINT_FOREIGNKEY' ||
+    code === 'ER_NO_REFERENCED_ROW_2' ||
+    code === 'ER_ROW_IS_REFERENCED_2' ||
     /FOREIGN KEY constraint failed/i.test(message)
   ) {
     return {
@@ -174,7 +226,9 @@ export function describeDatabaseError(
   if (
     code === '23502' ||
     code === 'SQLITE_CONSTRAINT_NOTNULL' ||
-    /NOT NULL constraint failed/i.test(message)
+    code === 'ER_BAD_NULL_ERROR' ||
+    code === 'ER_NO_DEFAULT_FOR_FIELD' ||
+    /NOT NULL constraint failed|cannot be null/i.test(message)
   ) {
     return {statusCode: 400, message: 'A required field is missing'};
   }
@@ -183,7 +237,8 @@ export function describeDatabaseError(
   if (
     code === '23514' ||
     code === 'SQLITE_CONSTRAINT_CHECK' ||
-    /CHECK constraint failed/i.test(message)
+    code === 'ER_CHECK_CONSTRAINT_VIOLATED' ||
+    /CHECK constraint failed|Check constraint .* is violated/i.test(message)
   ) {
     return {
       statusCode: 400,
@@ -194,6 +249,7 @@ export function describeDatabaseError(
   // Connection / busy exceptions
   if (
     isSqliteConnectionCode(code) ||
+    isMysqlConnectionCode(code) ||
     (code.length === 5 && code.slice(0, 2) === '08')
   ) {
     return {

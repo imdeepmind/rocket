@@ -8,6 +8,12 @@ const pgError = (code: string, extra: Record<string, unknown> = {}) =>
 const sqliteError = (code: string, message = 'raw sqlite driver message') =>
   Object.assign(new Error(message), {code});
 
+const mysqlError = (
+  code: string,
+  message = 'raw mysql driver message',
+  extra: Record<string, unknown> = {},
+) => Object.assign(new Error(message), {code, ...extra});
+
 describe('isDatabaseError', () => {
   test('should return false for values without a string code', () => {
     expect(isDatabaseError(null)).toBe(false);
@@ -31,6 +37,20 @@ describe('isDatabaseError', () => {
   test('should recognize SQLite driver codes', () => {
     expect(isDatabaseError({code: 'SQLITE_CONSTRAINT_UNIQUE'})).toBe(true);
     expect(isDatabaseError({code: 'SQLITE_BUSY'})).toBe(true);
+  });
+
+  test('should recognize MySQL driver codes', () => {
+    expect(isDatabaseError({code: 'ER_DUP_ENTRY'})).toBe(true);
+    expect(isDatabaseError({code: 'ER_NO_REFERENCED_ROW_2'})).toBe(true);
+    expect(isDatabaseError({code: 'ECONNREFUSED'})).toBe(true);
+    expect(isDatabaseError({sqlState: '23000'})).toBe(true);
+    expect(
+      isDatabaseError(
+        new Error(
+          'Cannot add or update a child row: a foreign key constraint fails (`test`.`users`, CONSTRAINT `fk` FOREIGN KEY (`id`))',
+        ),
+      ),
+    ).toBe(true);
   });
 
   test('should recognize SqliteError by name or constraint message', () => {
@@ -281,6 +301,145 @@ describe('describeDatabaseError', () => {
     ).toEqual({
       statusCode: 500,
       message: 'Internal Server Error',
+    });
+    expect(describeDatabaseError(mysqlError('ER_PARSE_ERROR'))).toEqual({
+      statusCode: 500,
+      message: 'Internal Server Error',
+    });
+  });
+
+  describe('mysql error description', () => {
+    test('should parse MySQL unique violation messages with table prefix', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_DUP_ENTRY',
+            "Duplicate entry 'test@example.com' for key 'users.email'",
+          ),
+        ),
+      ).toEqual({statusCode: 409, message: 'Email already exists'});
+    });
+
+    test('should parse MySQL unique violation messages without table prefix', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_DUP_ENTRY',
+            "Duplicate entry 'test@example.com' for key 'email'",
+          ),
+        ),
+      ).toEqual({statusCode: 409, message: 'Email already exists'});
+    });
+
+    test('should parse MySQL unique violation messages with backticks', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_DUP_ENTRY',
+            "Duplicate entry 'test@example.com' for key `users.username`",
+          ),
+        ),
+      ).toEqual({statusCode: 409, message: 'Username already exists'});
+    });
+
+    test('should strip _unique suffix from MySQL key name', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_DUP_ENTRY',
+            "Duplicate entry 'alice' for key 'users_username_unique'",
+          ),
+        ),
+      ).toEqual({statusCode: 409, message: 'Username already exists'});
+    });
+
+    test('should fallback to generic message when MySQL key cannot be parsed', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError('ER_DUP_ENTRY', 'Duplicate entry without key pattern'),
+        ),
+      ).toEqual({
+        statusCode: 409,
+        message: 'A record with this value already exists',
+      });
+    });
+
+    test('should map MySQL foreign key violations to 400', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_NO_REFERENCED_ROW_2',
+            'Cannot add or update a child row: a foreign key constraint fails',
+          ),
+        ),
+      ).toEqual({
+        statusCode: 400,
+        message: 'The request references a record that does not exist',
+      });
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_ROW_IS_REFERENCED_2',
+            'Cannot delete or update a parent row: a foreign key constraint fails',
+          ),
+        ),
+      ).toEqual({
+        statusCode: 400,
+        message: 'The request references a record that does not exist',
+      });
+    });
+
+    test('should map MySQL not-null violations to 400', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError('ER_BAD_NULL_ERROR', "Column 'name' cannot be null"),
+        ),
+      ).toEqual({
+        statusCode: 400,
+        message: 'A required field is missing',
+      });
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_NO_DEFAULT_FOR_FIELD',
+            "Field 'name' doesn't have a default value",
+          ),
+        ),
+      ).toEqual({
+        statusCode: 400,
+        message: 'A required field is missing',
+      });
+    });
+
+    test('should map MySQL check constraint violations to 400', () => {
+      expect(
+        describeDatabaseError(
+          mysqlError(
+            'ER_CHECK_CONSTRAINT_VIOLATED',
+            "Check constraint 'chk_age' is violated",
+          ),
+        ),
+      ).toEqual({
+        statusCode: 400,
+        message: 'The provided data violates a database constraint',
+      });
+    });
+
+    test('should map MySQL connection errors to 503', () => {
+      expect(describeDatabaseError(mysqlError('ECONNREFUSED'))).toEqual({
+        statusCode: 503,
+        message: 'The service is temporarily unavailable',
+      });
+      expect(
+        describeDatabaseError(mysqlError('PROTOCOL_CONNECTION_LOST')),
+      ).toEqual({
+        statusCode: 503,
+        message: 'The service is temporarily unavailable',
+      });
+      expect(describeDatabaseError(mysqlError('ER_CON_COUNT_ERROR'))).toEqual({
+        statusCode: 503,
+        message: 'The service is temporarily unavailable',
+      });
     });
   });
 });

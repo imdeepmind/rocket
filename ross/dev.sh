@@ -18,7 +18,7 @@ case "${1:-help}" in
     npm run compile && npm run coverage && npm run lint:write
     ;;
   db)
-    docker compose up -d redis && docker compose up -d db
+    docker compose up -d redis && docker compose up -d db && docker compose up -d mysql
     ;;
   cserve)
     npm run coverage && cd coverage && npx http-server

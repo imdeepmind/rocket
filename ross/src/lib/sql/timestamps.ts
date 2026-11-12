@@ -1,7 +1,13 @@
 import {DBEngine, ModelConfig} from '@/interfaces/config';
 
 export function getUpdatedAtExpression(engine: DBEngine): string {
-  return engine === 'sqlite' ? "(datetime('now'))" : 'now()';
+  if (engine === 'sqlite') {
+    return "(datetime('now'))";
+  }
+  if (engine === 'mysql') {
+    return 'CURRENT_TIMESTAMP';
+  }
+  return 'now()';
 }
 
 export function hasUpdatedAtField(model: ModelConfig): boolean {

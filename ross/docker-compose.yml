@@ -28,6 +28,24 @@ services:
       timeout: 3s
       retries: 5
 
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: devpassword
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devpassword
+      MYSQL_DATABASE: rocketdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init-mysql-db.sql:/docker-entrypoint-initdb.d/init-mysql-db.sql:ro
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "devuser", "-pdevpassword" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   server:
     image: node:20
     working_dir: /app
@@ -81,4 +99,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  mysql_data:
   node_modules:

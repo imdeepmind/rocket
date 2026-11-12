@@ -19,3 +19,19 @@ export const sqlitePrepareMock = vi.fn().mockReturnValue({
 });
 export const sqliteCloseMock = vi.fn();
 export const sqliteExecMock = vi.fn();
+
+export const mysqlQueryMock = vi.fn().mockResolvedValue([[], []]);
+export const mysqlEndMock = vi.fn().mockResolvedValue(undefined);
+export const mysqlConnQueryMock = vi.fn().mockResolvedValue([[], []]);
+export const mysqlConnReleaseMock = vi.fn();
+export const mysqlConnBeginTxMock = vi.fn().mockResolvedValue(undefined);
+export const mysqlConnCommitMock = vi.fn().mockResolvedValue(undefined);
+export const mysqlConnRollbackMock = vi.fn().mockResolvedValue(undefined);
+export const mysqlGetConnectionMock = vi.fn().mockResolvedValue({
+  query: mysqlConnQueryMock,
+  beginTransaction: mysqlConnBeginTxMock,
+  commit: mysqlConnCommitMock,
+  rollback: mysqlConnRollbackMock,
+  release: mysqlConnReleaseMock,
+});
+export const mysqlOnMock = vi.fn();

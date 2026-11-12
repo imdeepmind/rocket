@@ -385,6 +385,12 @@ describe('validateInvalidDatabaseConfig', () => {
       expected:
         '/infrastructure/database/connection/url must match pattern "^(.\\/|\\/)?([\\w\\-. ]+\\/)*[\\w\\-. ]+\\.(db|sqlite)$"',
     },
+    {
+      name: 'connection.url wrong mysql connection string',
+      patch: {engine: 'mysql', connection: {url: './database.db'}},
+      expected:
+        '/infrastructure/database/connection/url must match pattern "^(mysql(2)?|mariadb):\\/\\/"',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -416,6 +422,33 @@ describe('validateValidDatabaseConfig', () => {
     {
       name: 'engine as sqlite',
       patch: {engine: 'sqlite', connection: {url: './database.db'}},
+    },
+    {
+      name: 'engine as mysql',
+      patch: {
+        engine: 'mysql',
+        connection: {
+          url: 'mysql://devuser:devpassword@localhost:3306/rocketdb',
+        },
+      },
+    },
+    {
+      name: 'engine as mariadb',
+      patch: {
+        engine: 'mysql',
+        connection: {
+          url: 'mariadb://devuser:devpassword@localhost:3306/rocketdb',
+        },
+      },
+    },
+    {
+      name: 'engine as mysql2 protocol',
+      patch: {
+        engine: 'mysql',
+        connection: {
+          url: 'mysql2://devuser:devpassword@localhost:3306/rocketdb',
+        },
+      },
     },
   ])('Scenario: $name . should return', ({patch}) => {
     const config = {
