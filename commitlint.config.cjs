@@ -1,5 +1,5 @@
 module.exports = {
-  extends: ['@commitlint/config-conventional'],
+  extends: [require.resolve('@commitlint/config-conventional', { paths: [__dirname + '/ross'] })],
   rules: {
     'type-enum': [2, 'always', ['feat', 'chore', 'ci', 'bug', 'refactor', 'test']],
     'header-max-length': [2, 'always', 120],

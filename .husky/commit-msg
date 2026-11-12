@@ -1,1 +1,7 @@
-npx --no-install commitlint --edit $1
+#!/usr/bin/env bash
+ROOT_DIR="$(dirname "$0")/.."
+if [ -x "$ROOT_DIR/ross/node_modules/.bin/commitlint" ]; then
+  "$ROOT_DIR/ross/node_modules/.bin/commitlint" --edit "$1"
+else
+  npx --no-install commitlint --edit "$1"
+fi
