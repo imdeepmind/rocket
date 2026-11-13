@@ -1,116 +1,81 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 /**
- * ROSS Design System - Docusaurus Theme
- * Matched to the dark, high-contrast aesthetic of the landing page.
+ * ROSS Docs Theme
+ * Cleanly overrides Infima variables to match the landing page visual aesthetic:
+ * Palette: #08080D background, #171722 surface, #E11D48 rose accent, Inter & Space Grotesk fonts.
  */
 
 :root {
-  /* ROSS Palette Tokens */
-  --ross-accent: #E11D48;
-  --ross-accent-hover: #F43F5E;
-  --ross-accent-light: #FF6B85;
-  --ross-accent-pill: #FF8FA3;
-  --ross-accent-soft: rgba(225, 29, 72, 0.12);
-  --ross-accent-pill-bg: rgba(225, 29, 72, 0.14);
-  --ross-accent-glow: rgba(225, 29, 72, 0.35);
-  --ross-bg: #08080D;
-  --ross-surface: #12121A;
-  --ross-card-bg: #171722;
-  --ross-text: #F7F7FA;
-  --ross-text-secondary: #CFCFDC;
-  --ross-muted: #A9A9BB;
-  --ross-muted-light: #B4B4C6;
-  --ross-border: rgba(255, 255, 255, 0.08);
-  --ross-border-strong: rgba(255, 255, 255, 0.14);
-
-  /* Infima Core Variables */
-  --ifm-color-primary: #E11D48;
-  --ifm-color-primary-dark: #cb153d;
-  --ifm-color-primary-darker: #bf1439;
-  --ifm-color-primary-darkest: #9e102f;
-  --ifm-color-primary-light: #e5375d;
-  --ifm-color-primary-lighter: #e74367;
-  --ifm-color-primary-lightest: #ed6a86;
-
   /* Typography */
   --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --ifm-heading-font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, monospace;
-  --ifm-font-size-base: 16px;
+  --ifm-font-size-base: 15px;
   --ifm-line-height-base: 1.65;
   --ifm-heading-font-weight: 700;
-  --ifm-heading-color: #FFFFFF;
-  --ifm-code-font-size: 88%;
 
-  /* Dark Theme Colors (applied globally to align with landing page) */
+  /* Rose Accent Palette (from landing page) */
+  --ifm-color-primary: #E11D48;
+  --ifm-color-primary-dark: #CB1A41;
+  --ifm-color-primary-darker: #C0183D;
+  --ifm-color-primary-darkest: #9E1432;
+  --ifm-color-primary-light: #FF6B85;
+  --ifm-color-primary-lighter: #FF8FA3;
+  --ifm-color-primary-lightest: #FFA6B7;
+
+  /* Canvas & Surfaces */
   --ifm-background-color: #08080D;
   --ifm-background-surface-color: #12121A;
   --ifm-card-background-color: #171722;
+
+  /* Content Colors */
   --ifm-color-content: #F7F7FA;
   --ifm-color-content-secondary: #A9A9BB;
-  --ifm-link-color: #FF6B85;
-  --ifm-link-hover-color: #FF8FA3;
-  --ifm-link-decoration: none;
+  --ifm-heading-color: #FFFFFF;
 
-  /* Navbar & Sidebar */
-  --ifm-navbar-background-color: rgba(8, 8, 13, 0.82);
+  /* Navbar */
+  --ifm-navbar-background-color: transparent;
   --ifm-navbar-shadow: none;
   --ifm-navbar-link-color: #A9A9BB;
   --ifm-navbar-link-hover-color: #FFFFFF;
-  --ifm-footer-background-color: #08080D;
 
+  /* Sidebar Menu */
   --ifm-menu-color: #A9A9BB;
   --ifm-menu-color-active: #FF8FA3;
   --ifm-menu-color-background-active: rgba(225, 29, 72, 0.14);
   --ifm-menu-color-background-hover: rgba(255, 255, 255, 0.05);
 
-  /* Table & TOC */
-  --ifm-toc-border-color: rgba(255, 255, 255, 0.08);
-  --ifm-toc-link-color: #A9A9BB;
+  /* Borders & Dividers */
+  --ifm-toc-border-color: transparent;
   --ifm-table-border-color: rgba(255, 255, 255, 0.08);
   --ifm-table-stripe-background: rgba(255, 255, 255, 0.02);
+  --ifm-table-head-background: #171722;
+  --ifm-table-head-color: #FFFFFF;
+  --ifm-hr-border-color: rgba(255, 255, 255, 0.08);
 
   /* Code */
-  --ifm-code-background: rgba(255, 255, 255, 0.06);
+  --ifm-code-background: rgba(255, 255, 255, 0.07);
   --ifm-code-border-radius: 6px;
   --ifm-code-padding-horizontal: 6px;
   --ifm-code-padding-vertical: 2px;
-  --docusaurus-highlighted-code-line-bg: rgba(225, 29, 72, 0.15);
+  --docusaurus-highlighted-code-line-bg: rgba(225, 29, 72, 0.18);
 
-  /* Global Layout */
-  --ifm-global-radius: 12px;
-  --ifm-global-border-width: 1px;
+  /* Global Shapes & Radii */
+  --ifm-global-radius: 10px;
+  --ifm-global-shadow-lw: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ifm-global-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
-[data-theme='dark'],
-[data-theme='light'] {
-  --ifm-background-color: #08080D !important;
-  --ifm-background-surface-color: #12121A !important;
-  --ifm-card-background-color: #171722 !important;
-  --ifm-color-content: #F7F7FA !important;
-  --ifm-color-content-secondary: #A9A9BB !important;
+/* Base Body with Landing Page Ambient Rose Glow */
+html[data-theme='dark'] {
+  background-color: #08080D;
+  background-image: radial-gradient(ellipse 1400px 700px at 50% -120px, rgba(225, 29, 72, 0.22), transparent 75%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: var(--ifm-color-content);
 }
 
-/* ==========================================================================
-   Base Layout & Document Styling
-   ========================================================================== */
-
-html, body {
-  background-color: #08080D !important;
-  background-image: 
-    radial-gradient(ellipse 1400px 700px at 50% -120px, rgba(225, 29, 72, 0.25), rgba(225, 29, 72, 0.05) 55%, transparent 80%),
-    radial-gradient(ellipse 900px 450px at 100% 60%, rgba(225, 29, 72, 0.07), transparent 70%) !important;
-  background-attachment: fixed !important;
-  background-repeat: no-repeat !important;
-  color: var(--ross-text);
-  font-family: var(--ifm-font-family-base);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Ensure Docusaurus wrappers do not paint over the gradient */
+/* Ensure Docusaurus background layers don't obscure the ambient glow */
 .main-wrapper,
 main,
 [class*='docMainContainer'],
@@ -120,419 +85,118 @@ article {
   background: transparent !important;
 }
 
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--ifm-heading-font-family);
-  color: #FFFFFF;
-  letter-spacing: -0.025em;
-  font-weight: 700;
-}
-
-h1 {
-  font-size: 2.35rem;
-  line-height: 1.15;
-  margin-bottom: 1.5rem;
-}
-
-h2 {
-  font-size: 1.7rem;
-  line-height: 1.25;
-  margin-top: 2.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--ross-border);
-}
-
-h3 {
-  font-size: 1.25rem;
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
-}
-
-p, li {
-  color: var(--ross-text-secondary);
-  line-height: 1.7;
-}
-
-strong {
-  color: #FFFFFF;
-}
-
-/* ==========================================================================
-   Navbar
-   ========================================================================== */
-
+/* Navbar */
 .navbar {
-  background: var(--ifm-navbar-background-color) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--ross-border);
-  box-shadow: none;
-  height: 68px;
-  padding: 0 2rem;
-}
-
-.navbar__brand {
-  margin-right: 2rem;
+  background-color: transparent;
+  border-bottom: none;
 }
 
 .navbar__title {
   font-family: var(--ifm-heading-font-family);
-  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  color: #FFFFFF;
+  letter-spacing: -0.02em;
 }
 
-.navbar__link {
-  font-size: 14.5px;
-  font-weight: 500;
-  color: var(--ross-muted);
-  transition: color 0.15s ease;
+/* Mobile Sidebar Drawer - ensure it floats on top of all page content */
+.navbar-sidebar {
+  background-color: #08080D;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: calc(var(--ifm-z-index-fixed) + 10);
 }
 
-.navbar__link:hover {
-  color: #FFFFFF;
+.navbar-sidebar__backdrop {
+  z-index: calc(var(--ifm-z-index-fixed) + 5);
 }
 
-.navbar__link--active {
-  color: #FFFFFF;
-  font-weight: 600;
-}
-
-/* ==========================================================================
-   Sidebar
-   ========================================================================== */
-
+/* Desktop Sidebar */
 .theme-doc-sidebar-container {
-  background: rgba(8, 8, 13, 0.82) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-right: 1px solid var(--ross-border) !important;
+  border-right: none !important;
 }
 
-.menu__list {
-  padding: 12px 8px;
+/* Table of Contents (Right Side Content List) */
+.table-of-contents,
+.table-of-contents__left-border,
+.table-of-contents ul {
+  border-left: none !important;
 }
 
 .menu__link {
-  font-size: 14px;
-  color: var(--ross-muted);
   border-radius: 8px;
-  padding: 8px 12px;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.menu__link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .menu__link--active:not(.menu__link--sublist) {
-  color: var(--ross-accent-pill) !important;
-  background: var(--ross-accent-pill-bg) !important;
   box-shadow: inset 0 0 0 1px rgba(255, 107, 133, 0.25);
   font-weight: 600;
 }
 
-.menu__caret {
-  color: var(--ross-muted);
-}
-
-.menu__caret:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* ==========================================================================
-   Code Blocks & Inline Code
-   ========================================================================== */
-
-/* Inline code */
+/* Inline Code */
 :not(pre) > code {
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.88em;
-  color: var(--ross-accent-pill);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--ross-border);
-  border-radius: 6px;
-  padding: 2px 7px;
+  color: #FF8FA3;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Code Blocks */
+[class*='codeBlockContainer'] {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--ifm-global-radius);
+  box-shadow: var(--ifm-global-shadow-md);
+  margin-bottom: var(--ifm-spacing-vertical);
+}
+
+/* Tables */
+table {
+  display: table !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--ifm-global-radius);
+  background-color: #0E0E15;
+  margin: 1.5rem 0 !important;
+  table-layout: auto;
+  box-shadow: var(--ifm-global-shadow-md);
+  overflow: hidden;
+}
+
+table th {
+  background-color: #171722 !important;
+  color: #FFFFFF !important;
+  font-family: var(--ifm-heading-font-family);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 13px 18px;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-align: left;
   white-space: nowrap;
 }
 
-/* Code block container */
-div[class*='codeBlockContainer'] {
-  background: var(--ross-surface) !important;
-  border: 1px solid var(--ross-border) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
-  margin: 1.5rem 0;
-  overflow: hidden;
-}
-
-div[class*='codeBlockTitle'] {
-  background: var(--ross-card-bg) !important;
-  border-bottom: 1px solid var(--ross-border) !important;
-  color: var(--ross-muted) !important;
-  font-family: var(--ifm-font-family-monospace) !important;
-  font-size: 13px !important;
-  font-weight: 500;
-  padding: 10px 16px !important;
-}
-
-/* Code block pre */
-pre[class*='codeBlock'] {
-  background: transparent !important;
-  padding: 18px 20px !important;
-  font-size: 13.5px !important;
-  line-height: 1.75 !important;
-}
-
-/* Copy button */
-button[class*='copyButton'] {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid var(--ross-border-strong) !important;
-  border-radius: 8px !important;
-  color: var(--ross-muted) !important;
-  transition: all 0.15s ease !important;
-}
-
-button[class*='copyButton']:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #FFFFFF !important;
-}
-
-/* ==========================================================================
-   Tables
-   ========================================================================== */
-
-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  border: 1px solid var(--ross-border);
-  border-radius: 14px;
-  overflow: hidden;
-  margin: 1.75rem 0;
-  background: #0E0E15;
-}
-
-th {
-  background: var(--ross-card-bg);
-  color: #FFFFFF;
-  font-family: var(--ifm-heading-font-family);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--ross-border);
-  text-align: left;
-}
-
-td {
+table td {
   padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--ross-muted-light);
-  font-size: 14.5px;
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-/* ==========================================================================
-   Admonitions / Callouts (Alerts)
-   ========================================================================== */
-
-.alert {
-  border-radius: 14px !important;
-  border: 1px solid var(--ross-border) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  padding: 16px 20px !important;
-  margin: 1.5rem 0 !important;
-}
-
-.alert--info, .alert--secondary {
-  background: rgba(225, 29, 72, 0.07) !important;
-  border-left: 4px solid var(--ross-accent) !important;
-  color: var(--ross-text) !important;
-}
-
-.alert--info .alert__heading, .alert--secondary .alert__heading {
-  color: var(--ross-accent-light) !important;
-  font-family: var(--ifm-heading-font-family);
-}
-
-.alert--warning {
-  background: rgba(245, 158, 11, 0.07) !important;
-  border-left: 4px solid #F59E0B !important;
-  color: var(--ross-text) !important;
-}
-
-.alert--warning .alert__heading {
-  color: #FBBF24 !important;
-  font-family: var(--ifm-heading-font-family);
-}
-
-.alert--success {
-  background: rgba(16, 185, 129, 0.07) !important;
-  border-left: 4px solid #10B981 !important;
-  color: var(--ross-text) !important;
-}
-
-.alert--success .alert__heading {
-  color: #34D399 !important;
-  font-family: var(--ifm-heading-font-family);
-}
-
-.alert--danger {
-  background: rgba(239, 68, 68, 0.07) !important;
-  border-left: 4px solid #EF4444 !important;
-  color: var(--ross-text) !important;
-}
-
-.alert--danger .alert__heading {
-  color: #F87171 !important;
-  font-family: var(--ifm-heading-font-family);
-}
-
-/* Blockquote */
-blockquote {
-  border-left: 3px solid var(--ross-accent);
-  background: rgba(225, 29, 72, 0.05);
-  border-radius: 0 10px 10px 0;
-  padding: 12px 18px;
-  color: var(--ross-text-secondary);
-  margin: 1.5rem 0;
-}
-
-/* ==========================================================================
-   Table of Contents (TOC)
-   ========================================================================== */
-
-.table-of-contents {
-  border-left: 1px solid var(--ross-border);
-  padding-left: 14px;
-}
-
-.table-of-contents__link {
-  font-size: 13px;
-  color: var(--ross-muted);
-  transition: color 0.15s ease;
-}
-
-.table-of-contents__link:hover {
-  color: #FFFFFF;
-}
-
-.table-of-contents__link--active {
-  color: var(--ross-accent-pill) !important;
-  font-weight: 600;
-}
-
-/* ==========================================================================
-   Pagination & Breadcrumbs
-   ========================================================================== */
-
-.pagination-nav__link {
-  background: var(--ross-card-bg) !important;
-  border: 1px solid var(--ross-border) !important;
-  border-radius: 14px !important;
-  transition: all 0.2s ease !important;
-  padding: 16px 20px !important;
-}
-
-.pagination-nav__link:hover {
-  border-color: rgba(225, 29, 72, 0.45) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(225, 29, 72, 0.15);
-}
-
-.pagination-nav__sublabel {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ross-muted);
-  font-weight: 600;
-}
-
-.pagination-nav__label {
-  font-family: var(--ifm-heading-font-family);
-  font-size: 16px;
-  font-weight: 600;
-  color: #FFFFFF;
-}
-
-.breadcrumbs__item {
-  color: var(--ross-muted);
-  font-size: 13.5px;
-}
-
-.breadcrumbs__link {
-  color: var(--ross-muted);
-  transition: color 0.15s ease;
-}
-
-.breadcrumbs__link:hover {
-  color: #FFFFFF;
-}
-
-/* ==========================================================================
-   Footer
-   ========================================================================== */
-
-.footer {
-  background: var(--ross-bg) !important;
-  border-top: 1px solid var(--ross-border);
-  padding: 48px 2rem 36px;
-}
-
-.footer__title {
-  font-family: var(--ifm-heading-font-family);
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  color: #B4B4C6;
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #FFFFFF;
+  line-height: 1.55;
+  vertical-align: top;
 }
 
-.footer__link-item {
-  color: var(--ross-muted);
-  font-size: 14px;
-  transition: color 0.15s ease;
+table tr:last-child td {
+  border-bottom: none !important;
 }
 
-.footer__link-item:hover {
-  color: #FFFFFF;
-  text-decoration: none;
+table tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
-.footer__copyright {
-  color: var(--ross-muted);
-  font-size: 13px;
-  margin-top: 36px;
+table td code {
+  white-space: normal;
 }
 
-/* ==========================================================================
-   Custom Scrollbar
-   ========================================================================== */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--ross-bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ross-accent);
+@media (max-width: 768px) {
+  table {
+    display: block !important;
+    overflow-x: auto;
+  }
 }

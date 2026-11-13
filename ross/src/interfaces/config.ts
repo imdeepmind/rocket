@@ -102,12 +102,20 @@ export interface RateLimitConfig {
   enabled: boolean;
   max: number;
   timeWindow: string;
+  rateLimitHealthAPI?: boolean;
+}
+
+export interface ResolvedRateLimitConfig {
+  enabled: boolean;
+  max: number;
+  timeWindow: string;
+  rateLimitHealthAPI: boolean;
 }
 
 export interface CorsConfig {
   enabled: boolean;
   origins?: string[];
-  methods?: (HTTPMethod | 'HEAD')[];
+  methods?: (HTTPMethod | 'HEAD' | 'OPTIONS')[];
   allowedHeaders?: string[];
   exposedHeaders?: string[];
   credentials?: boolean;
@@ -358,7 +366,7 @@ export interface AppConfigInput {
 export interface ResolvedCorsConfig {
   enabled: boolean;
   origins: string[];
-  methods: (HTTPMethod | 'HEAD')[];
+  methods: (HTTPMethod | 'HEAD' | 'OPTIONS')[];
   allowedHeaders: string[];
   exposedHeaders: string[];
   credentials: boolean;
@@ -372,7 +380,7 @@ export interface ResolvedCorsConfig {
 export interface ResolvedApplicationConfig {
   name: string;
   logLevel: LogLevel;
-  rateLimit: RateLimitConfig;
+  rateLimit: ResolvedRateLimitConfig;
   cors: ResolvedCorsConfig;
   dangerouslyOverrideDefaultVariant: string;
   magicVariables: Record<string, string | number | boolean>;

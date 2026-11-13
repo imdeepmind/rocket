@@ -46,3 +46,25 @@ test('examples/01-barebone/barebone_config.json resolves and validates in dev', 
   ]);
   expect(resolved.data.models.notes.fields.status.query).toEqual(['eq', 'in']);
 });
+
+test('rejects empty string dangerouslyOverrideDefaultVariant in pipeline validation', () => {
+  const raw: AppConfigInput = {
+    application: {
+      name: 'Test App',
+      dangerouslyOverrideDefaultVariant: '',
+    },
+    data: {
+      models: {
+        notes: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, nullable: false},
+          },
+        },
+      },
+    },
+  };
+
+  expect(() => resolveAndValidateConfig(raw, 'dev')).toThrow(
+    '/application/dangerouslyOverrideDefaultVariant must NOT have fewer than 1 characters',
+  );
+});

@@ -61,14 +61,19 @@ test('minimal dev config resolves every section densely', () => {
   expect(config.application).toEqual({
     name: 'rocket',
     logLevel: 'info',
-    rateLimit: {enabled: false, max: 100, timeWindow: '1m'},
+    rateLimit: {
+      enabled: false,
+      max: 100,
+      timeWindow: '1m',
+      rateLimitHealthAPI: false,
+    },
     dangerouslyOverrideDefaultVariant: 'v1',
     magicVariables: {},
     cors: {
       enabled: false,
       origins: [],
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
       exposedHeaders: [],
       credentials: false,
       maxAge: 86400,
@@ -76,7 +81,7 @@ test('minimal dev config resolves every section densely', () => {
     },
     healthCheck: {
       enabled: true,
-      path: '/health',
+      path: '/api/health',
     },
   });
 
@@ -231,6 +236,7 @@ test('explicit false / 0 / "" values are never replaced', () => {
     enabled: false,
     max: 1,
     timeWindow: '5m',
+    rateLimitHealthAPI: false,
   });
   expect(config.application.magicVariables).toEqual({
     count: 0,
@@ -506,6 +512,7 @@ test('partial rateLimit is filled with defaults', () => {
     enabled: true,
     max: 100,
     timeWindow: '1m',
+    rateLimitHealthAPI: false,
   });
 });
 
@@ -515,7 +522,12 @@ test('full rateLimit and magicVariables pass through', () => {
     devInput({
       application: {
         name: 'rocket',
-        rateLimit: {enabled: true, max: 1000, timeWindow: '15m'},
+        rateLimit: {
+          enabled: true,
+          max: 1000,
+          timeWindow: '15m',
+          rateLimitHealthAPI: true,
+        },
         dangerouslyOverrideDefaultVariant: 'v2',
         magicVariables,
       },
@@ -527,6 +539,7 @@ test('full rateLimit and magicVariables pass through', () => {
     enabled: true,
     max: 1000,
     timeWindow: '15m',
+    rateLimitHealthAPI: true,
   });
   expect(config.application.dangerouslyOverrideDefaultVariant).toBe('v2');
   expect(config.application.magicVariables).toEqual(magicVariables);

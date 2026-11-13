@@ -54,8 +54,9 @@ const applicationSchema = {
         max: {type: 'integer', minimum: 1},
         timeWindow: {
           type: 'string',
-          pattern: '^\\d+[smhd]$',
+          pattern: '^[1-9]\\d*[smhd]$',
         },
+        rateLimitHealthAPI: {type: 'boolean'},
       },
     },
     cors: {
@@ -72,7 +73,7 @@ const applicationSchema = {
           type: 'array',
           items: {
             type: 'string',
-            enum: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+            enum: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
           },
         },
         allowedHeaders: {
@@ -134,7 +135,7 @@ const docsSchema = {
           required: ['title', 'version'],
           additionalProperties: false,
           properties: {
-            title: {type: 'string', minLength: 5},
+            title: {type: 'string', minLength: 1},
             description: {type: 'string', minLength: 1},
             version: {type: 'string'},
             termsOfService: {type: 'string', format: 'uri'},

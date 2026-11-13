@@ -79,12 +79,13 @@ async function createHealthApp(
     await app.register(swaggerPlugin);
   }
 
+  registerHealthRoute(app, resolvedConfig);
+
   await app.register(
     async apiApp => {
       apiApp.addHook('preHandler', async request => {
         apiApp.enforceSSP(request);
       });
-      registerHealthRoute(apiApp, resolvedConfig);
     },
     {prefix: '/api'},
   );
@@ -178,7 +179,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.uptime).toBeUndefined();
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'Connection refused',
+        error: 'Database service is unavailable',
       });
       expect(body.services.cache).toEqual({status: 'up'});
     });
@@ -202,7 +203,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.services.database.status).toBe('up');
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Redis connection timed out',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -226,11 +227,11 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'DB is offline',
+        error: 'Database service is unavailable',
       });
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Cache is offline',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -251,7 +252,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'Database service is not initialized',
+        error: 'Database service is unavailable',
       });
     });
 
@@ -272,7 +273,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Cache service is not initialized',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -310,11 +311,11 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(res.statusCode).toBe(503);
       expect(res.json().services.database).toEqual({
         status: 'down',
-        error: 'string error',
+        error: 'Database service is unavailable',
       });
       expect(res.json().services.cache).toEqual({
         status: 'down',
-        error: 'cache string error',
+        error: 'Cache service is unavailable',
       });
     });
   });
@@ -391,6 +392,33 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(res1.statusCode).toBe(200);
       expect(res2.statusCode).toBe(200);
     });
+
+    it('enforces rate limit on health check when rateLimitHealthAPI is true', async () => {
+      app = await createHealthApp({
+        application: {
+          rateLimit: {
+            enabled: true,
+            max: 1,
+            timeWindow: '1m',
+            rateLimitHealthAPI: true,
+          },
+        },
+      });
+
+      const res1 = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+      const res2 = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(res1.statusCode).toBe(200);
+      expect(res2.statusCode).toBe(429);
+      expect(res1.headers['x-ratelimit-limit']).toBe('1');
+      expect(res1.headers['x-ratelimit-remaining']).toBe('0');
+    });
   });
 
   describe('OpenAPI Integration', () => {
@@ -424,7 +452,38 @@ describe('Healthcheck Route (GET /api/health)', () => {
   });
 
   describe('Configurability', () => {
-    it('allows custom subpath via application.healthCheck.path', async () => {
+    it('defaults health route to /api/health when path is omitted', async () => {
+      app = await createHealthApp();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('ok');
+    });
+
+    it('mounts at /health when user passes path: "/health"', async () => {
+      app = await createHealthApp({
+        application: {
+          healthCheck: {
+            enabled: true,
+            path: '/health',
+          },
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('ok');
+    });
+
+    it('allows custom path via application.healthCheck.path', async () => {
       app = await createHealthApp({
         application: {
           healthCheck: {
@@ -436,14 +495,14 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: '/api/status',
+        url: '/status',
       });
 
       expect(res.statusCode).toBe(200);
       expect(res.json().status).toBe('ok');
     });
 
-    it('normalizes path if prefixed with /api/', async () => {
+    it('allows custom nested path /api/v1/health', async () => {
       app = await createHealthApp({
         application: {
           healthCheck: {
@@ -474,26 +533,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: '/api/ping',
-      });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.json().status).toBe('ok');
-    });
-
-    it('normalizes path when given exact /api', async () => {
-      app = await createHealthApp({
-        application: {
-          healthCheck: {
-            enabled: true,
-            path: '/api',
-          },
-        },
-      });
-
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/',
+        url: '/ping',
       });
 
       expect(res.statusCode).toBe(200);

@@ -325,6 +325,41 @@ describe('rate-limit plugin', () => {
       await fastify.close();
     });
 
+    it('always passes ttlSeconds >= 1 to cache.set even when expiresAt <= now or boundary is reached', async () => {
+      const fastify = Fastify();
+
+      const setSpy = vi.fn().mockResolvedValue(undefined);
+      const mockCacheStore: ICache = {
+        get: vi.fn().mockResolvedValue({current: 1, expiresAt: Date.now()}),
+        set: setSpy,
+        delete: vi.fn().mockResolvedValue(undefined),
+        has: vi.fn().mockResolvedValue(false),
+        clear: vi.fn().mockResolvedValue(undefined),
+        ping: vi.fn().mockResolvedValue(undefined),
+        raw: {} as unknown as NodeCache,
+      };
+
+      fastify.decorate('cache', mockCacheStore);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({max: 5, timeWindow: '1m'}),
+      );
+
+      await fastify.register(rateLimitPlugin);
+      fastify.get('/', async () => 'ok');
+      await fastify.ready();
+
+      const res = await fastify.inject({method: 'GET', url: '/'});
+      expect(res.statusCode).toBe(200);
+
+      expect(setSpy).toHaveBeenCalled();
+      const [, , ttlSeconds] = setSpy.mock.calls[0];
+      expect(ttlSeconds).toBeGreaterThanOrEqual(1);
+      expect(Number.isInteger(ttlSeconds)).toBe(true);
+
+      await fastify.close();
+    });
+
     it('returns child instance correctly', async () => {
       const fastify = Fastify();
 

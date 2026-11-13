@@ -3,6 +3,8 @@ import {describe, expect, it} from 'vitest';
 
 import corsPlugin from '@/plugin/cors';
 
+import {DEFAULT_CORS} from '@/lib/config/resolve';
+
 import {
   ResolvedAppConfig,
   ResolvedApplicationConfig,
@@ -339,6 +341,29 @@ describe('cors plugin', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['access-control-allow-origin']).toBe(
       'https://example.com',
+    );
+  });
+
+  it('allows x-api-key header in preflight with framework default allowedHeaders', async () => {
+    const app = createMockApp({
+      allowedHeaders: [...DEFAULT_CORS.allowedHeaders],
+    });
+    await app.register(corsPlugin);
+    await app.ready();
+
+    const preflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/users',
+      headers: {
+        origin: 'https://app.example.com',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'x-api-key',
+      },
+    });
+
+    expect(preflight.statusCode).toBe(204);
+    expect(preflight.headers['access-control-allow-headers']).toContain(
+      'x-api-key',
     );
   });
 });

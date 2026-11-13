@@ -117,9 +117,9 @@ describe('validateInvalidDocsConfig', () => {
     },
     {
       name: 'openapi title too small',
-      patch: {info: {title: '1234', version: '1.0.0'}},
+      patch: {info: {title: '', version: '1.0.0'}},
       expected:
-        '/docs/openapi/info/title must NOT have fewer than 5 characters',
+        '/docs/openapi/info/title must NOT have fewer than 1 characters',
     },
     {
       name: 'openapi description too small',
@@ -257,6 +257,10 @@ describe('validateValidDocsConfig', () => {
     {
       name: 'valid path',
       patch: {path: '/api/docs'},
+    },
+    {
+      name: 'openapi title with 1 character',
+      patch: {info: {title: 'A', version: '1.0.0'}},
     },
     {
       name: 'openapi title',
@@ -2902,6 +2906,13 @@ describe('validateRateLimitConfig', () => {
       expected: '/application/rateLimit/timeWindow must match pattern',
     },
     {
+      name: 'timeWindow with zero duration',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: '0s'},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
       name: 'missing enabled property',
       patch: {
         rateLimit: {
@@ -2931,6 +2942,47 @@ describe('validateRateLimitConfig', () => {
       },
       expected:
         "/application/rateLimit must have required property 'timeWindow'",
+    },
+    {
+      name: 'rateLimitHealthAPI as string instead of boolean',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          rateLimitHealthAPI: 'invalid' as unknown as boolean,
+        },
+      },
+      expected: '/application/rateLimit/rateLimitHealthAPI must be boolean',
+    },
+    {
+      name: 'rateLimitHealthAPI enabled when rateLimit is disabled',
+      patch: {
+        rateLimit: {
+          enabled: false,
+          max: 100,
+          timeWindow: '15m',
+          rateLimitHealthAPI: true,
+        },
+      },
+      expected:
+        'application.rateLimit: rateLimitHealthAPI can only be enabled when rateLimit is enabled',
+    },
+    {
+      name: 'rateLimitHealthAPI enabled when healthCheck is disabled',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          rateLimitHealthAPI: true,
+        },
+        healthCheck: {
+          enabled: false,
+        },
+      },
+      expected:
+        'application.rateLimit: rateLimitHealthAPI can only be enabled when healthCheck is enabled',
     },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
@@ -2986,6 +3038,31 @@ describe('validateRateLimitConfig', () => {
           enabled: false,
           max: 100,
           timeWindow: '15m',
+        },
+      },
+    },
+    {
+      name: 'valid rate limit with rateLimitHealthAPI true and healthCheck enabled',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          rateLimitHealthAPI: true,
+        },
+        healthCheck: {
+          enabled: true,
+        },
+      },
+    },
+    {
+      name: 'valid rate limit with rateLimitHealthAPI false',
+      patch: {
+        rateLimit: {
+          enabled: true,
+          max: 100,
+          timeWindow: '15m',
+          rateLimitHealthAPI: false,
         },
       },
     },

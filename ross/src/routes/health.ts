@@ -11,11 +11,6 @@ export function registerHealthRoute(
   }
 
   let path = config.application.healthCheck.path;
-  if (path.startsWith('/api/')) {
-    path = path.slice(4);
-  } else if (path === '/api') {
-    path = '/';
-  }
   if (!path.startsWith('/')) {
     path = `/${path}`;
   }
@@ -93,13 +88,17 @@ export function registerHealthRoute(
     },
   };
 
+  const shouldRateLimit =
+    config.application.rateLimit.enabled &&
+    config.application.rateLimit.rateLimitHealthAPI;
+
   app.get(
     path,
     {
       schema,
-      config: {rateLimit: false},
+      ...(shouldRateLimit ? {} : {config: {rateLimit: false}}),
     },
-    async (_request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       let databaseStatus:
         | {status: 'up'; latencyMs: number}
         | {status: 'down'; error: string};
@@ -113,8 +112,11 @@ export function registerHealthRoute(
         const latencyMs = Date.now() - start;
         databaseStatus = {status: 'up', latencyMs};
       } catch (err: unknown) {
-        const error = err instanceof Error ? err.message : String(err);
-        databaseStatus = {status: 'down', error};
+        request.log.error(err);
+        databaseStatus = {
+          status: 'down',
+          error: 'Database service is unavailable',
+        };
       }
 
       let cacheStatus: {status: 'up'} | {status: 'down'; error: string};
@@ -132,8 +134,11 @@ export function registerHealthRoute(
         }
         cacheStatus = {status: 'up'};
       } catch (err: unknown) {
-        const error = err instanceof Error ? err.message : String(err);
-        cacheStatus = {status: 'down', error};
+        request.log.error(err);
+        cacheStatus = {
+          status: 'down',
+          error: 'Cache service is unavailable',
+        };
       }
 
       const isHealthy =

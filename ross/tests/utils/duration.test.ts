@@ -35,6 +35,10 @@ describe('duration utils', () => {
       expect(() => parseDuration('s30')).toThrow('Invalid duration format');
       expect(() => parseDuration('')).toThrow('Invalid duration format');
       expect(() => parseDuration('10 x')).toThrow('Invalid duration format');
+      expect(() => parseDuration('0s')).toThrow('Invalid duration format');
+      expect(() => parseDuration('0m')).toThrow('Invalid duration format');
+      expect(() => parseDuration('0h')).toThrow('Invalid duration format');
+      expect(() => parseDuration('0d')).toThrow('Invalid duration format');
     });
 
     it('should throw error for unsupported unit', () => {

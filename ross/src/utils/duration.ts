@@ -20,6 +20,11 @@ export function parseDuration(timeWindow: string): number {
   }
 
   const value = parseInt(match[1], 10);
+  if (value < 1) {
+    throw new Error(
+      `Invalid duration format: "${timeWindow}". Duration must be greater than or equal to 1.`,
+    );
+  }
   const unit = match[2];
 
   switch (unit) {

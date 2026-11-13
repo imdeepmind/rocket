@@ -163,4 +163,5 @@ curl -X DELETE http://localhost:3000/api/v1/tasks/id/1
 ## Next Steps
 
 - Explore the [CLI Reference](./cli.md) for all available commands, options, and configuration resolution rules.
+- Read the [Application Configuration](./application.md) guide to configure runtime behavior, rate limiting, CORS, and health checks.
 - View the interactive Swagger UI at `http://localhost:3000/api/docs` while the server is running.

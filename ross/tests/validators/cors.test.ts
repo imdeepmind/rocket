@@ -144,6 +144,54 @@ describe('CORS configuration and validation', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('should reject empty origins array when cors is enabled', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      application: {
+        ...baseConfig.application,
+        cors: {
+          enabled: true,
+          origins: [],
+        },
+      },
+    };
+
+    expect(() => validateConfig(config)).toThrow(
+      'application.cors: origins must contain at least one origin when cors is enabled',
+    );
+  });
+
+  it('should reject omitted origins when cors is enabled', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      application: {
+        ...baseConfig.application,
+        cors: {
+          enabled: true,
+        },
+      },
+    };
+
+    expect(() => validateConfig(config)).toThrow(
+      'application.cors: origins must contain at least one origin when cors is enabled',
+    );
+  });
+
+  it('should allow empty origins when cors is disabled', () => {
+    const config: AppConfig = {
+      ...baseConfig,
+      application: {
+        ...baseConfig.application,
+        cors: {
+          enabled: false,
+          origins: [],
+        },
+      },
+    };
+
+    expect(() => validateConfig(config)).not.toThrow();
+  });
+
   it('should reject unrecognized properties under application.cors', () => {
     const config = {
       ...baseConfig,
@@ -176,6 +224,22 @@ describe('CORS configuration and validation', () => {
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
       'must be equal to one of the allowed values',
     );
+  });
+
+  it('should accept OPTIONS in application.cors.methods', () => {
+    const config = {
+      ...baseConfig,
+      application: {
+        ...baseConfig.application,
+        cors: {
+          enabled: true,
+          origins: ['https://example.com'],
+          methods: ['GET', 'POST', 'OPTIONS'],
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
   });
 
   it('should reject negative maxAge under application.cors', () => {

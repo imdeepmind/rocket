@@ -5,7 +5,8 @@
     "rateLimit": {
       "enabled": true,
       "max": 1000,
-      "timeWindow": "15m"
+      "timeWindow": "15m",
+      "rateLimitHealthAPI": false
     },
     "cors": {
       "enabled": true,
@@ -41,7 +42,7 @@
     },
     "healthCheck": {
       "enabled": true,
-      "path": "/health"
+      "path": "/api/health"
     }
   },
   "docs": {

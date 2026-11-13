@@ -287,7 +287,7 @@ describe('MySQL route operations', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(200);
@@ -303,12 +303,14 @@ describe('MySQL route operations', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(503);
       expect(response.json().services.database.status).toBe('down');
-      expect(response.json().services.database.error).toBe('Connection lost');
+      expect(response.json().services.database.error).toBe(
+        'Database service is unavailable',
+      );
 
       await app.close();
     });

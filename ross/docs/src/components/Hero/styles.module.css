@@ -90,7 +90,7 @@
   font-weight: 600;
   font-size: 15px;
   color: #ffffff !important;
-  background: var(--ross-accent, #E11D48);
+  background: var(--ifm-color-primary);
   box-shadow: 0 8px 28px rgba(225, 29, 72, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   text-decoration: none !important;
   cursor: pointer;
