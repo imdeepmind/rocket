@@ -56,6 +56,7 @@ const applicationSchema = {
           type: 'string',
           pattern: '^[1-9]\\d*[smhd]$',
         },
+        rateLimitHealthAPI: {type: 'boolean'},
       },
     },
     cors: {

@@ -308,7 +308,9 @@ describe('MySQL route operations', () => {
 
       expect(response.statusCode).toBe(503);
       expect(response.json().services.database.status).toBe('down');
-      expect(response.json().services.database.error).toBe('Connection lost');
+      expect(response.json().services.database.error).toBe(
+        'Database service is unavailable',
+      );
 
       await app.close();
     });

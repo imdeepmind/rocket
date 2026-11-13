@@ -137,7 +137,8 @@ With the above setting, your generated endpoints become:
   {
     "enabled": false,
     "max": 100,
-    "timeWindow": "1m"
+    "timeWindow": "1m",
+    "rateLimitHealthAPI": false
   }
   ```
 
@@ -152,6 +153,7 @@ Rate limiting is integrated with ROSS's caching layer (`infrastructure.cache`). 
 | `enabled` | `boolean` | **Yes** (if `rateLimit` is defined) | `false` | Enables or disables rate limiting globally. |
 | `max` | `integer` | **Yes** (if `rateLimit` is defined) | `100` | Maximum number of requests allowed within the time window (`minimum: 1`). |
 | `timeWindow` | `string` | **Yes** (if `rateLimit` is defined) | `"1m"` | Rolling time duration window. Must match `^[1-9]\d*[smhd]$` (value $\ge 1$). |
+| `rateLimitHealthAPI` | `boolean` | No | `false` | Enables rate limiting on the health check endpoint (`application.healthCheck`). Can only be set to `true` when both `rateLimit.enabled` and `healthCheck.enabled` are `true`. |
 
 #### Supported Time Window Units
 
@@ -196,7 +198,7 @@ When a client exceeds the configured `max` threshold, ROSS immediately halts the
     "enabled": false,
     "origins": [],
     "methods": ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
-    "allowedHeaders": ["Content-Type", "Authorization"],
+    "allowedHeaders": ["Content-Type", "Authorization", "x-api-key"],
     "exposedHeaders": [],
     "credentials": false,
     "maxAge": 86400,
@@ -213,7 +215,7 @@ Configures Cross-Origin Resource Sharing (CORS) rules to regulate how web browse
 | `enabled` | `boolean` | **Yes** (if `cors` is defined) | `false` | Enables or disables CORS handling. |
 | `origins` | `string[]` | **Yes** (if `cors.enabled: true`) | `[]` | List of allowed origin URLs or `["*"]` for public APIs. Must contain at least 1 origin when CORS is enabled. |
 | `methods` | `string[]` | No | `["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"]` | Allowed HTTP methods for cross-origin requests. Allowed: `GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`, `OPTIONS`. |
-| `allowedHeaders` | `string[]` | No | `["Content-Type", "Authorization"]` | Headers allowed in cross-origin requests (`Access-Control-Allow-Headers`). |
+| `allowedHeaders` | `string[]` | No | `["Content-Type", "Authorization", "x-api-key"]` | Headers allowed in cross-origin requests (`Access-Control-Allow-Headers`). |
 | `exposedHeaders` | `string[]` | No | `[]` | Headers exposed to client-side JavaScript (`Access-Control-Expose-Headers`). |
 | `credentials` | `boolean` | No | `false` | Whether to allow cookies, authorization headers, or TLS client certificates (`Access-Control-Allow-Credentials`). |
 | `maxAge` | `integer` | No | `86400` | Preflight cache lifetime in seconds (`Access-Control-Max-Age`). Defaults to 24 hours. |
@@ -429,11 +431,12 @@ If the referenced environment variable is not defined when the server starts, RO
 | `rateLimit.enabled` | `boolean` | **Yes\*** | `false` | Required if `rateLimit` object is present. |
 | `rateLimit.max` | `integer` | **Yes\*** | `100` | Minimum: 1. Max requests allowed per window. |
 | `rateLimit.timeWindow` | `string` | **Yes\*** | `"1m"` | Format: `^[1-9]\d*[smhd]$` (e.g., `"15m"`, `"1h"`). |
+| `rateLimit.rateLimitHealthAPI` | `boolean` | No | `false` | Enforces rate limit on health check. Can only be true when rateLimit and healthCheck are enabled. |
 | `cors` | `object` | No | See defaults | Configures cross-origin access policies. |
 | `cors.enabled` | `boolean` | **Yes\*** | `false` | Required if `cors` object is present. |
 | `cors.origins` | `string[]` | **Yes\*** | `[]` | Allowed domains. Required (length $\ge 1$) when `cors.enabled: true`. Cannot contain `*` if `credentials: true`. |
 | `cors.methods` | `string[]` | No | `["GET", ...]` | Allowed HTTP verbs (`GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`, `OPTIONS`). |
-| `cors.allowedHeaders` | `string[]` | No | `["Content-Type", ...]` | Allowed request headers. |
+| `cors.allowedHeaders` | `string[]` | No | `["Content-Type", ...]` | Allowed request headers (`Content-Type`, `Authorization`, `x-api-key`). |
 | `cors.exposedHeaders` | `string[]` | No | `[]` | Headers readable by the browser client. |
 | `cors.credentials` | `boolean` | No | `false` | Allows cookies/auth headers across origins. |
 | `cors.maxAge` | `integer` | No | `86400` | Preflight cache TTL in seconds. |
@@ -441,7 +444,7 @@ If the referenced environment variable is not defined when the server starts, RO
 | `magicVariables` | `object` | No | `{}` | Key-value pairs for `[[varName]]` server-side parameter injection. |
 | `healthCheck` | `object` | No | See defaults | Automated database and cache health probe. |
 | `healthCheck.enabled` | `boolean` | No | `true` | Set to `false` to disable. |
-| `healthCheck.path` | `string` | No | `"/api/health"` | Root-mounted endpoint path. Exempt from rate limiting. |
+| `healthCheck.path` | `string` | No | `"/api/health"` | Root-mounted endpoint path. Exempt from rate limiting unless rateLimitHealthAPI is true. |
 
 *\* Indicates the property is required when the parent object (`rateLimit` or `cors`) is defined (for `cors.origins`, required when `cors.enabled` is `true`).*
 

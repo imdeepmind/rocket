@@ -185,7 +185,7 @@ are filled in.
 | Section | Default |
 |---|---|
 | `application.logLevel` | `info` |
-| `application.rateLimit` | `{ enabled: false, max: 100, timeWindow: "1m" }` |
+| `application.rateLimit` | `{ enabled: false, max: 100, timeWindow: "1m", rateLimitHealthAPI: false }` |
 | `application.dangerouslyOverrideDefaultVariant` | `v1` |
 | `docs.openapi` | enabled in `dev`, disabled in `prod`; path `/docs`; version `1.0.0`; info title falls back to `application.name` |
 | `infrastructure.database` | dev: SQLite at `./database.db`; **prod: required** |

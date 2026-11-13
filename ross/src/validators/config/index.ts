@@ -8,6 +8,7 @@ import validateCorsConstraints from './validate-cors';
 import validateCustomAPIs from './validate-custom-apis';
 import validateIndexes from './validate-index';
 import validateModelValidation from './validate-model';
+import validateRateLimitConstraints from './validate-rate-limit';
 import validateRbacConstraints from './validate-rbac';
 import validateRelations from './validate-relations';
 
@@ -27,6 +28,7 @@ export function validateConfig<T extends AppConfig | ResolvedAppConfig>(
         ...validateRelations(input as AppConfig),
         ...validateCacheDbConstraints(input as AppConfig),
         ...validateCorsConstraints(input as AppConfig),
+        ...validateRateLimitConstraints(input as AppConfig),
         ...validateCustomAPIs(input as AppConfig),
         ...validateApisConstraints(input as ResolvedAppConfig),
         ...validateAuthConstraints(input as AppConfig),

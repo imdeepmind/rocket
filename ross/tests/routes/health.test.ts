@@ -179,7 +179,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.uptime).toBeUndefined();
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'Connection refused',
+        error: 'Database service is unavailable',
       });
       expect(body.services.cache).toEqual({status: 'up'});
     });
@@ -203,7 +203,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.services.database.status).toBe('up');
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Redis connection timed out',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -227,11 +227,11 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'DB is offline',
+        error: 'Database service is unavailable',
       });
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Cache is offline',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -252,7 +252,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.database).toEqual({
         status: 'down',
-        error: 'Database service is not initialized',
+        error: 'Database service is unavailable',
       });
     });
 
@@ -273,7 +273,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(body.status).toBe('degraded');
       expect(body.services.cache).toEqual({
         status: 'down',
-        error: 'Cache service is not initialized',
+        error: 'Cache service is unavailable',
       });
     });
 
@@ -311,11 +311,11 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(res.statusCode).toBe(503);
       expect(res.json().services.database).toEqual({
         status: 'down',
-        error: 'string error',
+        error: 'Database service is unavailable',
       });
       expect(res.json().services.cache).toEqual({
         status: 'down',
-        error: 'cache string error',
+        error: 'Cache service is unavailable',
       });
     });
   });
@@ -391,6 +391,33 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       expect(res1.statusCode).toBe(200);
       expect(res2.statusCode).toBe(200);
+    });
+
+    it('enforces rate limit on health check when rateLimitHealthAPI is true', async () => {
+      app = await createHealthApp({
+        application: {
+          rateLimit: {
+            enabled: true,
+            max: 1,
+            timeWindow: '1m',
+            rateLimitHealthAPI: true,
+          },
+        },
+      });
+
+      const res1 = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+      const res2 = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(res1.statusCode).toBe(200);
+      expect(res2.statusCode).toBe(429);
+      expect(res1.headers['x-ratelimit-limit']).toBe('1');
+      expect(res1.headers['x-ratelimit-remaining']).toBe('0');
     });
   });
 

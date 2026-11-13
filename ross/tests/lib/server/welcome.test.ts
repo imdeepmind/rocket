@@ -164,6 +164,7 @@ describe('welcome utility', () => {
           enabled: true,
           max: 100,
           timeWindow: '15m',
+          rateLimitHealthAPI: false,
         },
       },
     };
@@ -186,6 +187,7 @@ describe('welcome utility', () => {
           enabled: false,
           max: 100,
           timeWindow: '15m',
+          rateLimitHealthAPI: false,
         },
       },
     };

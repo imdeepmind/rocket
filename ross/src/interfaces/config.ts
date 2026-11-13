@@ -102,6 +102,14 @@ export interface RateLimitConfig {
   enabled: boolean;
   max: number;
   timeWindow: string;
+  rateLimitHealthAPI?: boolean;
+}
+
+export interface ResolvedRateLimitConfig {
+  enabled: boolean;
+  max: number;
+  timeWindow: string;
+  rateLimitHealthAPI: boolean;
 }
 
 export interface CorsConfig {
@@ -372,7 +380,7 @@ export interface ResolvedCorsConfig {
 export interface ResolvedApplicationConfig {
   name: string;
   logLevel: LogLevel;
-  rateLimit: RateLimitConfig;
+  rateLimit: ResolvedRateLimitConfig;
   cors: ResolvedCorsConfig;
   dangerouslyOverrideDefaultVariant: string;
   magicVariables: Record<string, string | number | boolean>;
