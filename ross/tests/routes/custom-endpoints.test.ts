@@ -24,7 +24,7 @@ describe('test custom-endpoints api', () => {
     },
     updateUser: {
       method: 'POST' as const,
-      path: '/update-user',
+      path: '/update-user/:id',
       description: 'Update a user by ID',
       validation: {
         type: 'object',
@@ -380,7 +380,8 @@ describe('test custom-endpoints api', () => {
           validation: {},
           handler: {
             type: 'function' as const,
-            sql: 'SELECT 1;',
+            file: './fn.ts',
+            exportName: 'test',
           },
         },
       };
@@ -505,7 +506,7 @@ describe('test custom-endpoints api', () => {
       const noValidationEndpoints = {
         getUser: {
           method: 'GET' as const,
-          path: '/get-user',
+          path: '/get-user/:id',
           description: 'Get user by id without explicit validation in config',
           handler: {
             type: 'sql' as const,

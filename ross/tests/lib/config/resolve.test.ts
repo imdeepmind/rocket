@@ -833,7 +833,7 @@ test('customEndpoints, integrations and apiVariants pass through', () => {
     method: 'GET' as const,
     path: '/ping',
     description: 'Ping',
-    handler: {type: 'sql', sql: 'SELECT * FROM users'},
+    handler: {type: 'sql' as const, sql: 'SELECT * FROM users'},
   };
   const apiVariants = {'model.v1.users.index.getAll': {variants: ['admin']}};
 
