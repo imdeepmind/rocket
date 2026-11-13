@@ -184,7 +184,6 @@ table tbody tr:hover td {
 
 table td code {
   white-space: normal;
-  word-break: break-word;
 }
 
 @media (max-width: 768px) {
