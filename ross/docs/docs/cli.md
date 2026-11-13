@@ -12,6 +12,7 @@ ROSS provides a subcommand-driven command line interface (`ross`) for developmen
 | --- | --- | --- |
 | `ross dev` | | Start development server with welcome banner and route table |
 | `ross start` | `ross serve` | Start production server with graceful shutdown |
+| `ross build` | | Build custom function endpoints into standalone bundles |
 | `ross migrate` | `ross db:push` | Run database migrations and exit |
 | `ross config validate` | `ross check` | Validate configuration syntax, schema, and relations |
 | `ross config show` | | Resolve, redact secrets, and print full configuration |
@@ -63,6 +64,7 @@ No configuration file found. Provide one via -c, --config <path> or create a ros
 
 Starts the development server. In development mode:
 
+- Compiles custom TypeScript function endpoints declared in `customEndpoints` into standalone bundles under `.ross/functions/` before starting the server.
 - Displays a startup welcome banner with server URL and Swagger documentation link.
 - Prints a list of all registered models and custom API endpoints.
 - Enables Swagger UI (by default at `/api/docs`).
@@ -122,6 +124,37 @@ ross start
 
 # Alias with custom port
 ross serve -p 8080
+```
+
+---
+
+### `ross build`
+
+Builds all custom TypeScript function endpoints declared in your configuration file into standalone, single-file bundles under `.ross/functions/`.
+
+- Bundles source files with `esbuild` targeting Node.js 24 with ESM output and source maps.
+- Deduplicates compilation: each unique TypeScript source file is compiled exactly once, even if referenced by multiple endpoints with different exported handlers.
+- Validates that every named handler function is properly exported as a callable function from the bundle.
+- Exits with status `0` on success (or when no function endpoints are defined).
+- Exits with status `1` on compilation or export validation failure with error details.
+
+```bash
+ross build [options]
+```
+
+#### Options
+
+- `-c, --config <path>`: Path to configuration file (uses auto-discovery if omitted).
+- `-v, --verbose`: Enable verbose logging output (shows resolved config and working directory).
+
+#### Examples
+
+```bash
+# Build function endpoints using auto-discovered config
+ross build
+
+# Build using a specific configuration file with verbose logging
+ross build -c ./configs/production.json -v
 ```
 
 ---

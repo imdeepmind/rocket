@@ -2,6 +2,7 @@ import {Command} from 'commander';
 
 import {validateConfigPath, validateMode, validatePort} from '@/validators';
 
+import {handleBuild} from './commands/build';
 import {handleConfigShow, handleConfigValidate} from './commands/config';
 import {handleDev} from './commands/dev';
 import {handleMigrate} from './commands/migrate';
@@ -65,6 +66,14 @@ export function buildCli(): Command {
     .option('-c, --config <path>', 'Path to config file', validateConfigPath)
     .option('-v, --verbose', 'Enable verbose logging', false)
     .action(handleMigrate);
+
+  // Subcommand: build
+  program
+    .command('build')
+    .description('Build custom function endpoints into standalone bundles')
+    .option('-c, --config <path>', 'Path to config file', validateConfigPath)
+    .option('-v, --verbose', 'Enable verbose logging', false)
+    .action(handleBuild);
 
   // Subcommand group: config
   const configCmd = program

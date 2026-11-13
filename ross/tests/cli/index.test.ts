@@ -1,4 +1,5 @@
 import {buildCli, runCli} from '@/cli';
+import * as buildCommand from '@/cli/commands/build';
 import * as configCommand from '@/cli/commands/config';
 import * as devCommand from '@/cli/commands/dev';
 import * as migrateCommand from '@/cli/commands/migrate';
@@ -10,6 +11,10 @@ vi.mock('@/validators', () => ({
   validateConfigPath: vi.fn(val => val),
   validatePort: vi.fn(val => Number(val)),
   validateMode: vi.fn(val => val),
+}));
+
+vi.mock('@/cli/commands/build', () => ({
+  handleBuild: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/cli/commands/dev', () => ({
@@ -50,9 +55,23 @@ describe('cli/index', () => {
     expect(commandNames).toContain('dev');
     expect(commandNames).toContain('start');
     expect(commandNames).toContain('migrate');
+    expect(commandNames).toContain('build');
     expect(commandNames).toContain('config');
     expect(commandNames).toContain('check');
     expect(commandNames).toContain('routes');
+  });
+
+  it('dispatches "ross build" to handleBuild', async () => {
+    const cli = buildCli();
+    await cli.parseAsync(['node', 'ross', 'build', '-c', 'test.json', '-v']);
+
+    expect(buildCommand.handleBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: 'test.json',
+        verbose: true,
+      }),
+      expect.anything(),
+    );
   });
 
   it('dispatches "ross dev" to handleDev', async () => {

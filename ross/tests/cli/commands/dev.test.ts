@@ -5,7 +5,17 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
+import {buildFunctions} from '@/lib/functions/builder';
 import {showWelcomeScreen} from '@/lib/server/welcome';
+
+vi.mock('@/lib/config/pipeline', () => ({
+  resolveAndValidateConfig: vi.fn((cfg: unknown) => cfg),
+}));
+
+vi.mock('@/lib/functions/builder', () => ({
+  buildFunctions: vi.fn().mockResolvedValue([]),
+}));
 
 vi.mock('@/server', () => ({
   startServer: vi.fn(),
@@ -66,6 +76,14 @@ describe('cli/commands/dev', () => {
     expect(process.env.NODE_ENV).toBe('development');
     expect(configFinder.resolveConfigPath).toHaveBeenCalledWith(undefined);
     expect(configFinder.loadConfigFile).toHaveBeenCalledWith('/app/ross.json');
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
+      {application: {name: 'Dev App'}},
+      'dev',
+    );
+    expect(buildFunctions).toHaveBeenCalledWith({
+      config: {application: {name: 'Dev App'}},
+      configDir: '/app',
+    });
     expect(startServer).toHaveBeenCalledWith(
       {application: {name: 'Dev App'}},
       3000,
@@ -222,6 +240,36 @@ describe('cli/commands/dev', () => {
     expect(mockApp.close).toHaveBeenCalledTimes(2);
 
     onSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('exits with 1 when buildFunctions fails', async () => {
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue({
+      application: {name: 'Dev App'},
+    });
+    vi.mocked(buildFunctions).mockRejectedValueOnce(
+      new Error('TypeScript compilation error'),
+    );
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: number,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    await expect(handleDev({})).rejects.toThrow('process.exit: 1');
+
+    expect(buildFunctions).toHaveBeenCalled();
+    expect(startServer).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to build functions:',
+      'TypeScript compilation error',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
     exitSpy.mockRestore();
   });
 });

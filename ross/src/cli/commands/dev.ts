@@ -1,7 +1,11 @@
+import * as path from 'path';
+
 import chalk from 'chalk';
 
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
+import {buildFunctions} from '@/lib/functions/builder';
 import {showWelcomeScreen} from '@/lib/server/welcome';
 
 import {DevCLIOptions} from '@/interfaces';
@@ -17,6 +21,21 @@ export async function handleDev(options: DevCLIOptions): Promise<void> {
 
   const configPath = resolveConfigPath(options.config);
   const loadedConfig = loadConfigFile(configPath);
+  const configDir = path.dirname(path.resolve(configPath));
+
+  try {
+    const resolvedConfig = resolveAndValidateConfig(loadedConfig, 'dev');
+    await buildFunctions({
+      config: resolvedConfig,
+      configDir,
+    });
+  } catch (err) {
+    console.error(
+      chalk.red('Failed to build functions:'),
+      (err as Error).message,
+    );
+    process.exit(1);
+  }
 
   const port =
     options.port ?? (process.env.PORT ? Number(process.env.PORT) : 3000);
