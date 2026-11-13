@@ -34,7 +34,7 @@
   --ifm-heading-color: #FFFFFF;
 
   /* Navbar */
-  --ifm-navbar-background-color: #08080D;
+  --ifm-navbar-background-color: transparent;
   --ifm-navbar-shadow: none;
   --ifm-navbar-link-color: #A9A9BB;
   --ifm-navbar-link-hover-color: #FFFFFF;
@@ -46,7 +46,7 @@
   --ifm-menu-color-background-hover: rgba(255, 255, 255, 0.05);
 
   /* Borders & Dividers */
-  --ifm-toc-border-color: rgba(255, 255, 255, 0.08);
+  --ifm-toc-border-color: transparent;
   --ifm-table-border-color: rgba(255, 255, 255, 0.08);
   --ifm-table-stripe-background: rgba(255, 255, 255, 0.02);
   --ifm-table-head-background: #171722;
@@ -87,7 +87,8 @@ article {
 
 /* Navbar */
 .navbar {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: transparent;
+  border-bottom: none;
 }
 
 .navbar__title {
@@ -109,7 +110,14 @@ article {
 
 /* Desktop Sidebar */
 .theme-doc-sidebar-container {
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: none !important;
+}
+
+/* Table of Contents (Right Side Content List) */
+.table-of-contents,
+.table-of-contents__left-border,
+.table-of-contents ul {
+  border-left: none !important;
 }
 
 .menu__link {
