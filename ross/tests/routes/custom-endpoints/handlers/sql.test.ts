@@ -11,7 +11,6 @@ describe('buildSqlEndpoint', () => {
     expect(result.params).toBeUndefined();
     expect(result.querystring).toBeUndefined();
     expect(result.body).toBeUndefined();
-    expect(result.routePath).toBe('');
   });
 
   it('should detect path params', () => {
@@ -21,7 +20,6 @@ describe('buildSqlEndpoint', () => {
     );
     expect(result.params).toBeDefined();
     expect(result.params).toHaveProperty('properties.id');
-    expect(result.routePath).toBe('/:id');
   });
 
   it('should detect body params', () => {
@@ -32,7 +30,6 @@ describe('buildSqlEndpoint', () => {
     expect(result.body).toBeDefined();
     expect(result.body).toHaveProperty('properties.name');
     expect(result.body).toHaveProperty('properties.id');
-    expect(result.routePath).toBe('');
   });
 
   it('should detect query params', () => {
@@ -43,7 +40,6 @@ describe('buildSqlEndpoint', () => {
     expect(result.querystring).toBeDefined();
     expect(result.querystring).toHaveProperty('properties.status');
     expect(result.querystring).toHaveProperty('properties.minAge');
-    expect(result.routePath).toBe('');
   });
 
   it('should not add body schema for GET method', () => {
@@ -62,7 +58,6 @@ describe('buildSqlEndpoint', () => {
     expect(result.params).toBeUndefined();
     expect(result.querystring).toBeUndefined();
     expect(result.body).toBeUndefined();
-    expect(result.routePath).toBe('');
   });
 
   it('should skip header query placeholders without building schema', () => {
@@ -74,7 +69,6 @@ describe('buildSqlEndpoint', () => {
     expect(result.params).toHaveProperty('properties.id');
     expect(result.querystring).toBeUndefined();
     expect(result.body).toBeUndefined();
-    expect(result.routePath).toBe('/:id');
   });
 });
 

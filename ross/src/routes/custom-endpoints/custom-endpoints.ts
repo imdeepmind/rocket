@@ -52,8 +52,8 @@ function registerCustomEndpoint(
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
 ): void {
-  const {schema, routePathSuffix} = generateSchema(config, endpoint, policy);
-  const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}${routePathSuffix}`;
+  const schema = generateSchema(config, endpoint, policy);
+  const routePath = `/${variant}/custom-endpoints${endpoint.path.replace(/\/$/, '')}`;
 
   app.route({
     method: endpoint.method,
@@ -93,20 +93,15 @@ function generateSchema(
   config: ResolvedAppConfig,
   endpoint: CustomEndpointConfig,
   policy: ResolvedApiPolicy,
-): {
-  schema: Record<string, unknown>;
-  routePathSuffix: string;
-} {
+): Record<string, unknown> {
   const schema: Record<string, unknown> = {
     summary: `Custom Endpoint: ${endpoint.path}`,
     description: endpoint.description,
     tags: policy.tags,
   };
 
-  let routePathSuffix = '';
-
   if (endpoint.handler.type === 'sql') {
-    const {params, querystring, body, routePath} = buildSqlEndpoint(
+    const {params, querystring, body} = buildSqlEndpoint(
       endpoint.handler.sql,
       endpoint.method,
       endpoint.validation,
@@ -114,7 +109,6 @@ function generateSchema(
     if (params) schema.params = params;
     if (querystring) schema.querystring = querystring;
     if (body) schema.body = body;
-    routePathSuffix = routePath;
   }
 
   schema.response = getResponseStructureSchema([200], {
@@ -134,5 +128,5 @@ function generateSchema(
     schema.security = security;
   }
 
-  return {schema, routePathSuffix};
+  return schema;
 }

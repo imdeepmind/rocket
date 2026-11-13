@@ -90,7 +90,6 @@ export function buildSqlEndpoint(
   params?: Record<string, unknown>;
   querystring?: Record<string, unknown>;
   body?: Record<string, unknown>;
-  routePath: string;
 } {
   const paramsProperties: Record<string, object> = {};
   const queryProperties: Record<string, object> = {};
@@ -126,16 +125,12 @@ export function buildSqlEndpoint(
     : [];
 
   const result: {
-    routePath: string;
     params?: Record<string, unknown>;
     querystring?: Record<string, unknown>;
     body?: Record<string, unknown>;
-  } = {routePath: ''};
+  } = {};
 
   if (paramsKeys.length > 0) {
-    for (const key of paramsKeys) {
-      result.routePath += `/:${key}`;
-    }
     const finalParamsProps: Record<string, object> = {};
     for (const key of paramsKeys) {
       finalParamsProps[key] = {
