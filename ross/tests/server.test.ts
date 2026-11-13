@@ -280,24 +280,24 @@ describe('Server', () => {
     );
   });
 
-  it('should override logger level to debug when verbose is true', async () => {
+  it('should override logger level to trace when verbose is true', async () => {
     const fastifyMock = vi.mocked(Fastify);
 
     // Test verbose in prod mode
     await startServer(mockConfig, 3000, 'prod', true);
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        logger: expect.objectContaining({level: 'debug'}),
+        logger: expect.objectContaining({level: 'trace'}),
       }),
     );
 
     fastifyMock.mockClear();
 
-    // Test verbose in dev mode (should still be debug)
+    // Test verbose in dev mode (should still be trace)
     await startServer(mockConfig, 3000, 'dev', true);
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        logger: expect.objectContaining({level: 'debug'}),
+        logger: expect.objectContaining({level: 'trace'}),
       }),
     );
   });

@@ -117,9 +117,9 @@ describe('validateInvalidDocsConfig', () => {
     },
     {
       name: 'openapi title too small',
-      patch: {info: {title: '1234', version: '1.0.0'}},
+      patch: {info: {title: '', version: '1.0.0'}},
       expected:
-        '/docs/openapi/info/title must NOT have fewer than 5 characters',
+        '/docs/openapi/info/title must NOT have fewer than 1 characters',
     },
     {
       name: 'openapi description too small',
@@ -257,6 +257,10 @@ describe('validateValidDocsConfig', () => {
     {
       name: 'valid path',
       patch: {path: '/api/docs'},
+    },
+    {
+      name: 'openapi title with 1 character',
+      patch: {info: {title: 'A', version: '1.0.0'}},
     },
     {
       name: 'openapi title',
@@ -2898,6 +2902,13 @@ describe('validateRateLimitConfig', () => {
       name: 'timeWindow with invalid format (no number)',
       patch: {
         rateLimit: {enabled: true, max: 100, timeWindow: 'm'},
+      },
+      expected: '/application/rateLimit/timeWindow must match pattern',
+    },
+    {
+      name: 'timeWindow with zero duration',
+      patch: {
+        rateLimit: {enabled: true, max: 100, timeWindow: '0s'},
       },
       expected: '/application/rateLimit/timeWindow must match pattern',
     },

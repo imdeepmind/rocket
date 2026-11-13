@@ -11,11 +11,6 @@ export function registerHealthRoute(
   }
 
   let path = config.application.healthCheck.path;
-  if (path.startsWith('/api/')) {
-    path = path.slice(4);
-  } else if (path === '/api') {
-    path = '/';
-  }
   if (!path.startsWith('/')) {
     path = `/${path}`;
   }

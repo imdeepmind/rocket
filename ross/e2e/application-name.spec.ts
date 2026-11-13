@@ -12,7 +12,7 @@ function getAppNameTestConfig(
     logLevel: 'warn',
     healthCheck: {
       enabled: true,
-      path: '/health',
+      path: '/api/health',
     },
   };
 

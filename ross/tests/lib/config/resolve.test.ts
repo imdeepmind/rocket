@@ -76,7 +76,7 @@ test('minimal dev config resolves every section densely', () => {
     },
     healthCheck: {
       enabled: true,
-      path: '/health',
+      path: '/api/health',
     },
   });
 

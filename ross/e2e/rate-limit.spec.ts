@@ -24,7 +24,7 @@ function getRateLimitConfig(
       },
       healthCheck: {
         enabled: true,
-        path: '/health',
+        path: '/api/health',
       },
     },
     infrastructure: {

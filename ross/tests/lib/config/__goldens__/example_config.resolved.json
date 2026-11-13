@@ -41,7 +41,7 @@
     },
     "healthCheck": {
       "enabled": true,
-      "path": "/health"
+      "path": "/api/health"
     }
   },
   "docs": {

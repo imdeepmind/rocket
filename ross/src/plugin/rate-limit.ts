@@ -24,15 +24,22 @@ export default fp(
           .get<{current: number; expiresAt: number}>(key)
           .then(val => {
             const now = Date.now();
-            if (!val || val.expiresAt < now) {
+            if (!val || val.expiresAt <= now) {
               val = {current: 1, expiresAt: now + windowMs};
             } else {
               val.current += 1;
             }
+            const ttlSeconds = Math.max(
+              1,
+              Math.ceil((val.expiresAt - now) / 1000),
+            );
             fastify.cache
-              .set(key, val, Math.ceil((val.expiresAt - now) / 1000))
+              .set(key, val, ttlSeconds)
               .then(() => {
-                cb(null, {current: val.current, ttl: val.expiresAt - now});
+                cb(null, {
+                  current: val.current,
+                  ttl: Math.max(0, val.expiresAt - now),
+                });
               })
               .catch(err => cb(err));
           })

@@ -29,7 +29,7 @@ function getCorsTestConfig(
       },
       healthCheck: {
         enabled: true,
-        path: '/health',
+        path: '/api/health',
       },
       ...extraAppConfig,
     },
@@ -864,16 +864,24 @@ test.describe('CORS Defaults and Disabled States', () => {
     const server = await createE2EServer(
       getCorsTestConfig({
         enabled: true,
+        origins: ['https://app.example.com'],
       }),
     );
 
     try {
-      // By default origins is [] so cross-origin request receives no allow-origin
       const res = await server.request.get('/api/v1/users/', {
-        headers: {origin: 'https://example.com'},
+        headers: {origin: 'https://app.example.com'},
       });
       expect(res.status()).toBe(200);
-      expect(res.headers()['access-control-allow-origin']).toBeUndefined();
+      expect(res.headers()['access-control-allow-origin']).toBe(
+        'https://app.example.com',
+      );
+
+      const otherRes = await server.request.get('/api/v1/users/', {
+        headers: {origin: 'https://example.com'},
+      });
+      expect(otherRes.status()).toBe(200);
+      expect(otherRes.headers()['access-control-allow-origin']).toBeUndefined();
     } finally {
       await server.cleanup();
     }
@@ -881,6 +889,27 @@ test.describe('CORS Defaults and Disabled States', () => {
 });
 
 test.describe('CORS Negative Configuration & Schema Validation', () => {
+  test('Startup rejects enabled: true with empty origins', async () => {
+    const invalidConfig = getCorsTestConfig({
+      enabled: true,
+      origins: [],
+    });
+
+    await expect(createE2EServer(invalidConfig)).rejects.toThrow(
+      /origins must contain at least one origin when cors is enabled/,
+    );
+  });
+
+  test('Startup rejects enabled: true with missing origins', async () => {
+    const invalidConfig = getCorsTestConfig({
+      enabled: true,
+    });
+
+    await expect(createE2EServer(invalidConfig)).rejects.toThrow(
+      /origins must contain at least one origin when cors is enabled/,
+    );
+  });
+
   test('Startup rejects credentials: true combined with wildcard origin "*"', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: true,
@@ -896,6 +925,7 @@ test.describe('CORS Negative Configuration & Schema Validation', () => {
   test('Startup rejects invalid HTTP method enum', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: true,
+      origins: ['https://app.example.com'],
       methods: ['INVALID_METHOD' as unknown as 'GET'],
     });
 
@@ -907,6 +937,7 @@ test.describe('CORS Negative Configuration & Schema Validation', () => {
   test('Startup rejects negative maxAge', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: true,
+      origins: ['https://app.example.com'],
       maxAge: -1,
     });
 
@@ -918,6 +949,7 @@ test.describe('CORS Negative Configuration & Schema Validation', () => {
   test('Startup rejects non-integer maxAge', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: true,
+      origins: ['https://app.example.com'],
       maxAge: 3.5 as unknown as number,
     });
 
@@ -929,6 +961,7 @@ test.describe('CORS Negative Configuration & Schema Validation', () => {
   test('Startup rejects non-boolean enabled', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: 'true' as unknown as boolean,
+      origins: ['https://app.example.com'],
     });
 
     await expect(createE2EServer(invalidConfig)).rejects.toThrow(
@@ -939,6 +972,7 @@ test.describe('CORS Negative Configuration & Schema Validation', () => {
   test('Startup rejects non-boolean credentials', async () => {
     const invalidConfig = getCorsTestConfig({
       enabled: true,
+      origins: ['https://app.example.com'],
       credentials: 'true' as unknown as boolean,
     });
 

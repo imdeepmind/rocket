@@ -79,12 +79,13 @@ async function createHealthApp(
     await app.register(swaggerPlugin);
   }
 
+  registerHealthRoute(app, resolvedConfig);
+
   await app.register(
     async apiApp => {
       apiApp.addHook('preHandler', async request => {
         apiApp.enforceSSP(request);
       });
-      registerHealthRoute(apiApp, resolvedConfig);
     },
     {prefix: '/api'},
   );
@@ -424,7 +425,38 @@ describe('Healthcheck Route (GET /api/health)', () => {
   });
 
   describe('Configurability', () => {
-    it('allows custom subpath via application.healthCheck.path', async () => {
+    it('defaults health route to /api/health when path is omitted', async () => {
+      app = await createHealthApp();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('ok');
+    });
+
+    it('mounts at /health when user passes path: "/health"', async () => {
+      app = await createHealthApp({
+        application: {
+          healthCheck: {
+            enabled: true,
+            path: '/health',
+          },
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('ok');
+    });
+
+    it('allows custom path via application.healthCheck.path', async () => {
       app = await createHealthApp({
         application: {
           healthCheck: {
@@ -436,14 +468,14 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: '/api/status',
+        url: '/status',
       });
 
       expect(res.statusCode).toBe(200);
       expect(res.json().status).toBe('ok');
     });
 
-    it('normalizes path if prefixed with /api/', async () => {
+    it('allows custom nested path /api/v1/health', async () => {
       app = await createHealthApp({
         application: {
           healthCheck: {
@@ -474,26 +506,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: '/api/ping',
-      });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.json().status).toBe('ok');
-    });
-
-    it('normalizes path when given exact /api', async () => {
-      app = await createHealthApp({
-        application: {
-          healthCheck: {
-            enabled: true,
-            path: '/api',
-          },
-        },
-      });
-
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/',
+        url: '/ping',
       });
 
       expect(res.statusCode).toBe(200);

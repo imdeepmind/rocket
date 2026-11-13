@@ -287,7 +287,7 @@ describe('MySQL route operations', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(200);
@@ -303,7 +303,7 @@ describe('MySQL route operations', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(503);

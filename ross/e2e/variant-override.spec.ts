@@ -17,7 +17,7 @@ function getVariantTestConfig(
         : {}),
       healthCheck: {
         enabled: true,
-        path: '/health',
+        path: '/api/health',
       },
     },
     infrastructure: {
@@ -80,18 +80,10 @@ test.describe('Default Variant (dangerouslyOverrideDefaultVariant omitted)', () 
     }
   });
 
-  test('Falsy empty string fallback defaults safely to v1 segment', async () => {
-    const server = await createE2EServer(getVariantTestConfig(''));
-
-    try {
-      const resV1 = await server.request.get('/api/v1/users/');
-      expect(resV1.status()).toBe(200);
-
-      const resV2 = await server.request.get('/api/v2/users/');
-      expect(resV2.status()).toBe(404);
-    } finally {
-      await server.cleanup();
-    }
+  test('Startup rejects empty string dangerouslyOverrideDefaultVariant', async () => {
+    await expect(createE2EServer(getVariantTestConfig(''))).rejects.toThrow(
+      /dangerouslyOverrideDefaultVariant.*must NOT have fewer than 1 characters/,
+    );
   });
 });
 

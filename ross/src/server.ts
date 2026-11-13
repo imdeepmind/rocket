@@ -66,7 +66,7 @@ export async function startServer(
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: verbose ? 'debug' : resolvedConfig.application.logLevel,
+      level: verbose ? 'trace' : resolvedConfig.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {
@@ -154,6 +154,9 @@ export async function startServer(
     await migrateDatabase(resolvedConfig);
   }
 
+  // register health check route
+  registerHealthRoute(app, resolvedConfig);
+
   // register all config-driven routes under /api prefix (swagger excluded)
   await app.register(
     async app => {
@@ -165,7 +168,6 @@ export async function startServer(
       });
 
       registerRoutes(app, resolvedConfig);
-      registerHealthRoute(app, resolvedConfig);
 
       // register auth routes (only when up-auth is configured and enabled)
       if (

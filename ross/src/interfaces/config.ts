@@ -107,7 +107,7 @@ export interface RateLimitConfig {
 export interface CorsConfig {
   enabled: boolean;
   origins?: string[];
-  methods?: (HTTPMethod | 'HEAD')[];
+  methods?: (HTTPMethod | 'HEAD' | 'OPTIONS')[];
   allowedHeaders?: string[];
   exposedHeaders?: string[];
   credentials?: boolean;
@@ -358,7 +358,7 @@ export interface AppConfigInput {
 export interface ResolvedCorsConfig {
   enabled: boolean;
   origins: string[];
-  methods: (HTTPMethod | 'HEAD')[];
+  methods: (HTTPMethod | 'HEAD' | 'OPTIONS')[];
   allowedHeaders: string[];
   exposedHeaders: string[];
   credentials: boolean;

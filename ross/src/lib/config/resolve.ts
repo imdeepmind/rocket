@@ -52,6 +52,7 @@ export const DEFAULT_CORS = {
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'] as (
     | HTTPMethod
     | 'HEAD'
+    | 'OPTIONS'
   )[],
   allowedHeaders: ['Content-Type', 'Authorization'] as string[],
   exposedHeaders: [] as string[],
@@ -76,7 +77,7 @@ export const DEFAULT_CACHE_TIMEOUT = 10000;
 
 export const DEFAULT_HEALTH_CHECK = {
   enabled: true,
-  path: '/health',
+  path: '/api/health',
 } as const;
 
 export const DEFAULT_SQLITE_URL = './database.db';
@@ -170,7 +171,7 @@ export function resolveApplication(
         : [...DEFAULT_CORS.routes],
     },
     dangerouslyOverrideDefaultVariant:
-      input.dangerouslyOverrideDefaultVariant || DEFAULT_VARIANT,
+      input.dangerouslyOverrideDefaultVariant ?? DEFAULT_VARIANT,
     magicVariables: input.magicVariables ? clone(input.magicVariables) : {},
     healthCheck: {
       enabled: input.healthCheck?.enabled ?? DEFAULT_HEALTH_CHECK.enabled,

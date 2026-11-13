@@ -94,7 +94,7 @@ Controls the verbosity of Fastify's structured JSON logger during server executi
 }
 ```
 
-> **Tip**: You can temporarily override `logLevel` in your terminal without modifying your config by passing the `--verbose` flag (e.g., `ross dev --verbose` or `ross start --verbose`), which forces the log level to `"debug"`.
+> **Tip**: You can temporarily override `logLevel` in your terminal without modifying your config by passing the `--verbose` flag (e.g., `ross dev --verbose` or `ross start --verbose`), which forces the log level to `"trace"`.
 
 ### `dangerouslyOverrideDefaultVariant`
 
@@ -151,7 +151,7 @@ Rate limiting is integrated with ROSS's caching layer (`infrastructure.cache`). 
 | --- | --- | --- | --- | --- |
 | `enabled` | `boolean` | **Yes** (if `rateLimit` is defined) | `false` | Enables or disables rate limiting globally. |
 | `max` | `integer` | **Yes** (if `rateLimit` is defined) | `100` | Maximum number of requests allowed within the time window (`minimum: 1`). |
-| `timeWindow` | `string` | **Yes** (if `rateLimit` is defined) | `"1m"` | Rolling time duration window. Must match `^\d+[smhd]$`. |
+| `timeWindow` | `string` | **Yes** (if `rateLimit` is defined) | `"1m"` | Rolling time duration window. Must match `^[1-9]\d*[smhd]$` (value $\ge 1$). |
 
 #### Supported Time Window Units
 
@@ -211,8 +211,8 @@ Configures Cross-Origin Resource Sharing (CORS) rules to regulate how web browse
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `enabled` | `boolean` | **Yes** (if `cors` is defined) | `false` | Enables or disables CORS handling. |
-| `origins` | `string[]` | No | `[]` | List of allowed origin URLs or `["*"]` for public APIs. |
-| `methods` | `string[]` | No | `["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"]` | Allowed HTTP methods for cross-origin requests. Allowed: `GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`. |
+| `origins` | `string[]` | **Yes** (if `cors.enabled: true`) | `[]` | List of allowed origin URLs or `["*"]` for public APIs. Must contain at least 1 origin when CORS is enabled. |
+| `methods` | `string[]` | No | `["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"]` | Allowed HTTP methods for cross-origin requests. Allowed: `GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`, `OPTIONS`. |
 | `allowedHeaders` | `string[]` | No | `["Content-Type", "Authorization"]` | Headers allowed in cross-origin requests (`Access-Control-Allow-Headers`). |
 | `exposedHeaders` | `string[]` | No | `[]` | Headers exposed to client-side JavaScript (`Access-Control-Expose-Headers`). |
 | `credentials` | `boolean` | No | `false` | Whether to allow cookies, authorization headers, or TLS client certificates (`Access-Control-Allow-Credentials`). |
@@ -322,7 +322,7 @@ If a variable defined in `application.magicVariables` has the same name as a bui
   ```json
   {
     "enabled": true,
-    "path": "/health"
+    "path": "/api/health"
   }
   ```
 
@@ -333,15 +333,17 @@ Configures an automated health monitoring endpoint that probes the operational r
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `enabled` | `boolean` | No | `true` | Enables or disables the health check route. |
-| `path` | `string` | No | `"/health"` | The URL path for the health check. Must start with `/` or will be prefixed with `/`. |
+| `path` | `string` | No | `"/api/health"` | The URL path for the health check. Must start with `/` or will be prefixed with `/`. |
 
-#### Path Normalization
+#### Route Registration and Path Handling
 
-ROSS registers health check routes under the `/api` prefix. The `path` field is automatically normalized:
+ROSS registers the health check route directly at the root application level (outside the `/api` prefix), allowing you to mount your health endpoint at any URL path required by your infrastructure or load balancers. The `path` field is automatically prefixed with a leading `/` if omitted:
 
-- `"path": "/health"` $\rightarrow$ accessible at `/api/health`
+- Default (`path` omitted): accessible at `/api/health`
+- `"path": "/health"` $\rightarrow$ accessible at `/health`
+- `"path": "/status"` $\rightarrow$ accessible at `/status`
 - `"path": "/api/health"` $\rightarrow$ accessible at `/api/health`
-- `"path": "/status"` $\rightarrow$ accessible at `/api/status`
+- `"path": "ping"` $\rightarrow$ automatically prefixed with `/`, accessible at `/ping`
 
 #### Probed Services
 
@@ -426,11 +428,11 @@ If the referenced environment variable is not defined when the server starts, RO
 | `rateLimit` | `object` | No | See defaults | Protects against DoS / brute force. |
 | `rateLimit.enabled` | `boolean` | **Yes\*** | `false` | Required if `rateLimit` object is present. |
 | `rateLimit.max` | `integer` | **Yes\*** | `100` | Minimum: 1. Max requests allowed per window. |
-| `rateLimit.timeWindow` | `string` | **Yes\*** | `"1m"` | Format: `^\d+[smhd]$` (e.g., `"15m"`, `"1h"`). |
+| `rateLimit.timeWindow` | `string` | **Yes\*** | `"1m"` | Format: `^[1-9]\d*[smhd]$` (e.g., `"15m"`, `"1h"`). |
 | `cors` | `object` | No | See defaults | Configures cross-origin access policies. |
 | `cors.enabled` | `boolean` | **Yes\*** | `false` | Required if `cors` object is present. |
-| `cors.origins` | `string[]` | No | `[]` | Allowed domains. Cannot contain `*` if `credentials: true`. |
-| `cors.methods` | `string[]` | No | `["GET", ...]` | Allowed HTTP verbs. |
+| `cors.origins` | `string[]` | **Yes\*** | `[]` | Allowed domains. Required (length $\ge 1$) when `cors.enabled: true`. Cannot contain `*` if `credentials: true`. |
+| `cors.methods` | `string[]` | No | `["GET", ...]` | Allowed HTTP verbs (`GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`, `OPTIONS`). |
 | `cors.allowedHeaders` | `string[]` | No | `["Content-Type", ...]` | Allowed request headers. |
 | `cors.exposedHeaders` | `string[]` | No | `[]` | Headers readable by the browser client. |
 | `cors.credentials` | `boolean` | No | `false` | Allows cookies/auth headers across origins. |
@@ -439,9 +441,9 @@ If the referenced environment variable is not defined when the server starts, RO
 | `magicVariables` | `object` | No | `{}` | Key-value pairs for `[[varName]]` server-side parameter injection. |
 | `healthCheck` | `object` | No | See defaults | Automated database and cache health probe. |
 | `healthCheck.enabled` | `boolean` | No | `true` | Set to `false` to disable. |
-| `healthCheck.path` | `string` | No | `"/health"` | Normalized under `/api`. Exempt from rate limiting. |
+| `healthCheck.path` | `string` | No | `"/api/health"` | Root-mounted endpoint path. Exempt from rate limiting. |
 
-*\* Indicates the property is required when the parent object (`rateLimit` or `cors`) is defined.*
+*\* Indicates the property is required when the parent object (`rateLimit` or `cors`) is defined (for `cors.origins`, required when `cors.enabled` is `true`).*
 
 ## Recipes
 

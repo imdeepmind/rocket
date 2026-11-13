@@ -54,7 +54,7 @@ test.describe('Configuration Defaults & Overrides', () => {
     }
   });
 
-  test('Custom path (healthCheck.path: "/status") mounts at /api/status', async () => {
+  test('Custom path (healthCheck.path: "/status") mounts at /status', async () => {
     const server = await createE2EServer({
       application: {
         name: 'Rocket E2E - Custom Path',
@@ -88,7 +88,7 @@ test.describe('Configuration Defaults & Overrides', () => {
     });
 
     try {
-      const customRes = await server.request.get('/api/status');
+      const customRes = await server.request.get('/status');
       expect(customRes.status()).toBe(200);
 
       const body = await customRes.json();
@@ -97,6 +97,50 @@ test.describe('Configuration Defaults & Overrides', () => {
       // Default path should return 404 since path was customized
       const defaultRes = await server.request.get('/api/health');
       expect(defaultRes.status()).toBe(404);
+    } finally {
+      await server.cleanup();
+    }
+  });
+
+  test('Root path (healthCheck.path: "/health") mounts at /health', async () => {
+    const server = await createE2EServer({
+      application: {
+        name: 'Rocket E2E - Root Health',
+        logLevel: 'warn',
+        healthCheck: {
+          enabled: true,
+          path: '/health',
+        },
+      },
+      infrastructure: {
+        database: {
+          engine: 'sqlite',
+          connection: {url: './e2e/.data/test.db'},
+        },
+      },
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {
+                type: 'integer',
+                primaryKey: true,
+                autoIncrement: true,
+                nullable: false,
+              },
+            },
+          },
+        },
+      },
+      apis: {},
+    });
+
+    try {
+      const customRes = await server.request.get('/health');
+      expect(customRes.status()).toBe(200);
+
+      const body = await customRes.json();
+      expect(body.status).toBe('ok');
     } finally {
       await server.cleanup();
     }
@@ -149,7 +193,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - SQLite Memory',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       docs: {openapi: {enabled: true, path: '/api/docs'}},
       infrastructure: {
@@ -200,7 +244,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - SQLite Redis',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       infrastructure: {
         database: {
@@ -247,7 +291,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - PG Memory',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       infrastructure: {
         database: {
@@ -291,7 +335,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - PG Redis',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       infrastructure: {
         database: {
@@ -338,7 +382,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - MySQL Memory',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       infrastructure: {
         database: {
@@ -382,7 +426,7 @@ test.describe('Database & Cache Matrix', () => {
       application: {
         name: 'Rocket E2E - MySQL Redis',
         logLevel: 'warn',
-        healthCheck: {enabled: true, path: '/health'},
+        healthCheck: {enabled: true, path: '/api/health'},
       },
       infrastructure: {
         database: {
@@ -432,7 +476,7 @@ test.describe('Negative & Degraded Service Health (503 & Startup Failure)', () =
         application: {
           name: 'Rocket E2E - Redis Down',
           logLevel: 'warn',
-          healthCheck: {enabled: true, path: '/health'},
+          healthCheck: {enabled: true, path: '/api/health'},
         },
         infrastructure: {
           database: {
@@ -470,7 +514,7 @@ test.describe('Negative & Degraded Service Health (503 & Startup Failure)', () =
         application: {
           name: 'Rocket E2E - PG Down',
           logLevel: 'warn',
-          healthCheck: {enabled: true, path: '/health'},
+          healthCheck: {enabled: true, path: '/api/health'},
         },
         infrastructure: {
           database: {
@@ -519,7 +563,7 @@ test.describe('Negative & Degraded Service Health (503 & Startup Failure)', () =
         application: {
           name: 'Rocket E2E - MySQL Down',
           logLevel: 'warn',
-          healthCheck: {enabled: true, path: '/health'},
+          healthCheck: {enabled: true, path: '/api/health'},
         },
         infrastructure: {
           database: {
