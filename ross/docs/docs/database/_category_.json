@@ -1,0 +1,9 @@
+{
+  "label": "Database & Models",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Configure database connections and run migrations in ROSS."
+  }
+}
+
