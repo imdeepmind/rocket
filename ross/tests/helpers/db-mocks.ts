@@ -34,4 +34,11 @@ export const mysqlGetConnectionMock = vi.fn().mockResolvedValue({
   rollback: mysqlConnRollbackMock,
   release: mysqlConnReleaseMock,
 });
+export const mysqlCreateConnectionMock = vi.fn().mockResolvedValue({
+  query: mysqlConnQueryMock,
+  beginTransaction: mysqlConnBeginTxMock,
+  commit: mysqlConnCommitMock,
+  rollback: mysqlConnRollbackMock,
+  end: mysqlEndMock,
+});
 export const mysqlOnMock = vi.fn();
