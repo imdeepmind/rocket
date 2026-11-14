@@ -10,6 +10,7 @@ This is useful for:
 
 - Mounting ROSS inside an existing Fastify server or test harness.
 - Authoring configuration in TypeScript with full type checking.
+- Splitting configuration across multiple files for large projects.
 - Running migrations from a deployment script.
 - Testing APIs with `app.inject()` without opening a port.
 
