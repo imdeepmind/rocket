@@ -27,6 +27,8 @@ export interface E2EServer {
 
 export interface CreateE2EServerOptions {
   migrate?: boolean;
+  dangerouslyAllowDdl?: boolean;
+  configDir?: string;
 }
 
 function cleanDbFiles(dbFile: string): void {
@@ -76,7 +78,14 @@ export async function createE2EServer(
   let app: FastifyInstance | undefined;
 
   try {
-    const resolvedConfig = resolveAndValidateConfig(config, 'dev');
+    const resolvedConfig = resolveAndValidateConfig(
+      config,
+      'dev',
+      options.configDir,
+      options.dangerouslyAllowDdl !== undefined
+        ? {dangerouslyAllowDdl: options.dangerouslyAllowDdl}
+        : undefined,
+    );
     if (migrate) {
       await migrateDatabase(resolvedConfig);
     }

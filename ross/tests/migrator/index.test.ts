@@ -1044,6 +1044,55 @@ describe('migrateDatabase', () => {
       expect(runCustomMigrations).not.toHaveBeenCalled();
     });
 
+    it('should skip custom migrations when directory is empty string', async () => {
+      const config = getBaseConfig('sqlite');
+      config.infrastructure.database.migrations = {
+        directory: '',
+        dangerouslyAllowDDL: false,
+      };
+
+      await runMigrate(config);
+
+      expect(discoverMigrations).not.toHaveBeenCalled();
+      expect(validateMigrations).not.toHaveBeenCalled();
+      expect(runCustomMigrations).not.toHaveBeenCalled();
+    });
+
+    it('should forward dangerouslyAllowDDL as false when explicitly false in config', async () => {
+      const config = getBaseConfigWithMigrations('sqlite', {
+        directory: '/app/sqlite-migrations',
+        dangerouslyAllowDDL: false,
+      });
+
+      const mockDiscovered: DiscoveredMigration[] = [
+        {
+          id: '01_seed.sql',
+          name: '01_seed.sql',
+          prefix: 1,
+          filePath: '/app/sqlite-migrations/01_seed.sql',
+          content: 'INSERT INTO foo VALUES (1);',
+          checksum: 'abc',
+          containsDDL: false,
+        },
+      ];
+      vi.mocked(discoverMigrations).mockReturnValue(mockDiscovered);
+
+      await runMigrate(config);
+
+      expect(discoverMigrations).toHaveBeenCalledWith({
+        migrationsDir: '/app/sqlite-migrations',
+        engine: 'sqlite',
+        dangerouslyAllowDDL: false,
+      });
+      expect(validateMigrations).toHaveBeenCalledWith(mockDiscovered, false);
+      expect(runCustomMigrations).toHaveBeenCalledWith({
+        migrations: mockDiscovered,
+        engine: 'sqlite',
+        connectionUrl: 'test.db',
+        dangerouslyAllowDDL: false,
+      });
+    });
+
     it('should not execute custom migrations when Drizzle push fails', async () => {
       const config = getBaseConfigWithMigrations('postgres');
       const drizzleError = new Error('Drizzle push failed');
