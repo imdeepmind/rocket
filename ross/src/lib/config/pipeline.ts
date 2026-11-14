@@ -17,7 +17,8 @@ import {resolveConfig} from './resolve';
 export function resolveAndValidateConfig(
   raw: AppConfigInput,
   mode: Mode,
+  configDir?: string,
 ): ResolvedAppConfig {
-  const resolved = resolveConfig(resolveEnvVars(raw), {mode});
+  const resolved = resolveConfig(resolveEnvVars(raw), {mode, configDir});
   return validateConfig(resolved);
 }

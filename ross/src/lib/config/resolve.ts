@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import {HTTPMethod, Mode} from '@/interfaces';
 import {
   ApiKeyProvider,
@@ -225,6 +227,7 @@ export function resolveDocs(
 export function resolveInfrastructure(
   infrastructure: AppConfigInput['infrastructure'],
   mode: Mode,
+  configDir?: string,
 ): ResolvedInfrastructureConfig {
   const database = infrastructure?.database;
 
@@ -236,6 +239,14 @@ export function resolveInfrastructure(
       connection: {url: database.connection.url},
       timeout: database.timeout ?? DEFAULT_DB_TIMEOUT,
     };
+
+    if (database.migrations) {
+      const baseDir = configDir ?? process.cwd();
+      resolvedDatabase.migrations = {
+        directory: path.resolve(baseDir, database.migrations.directory),
+        dangerouslyAllowDDL: database.migrations.dangerouslyAllowDDL ?? false,
+      };
+    }
   } else if (mode !== 'prod') {
     resolvedDatabase = {...DEFAULT_DEV_DATABASE};
   } else {
@@ -445,6 +456,7 @@ export function resolveRbac(input?: RbacConfig): RbacConfig {
 
 export interface ResolveConfigOptions {
   mode: Mode;
+  configDir?: string;
 }
 
 /**
@@ -456,14 +468,14 @@ export interface ResolveConfigOptions {
  */
 export function resolveConfig(
   raw: AppConfigInput,
-  {mode}: ResolveConfigOptions,
+  {mode, configDir}: ResolveConfigOptions,
 ): ResolvedAppConfig {
   const application = resolveApplication(raw.application);
 
   const config: ResolvedAppConfig = {
     application,
     docs: resolveDocs(raw.docs, mode, application.name),
-    infrastructure: resolveInfrastructure(raw.infrastructure, mode),
+    infrastructure: resolveInfrastructure(raw.infrastructure, mode, configDir),
     data: resolveData(raw.data),
     apis: (raw.apis ? clone(raw.apis) : {}) as ApisConfig,
     customEndpoints: raw.customEndpoints

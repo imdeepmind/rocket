@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import {expect, test} from 'vitest';
 
 import {
@@ -172,6 +174,82 @@ test('prod mode keeps an explicit database timeout', () => {
     connection: {url: './data.db'},
     timeout: 5000,
   });
+});
+
+test('resolves migrations directory relative to configDir and defaults dangerouslyAllowDDL to false', () => {
+  const config = resolveConfig(
+    {
+      application: {name: 'rocket'},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://localhost/db'},
+          migrations: {
+            directory: './custom-migrations',
+          },
+        },
+      },
+      data: {models: {}},
+    },
+    {mode: 'prod', configDir: '/custom/config/dir'},
+  );
+
+  expect(config.infrastructure.database.migrations).toEqual({
+    directory: '/custom/config/dir/custom-migrations',
+    dangerouslyAllowDDL: false,
+  });
+});
+
+test('resolves migrations directory relative to process.cwd() when configDir is omitted', () => {
+  const config = resolveConfig(
+    {
+      application: {name: 'rocket'},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://localhost/db'},
+          migrations: {
+            directory: './custom-migrations',
+            dangerouslyAllowDDL: true,
+          },
+        },
+      },
+      data: {models: {}},
+    },
+    {mode: 'prod'},
+  );
+
+  expect(config.infrastructure.database.migrations).toEqual({
+    directory: path.resolve(process.cwd(), './custom-migrations'),
+    dangerouslyAllowDDL: true,
+  });
+});
+
+test('preserves absolute migrations directory', () => {
+  const absoluteDir = path.resolve('/var/migrations');
+  const config = resolveConfig(
+    {
+      application: {name: 'rocket'},
+      infrastructure: {
+        database: {
+          engine: 'sqlite',
+          connection: {url: './data.db'},
+          migrations: {
+            directory: absoluteDir,
+          },
+        },
+      },
+      data: {models: {}},
+    },
+    {mode: 'dev', configDir: '/some/other/dir'},
+  );
+
+  expect(config.infrastructure.database.migrations?.directory).toBe(
+    absoluteDir,
+  );
+  expect(config.infrastructure.database.migrations?.dangerouslyAllowDDL).toBe(
+    false,
+  );
 });
 
 test('dev mode keeps an explicit database engine and url', () => {

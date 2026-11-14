@@ -119,6 +119,26 @@ describe('cli/index', () => {
     );
   });
 
+  it('dispatches "ross migrate --dangerously-allow-ddl" to handleMigrate with dangerouslyAllowDdl: true', async () => {
+    const cli = buildCli();
+    await cli.parseAsync([
+      'node',
+      'ross',
+      'migrate',
+      '-c',
+      'test.json',
+      '--dangerously-allow-ddl',
+    ]);
+
+    expect(migrateCommand.handleMigrate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: 'test.json',
+        dangerouslyAllowDdl: true,
+      }),
+      expect.anything(),
+    );
+  });
+
   it('dispatches "ross config show" to handleConfigShow', async () => {
     const cli = buildCli();
     await cli.parseAsync(['node', 'ross', 'config', 'show', '-c', 'test.json']);
