@@ -1,15 +1,14 @@
 import {startServer, type StartServerResult} from '@/server';
 
-import {defineConfig, type DefineConfigOptions} from '@/lib/config/define';
+import {defineConfig} from '@/lib/config/define';
 
-import type {AppConfigInput} from '@/interfaces/config';
+import type {AppConfigInput, DefineConfigOptions} from '@/interfaces/config';
 
 import '@/types/fastify';
 
 export {default as migrateDatabase} from '@/migrator';
 
 export {defineConfig};
-export type {DefineConfigOptions} from '@/lib/config/define';
 
 export type CreateServerOptions = DefineConfigOptions;
 
@@ -41,6 +40,7 @@ export type {
   CacheDbConfig,
   CustomEndpointConfig,
   DatabaseConfig,
+  DefineConfigOptions,
   EmailConfig,
   ModelConfigInput,
   ModelFieldConfig,

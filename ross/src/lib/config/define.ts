@@ -1,14 +1,10 @@
 import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 
-import {Mode} from '@/interfaces';
-import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
-
-export interface DefineConfigOptions {
-  /** Configuration mode. Defaults to `prod` when NODE_ENV is `production`. */
-  mode?: Mode;
-  /** Base directory for relative paths such as custom functions/migrations. */
-  configDir?: string;
-}
+import {
+  AppConfigInput,
+  DefineConfigOptions,
+  ResolvedAppConfig,
+} from '@/interfaces/config';
 
 /**
  * Runs the full configuration pipeline: environment resolution, default
@@ -25,7 +21,7 @@ export function defineConfig(
   config: AppConfigInput,
   options: DefineConfigOptions = {},
 ): ResolvedAppConfig {
-  const mode: Mode =
+  const mode =
     options.mode ?? (process.env.NODE_ENV === 'production' ? 'prod' : 'dev');
 
   return resolveAndValidateConfig(config, mode, options.configDir);
