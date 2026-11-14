@@ -8,13 +8,16 @@ import {
   mysqlConnBeginTxMock,
   mysqlConnCommitMock,
   mysqlConnQueryMock,
+  mysqlConnReleaseMock,
   mysqlConnRollbackMock,
-  mysqlCreateConnectionMock,
   mysqlEndMock,
+  mysqlGetConnectionMock,
+  mysqlQueryMock,
   pgClientQueryMock,
   pgClientReleaseMock,
   pgConnectMock,
   pgEndMock,
+  pgQueryMock,
   sqliteAllMock,
   sqliteCloseMock,
   sqliteExecMock,
@@ -41,17 +44,13 @@ describe('runCustomMigrations', () => {
 
   describe('PostgreSQL', () => {
     it('provisions table, queries history, and applies pending data migration in a transaction', async () => {
-      // 1. Table creation query resolves
+      // 1. Table creation query resolves on pool
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      // 2. Select history query resolves empty on pool
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      // 3. Content query on transaction client
       pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      // 2. Select history query resolves empty
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      // 3. BEGIN
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      // 4. Content query
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      // 5. History insert
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      // 6. COMMIT
+      // 4. History insert on transaction client
       pgClientQueryMock.mockResolvedValueOnce({rows: []});
 
       const migration: DiscoveredMigration = {
@@ -71,12 +70,13 @@ describe('runCustomMigrations', () => {
       });
 
       expect(result).toEqual({applied: ['01_init.sql'], skipped: []});
-      expect(pgConnectMock).toHaveBeenCalledTimes(1);
-      expect(pgClientQueryMock).toHaveBeenCalledWith(
+      expect(pgQueryMock).toHaveBeenCalledWith(
         expect.stringContaining('CREATE TABLE IF NOT EXISTS _ross_migrations'),
+        [],
       );
+      expect(pgConnectMock).toHaveBeenCalledTimes(1);
       expect(pgClientQueryMock).toHaveBeenCalledWith('BEGIN');
-      expect(pgClientQueryMock).toHaveBeenCalledWith(migration.content);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(migration.content, []);
       expect(pgClientQueryMock).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO _ross_migrations'),
         ['01_init.sql', 'hash-01', false],
@@ -87,8 +87,8 @@ describe('runCustomMigrations', () => {
     });
 
     it('skips already executed data migration with matching checksum', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({
         rows: [
           {
             id: '01_init.sql',
@@ -116,14 +116,13 @@ describe('runCustomMigrations', () => {
       });
 
       expect(result).toEqual({applied: [], skipped: ['01_init.sql']});
-      expect(pgClientQueryMock).not.toHaveBeenCalledWith('BEGIN');
-      expect(pgClientReleaseMock).toHaveBeenCalledTimes(1);
+      expect(pgConnectMock).not.toHaveBeenCalled();
       expect(pgEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('throws error when already executed migration has mismatched checksum', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({
         rows: [
           {
             id: '01_init.sql',
@@ -154,13 +153,12 @@ describe('runCustomMigrations', () => {
         'Migration "01_init.sql" has been executed previously with a different checksum. Altering executed migrations is not allowed.',
       );
 
-      expect(pgClientReleaseMock).toHaveBeenCalledTimes(1);
       expect(pgEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('re-executes DDL migration on every run when dangerouslyAllowDDL is true with upsert', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({
         rows: [
           {
             id: '02_view.sql',
@@ -170,10 +168,8 @@ describe('runCustomMigrations', () => {
           },
         ],
       });
-      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // BEGIN
       pgClientQueryMock.mockResolvedValueOnce({rows: []}); // Content
       pgClientQueryMock.mockResolvedValueOnce({rows: []}); // UPSERT
-      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // COMMIT
 
       const migration: DiscoveredMigration = {
         id: '02_view.sql',
@@ -202,8 +198,8 @@ describe('runCustomMigrations', () => {
     });
 
     it('rejects DDL migration when dangerouslyAllowDDL is false', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({rows: []});
 
       const migration: DiscoveredMigration = {
         id: '02_ddl.sql',
@@ -226,16 +222,14 @@ describe('runCustomMigrations', () => {
         'Migration "02_ddl.sql" contains non-DML/DDL statements. Custom migrations only permit data operations by default. Use --dangerously-allow-ddl to allow this at your own risk.',
       );
 
-      expect(pgClientReleaseMock).toHaveBeenCalledTimes(1);
       expect(pgEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('rolls back transaction on SQL execution error and stops further execution', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // Table
-      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // History
+      pgQueryMock.mockResolvedValueOnce({rows: []}); // Table
+      pgQueryMock.mockResolvedValueOnce({rows: []}); // History
       pgClientQueryMock.mockResolvedValueOnce({rows: []}); // BEGIN
       pgClientQueryMock.mockRejectedValueOnce(new Error('Syntax error')); // Content fails
-      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // ROLLBACK
 
       const migration1: DiscoveredMigration = {
         id: '01_broken.sql',
@@ -266,15 +260,18 @@ describe('runCustomMigrations', () => {
       ).rejects.toThrow('Migration "01_broken.sql" failed: Syntax error');
 
       expect(pgClientQueryMock).toHaveBeenCalledWith('ROLLBACK');
-      expect(pgClientQueryMock).not.toHaveBeenCalledWith(migration2.content);
+      expect(pgClientQueryMock).not.toHaveBeenCalledWith(
+        migration2.content,
+        [],
+      );
       expect(pgClientReleaseMock).toHaveBeenCalledTimes(1);
       expect(pgEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('handles rollback failure gracefully without masking the original error', async () => {
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
-      pgClientQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgQueryMock.mockResolvedValueOnce({rows: []});
+      pgClientQueryMock.mockResolvedValueOnce({rows: []}); // BEGIN
       pgClientQueryMock.mockRejectedValueOnce(new Error('Query error'));
       pgClientQueryMock.mockRejectedValueOnce(new Error('Rollback failed'));
 
@@ -330,11 +327,11 @@ describe('runCustomMigrations', () => {
       expect(sqlitePrepareMock).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO _ross_migrations'),
       );
-      expect(sqliteRunMock).toHaveBeenCalledWith(
+      expect(sqliteRunMock).toHaveBeenCalledWith([
         '01_seed.sql',
         'hash-sqlite-01',
         0,
-      );
+      ]);
       expect(sqliteExecMock).toHaveBeenCalledWith('COMMIT');
       expect(sqliteCloseMock).toHaveBeenCalledTimes(1);
     });
@@ -435,7 +432,11 @@ describe('runCustomMigrations', () => {
       expect(sqlitePrepareMock).toHaveBeenCalledWith(
         expect.stringContaining('ON CONFLICT (id) DO UPDATE'),
       );
-      expect(sqliteRunMock).toHaveBeenCalledWith('02_view.sql', 'new-hash', 1);
+      expect(sqliteRunMock).toHaveBeenCalledWith([
+        '02_view.sql',
+        'new-hash',
+        1,
+      ]);
       expect(sqliteExecMock).toHaveBeenCalledWith('COMMIT');
     });
 
@@ -504,8 +505,8 @@ describe('runCustomMigrations', () => {
 
   describe('MySQL', () => {
     it('provisions table, queries history, and applies pending migration in a transaction', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]); // Table
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]); // History
+      mysqlQueryMock.mockResolvedValueOnce([[]]); // Table
+      mysqlQueryMock.mockResolvedValueOnce([[]]); // History
       mysqlConnQueryMock.mockResolvedValueOnce([[]]); // Content
       mysqlConnQueryMock.mockResolvedValueOnce([[]]); // History insert
 
@@ -526,26 +527,25 @@ describe('runCustomMigrations', () => {
       });
 
       expect(result).toEqual({applied: ['01_init.sql'], skipped: []});
-      expect(mysqlCreateConnectionMock).toHaveBeenCalledWith({
-        uri: 'mysql://user:pass@localhost:3306/testdb',
-        multipleStatements: true,
-      });
-      expect(mysqlConnQueryMock).toHaveBeenCalledWith(
+      expect(mysqlQueryMock).toHaveBeenCalledWith(
         expect.stringContaining('CREATE TABLE IF NOT EXISTS _ross_migrations'),
+        [],
       );
+      expect(mysqlGetConnectionMock).toHaveBeenCalledTimes(1);
       expect(mysqlConnBeginTxMock).toHaveBeenCalledTimes(1);
-      expect(mysqlConnQueryMock).toHaveBeenCalledWith(migration.content);
+      expect(mysqlConnQueryMock).toHaveBeenCalledWith(migration.content, []);
       expect(mysqlConnQueryMock).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO _ross_migrations'),
-        ['01_init.sql', 'hash-mysql-01', false],
+        ['01_init.sql', 'hash-mysql-01', 0],
       );
       expect(mysqlConnCommitMock).toHaveBeenCalledTimes(1);
+      expect(mysqlConnReleaseMock).toHaveBeenCalledTimes(1);
       expect(mysqlEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('skips already executed data migration with matching checksum', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]);
-      mysqlConnQueryMock.mockResolvedValueOnce([
+      mysqlQueryMock.mockResolvedValueOnce([[]]);
+      mysqlQueryMock.mockResolvedValueOnce([
         [
           {
             id: '01_init.sql',
@@ -573,13 +573,13 @@ describe('runCustomMigrations', () => {
       });
 
       expect(result).toEqual({applied: [], skipped: ['01_init.sql']});
-      expect(mysqlConnBeginTxMock).not.toHaveBeenCalled();
+      expect(mysqlGetConnectionMock).not.toHaveBeenCalled();
       expect(mysqlEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('throws error when already executed migration has mismatched checksum', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]);
-      mysqlConnQueryMock.mockResolvedValueOnce([
+      mysqlQueryMock.mockResolvedValueOnce([[]]);
+      mysqlQueryMock.mockResolvedValueOnce([
         [
           {
             id: '01_init.sql',
@@ -614,8 +614,8 @@ describe('runCustomMigrations', () => {
     });
 
     it('re-executes DDL migration on every run when dangerouslyAllowDDL is true with upsert', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]);
-      mysqlConnQueryMock.mockResolvedValueOnce([
+      mysqlQueryMock.mockResolvedValueOnce([[]]);
+      mysqlQueryMock.mockResolvedValueOnce([
         [
           {
             id: '02_proc.sql',
@@ -649,14 +649,14 @@ describe('runCustomMigrations', () => {
       expect(mysqlConnBeginTxMock).toHaveBeenCalledTimes(1);
       expect(mysqlConnQueryMock).toHaveBeenCalledWith(
         expect.stringContaining('ON DUPLICATE KEY UPDATE'),
-        ['02_proc.sql', 'new-hash', true],
+        ['02_proc.sql', 'new-hash', 1],
       );
       expect(mysqlConnCommitMock).toHaveBeenCalledTimes(1);
     });
 
     it('rolls back transaction on error and ends connection', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]); // Table
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]); // History
+      mysqlQueryMock.mockResolvedValueOnce([[]]); // Table
+      mysqlQueryMock.mockResolvedValueOnce([[]]); // History
       mysqlConnQueryMock.mockRejectedValueOnce(new Error('MySQL query error')); // Content
 
       const migration: DiscoveredMigration = {
@@ -678,12 +678,13 @@ describe('runCustomMigrations', () => {
       ).rejects.toThrow('Migration "01_broken.sql" failed: MySQL query error');
 
       expect(mysqlConnRollbackMock).toHaveBeenCalledTimes(1);
+      expect(mysqlConnReleaseMock).toHaveBeenCalledTimes(1);
       expect(mysqlEndMock).toHaveBeenCalledTimes(1);
     });
 
     it('handles rollback failure gracefully without masking the original error', async () => {
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]);
-      mysqlConnQueryMock.mockResolvedValueOnce([[]]);
+      mysqlQueryMock.mockResolvedValueOnce([[]]);
+      mysqlQueryMock.mockResolvedValueOnce([[]]);
       mysqlConnQueryMock.mockRejectedValueOnce(new Error('MySQL query error'));
       mysqlConnRollbackMock.mockRejectedValueOnce(new Error('Rollback failed'));
 
