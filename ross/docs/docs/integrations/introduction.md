@@ -60,9 +60,9 @@ Each OTP email contains:
 
 The generated code is hashed and stored in the configured cache (`infrastructure.cache`). The plain code is sent only through the email provider.
 
-:::warning[Use Redis for OTPs in production]
+:::warning[Use a distributed cache for OTPs in production]
 
-With the in-memory cache engine, OTPs are not shared across processes and are lost on restart. In multi-instance deployments, configure `infrastructure.cache` with `"engine": "redis"`.
+With the in-memory cache engine, OTPs are not shared across processes and are lost on restart. In multi-instance deployments, configure `infrastructure.cache` with `"engine": "redis"` or `"engine": "memcached"`. See [Cache](../cache/introduction.md) for configuration details.
 
 :::
 

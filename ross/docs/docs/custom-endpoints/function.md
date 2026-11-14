@@ -82,7 +82,7 @@ Provides access to incoming HTTP parameters and user authentication:
 Provides access to ROSS runtime instances and decorators:
 
 - **`app.db.query(sql, params)`**: Uniform database query runner. Returns `{ rows, changes }`.
-- **`app.cache`**: Active cache provider (`app.cache.get(key)`, `app.cache.set(key, value, ttlSeconds)`).
+- **`app.cache`**: Active cache provider with a uniform API across in-memory, Redis, and Memcached (`app.cache.get(key)`, `app.cache.set(key, value, ttlSeconds)`, `delete`, `has`, `clear`, `ping`). See [Cache](../cache/introduction.md).
 - **`app.appConfig`**: The resolved application configuration tree.
 
 ## Return Values & Response Format

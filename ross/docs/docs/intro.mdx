@@ -88,7 +88,7 @@ defaults:
 - docs are enabled in `dev` and disabled in `prod`
 - the dev database defaults to SQLite (`./database.db`); `prod` requires
   `infrastructure.database`
-- the cache defaults to in-memory; Redis is only used when configured
+- the cache defaults to in-memory; configure `infrastructure.cache` with Redis or Memcached when you need a shared cache
 - authentication defaults to disabled
 - rate limiting defaults to disabled (`100 requests / 1m`)
 - CORS defaults to disabled
@@ -107,6 +107,7 @@ ross config show -c config.json
 - **Framework**: Fastify
 - **Architecture**: TypeScript
 - **Database**: PostgreSQL and SQLite
+- **Cache**: In-memory, Redis, and Memcached
 - **Validation**: AJV
 - **Documentation**: Swagger / OpenAPI
 - **Testing**: Vitest
