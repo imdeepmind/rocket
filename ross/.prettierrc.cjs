@@ -9,6 +9,7 @@ module.exports = {
     '^@/migrator(/.*)?$',
     '^@/plugin(/.*)?$',
     '^@/server(/.*)?$',
+    '^@/index$',
     '',
     '^@/lib(/.*)?$',
     '',

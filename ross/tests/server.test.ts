@@ -12,6 +12,7 @@ import corsPlugin from '@/plugin/cors';
 import otpPlugin from '@/plugin/otp';
 import rateLimitPlugin from '@/plugin/rate-limit';
 import {startServer} from '@/server';
+import {createServer} from '@/index';
 
 import {resolveConfig} from '@/lib/config/resolve';
 
@@ -1183,6 +1184,17 @@ describe('Server', () => {
         (call: unknown[]) => call[0] === cachePlugin,
       );
       expect(cachePluginCall).toBeDefined();
+    });
+  });
+
+  describe('createServer', () => {
+    it('should resolve and validate raw configuration without listening', async () => {
+      const result = await createServer(mockConfig);
+
+      expect(result.app).toBe(mockApp);
+      expect(Array.isArray(result.routes)).toBe(true);
+      expect(mockApp.listen).not.toHaveBeenCalled();
+      expect(mockApp.appConfig?.docs.openapi.enabled).toBe(true);
     });
   });
 });

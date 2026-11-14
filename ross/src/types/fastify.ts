@@ -47,3 +47,5 @@ declare module 'fastify' {
     otp: import('@/interfaces/otp').IOtpService;
   }
 }
+
+export {};
