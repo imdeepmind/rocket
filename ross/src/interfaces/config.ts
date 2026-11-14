@@ -1,7 +1,7 @@
 import {HTTPMethod} from './index';
 
 export type DBEngine = 'sqlite' | 'postgres' | 'mysql';
-export type CacheDbEngine = 'redis' | 'memory';
+export type CacheDbEngine = 'redis' | 'memory' | 'memcached';
 export type DataType =
   | 'integer'
   | 'string'
@@ -474,6 +474,13 @@ export type ResolvedCacheConfig =
   | {engine: 'memory'}
   | {
       engine: 'redis';
+      connection: {
+        url: string;
+      };
+      timeout: number;
+    }
+  | {
+      engine: 'memcached';
       connection: {
         url: string;
       };

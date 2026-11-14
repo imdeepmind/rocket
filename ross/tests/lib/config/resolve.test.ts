@@ -780,6 +780,49 @@ test('redis cache timeout is preserved and memory cache is normalized', () => {
   expect(memoryConfig.infrastructure.cache).toEqual({engine: 'memory'});
 });
 
+test('memcached cache gets a default timeout and preserves the url', () => {
+  const config = resolveConfig(
+    devInput({
+      infrastructure: {
+        database: {engine: 'sqlite', connection: {url: './data.db'}},
+        cache: {
+          engine: 'memcached',
+          connection: {url: 'localhost:11211'},
+        },
+      },
+    }),
+    {mode: 'dev'},
+  );
+
+  expect(config.infrastructure.cache).toEqual({
+    engine: 'memcached',
+    connection: {url: 'localhost:11211'},
+    timeout: 10000,
+  });
+});
+
+test('memcached cache timeout is preserved', () => {
+  const config = resolveConfig(
+    devInput({
+      infrastructure: {
+        database: {engine: 'sqlite', connection: {url: './data.db'}},
+        cache: {
+          engine: 'memcached',
+          connection: {url: 'memcached://localhost:11211'},
+          timeout: 3000,
+        },
+      },
+    }),
+    {mode: 'dev'},
+  );
+
+  expect(config.infrastructure.cache).toEqual({
+    engine: 'memcached',
+    connection: {url: 'memcached://localhost:11211'},
+    timeout: 3000,
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Authentication
 // ---------------------------------------------------------------------------

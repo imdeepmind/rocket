@@ -4,12 +4,17 @@ import {FastifyInstance} from 'fastify';
 import fp from 'fastify-plugin';
 import {ulid} from 'ulid';
 
-import {isRedisCacheConfigured, NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
+import {isDistributedCacheConfigured} from '@/lib/cache';
 
 import {IOtpService, OtpData} from '@/interfaces/otp';
 
 import {compare, hash} from '@/utils/hash';
-import {OTP_EMAIL_SUBJECT, OTP_LENGTH, OTP_TTL_SECONDS} from '@/constants';
+import {
+  NODE_CACHE_OTP_WARNING,
+  OTP_EMAIL_SUBJECT,
+  OTP_LENGTH,
+  OTP_TTL_SECONDS,
+} from '@/constants';
 
 /**
  * Get the cache key for an OTP
@@ -48,7 +53,7 @@ export default fp(
             ulid: otpUlid,
           };
 
-          if (!isRedisCacheConfigured(fastify.appConfig)) {
+          if (!isDistributedCacheConfigured(fastify.appConfig)) {
             fastify.log.warn(NODE_CACHE_OTP_WARNING);
           }
 

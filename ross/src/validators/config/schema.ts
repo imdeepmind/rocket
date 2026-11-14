@@ -266,6 +266,27 @@ const cacheSchema = {
         timeout: {type: 'integer', minimum: 1},
       },
     },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['engine', 'connection'],
+      properties: {
+        engine: {const: 'memcached'},
+        connection: {
+          type: 'object',
+          required: ['url'],
+          additionalProperties: false,
+          properties: {
+            url: {
+              type: 'string',
+              pattern:
+                '^(memcached:\\/\\/)?[a-zA-Z0-9._-]+:[0-9]+(,[a-zA-Z0-9._-]+:[0-9]+)*$',
+            },
+          },
+        },
+        timeout: {type: 'integer', minimum: 1},
+      },
+    },
   ],
 };
 

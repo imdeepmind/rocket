@@ -2,9 +2,9 @@ import Fastify from 'fastify';
 import NodeCache from 'node-cache';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {ICache} from '@/plugin/cache';
 import rateLimitPlugin from '@/plugin/rate-limit';
 
+import {ICache} from '@/interfaces/cache';
 import {ResolvedAppConfig} from '@/interfaces/config';
 
 const {mockParseDuration} = vi.hoisted(() => {
@@ -75,6 +75,7 @@ describe('rate-limit plugin', () => {
       has: vi.fn().mockResolvedValue(false),
       clear: vi.fn().mockResolvedValue(undefined),
       ping: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
       raw: {} as unknown as NodeCache,
     };
   });
@@ -190,6 +191,7 @@ describe('rate-limit plugin', () => {
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
         ping: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -232,6 +234,7 @@ describe('rate-limit plugin', () => {
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
         ping: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -262,6 +265,7 @@ describe('rate-limit plugin', () => {
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
         ping: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -302,6 +306,7 @@ describe('rate-limit plugin', () => {
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
         ping: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 
@@ -336,6 +341,7 @@ describe('rate-limit plugin', () => {
         has: vi.fn().mockResolvedValue(false),
         clear: vi.fn().mockResolvedValue(undefined),
         ping: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
         raw: {} as unknown as NodeCache,
       };
 

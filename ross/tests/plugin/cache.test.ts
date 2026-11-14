@@ -1,216 +1,107 @@
 import Fastify, {FastifyInstance} from 'fastify';
-import Redis from 'ioredis';
-import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import cachePlugin from '@/plugin/cache';
 
+import {createCache} from '@/lib/cache';
 import {resolveConfig} from '@/lib/config/resolve';
 
-import {CacheDbConfig, ResolvedAppConfig} from '@/interfaces/config';
+import {ICache} from '@/interfaces/cache';
 
-// Mock ioredis
-vi.mock('ioredis', () => {
-  const RedisMock = vi.fn().mockImplementation(
-    class {
-      on = vi.fn();
-      ping = vi.fn().mockResolvedValue('PONG');
-      get = vi.fn();
-      set = vi.fn();
-      del = vi.fn();
-      exists = vi.fn();
-      flushdb = vi.fn();
-      quit = vi.fn();
-    } as unknown as () => unknown,
-  );
-  return {default: RedisMock};
-});
+vi.mock('@/lib/cache', () => ({
+  createCache: vi.fn(),
+}));
+
+function createCacheMock(): ICache {
+  return {
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+    has: vi.fn().mockResolvedValue(false),
+    clear: vi.fn().mockResolvedValue(undefined),
+    ping: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+    raw: {},
+  };
+}
 
 describe('cache plugin', () => {
   let app: FastifyInstance;
+  let cache: ICache;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    cache = createCacheMock();
+    vi.mocked(createCache).mockReturnValue(cache);
   });
 
   afterEach(async () => {
     if (app) {
-      await app.close();
+      try {
+        await app.close();
+      } catch {
+        // The ping-failure test leaves the instance unready.
+      }
     }
   });
 
-  describe('NodeCache', () => {
-    it('uses node-cache when no cache config is provided', async () => {
-      app = Fastify();
-      app.appConfig = resolveConfig(
-        {application: {name: 'test'}, data: {models: {}}},
-        {mode: 'dev'},
-      );
-      await app.register(cachePlugin);
-      await app.ready();
+  function createApp(): FastifyInstance {
+    const fastify = Fastify();
+    fastify.appConfig = resolveConfig(
+      {application: {name: 'test'}, data: {models: {}}},
+      {mode: 'dev'},
+    );
+    return fastify;
+  }
 
-      expect(app.hasDecorator('cache')).toBe(true);
-      expect(app.cache.raw.constructor.name).toBe('NodeCache');
-    });
+  it('creates, pings and decorates the configured cache', async () => {
+    app = createApp();
 
-    it('performs node-cache operations', async () => {
-      app = Fastify();
-      app.appConfig = resolveConfig(
-        {application: {name: 'test'}, data: {models: {}}},
-        {mode: 'dev'},
-      );
-      await app.register(cachePlugin);
-      await app.ready();
+    await app.register(cachePlugin);
+    await app.ready();
 
-      expect(await app.cache.get('foo')).toBeNull();
-
-      await app.cache.set('foo', 'bar');
-      expect(await app.cache.get('foo')).toBe('bar');
-
-      await app.cache.set('foo2', 'bar2', 100);
-      expect(await app.cache.get('foo2')).toBe('bar2');
-
-      expect(await app.cache.has('foo')).toBe(true);
-
-      await app.cache.delete('foo');
-      expect(await app.cache.has('foo')).toBe(false);
-
-      await app.cache.set('key', 'val');
-      await app.cache.clear();
-      expect(await app.cache.get('key')).toBeNull();
-
-      await expect(app.cache.ping()).resolves.toBeUndefined();
-    });
+    expect(createCache).toHaveBeenCalledWith(
+      {engine: 'memory'},
+      {logger: app.log},
+    );
+    expect(cache.ping).toHaveBeenCalledTimes(1);
+    expect(app.hasDecorator('cache')).toBe(true);
+    expect(app.cache).toBe(cache);
   });
 
-  describe('Redis Cache', () => {
-    beforeEach(() => {
-      app = Fastify();
-      const mockConfig: CacheDbConfig = {
-        engine: 'redis',
-        connection: {
-          url: 'redis://localhost:6379',
-        },
-      };
-      app.appConfig = {
-        infrastructure: {cache: mockConfig},
-      } as unknown as ResolvedAppConfig;
+  it('closes the cache when the application shuts down', async () => {
+    app = createApp();
 
-      // Need to setup vi.mocked so we can control the instance methods properly,
-      // but since we mocked the constructor we can intercept via vi.mocked
-      (Redis as unknown as Mock).mockClear();
-    });
+    await app.register(cachePlugin);
+    await app.ready();
+    await app.close();
 
-    it('uses redis when infrastructure.cache engine is redis', async () => {
-      const mockPing = vi.fn().mockResolvedValue('PONG');
-      (Redis as unknown as Mock).mockImplementation(
-        class {
-          on = vi.fn();
-          ping = mockPing;
-          quit = vi.fn();
-        } as unknown as () => unknown,
-      );
+    expect(cache.close).toHaveBeenCalled();
+  });
 
-      await app.register(cachePlugin);
-      await app.ready();
+  it('closes the cache and fails startup when the ping fails', async () => {
+    vi.mocked(cache.ping).mockRejectedValueOnce(
+      new Error('Cache is unavailable'),
+    );
+    app = createApp();
 
-      expect(app.hasDecorator('cache')).toBe(true);
-      expect(mockPing).toHaveBeenCalled();
+    await expect(app.register(cachePlugin)).rejects.toThrow(
+      'Cache is unavailable',
+    );
+    expect(cache.close).toHaveBeenCalledTimes(1);
+  });
 
-      const MockRedisConstructor = vi.mocked(Redis);
-      const mockCalls = MockRedisConstructor.mock.calls as unknown as Array<
-        [string, {retryStrategy?: (times: number) => number}]
-      >;
-      const args = mockCalls[0];
-      const retryStrategy = args[1]?.retryStrategy;
+  it('surfaces the ping error even when cleanup also fails', async () => {
+    vi.mocked(cache.ping).mockRejectedValueOnce(
+      new Error('Cache is unavailable'),
+    );
+    vi.mocked(cache.close).mockRejectedValueOnce(new Error('close failed'));
+    app = createApp();
 
-      expect(retryStrategy?.(10)).toBe(500);
-      expect(retryStrategy?.(100)).toBe(2000);
-    });
-
-    it('throws error when redis connection fails', async () => {
-      const mockPing = vi
-        .fn()
-        .mockRejectedValue(new Error('Connection Failed'));
-      (Redis as unknown as Mock).mockImplementation(
-        class {
-          on = vi.fn();
-          ping = mockPing;
-          quit = vi.fn();
-        } as unknown as () => unknown,
-      );
-
-      await expect(app.register(cachePlugin)).rejects.toThrow(
-        'Connection Failed',
-      );
-    });
-
-    it('performs redis operations', async () => {
-      const mockGet = vi
-        .fn()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce('"bar"')
-        .mockResolvedValueOnce('invalid json');
-      const mockSet = vi.fn().mockResolvedValue('OK');
-      const mockExists = vi
-        .fn()
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(0);
-      const mockDel = vi.fn().mockResolvedValue(1);
-      const mockFlushDb = vi.fn().mockResolvedValue('OK');
-
-      (Redis as unknown as Mock).mockImplementation(
-        class {
-          on = (event: string, cb: (err?: Error) => void) => {
-            if (event === 'error') cb(new Error('test error'));
-            if (event === 'connect') cb();
-            if (event === 'ready') cb();
-          };
-          ping = vi.fn().mockResolvedValue('PONG');
-          get = mockGet;
-          set = mockSet;
-          del = mockDel;
-          exists = mockExists;
-          flushdb = mockFlushDb;
-          quit = vi.fn();
-        } as unknown as () => unknown,
-      );
-
-      await app.register(cachePlugin);
-      await app.ready();
-
-      // get missing
-      expect(await app.cache.get('foo')).toBeNull();
-      // get stringified
-      expect(await app.cache.get('foo')).toBe('bar');
-      // get fallback non-json
-      expect(await app.cache.get('foo')).toBe('invalid json');
-
-      // set object
-      await app.cache.set('obj', {a: 1});
-      expect(mockSet).toHaveBeenCalledWith('obj', '{"a":1}');
-
-      // set string
-      await app.cache.set('str', 'val');
-      expect(mockSet).toHaveBeenCalledWith('str', 'val');
-
-      // set with ttl
-      await app.cache.set('ttl', 'val', 10);
-      expect(mockSet).toHaveBeenCalledWith('ttl', 'val', 'EX', 10);
-
-      // exists
-      expect(await app.cache.has('exist')).toBe(true);
-      expect(await app.cache.has('miss')).toBe(false);
-
-      // del
-      await app.cache.delete('key');
-      expect(mockDel).toHaveBeenCalledWith('key');
-
-      // clear
-      await app.cache.clear();
-      expect(mockFlushDb).toHaveBeenCalled();
-
-      // ping
-      await expect(app.cache.ping()).resolves.toBeUndefined();
-    });
+    await expect(app.register(cachePlugin)).rejects.toThrow(
+      'Cache is unavailable',
+    );
+    expect(cache.close).toHaveBeenCalledTimes(1);
   });
 });
