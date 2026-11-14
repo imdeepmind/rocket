@@ -238,7 +238,7 @@
     "customEndpoints": {
         "getUserById": {
             "method": "POST",
-            "path": "/users-by-id",
+            "path": "/users-by-id/:id",
             "description": "Returns a user by ID.",
             "validation": {
                 "type": "object",
@@ -266,11 +266,90 @@
         },
         "updatePostTitle": {
             "method": "PUT",
-            "path": "/posts-title",
+            "path": "/posts-title/:id",
             "description": "Updates post title by path id and body title.",
             "handler": {
                 "type": "sql",
                 "sql": "UPDATE posts SET title = [[body.title:string]] WHERE id = [[path.id:integer]];"
+            }
+        },
+        "sayHello": {
+            "method": "GET",
+            "path": "/hello",
+            "description": "Sample custom function returning a greeting with query and header support.",
+            "validation": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "x-client-name": {
+                        "type": "string"
+                    }
+                }
+            },
+            "handler": {
+                "type": "function",
+                "file": "./example_functions/hello.ts",
+                "exportName": "sayHello",
+                "inputs": {
+                    "query": ["name"],
+                    "headers": ["x-client-name"]
+                }
+            }
+        },
+        "getUserStats": {
+            "method": "GET",
+            "path": "/users-stats",
+            "description": "Sample custom function demonstrating app.db and app.cache access.",
+            "validation": {
+                "type": "object",
+                "properties": {
+                    "role": {
+                        "type": "string"
+                    }
+                }
+            },
+            "handler": {
+                "type": "function",
+                "file": "./example_functions/users.ts",
+                "exportName": "getUserStats",
+                "inputs": {
+                    "query": ["role"]
+                }
+            }
+        },
+        "echoData": {
+            "method": "POST",
+            "path": "/echo/:category",
+            "description": "Sample custom function demonstrating path params, body, and headers with (request, app).",
+            "validation": {
+                "type": "object",
+                "required": ["category", "message"],
+                "properties": {
+                    "category": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "integer"
+                    },
+                    "x-request-id": {
+                        "type": "string"
+                    }
+                }
+            },
+            "handler": {
+                "type": "function",
+                "file": "./example_functions/echo.ts",
+                "exportName": "echoData",
+                "inputs": {
+                    "path": ["category"],
+                    "body": ["message", "priority"],
+                    "headers": ["x-request-id"]
+                }
             }
         }
     },
@@ -328,6 +407,15 @@
         "custom.test.all.unknown.updatePostTitle": {
             "authorization": true,
             "roles": ["editor:senior", "admin"]
+        },
+        "custom.test.all.unknown.sayHello": {
+            "authorization": false
+        },
+        "custom.test.all.unknown.getUserStats": {
+            "authorization": false
+        },
+        "custom.test.all.unknown.echoData": {
+            "authorization": false
         },
         "aggregate.test.users.email.getAggregation": {
             "supportedAggregations": ["count"]

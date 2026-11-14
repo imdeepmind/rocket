@@ -2055,7 +2055,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+)(\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+))*$"',
     },
     {
       name: 'path with space',
@@ -2071,7 +2071,7 @@ describe('validateInvalidCustomEndpointsConfig', () => {
         },
       },
       expected:
-        '/customEndpoints/test/path must match pattern "^\\/[a-zA-Z0-9_-]+$"',
+        '/customEndpoints/test/path must match pattern "^\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+)(\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+))*$"',
     },
     {
       name: 'empty description',
@@ -2698,7 +2698,7 @@ describe('validateValidCustomEndpointsConfig', () => {
         customEndpoints: {
           sample_query: {
             method: 'POST' as const,
-            path: '/test',
+            path: '/test/:id',
             description: 'test',
             validation: {
               type: 'object',
@@ -2718,7 +2718,7 @@ describe('validateValidCustomEndpointsConfig', () => {
         customEndpoints: {
           sample_query: {
             method: 'GET' as const,
-            path: '/test',
+            path: '/test/:id',
             description: 'test',
             validation: {
               type: 'object',
@@ -4936,7 +4936,7 @@ describe('validateCustomEndpointsConfig', () => {
       customEndpoints: {
         testEndpoint: {
           method: 'GET',
-          path: '/test-path',
+          path: '/test-path/:id',
           description: 'Test endpoint description',
           validation: {
             type: 'object',

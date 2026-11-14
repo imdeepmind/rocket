@@ -185,10 +185,29 @@ export interface WebhookConfig {
   triggerOnResponse: boolean;
 }
 
-export interface CustomEndpointHandler {
-  type: string;
+export interface CustomEndpointSqlHandler {
+  type: 'sql';
   sql: string;
 }
+
+export interface CustomEndpointFunctionInputs {
+  path?: string[];
+  query?: string[];
+  body?: string[];
+  headers?: string[];
+  header?: string[];
+}
+
+export interface CustomEndpointFunctionHandler {
+  type: 'function';
+  file: string;
+  exportName: string;
+  inputs?: CustomEndpointFunctionInputs;
+}
+
+export type CustomEndpointHandler =
+  | CustomEndpointSqlHandler
+  | CustomEndpointFunctionHandler;
 
 export interface CustomEndpointConfig {
   method: HTTPMethod;

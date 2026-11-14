@@ -441,7 +441,7 @@ const webhookSchema = {
   },
 };
 
-const customEndpointHandlerSchema = {
+const customEndpointSqlHandlerSchema = {
   type: 'object',
   required: ['type', 'sql'],
   additionalProperties: false,
@@ -457,6 +457,61 @@ const customEndpointHandlerSchema = {
   },
 };
 
+const customEndpointFunctionHandlerSchema = {
+  type: 'object',
+  required: ['type', 'file', 'exportName'],
+  additionalProperties: false,
+  properties: {
+    type: {
+      type: 'string',
+      enum: ['function'],
+    },
+    file: {
+      type: 'string',
+      minLength: 1,
+    },
+    exportName: {
+      type: 'string',
+      minLength: 1,
+    },
+    inputs: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        path: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+        query: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+        body: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+        headers: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+        header: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+      },
+    },
+  },
+};
+
+const customEndpointHandlerSchema = {
+  oneOf: [customEndpointSqlHandlerSchema, customEndpointFunctionHandlerSchema],
+};
+
 const customEndpointSchema = {
   type: 'object',
   required: ['method', 'path', 'description', 'handler'],
@@ -468,7 +523,8 @@ const customEndpointSchema = {
     },
     path: {
       type: 'string',
-      pattern: '^\\/[a-zA-Z0-9_-]+$',
+      pattern:
+        '^\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+)(\\/([a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+))*$',
     },
     description: {
       type: 'string',

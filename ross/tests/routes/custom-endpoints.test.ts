@@ -24,7 +24,7 @@ describe('test custom-endpoints api', () => {
     },
     updateUser: {
       method: 'POST' as const,
-      path: '/update-user',
+      path: '/update-user/:id',
       description: 'Update a user by ID',
       validation: {
         type: 'object',
@@ -379,9 +379,10 @@ describe('test custom-endpoints api', () => {
           description: 'Test unsupported handler type',
           validation: {},
           handler: {
-            type: 'function' as const,
-            sql: 'SELECT 1;',
-          },
+            type: 'grpc' as unknown as 'sql',
+            file: './fn.ts',
+            exportName: 'test',
+          } as never,
         },
       };
 
@@ -399,7 +400,7 @@ describe('test custom-endpoints api', () => {
 
       expect(response.statusCode).toBe(500);
       expect(JSON.parse(response.body).message).toBe(
-        'Handler type "function" not supported',
+        'Handler type "grpc" not supported',
       );
 
       await fastify.close();
@@ -505,7 +506,7 @@ describe('test custom-endpoints api', () => {
       const noValidationEndpoints = {
         getUser: {
           method: 'GET' as const,
-          path: '/get-user',
+          path: '/get-user/:id',
           description: 'Get user by id without explicit validation in config',
           handler: {
             type: 'sql' as const,

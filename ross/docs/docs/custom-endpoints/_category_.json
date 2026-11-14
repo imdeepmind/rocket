@@ -1,0 +1,9 @@
+{
+  "label": "Custom Endpoints",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Configure raw SQL queries and custom TypeScript functions as REST API endpoints in ROSS."
+  }
+}
+

@@ -19,6 +19,8 @@ export interface StartCLIOptions extends BaseCLIOptions {
 
 export interface MigrateCLIOptions extends BaseCLIOptions {}
 
+export interface BuildCLIOptions extends BaseCLIOptions {}
+
 export interface ConfigShowCLIOptions extends BaseCLIOptions {
   mode?: Mode;
   raw?: boolean;
@@ -36,6 +38,7 @@ export type CLIOptions =
   | DevCLIOptions
   | StartCLIOptions
   | MigrateCLIOptions
+  | BuildCLIOptions
   | ConfigShowCLIOptions
   | ConfigValidateCLIOptions
   | RoutesCLIOptions;
@@ -46,6 +49,8 @@ export {
   DatabaseQuery,
   TransactionClient,
 } from './database';
+
+export {CustomFunctionHandler} from './functions';
 
 export interface StructuredResponse<T = unknown> {
   code: number;

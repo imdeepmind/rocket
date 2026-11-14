@@ -5,4 +5,6 @@ module.exports = [
   '.migrations/',
   'playwright-report/',
   'test-results/',
+  '.ross/',
+  'example_functions/',
 ];
