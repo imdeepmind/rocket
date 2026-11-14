@@ -120,6 +120,68 @@ describe('redactConfig', () => {
     }
   });
 
+  test('redacts aws-ses secretAccessKey but keeps accessKeyId', () => {
+    const config = buildConfig({
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+            accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+            secretAccessKey: 'super-secret-key',
+          },
+        },
+      },
+    });
+
+    const redacted = redactConfig(config);
+
+    expect(redacted.integrations.email).toEqual({
+      provider: 'aws-ses',
+      config: {
+        region: 'us-east-1',
+        fromEmail: 'noreply@example.com',
+        accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+        secretAccessKey: '***',
+      },
+    });
+  });
+
+  test('leaves aws-ses config without credentials untouched', () => {
+    const config = buildConfig({
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'eu-west-1',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    });
+
+    const redacted = redactConfig(config);
+
+    expect(redacted.integrations.email).toEqual({
+      provider: 'aws-ses',
+      config: {
+        region: 'eu-west-1',
+        fromEmail: 'noreply@example.com',
+      },
+    });
+  });
+
+  test('leaves the dummy email provider untouched', () => {
+    const config = buildConfig({
+      integrations: {email: {provider: 'dummy'}},
+    });
+
+    const redacted = redactConfig(config);
+
+    expect(redacted.integrations.email).toEqual({provider: 'dummy'});
+  });
+
   test('does not mutate the original config', () => {
     const config = buildConfig({
       authentication: upAuth,

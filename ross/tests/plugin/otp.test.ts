@@ -133,6 +133,7 @@ describe('OTP Plugin', () => {
       // Verify email was sent
       expect(communicateMock.sendEmail).toHaveBeenCalledWith(
         email,
+        'Your OTP Code',
         expect.stringContaining('Your OTP Code'),
         expect.stringContaining('one-time password'),
       );
@@ -143,11 +144,12 @@ describe('OTP Plugin', () => {
 
       await (app as any).otp.sendOTPForVerification(email);
 
-      const [sentEmail, htmlBody, textBody] = (
+      const [sentEmail, subject, htmlBody, textBody] = (
         communicateMock.sendEmail as Mock
       ).mock.calls[0];
 
       expect(sentEmail).toBe(email);
+      expect(subject).toBe('Your OTP Code');
       expect(htmlBody).toContain('<h2>Your OTP Code</h2>');
       expect(htmlBody).toContain('expire in 10 minutes');
       expect(textBody).toContain('one-time password');
@@ -160,7 +162,7 @@ describe('OTP Plugin', () => {
       // We'll verify indirectly by checking the email content
       await (app as any).otp.sendOTPForVerification(email);
 
-      const [, htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
+      const [, , htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
 
       // Extract OTP from HTML body (format: <strong>XXXXXX</strong>)
       const otpMatch = htmlBody.match(/<strong>(\d{6})<\/strong>/);
@@ -230,7 +232,7 @@ describe('OTP Plugin', () => {
       const ulid = await (app as any).otp.sendOTPForVerification(email);
 
       // Extract the OTP from the email body to verify it
-      const [, htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
+      const [, , htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
       const otpMatch = htmlBody.match(/<strong>(\d{6})<\/strong>/);
       const correctOtp = otpMatch![1];
 
@@ -287,8 +289,8 @@ describe('OTP Plugin', () => {
 
       // Get OTPs from email bodies
       const calls = (communicateMock.sendEmail as Mock).mock.calls;
-      const otp1Match = calls[0][1].match(/<strong>(\d{6})<\/strong>/);
-      const otp2Match = calls[1][1].match(/<strong>(\d{6})<\/strong>/);
+      const otp1Match = calls[0][2].match(/<strong>(\d{6})<\/strong>/);
+      const otp2Match = calls[1][2].match(/<strong>(\d{6})<\/strong>/);
 
       const otp1 = otp1Match![1];
       const otp2 = otp2Match![1];
@@ -374,7 +376,7 @@ describe('OTP Plugin', () => {
       expect(ulid).toBeDefined();
 
       // Step 2: Extract OTP from email
-      const [, htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
+      const [, , htmlBody] = (communicateMock.sendEmail as Mock).mock.calls[0];
       const otpMatch = htmlBody.match(/<strong>(\d{6})<\/strong>/);
       const otp = otpMatch![1];
 

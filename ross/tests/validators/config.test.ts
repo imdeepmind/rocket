@@ -4898,6 +4898,191 @@ describe('validateIntegrationsConfig', () => {
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
   });
 
+  it('should pass when aws-ses email config includes explicit credentials', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+            accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+            secretAccessKey: 'super-secret-key',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should pass when aws-ses email config omits credentials for the IAM role fallback', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when aws-ses email config is missing the config object', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'config'",
+    );
+  });
+
+  it('should throw when aws-ses config is missing the region', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'region'",
+    );
+  });
+
+  it('should throw when aws-ses config is missing fromEmail', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'fromEmail'",
+    );
+  });
+
+  it('should throw when aws-ses fromEmail is not a valid email', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'not-an-email',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match format "email"',
+    );
+  });
+
+  it('should throw when aws-ses provides accessKeyId without secretAccessKey', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+            accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must have property secretAccessKey when property accessKeyId is present',
+    );
+  });
+
+  it('should throw when aws-ses provides secretAccessKey without accessKeyId', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+            secretAccessKey: 'super-secret-key',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must have property accessKeyId when property secretAccessKey is present',
+    );
+  });
+
+  it('should throw when aws-ses config has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'aws-ses',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+            profile: 'dev',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+
+  it('should throw when the dummy provider includes a config block', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'dummy',
+          config: {
+            region: 'us-east-1',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match exactly one schema in oneOf',
+    );
+  });
+
   it('should throw when email config is missing required provider', () => {
     const config = {
       ...validBaseConfig,
@@ -4922,7 +5107,7 @@ describe('validateIntegrationsConfig', () => {
     };
 
     expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      'must be equal to one of the allowed values',
+      'must be equal to constant',
     );
   });
 

@@ -739,16 +739,43 @@ const authenticationSchema = {
   ],
 };
 
-const emailSchema = {
+const dummyEmailSchema = {
   type: 'object',
   additionalProperties: false,
   required: ['provider'],
   properties: {
-    provider: {
-      type: 'string',
-      enum: ['dummy'],
+    provider: {const: 'dummy'},
+  },
+};
+
+const awsSesEmailSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['provider', 'config'],
+  properties: {
+    provider: {const: 'aws-ses'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['region', 'fromEmail'],
+      properties: {
+        region: {type: 'string', minLength: 1},
+        fromEmail: {type: 'string', format: 'email'},
+        accessKeyId: {type: 'string', minLength: 1},
+        secretAccessKey: {type: 'string', minLength: 1},
+      },
+      // Explicit credentials are optional (IAM roles / default credential
+      // chain), but they must always be provided as a pair.
+      dependencies: {
+        accessKeyId: ['secretAccessKey'],
+        secretAccessKey: ['accessKeyId'],
+      },
     },
   },
+};
+
+const emailSchema = {
+  oneOf: [dummyEmailSchema, awsSesEmailSchema],
 };
 
 const integrationsSchema = {
