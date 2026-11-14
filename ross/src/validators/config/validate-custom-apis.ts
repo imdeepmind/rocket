@@ -199,11 +199,13 @@ function validateCustomAPIs(config: AppConfig): string[] {
       const inputsPath = inputs?.path ?? [];
       const inputsQuery = inputs?.query ?? [];
       const inputsBody = inputs?.body ?? [];
+      const inputsHeaders = inputs?.headers ?? inputs?.header ?? [];
 
       const hasInputs =
         inputsPath.length > 0 ||
         inputsQuery.length > 0 ||
-        inputsBody.length > 0;
+        inputsBody.length > 0 ||
+        inputsHeaders.length > 0;
 
       const validationProps =
         (endpoint.validation?.properties as
@@ -243,6 +245,14 @@ function validateCustomAPIs(config: AppConfig): string[] {
         }
       }
 
+      for (const param of inputsHeaders) {
+        if (!(param in validationProps)) {
+          errors.push(
+            `${path}/handler/inputs/headers: parameter "${param}" not declared in validation schema properties`,
+          );
+        }
+      }
+
       if (
         (endpoint.method === 'GET' || endpoint.method === 'DELETE') &&
         inputsBody.length > 0
@@ -271,7 +281,13 @@ function validateCustomAPIs(config: AppConfig): string[] {
 
       // Check for parameter duplication across sources
       const seenParams = new Set<string>();
-      for (const source of ['path', 'query', 'body'] as const) {
+      for (const source of [
+        'path',
+        'query',
+        'body',
+        'headers',
+        'header',
+      ] as const) {
         const list = inputs?.[source] ?? [];
         for (const param of list) {
           if (seenParams.has(param)) {

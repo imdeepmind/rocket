@@ -379,10 +379,10 @@ describe('test custom-endpoints api', () => {
           description: 'Test unsupported handler type',
           validation: {},
           handler: {
-            type: 'function' as const,
+            type: 'grpc' as unknown as 'sql',
             file: './fn.ts',
             exportName: 'test',
-          },
+          } as never,
         },
       };
 
@@ -400,7 +400,7 @@ describe('test custom-endpoints api', () => {
 
       expect(response.statusCode).toBe(500);
       expect(JSON.parse(response.body).message).toBe(
-        'Handler type "function" not supported',
+        'Handler type "grpc" not supported',
       );
 
       await fastify.close();

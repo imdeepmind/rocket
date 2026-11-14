@@ -493,6 +493,16 @@ const customEndpointFunctionHandlerSchema = {
           items: {type: 'string', minLength: 1},
           uniqueItems: true,
         },
+        headers: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
+        header: {
+          type: 'array',
+          items: {type: 'string', minLength: 1},
+          uniqueItems: true,
+        },
       },
     },
   },

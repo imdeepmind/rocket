@@ -50,6 +50,8 @@ export {
   TransactionClient,
 } from './database';
 
+export {CustomFunctionHandler} from './functions';
+
 export interface StructuredResponse<T = unknown> {
   code: number;
   message: string;

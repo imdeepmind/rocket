@@ -436,5 +436,59 @@ describe('custom endpoints validation', () => {
         '/customEndpoints/testFn/handler/inputs: parameter "status" cannot be declared in multiple input sources',
       );
     });
+
+    it('accepts headers in inputs when declared in validation properties', () => {
+      const config = createConfigWithEndpoints({
+        testFn: {
+          method: 'POST',
+          path: '/users',
+          description: 'Test fn',
+          validation: {
+            type: 'object',
+            properties: {
+              'x-api-key': {type: 'string'},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/test.ts',
+            exportName: 'test',
+            inputs: {
+              headers: ['x-api-key'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('throws when parameter in inputs.headers is not declared in validation properties', () => {
+      const config = createConfigWithEndpoints({
+        testFn: {
+          method: 'POST',
+          path: '/users',
+          description: 'Test fn',
+          validation: {
+            type: 'object',
+            properties: {
+              other: {type: 'string'},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/test.ts',
+            exportName: 'test',
+            inputs: {
+              headers: ['x-missing-header'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).toThrow(
+        '/customEndpoints/testFn/handler/inputs/headers: parameter "x-missing-header" not declared in validation schema properties',
+      );
+    });
   });
 });
