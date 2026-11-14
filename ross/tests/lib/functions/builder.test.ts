@@ -416,4 +416,115 @@ describe('buildFunctions', () => {
       /is not a function \(typeof is "object"\)/,
     );
   });
+
+  it('throws an error with compilation diagnostics when function file has syntax errors', async () => {
+    const fnDir = path.join(tempDir, 'function');
+    fs.mkdirSync(fnDir, {recursive: true});
+
+    const sourcePath = path.join(fnDir, 'syntax-error.ts');
+    fs.writeFileSync(
+      sourcePath,
+      'export async function syntaxError() { const x = ; return x; }',
+    );
+
+    const config = createMockConfig({
+      brokenSyntax: {
+        method: 'GET',
+        path: '/broken',
+        description: 'Syntax error endpoint',
+        handler: {
+          type: 'function',
+          file: './function/syntax-error.ts',
+          exportName: 'syntaxError',
+        },
+      },
+    });
+
+    await expect(
+      buildFunctions({config, configDir: tempDir}),
+    ).rejects.toThrow();
+  });
+
+  it('bundles local helper modules into a self-contained bundle', async () => {
+    const fnDir = path.join(tempDir, 'function');
+    const utilsDir = path.join(fnDir, 'utils');
+    fs.mkdirSync(utilsDir, {recursive: true});
+
+    const helperPath = path.join(utilsDir, 'calc.ts');
+    fs.writeFileSync(
+      helperPath,
+      'export function add(a: number, b: number): number { return a + b; }',
+    );
+
+    const sourcePath = path.join(fnDir, 'calculator.ts');
+    fs.writeFileSync(
+      sourcePath,
+      `
+      import { add } from './utils/calc';
+      export async function sum(request: any) {
+        return { result: add(request.a, request.b) };
+      }
+      `,
+    );
+
+    const config = createMockConfig({
+      calculator: {
+        method: 'POST',
+        path: '/calc',
+        description: 'Calculator endpoint',
+        handler: {
+          type: 'function',
+          file: './function/calculator.ts',
+          exportName: 'sum',
+        },
+      },
+    });
+
+    const results = await buildFunctions({config, configDir: tempDir});
+    expect(results).toHaveLength(1);
+
+    const mod = await import(
+      pathToFileURL(results[0].outputFile).href + '?t=' + Date.now()
+    );
+    const output = await mod.sum({a: 10, b: 25});
+    expect(output).toEqual({result: 35});
+  });
+
+  it('respects custom outDir parameter', async () => {
+    const fnDir = path.join(tempDir, 'function');
+    fs.mkdirSync(fnDir, {recursive: true});
+
+    const sourcePath = path.join(fnDir, 'custom-out.ts');
+    fs.writeFileSync(
+      sourcePath,
+      'export async function customOutHandler() { return "custom"; }',
+    );
+
+    const customOutDir = path.join(tempDir, 'custom-output-dir');
+
+    const config = createMockConfig({
+      customOutEndpoint: {
+        method: 'GET',
+        path: '/custom-out',
+        description: 'Custom out directory',
+        handler: {
+          type: 'function',
+          file: './function/custom-out.ts',
+          exportName: 'customOutHandler',
+        },
+      },
+    });
+
+    const results = await buildFunctions({
+      config,
+      configDir: tempDir,
+      outDir: customOutDir,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].outputFile).toBe(
+      path.join(customOutDir, 'custom-out.js'),
+    );
+    expect(fs.existsSync(results[0].outputFile)).toBe(true);
+  });
 });
