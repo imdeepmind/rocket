@@ -2,12 +2,16 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {createEmailSender} from '@/lib/email';
 import {createDummyEmailSender} from '@/lib/email/dummy';
+import {createSendgridEmailSender} from '@/lib/email/sendgrid';
 import {createSesEmailSender} from '@/lib/email/ses';
 
 import {EmailConfig} from '@/interfaces/config';
 import {EmailSender} from '@/interfaces/email';
 
 vi.mock('@/lib/email/dummy', () => ({createDummyEmailSender: vi.fn()}));
+vi.mock('@/lib/email/sendgrid', () => ({
+  createSendgridEmailSender: vi.fn(),
+}));
 vi.mock('@/lib/email/ses', () => ({createSesEmailSender: vi.fn()}));
 
 describe('createEmailSender', () => {
@@ -17,6 +21,7 @@ describe('createEmailSender', () => {
     vi.clearAllMocks();
     vi.mocked(createDummyEmailSender).mockReturnValue(sender);
     vi.mocked(createSesEmailSender).mockReturnValue(sender);
+    vi.mocked(createSendgridEmailSender).mockReturnValue(sender);
   });
 
   it('creates a dummy sender for the dummy provider', () => {
@@ -50,6 +55,19 @@ describe('createEmailSender', () => {
     createEmailSender({provider: 'aws-ses', config: options});
 
     expect(createSesEmailSender).toHaveBeenCalledWith(options);
+  });
+
+  it('creates a SendGrid sender with the provider options', () => {
+    const options = {
+      apiKey: 'SG.super-secret-api-key',
+      fromEmail: 'noreply@example.com',
+    };
+    const config: EmailConfig = {provider: 'sendgrid', config: options};
+
+    expect(createEmailSender(config)).toBe(sender);
+    expect(createSendgridEmailSender).toHaveBeenCalledWith(options);
+    expect(createDummyEmailSender).not.toHaveBeenCalled();
+    expect(createSesEmailSender).not.toHaveBeenCalled();
   });
 
   it('throws for an unsupported provider', () => {

@@ -774,8 +774,26 @@ const awsSesEmailSchema = {
   },
 };
 
+const sendgridEmailSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['provider', 'config'],
+  properties: {
+    provider: {const: 'sendgrid'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['apiKey', 'fromEmail'],
+      properties: {
+        apiKey: {type: 'string', minLength: 1},
+        fromEmail: {type: 'string', format: 'email'},
+      },
+    },
+  },
+};
+
 const emailSchema = {
-  oneOf: [dummyEmailSchema, awsSesEmailSchema],
+  oneOf: [dummyEmailSchema, awsSesEmailSchema, sendgridEmailSchema],
 };
 
 const integrationsSchema = {

@@ -34,6 +34,7 @@ export function redactConnectionUrl(url: string): string {
  *   - up-auth `jwtSecret`
  *   - api-key `key`
  *   - aws-ses `secretAccessKey`
+ *   - sendgrid `apiKey`
  *   - database / cache credentials inside connection URLs
  */
 export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
@@ -54,6 +55,10 @@ export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
 
   if (email?.provider === 'aws-ses' && email.config.secretAccessKey) {
     email.config.secretAccessKey = REDACTED;
+  }
+
+  if (email?.provider === 'sendgrid') {
+    email.config.apiKey = REDACTED;
   }
 
   redacted.infrastructure.database.connection.url = redactConnectionUrl(

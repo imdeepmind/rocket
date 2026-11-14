@@ -182,6 +182,30 @@ describe('redactConfig', () => {
     expect(redacted.integrations.email).toEqual({provider: 'dummy'});
   });
 
+  test('redacts the sendgrid apiKey but keeps fromEmail', () => {
+    const config = buildConfig({
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: 'SG.super-secret-api-key',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    });
+
+    const redacted = redactConfig(config);
+
+    expect(redacted.integrations.email).toEqual({
+      provider: 'sendgrid',
+      config: {
+        apiKey: '***',
+        fromEmail: 'noreply@example.com',
+      },
+    });
+  });
+
   test('does not mutate the original config', () => {
     const config = buildConfig({
       authentication: upAuth,

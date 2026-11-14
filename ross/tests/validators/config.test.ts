@@ -5064,6 +5064,132 @@ describe('validateIntegrationsConfig', () => {
     );
   });
 
+  it('should pass when sendgrid email config is valid', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: 'SG.super-secret-api-key',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+
+  it('should throw when sendgrid email config is missing the config object', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'config'",
+    );
+  });
+
+  it('should throw when sendgrid config is missing apiKey', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'apiKey'",
+    );
+  });
+
+  it('should throw when sendgrid config is missing fromEmail', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: 'SG.super-secret-api-key',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      "must have required property 'fromEmail'",
+    );
+  });
+
+  it('should throw when sendgrid apiKey is empty', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: '',
+            fromEmail: 'noreply@example.com',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have fewer than 1 characters',
+    );
+  });
+
+  it('should throw when sendgrid fromEmail is not a valid email', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: 'SG.super-secret-api-key',
+            fromEmail: 'not-an-email',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must match format "email"',
+    );
+  });
+
+  it('should throw when sendgrid config has extra properties', () => {
+    const config = {
+      ...validBaseConfig,
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          config: {
+            apiKey: 'SG.super-secret-api-key',
+            fromEmail: 'noreply@example.com',
+            region: 'us-east-1',
+          },
+        },
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'must NOT have additional properties',
+    );
+  });
+
   it('should throw when the dummy provider includes a config block', () => {
     const config = {
       ...validBaseConfig,

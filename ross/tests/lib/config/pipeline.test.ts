@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {expect, test} from 'vitest';
+import {afterEach, expect, test, vi} from 'vitest';
 
 import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {resolveConfig} from '@/lib/config/resolve';
@@ -12,6 +12,10 @@ const EXAMPLE_CONFIG_PATH = path.resolve('example_config.json');
 const GOLDEN_SNAPSHOT_PATH = path.resolve(
   'tests/lib/config/__goldens__/example_config.resolved.json',
 );
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 test('example_config.json resolves to the checked-in golden snapshot', () => {
   const raw = JSON.parse(
@@ -100,4 +104,40 @@ test('rejects empty string dangerouslyOverrideDefaultVariant in pipeline validat
   expect(() => resolveAndValidateConfig(raw, 'dev')).toThrow(
     '/application/dangerouslyOverrideDefaultVariant must NOT have fewer than 1 characters',
   );
+});
+
+test('resolves the SendGrid apiKey from the environment', () => {
+  vi.stubEnv('SENDGRID_API_KEY', 'SG.resolved-from-env');
+
+  const raw: AppConfigInput = {
+    application: {name: 'SendGrid Pipeline Test'},
+    data: {
+      models: {
+        notes: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, nullable: false},
+          },
+        },
+      },
+    },
+    integrations: {
+      email: {
+        provider: 'sendgrid',
+        config: {
+          apiKey: 'env:SENDGRID_API_KEY',
+          fromEmail: 'noreply@example.com',
+        },
+      },
+    },
+  };
+
+  const resolved = resolveAndValidateConfig(raw, 'dev');
+
+  expect(resolved.integrations.email).toEqual({
+    provider: 'sendgrid',
+    config: {
+      apiKey: 'SG.resolved-from-env',
+      fromEmail: 'noreply@example.com',
+    },
+  });
 });

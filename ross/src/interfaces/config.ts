@@ -51,7 +51,7 @@ export type JsonSchemaObject = {
 export type WebhookData = 'query' | 'body' | 'params' | 'response';
 export type AuthProviderType = 'api-key' | 'up-auth';
 export type ServerSideParamType = 'path' | 'query' | 'body';
-export type EmailEngine = 'dummy' | 'aws-ses';
+export type EmailEngine = 'dummy' | 'aws-ses' | 'sendgrid';
 export type RelationType = 'belongsTo';
 export type ForeignKeyAction =
   | 'cascade'
@@ -334,6 +334,11 @@ export interface AwsSesEmailOptions {
   secretAccessKey?: string;
 }
 
+export interface SendgridEmailOptions {
+  apiKey: string;
+  fromEmail: string;
+}
+
 export interface DummyEmailConfig {
   provider: 'dummy';
 }
@@ -343,7 +348,15 @@ export interface AwsSesEmailConfig {
   config: AwsSesEmailOptions;
 }
 
-export type EmailConfig = DummyEmailConfig | AwsSesEmailConfig;
+export interface SendgridEmailConfig {
+  provider: 'sendgrid';
+  config: SendgridEmailOptions;
+}
+
+export type EmailConfig =
+  | DummyEmailConfig
+  | AwsSesEmailConfig
+  | SendgridEmailConfig;
 
 export interface IntegrationsConfig {
   email?: EmailConfig;

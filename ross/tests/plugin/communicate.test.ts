@@ -84,6 +84,22 @@ describe('communicate plugin', () => {
     expect(createEmailSender).toHaveBeenCalledWith(email);
   });
 
+  it('passes the sendgrid configuration to the sender factory', async () => {
+    const email: EmailConfig = {
+      provider: 'sendgrid',
+      config: {
+        apiKey: 'SG.super-secret-api-key',
+        fromEmail: 'noreply@example.com',
+      },
+    };
+    app = buildApp(email);
+
+    await app.register(communicatePlugin);
+    await app.ready();
+
+    expect(createEmailSender).toHaveBeenCalledWith(email);
+  });
+
   it('throws when integrations.email is not configured', async () => {
     app = buildApp();
 
