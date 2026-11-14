@@ -1,4 +1,4 @@
-import {HTTPMethod} from './index';
+import {HTTPMethod, Mode} from './index';
 
 export type DBEngine = 'sqlite' | 'postgres' | 'mysql';
 export type CacheDbEngine = 'redis' | 'memory' | 'memcached';
@@ -424,6 +424,13 @@ export interface AppConfigInput {
   integrations?: IntegrationsConfig;
   apiVariants?: Record<string, ApiVariantEntry>;
   rbac?: RbacConfig;
+}
+
+export interface DefineConfigOptions {
+  /** Configuration mode. Defaults to `prod` when NODE_ENV is `production`. */
+  mode?: Mode;
+  /** Base directory for relative paths such as custom functions/migrations. */
+  configDir?: string;
 }
 
 export interface ResolvedCorsConfig {
