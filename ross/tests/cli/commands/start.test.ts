@@ -5,7 +5,12 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {showWelcomeScreen} from '@/lib/server/welcome';
+
+vi.mock('@/lib/config/pipeline', () => ({
+  resolveAndValidateConfig: vi.fn((cfg: unknown) => cfg),
+}));
 
 vi.mock('@/server', () => ({
   startServer: vi.fn(),
@@ -65,18 +70,20 @@ describe('cli/commands/start', () => {
 
     await handleStart({});
 
-    expect(process.env.NODE_ENV).toBe('production');
+    expect(process.env.NODE_ENV).toBe('prod');
     expect(configFinder.resolveConfigPath).toHaveBeenCalledWith(undefined);
     expect(configFinder.loadConfigFile).toHaveBeenCalledWith(
       '/app/config.json',
     );
-    expect(startServer).toHaveBeenCalledWith(
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
       {application: {name: 'Prod App'}},
-      3000,
       'prod',
-      false,
-      false,
+      '/app',
+      {},
     );
+    expect(startServer).toHaveBeenCalledWith({
+      application: {name: 'Prod App'},
+    });
     expect(mockApp.listen).toHaveBeenCalledWith({
       port: 3000,
       host: '0.0.0.0',
@@ -111,13 +118,9 @@ describe('cli/commands/start', () => {
       verbose: true,
     });
 
-    expect(startServer).toHaveBeenCalledWith(
-      {application: {name: 'Prod App'}},
-      80,
-      'prod',
-      true,
-      false,
-    );
+    expect(startServer).toHaveBeenCalledWith({
+      application: {name: 'Prod App'},
+    });
   });
 
   it('uses PORT environment variable when port option is omitted', async () => {

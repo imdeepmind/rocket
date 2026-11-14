@@ -1,6 +1,6 @@
 import {resolveEnvVars} from '@/lib/config/env';
 
-import {Mode} from '@/interfaces';
+import {CLIOptions, Mode} from '@/interfaces';
 import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
 
 import {validateConfig} from '@/validators/config';
@@ -18,7 +18,12 @@ export function resolveAndValidateConfig(
   raw: AppConfigInput,
   mode: Mode,
   configDir?: string,
+  cliOptions?: CLIOptions,
 ): ResolvedAppConfig {
-  const resolved = resolveConfig(resolveEnvVars(raw), {mode, configDir});
+  const resolved = resolveConfig(resolveEnvVars(raw), {
+    mode,
+    configDir,
+    cliOptions,
+  });
   return validateConfig(resolved);
 }

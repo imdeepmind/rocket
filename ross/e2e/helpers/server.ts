@@ -8,8 +8,10 @@ import {
 } from '@playwright/test';
 import {FastifyInstance} from 'fastify';
 
+import migrateDatabase from '@/migrator';
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {RouteInfo} from '@/lib/server/welcome';
 
 import {AppConfigInput} from '@/interfaces/config';
@@ -74,7 +76,11 @@ export async function createE2EServer(
   let app: FastifyInstance | undefined;
 
   try {
-    const serverResult = await startServer(config, 0, 'dev', false, migrate);
+    const resolvedConfig = resolveAndValidateConfig(config, 'dev');
+    if (migrate) {
+      await migrateDatabase(resolvedConfig);
+    }
+    const serverResult = await startServer(resolvedConfig);
     app = serverResult.app;
     await app.listen({port: 0, host: '127.0.0.1'});
 

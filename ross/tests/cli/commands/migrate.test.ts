@@ -58,6 +58,7 @@ describe('cli/commands/migrate', () => {
       mockRaw,
       'prod',
       '/app',
+      {config: 'ross.json'},
     );
     expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
     expect(logSpy).toHaveBeenCalledWith('Running database migrations...');
@@ -103,9 +104,12 @@ describe('cli/commands/migrate', () => {
       handleMigrate({config: 'ross.json', dangerouslyAllowDdl: true}),
     ).rejects.toThrow('process.exit: 0');
 
-    expect(
-      mockResolved.infrastructure.database.migrations.dangerouslyAllowDDL,
-    ).toBe(true);
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
+      mockRaw,
+      'prod',
+      '/app',
+      {config: 'ross.json', dangerouslyAllowDdl: true},
+    );
     expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
 
     logSpy.mockRestore();

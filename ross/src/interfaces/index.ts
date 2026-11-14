@@ -10,6 +10,7 @@ export interface DevCLIOptions extends BaseCLIOptions {
   port?: number;
   host?: string;
   migrate?: boolean;
+  dangerouslyAllowDdl?: boolean;
 }
 
 export interface StartCLIOptions extends BaseCLIOptions {

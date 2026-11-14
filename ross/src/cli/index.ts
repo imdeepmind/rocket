@@ -36,6 +36,11 @@ export function buildCli(): Command {
       '0.0.0.0',
     )
     .option('-m, --migrate', 'Run database migrations before starting', false)
+    .option(
+      '--dangerously-allow-ddl',
+      'Allow custom migrations containing DDL statements',
+      false,
+    )
     .option('-v, --verbose', 'Enable verbose logging', false)
     .action(handleDev);
 

@@ -3,11 +3,17 @@ import * as fs from 'fs';
 
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+import {
+  discoverMigrations,
+  validateMigrations,
+} from '@/migrator/custom/discovery';
+import {runCustomMigrations} from '@/migrator/custom/runner';
 import migrateDatabase from '@/migrator/index';
 
 import {resolveModel} from '@/lib/config/resolve';
 
 import {ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
+import {DiscoveredMigration} from '@/interfaces/migrations';
 
 // Migrator tests describe sparse user models on purpose; the migrator input
 // is the resolved config, so route through a widened test type.
@@ -49,11 +55,26 @@ vi.mock('child_process', () => ({
   execSync: vi.fn(),
 }));
 
+vi.mock('@/migrator/custom/discovery', () => ({
+  discoverMigrations: vi.fn(),
+  validateMigrations: vi.fn(),
+}));
+
+vi.mock('@/migrator/custom/runner', () => ({
+  runCustomMigrations: vi.fn(),
+}));
+
 describe('migrateDatabase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(fs.mkdtempSync).mockReturnValue('/mock/tmp/dir');
     vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(discoverMigrations).mockReturnValue([]);
+    vi.mocked(validateMigrations).mockReturnValue(undefined);
+    vi.mocked(runCustomMigrations).mockResolvedValue({
+      applied: [],
+      skipped: [],
+    });
   });
 
   afterEach(() => {
@@ -148,6 +169,7 @@ describe('migrateDatabase', () => {
     expect(drizzleConfigContent).toContain(
       'url: process.env.DRIZZLE_DATABASE_URL!',
     );
+    expect(drizzleConfigContent).toContain('tablesFilter: ["users"]');
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
@@ -219,6 +241,7 @@ describe('migrateDatabase', () => {
     expect(drizzleConfigContent).toContain(
       'url: process.env.DRIZZLE_DATABASE_URL!',
     );
+    expect(drizzleConfigContent).toContain('tablesFilter: ["posts"]');
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
@@ -328,6 +351,7 @@ describe('migrateDatabase', () => {
     expect(drizzleConfigContent).toContain(
       'url: process.env.DRIZZLE_DATABASE_URL!',
     );
+    expect(drizzleConfigContent).toContain('tablesFilter: ["posts","tags"]');
 
     expect(execSync).toHaveBeenCalledWith(
       expect.stringContaining('npm run generate:sql -- --config='),
@@ -876,5 +900,194 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain("created_at: integer('created_at'");
     // updated_at from user definition is preserved
     expect(schemaContent).toContain("updated_at: integer('updated_at'");
+  });
+
+  it('should generate drizzle.config.ts with empty tablesFilter when models are empty', async () => {
+    const config = getBaseConfig('sqlite');
+    config.data.models = {};
+    await runMigrate(config);
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+    const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
+    expect(drizzleConfigContent).toContain('tablesFilter: []');
+  });
+
+  describe('custom migrations pipeline', () => {
+    const getBaseConfigWithMigrations = (
+      engine: 'sqlite' | 'postgres' | 'mysql' = 'postgres',
+      migrations?: {directory: string; dangerouslyAllowDDL: boolean},
+    ) => {
+      const config = getBaseConfig(engine);
+      config.infrastructure.database.migrations = migrations ?? {
+        directory: '/app/migrations',
+        dangerouslyAllowDDL: false,
+      };
+      return config;
+    };
+
+    it('should execute custom migrations sequentially after drizzle push', async () => {
+      const config = getBaseConfigWithMigrations('postgres', {
+        directory: '/app/migrations',
+        dangerouslyAllowDDL: false,
+      });
+
+      const callOrder: string[] = [];
+      vi.mocked(execSync).mockImplementation(() => {
+        callOrder.push('drizzle-push');
+        return '' as never;
+      });
+
+      const mockDiscovered: DiscoveredMigration[] = [
+        {
+          id: '01_init.sql',
+          name: '01_init.sql',
+          prefix: 1,
+          filePath: '/app/migrations/01_init.sql',
+          content: 'INSERT INTO foo VALUES (1);',
+          checksum: 'abc',
+          containsDDL: false,
+        },
+      ];
+
+      vi.mocked(discoverMigrations).mockImplementation(() => {
+        callOrder.push('discover');
+        return mockDiscovered;
+      });
+
+      vi.mocked(validateMigrations).mockImplementation(() => {
+        callOrder.push('validate');
+      });
+
+      vi.mocked(runCustomMigrations).mockImplementation(async () => {
+        callOrder.push('run');
+        return {applied: ['01_init.sql'], skipped: []};
+      });
+
+      await runMigrate(config);
+
+      expect(callOrder).toEqual([
+        'drizzle-push',
+        'discover',
+        'validate',
+        'run',
+      ]);
+      expect(discoverMigrations).toHaveBeenCalledWith({
+        migrationsDir: '/app/migrations',
+        engine: 'postgres',
+        dangerouslyAllowDDL: false,
+      });
+      expect(validateMigrations).toHaveBeenCalledWith(mockDiscovered, false);
+      expect(runCustomMigrations).toHaveBeenCalledWith({
+        migrations: mockDiscovered,
+        engine: 'postgres',
+        connectionUrl: 'postgres://db',
+        dangerouslyAllowDDL: false,
+      });
+    });
+
+    it('should forward dangerouslyAllowDDL from config to discover, validate, and run', async () => {
+      const config = getBaseConfigWithMigrations('mysql', {
+        directory: '/app/custom-migrations',
+        dangerouslyAllowDDL: true,
+      });
+
+      const mockDiscovered: DiscoveredMigration[] = [
+        {
+          id: '02_add_table.sql',
+          name: '02_add_table.sql',
+          prefix: 2,
+          filePath: '/app/custom-migrations/02_add_table.sql',
+          content: 'CREATE TABLE bar (id INT);',
+          checksum: 'def',
+          containsDDL: true,
+        },
+      ];
+      vi.mocked(discoverMigrations).mockReturnValue(mockDiscovered);
+
+      await runMigrate(config);
+
+      expect(discoverMigrations).toHaveBeenCalledWith({
+        migrationsDir: '/app/custom-migrations',
+        engine: 'mysql',
+        dangerouslyAllowDDL: true,
+      });
+      expect(validateMigrations).toHaveBeenCalledWith(mockDiscovered, true);
+      expect(runCustomMigrations).toHaveBeenCalledWith({
+        migrations: mockDiscovered,
+        engine: 'mysql',
+        connectionUrl: 'mysql://localhost/db',
+        dangerouslyAllowDDL: true,
+      });
+    });
+
+    it('should skip custom migrations when migrations config is undefined', async () => {
+      const config = getBaseConfig('postgres');
+      config.infrastructure.database.migrations = undefined;
+
+      await runMigrate(config);
+
+      expect(discoverMigrations).not.toHaveBeenCalled();
+      expect(validateMigrations).not.toHaveBeenCalled();
+      expect(runCustomMigrations).not.toHaveBeenCalled();
+    });
+
+    it('should skip custom migrations when directory is not configured', async () => {
+      const config = getBaseConfig('sqlite');
+      config.infrastructure.database.migrations = {
+        dangerouslyAllowDDL: false,
+      } as unknown as {directory: string; dangerouslyAllowDDL: boolean};
+
+      await runMigrate(config);
+
+      expect(discoverMigrations).not.toHaveBeenCalled();
+      expect(validateMigrations).not.toHaveBeenCalled();
+      expect(runCustomMigrations).not.toHaveBeenCalled();
+    });
+
+    it('should not execute custom migrations when Drizzle push fails', async () => {
+      const config = getBaseConfigWithMigrations('postgres');
+      const drizzleError = new Error('Drizzle push failed');
+      vi.mocked(execSync).mockImplementationOnce(() => {
+        throw drizzleError;
+      });
+
+      await expect(runMigrate(config)).rejects.toThrow('Drizzle push failed');
+
+      expect(discoverMigrations).not.toHaveBeenCalled();
+      expect(validateMigrations).not.toHaveBeenCalled();
+      expect(runCustomMigrations).not.toHaveBeenCalled();
+      expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', {
+        recursive: true,
+        force: true,
+      });
+    });
+
+    it('should halt execution when validateMigrations throws', async () => {
+      const config = getBaseConfigWithMigrations('postgres');
+      const validationError = new Error(
+        'Migration "01_ddl.sql" contains non-DML/DDL statements',
+      );
+      vi.mocked(validateMigrations).mockImplementationOnce(() => {
+        throw validationError;
+      });
+
+      await expect(runMigrate(config)).rejects.toThrow(
+        'Migration "01_ddl.sql" contains non-DML/DDL statements',
+      );
+
+      expect(runCustomMigrations).not.toHaveBeenCalled();
+    });
+
+    it('should bubble up error when runCustomMigrations throws', async () => {
+      const config = getBaseConfigWithMigrations('postgres');
+      const runnerError = new Error(
+        'Database connection failed during migration',
+      );
+      vi.mocked(runCustomMigrations).mockRejectedValueOnce(runnerError);
+
+      await expect(runMigrate(config)).rejects.toThrow(
+        'Database connection failed during migration',
+      );
+    });
   });
 });

@@ -1,6 +1,5 @@
 import Fastify, {FastifyInstance} from 'fastify';
 
-import migrateDatabase from '@/migrator';
 import authPlugin from '@/plugin/auth';
 import cachePlugin, {
   isRedisCacheConfigured,
@@ -16,7 +15,6 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
-import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {
   registerErrorHandler,
   registerNotFoundHandler,
@@ -44,8 +42,7 @@ import {
 } from '@/routes/auth/resend-otp';
 import {registerHealthRoute} from '@/routes/health';
 
-import {Mode} from '@/interfaces';
-import {AppConfigInput, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
 
 export interface StartServerResult {
   app: FastifyInstance;
@@ -53,20 +50,13 @@ export interface StartServerResult {
 }
 
 export async function startServer(
-  config: AppConfigInput,
-  port: number,
-  mode: Mode,
-  verbose: boolean = false,
-  migrate: boolean = false,
+  resolvedConfig: ResolvedAppConfig,
 ): Promise<StartServerResult> {
-  // resolve env vars, defaults, and validate in a single pipeline
-  const resolvedConfig = resolveAndValidateConfig(config, mode);
-
   const routes: RouteInfo[] = [];
 
   const app: FastifyInstance = Fastify({
     logger: {
-      level: verbose ? 'trace' : resolvedConfig.application.logLevel,
+      level: resolvedConfig.application.logLevel,
       transport: {
         target: 'pino-pretty',
         options: {
@@ -147,11 +137,6 @@ export async function startServer(
   // register swagger
   if (resolvedConfig.docs.openapi.enabled) {
     await app.register(swaggerPlugin);
-  }
-
-  // migrate the db based on config
-  if (migrate) {
-    await migrateDatabase(resolvedConfig);
   }
 
   // register health check route

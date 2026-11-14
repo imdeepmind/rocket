@@ -1,7 +1,10 @@
+import * as path from 'path';
+
 import chalk from 'chalk';
 
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {showWelcomeScreen} from '@/lib/server/welcome';
 
 import {StartCLIOptions} from '@/interfaces';
@@ -13,10 +16,17 @@ import {setupGracefulShutdown} from '../shutdown';
  * Handles 'ross start' (or 'ross serve') command execution.
  */
 export async function handleStart(options: StartCLIOptions): Promise<void> {
-  process.env.NODE_ENV = 'production';
+  process.env.NODE_ENV = 'prod';
 
   const configPath = resolveConfigPath(options.config);
+  const configDir = path.dirname(path.resolve(configPath));
   const loadedConfig = loadConfigFile(configPath);
+  const resolvedConfig = resolveAndValidateConfig(
+    loadedConfig,
+    'prod',
+    configDir,
+    options,
+  );
 
   const port =
     options.port ?? (process.env.PORT ? Number(process.env.PORT) : 3000);
@@ -30,13 +40,7 @@ export async function handleStart(options: StartCLIOptions): Promise<void> {
   console.log(chalk.blue('Mode: prod'));
   console.log(chalk.blue(`Verbose: ${verbose}`));
 
-  const {app, routes} = await startServer(
-    loadedConfig,
-    port,
-    'prod',
-    verbose,
-    false,
-  );
+  const {app, routes} = await startServer(resolvedConfig);
 
   setupGracefulShutdown(app);
 
