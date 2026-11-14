@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import chalk from 'chalk';
 
 import migrateDatabase from '@/migrator';
@@ -15,8 +17,16 @@ export async function handleMigrate(options: MigrateCLIOptions): Promise<void> {
   let migrationFailed = false;
   try {
     const configPath = resolveConfigPath(options.config);
+    const configDir = path.dirname(path.resolve(configPath));
     const loadedConfig = loadConfigFile(configPath);
-    const resolved = resolveAndValidateConfig(loadedConfig, 'prod');
+    const resolved = resolveAndValidateConfig(loadedConfig, 'prod', configDir);
+
+    if (
+      options.dangerouslyAllowDdl &&
+      resolved.infrastructure.database.migrations
+    ) {
+      resolved.infrastructure.database.migrations.dangerouslyAllowDDL = true;
+    }
 
     console.log(chalk.blue('Running database migrations...'));
     await migrateDatabase(resolved);

@@ -54,13 +54,59 @@ describe('cli/commands/migrate', () => {
 
     expect(configFinder.resolveConfigPath).toHaveBeenCalledWith('ross.json');
     expect(configFinder.loadConfigFile).toHaveBeenCalledWith('/app/ross.json');
-    expect(resolveAndValidateConfig).toHaveBeenCalledWith(mockRaw, 'prod');
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
+      mockRaw,
+      'prod',
+      '/app',
+    );
     expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
     expect(logSpy).toHaveBeenCalledWith('Running database migrations...');
     expect(logSpy).toHaveBeenCalledWith(
       'Database migrations completed successfully.',
     );
     expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('enables dangerouslyAllowDDL on resolved migrations config when dangerouslyAllowDdl is passed', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockRaw = {application: {name: 'Migrate App'}};
+    const mockResolved = {
+      application: {name: 'Migrate App (Resolved)'},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgres://localhost:5432/db'},
+          timeout: 5000,
+          migrations: {
+            directory: '/app/migrations',
+            dangerouslyAllowDDL: false,
+          },
+        },
+      },
+    };
+
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue(mockRaw as never);
+    vi.mocked(resolveAndValidateConfig).mockReturnValue(mockResolved as never);
+    vi.mocked(migrateDatabase).mockResolvedValue(undefined);
+
+    await expect(
+      handleMigrate({config: 'ross.json', dangerouslyAllowDdl: true}),
+    ).rejects.toThrow('process.exit: 0');
+
+    expect(
+      mockResolved.infrastructure.database.migrations.dangerouslyAllowDDL,
+    ).toBe(true);
+    expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
 
     logSpy.mockRestore();
     exitSpy.mockRestore();

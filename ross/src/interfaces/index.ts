@@ -17,7 +17,9 @@ export interface StartCLIOptions extends BaseCLIOptions {
   host?: string;
 }
 
-export interface MigrateCLIOptions extends BaseCLIOptions {}
+export interface MigrateCLIOptions extends BaseCLIOptions {
+  dangerouslyAllowDdl?: boolean;
+}
 
 export interface BuildCLIOptions extends BaseCLIOptions {}
 

@@ -178,6 +178,15 @@ const databaseSchema = {
       },
     },
     timeout: {type: 'integer', minimum: 1},
+    migrations: {
+      type: 'object',
+      required: ['directory'],
+      additionalProperties: false,
+      properties: {
+        directory: {type: 'string', minLength: 1},
+        dangerouslyAllowDDL: {type: 'boolean'},
+      },
+    },
   },
   oneOf: [
     {
