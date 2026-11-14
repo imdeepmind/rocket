@@ -6,7 +6,6 @@ import Fastify, {
 } from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import migrateDatabase from '@/migrator/index';
 import cachePlugin, {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import corsPlugin from '@/plugin/cors';
@@ -37,11 +36,15 @@ import {
 import {registerHealthRoute} from '@/routes/health';
 import {registerRoutes} from '@/routes/index';
 
-import {Mode} from '@/interfaces';
-import {AppConfig} from '@/interfaces/config';
+import {CLIOptions, Mode} from '@/interfaces';
+import {
+  AppConfig,
+  AppConfigInput,
+  ResolvedAppConfig,
+} from '@/interfaces/config';
 
 vi.mock('fastify', () => {
-  let appConfig: AppConfig | undefined;
+  let appConfig: ResolvedAppConfig | undefined;
   const storedHooks: Record<string, unknown[]> = {};
   const mockApp = {
     register: vi.fn(async (plugin: unknown) => {
@@ -78,10 +81,10 @@ vi.mock('fastify', () => {
       message,
       data,
     })),
-    set appConfig(val: AppConfig) {
+    set appConfig(val: ResolvedAppConfig) {
       appConfig = val;
     },
-    get appConfig(): AppConfig | undefined {
+    get appConfig(): ResolvedAppConfig | undefined {
       return appConfig;
     },
   };
@@ -92,10 +95,6 @@ vi.mock('fastify', () => {
 
 vi.mock('@/validators/config', () => ({
   validateConfig: vi.fn(c => c),
-}));
-
-vi.mock('@/migrator/index', () => ({
-  default: vi.fn(),
 }));
 
 vi.mock('@/routes/index', () => ({
@@ -216,12 +215,16 @@ describe('Server', () => {
     vi.restoreAllMocks();
   });
 
-  const runStart = async (
+  const resolve = (
+    cfg: AppConfigInput = mockConfig,
     mode: Mode = 'dev',
-    verbose: boolean = false,
-    migrate: boolean = false,
-  ) => {
-    await startServer(mockConfig, 3000, mode, verbose, migrate);
+    cliOptions?: CLIOptions,
+  ): ResolvedAppConfig => {
+    return resolveConfig(cfg, {mode, cliOptions});
+  };
+
+  const runStart = async (mode: Mode = 'dev', cliOptions?: CLIOptions) => {
+    await startServer(resolve(mockConfig, mode, cliOptions));
   };
 
   const runLastOnListenHook = async () => {
@@ -234,7 +237,7 @@ describe('Server', () => {
 
   it('should initialize fastify with correct logger based on configuration', async () => {
     const fastifyMock = vi.mocked(Fastify);
-    await startServer(mockConfig, 3000, 'dev');
+    await startServer(resolve(mockConfig, 'dev'));
 
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -246,7 +249,7 @@ describe('Server', () => {
 
     fastifyMock.mockClear();
 
-    await startServer(mockConfig, 3000, 'prod');
+    await startServer(resolve(mockConfig, 'prod'));
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         logger: expect.objectContaining({
@@ -263,7 +266,7 @@ describe('Server', () => {
       application: {name: 'Test App', logLevel: 'warn'},
     };
 
-    await startServer(customConfig, 3000, 'prod');
+    await startServer(resolve(customConfig, 'prod'));
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         logger: expect.objectContaining({level: 'warn'}),
@@ -272,7 +275,7 @@ describe('Server', () => {
 
     fastifyMock.mockClear();
 
-    await startServer(customConfig, 3000, 'dev');
+    await startServer(resolve(customConfig, 'dev'));
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         logger: expect.objectContaining({level: 'warn'}),
@@ -284,7 +287,7 @@ describe('Server', () => {
     const fastifyMock = vi.mocked(Fastify);
 
     // Test verbose in prod mode
-    await startServer(mockConfig, 3000, 'prod', true);
+    await startServer(resolve(mockConfig, 'prod', {verbose: true}));
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         logger: expect.objectContaining({level: 'trace'}),
@@ -294,7 +297,7 @@ describe('Server', () => {
     fastifyMock.mockClear();
 
     // Test verbose in dev mode (should still be trace)
-    await startServer(mockConfig, 3000, 'dev', true);
+    await startServer(resolve(mockConfig, 'dev', {verbose: true}));
     expect(fastifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         logger: expect.objectContaining({level: 'trace'}),
@@ -303,7 +306,7 @@ describe('Server', () => {
   });
 
   it('should register routes hook correctly', async () => {
-    const {routes} = await startServer(mockConfig, 3000, 'dev');
+    const {routes} = await startServer(resolve(mockConfig, 'dev'));
     const addHookMock = mockApp.addHook;
     expect(addHookMock).toHaveBeenCalledWith('onRoute', expect.any(Function));
 
@@ -324,7 +327,7 @@ describe('Server', () => {
   });
 
   it('should register plugins and routes', async () => {
-    await runStart('dev', false, true);
+    await runStart('dev');
 
     // db, cache, response, ssp, webhook, auth (always), swagger, swagger-ui,
     // and the /api prefix
@@ -335,16 +338,8 @@ describe('Server', () => {
     );
     expect(prefixCall).toBeDefined();
 
-    expect(migrateDatabase).toHaveBeenCalledWith(
-      resolveConfig(mockConfig, {mode: 'dev'}),
-    );
     expect(registerRoutes).toHaveBeenCalled();
     expect(registerHealthRoute).toHaveBeenCalled();
-  });
-
-  it('should skip migration when migrate is false', async () => {
-    await runStart('dev', false, false);
-    expect(migrateDatabase).not.toHaveBeenCalled();
   });
 
   it('should not register swagger if disabled', async () => {
@@ -354,7 +349,7 @@ describe('Server', () => {
         openapi: {...mockConfig.docs.openapi, enabled: false},
       },
     } as unknown as AppConfig;
-    await startServer(disabledSwaggerConfig, 3000, 'prod');
+    await startServer(resolve(disabledSwaggerConfig, 'prod'));
 
     // db, cache, response, ssp, webhook, auth (always), and the /api prefix
     expect(mockApp.register).toHaveBeenCalledTimes(7);
@@ -365,11 +360,12 @@ describe('Server', () => {
       ...mockConfig,
       data: {models: {}},
     } as unknown as AppConfig;
-    await startServer(noModelsConfig, 3000, 'prod');
+    const resolvedNoModels = resolve(noModelsConfig, 'prod');
+    await startServer(resolvedNoModels);
 
     expect(registerRoutes).toHaveBeenCalledWith(
       expect.any(Object),
-      resolveConfig(noModelsConfig, {mode: 'prod'}),
+      resolvedNoModels,
     );
     expect(mockApp.register).toHaveBeenCalledWith(
       expect.any(Function),
@@ -658,13 +654,13 @@ describe('Server', () => {
   });
 
   it('should return the app instance and routes', async () => {
-    const {app, routes} = await startServer(mockConfig, 3000, 'dev');
+    const {app, routes} = await startServer(resolve(mockConfig, 'dev'));
     expect(app).toBe(mockApp);
     expect(Array.isArray(routes)).toBe(true);
   });
 
   it('should install the error handler before registering any routes', async () => {
-    await startServer(mockConfig, 3000, 'dev');
+    await startServer(resolve(mockConfig, 'dev'));
 
     const handlerOrder = mockApp.setErrorHandler.mock.invocationCallOrder[0];
     const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
@@ -673,7 +669,7 @@ describe('Server', () => {
   });
 
   it('should install the not-found handler before registering any routes', async () => {
-    await startServer(mockConfig, 3000, 'dev');
+    await startServer(resolve(mockConfig, 'dev'));
 
     const handlerOrder = mockApp.setNotFoundHandler.mock.invocationCallOrder[0];
     const firstRegisterOrder = mockApp.register.mock.invocationCallOrder[0];
@@ -682,7 +678,7 @@ describe('Server', () => {
   });
 
   it('should call enforceSSP in the global preHandler hook', async () => {
-    const {app} = await startServer(mockConfig, 3000, 'dev');
+    const {app} = await startServer(resolve(mockConfig, 'dev'));
     const mockApp = app as MockedApp;
 
     const preHandlerHooks = mockApp.getHook('preHandler');
@@ -720,7 +716,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithRateLimit, 3000, 'dev');
+      await startServer(resolve(configWithRateLimit, 'dev'));
 
       const rateLimitRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === rateLimitPlugin,
@@ -730,7 +726,7 @@ describe('Server', () => {
 
     it('should not register rate-limit plugin when rateLimit is not configured', async () => {
       const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
+      await startServer(resolve(mockConfig, 'dev'));
 
       const rateLimitRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === rateLimitPlugin,
@@ -753,7 +749,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithDisabledRateLimit, 3000, 'dev');
+      await startServer(resolve(configWithDisabledRateLimit, 'dev'));
 
       const rateLimitRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === rateLimitPlugin,
@@ -777,7 +773,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithCors, 3000, 'dev');
+      await startServer(resolve(configWithCors, 'dev'));
 
       const corsRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === corsPlugin,
@@ -787,7 +783,7 @@ describe('Server', () => {
 
     it('should not register cors plugin when cors is not configured', async () => {
       const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
+      await startServer(resolve(mockConfig, 'dev'));
 
       const corsRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === corsPlugin,
@@ -808,7 +804,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithDisabledCors, 3000, 'dev');
+      await startServer(resolve(configWithDisabledCors, 'dev'));
 
       const corsRegistration = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === corsPlugin,
@@ -839,7 +835,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithAuth, 3000, 'dev');
+      await startServer(resolve(configWithAuth, 'dev'));
 
       // Our startServer calls register(authPlugin) if config.auth is present
       expect(registerMock).toHaveBeenCalledWith(
@@ -881,7 +877,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithMfa, 3000, 'dev');
+      await startServer(resolve(configWithMfa, 'dev'));
 
       expect(registerMock).toHaveBeenCalledWith(otpPlugin);
     });
@@ -912,7 +908,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithMfa, 3000, 'dev');
+      await startServer(resolve(configWithMfa, 'dev'));
       await runLastOnListenHook();
 
       expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
@@ -944,7 +940,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithVerification, 3000, 'dev');
+      await startServer(resolve(configWithVerification, 'dev'));
       await runLastOnListenHook();
 
       expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
@@ -983,7 +979,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithRedis, 3000, 'dev');
+      await startServer(resolve(configWithRedis, 'dev'));
 
       expect(mockApp.log.warn).not.toHaveBeenCalled();
     });
@@ -1015,7 +1011,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithAll, 3000, 'dev');
+      await startServer(resolve(configWithAll, 'dev'));
 
       expect(registerRegistrationRoute).toHaveBeenCalled();
       expect(registerLoginRoute).toHaveBeenCalled();
@@ -1059,7 +1055,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithoutVerified, 3000, 'dev');
+      await startServer(resolve(configWithoutVerified, 'dev'));
 
       expect(registerRegistrationOtpVerifyRoute).not.toHaveBeenCalled();
       expect(registerRegistrationResendOtpRoute).not.toHaveBeenCalled();
@@ -1091,7 +1087,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithoutMfa, 3000, 'dev');
+      await startServer(resolve(configWithoutMfa, 'dev'));
 
       expect(registerLoginOtpVerifyRoute).not.toHaveBeenCalled();
       expect(registerLoginResendOtpRoute).not.toHaveBeenCalled();
@@ -1118,7 +1114,7 @@ describe('Server', () => {
         },
       };
 
-      await startServer(configWithoutEmail, 3000, 'dev');
+      await startServer(resolve(configWithoutEmail, 'dev'));
 
       expect(registerForgotPasswordRoute).not.toHaveBeenCalled();
       expect(registerForgotPasswordOtpVerifyRoute).not.toHaveBeenCalled();
@@ -1138,14 +1134,14 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithIntegrations, 3000, 'dev');
+      await startServer(resolve(configWithIntegrations, 'dev'));
 
       expect(registerMock).toHaveBeenCalledWith(communicatePlugin);
     });
 
     it('should not register communicate plugin when integrations.email is not configured', async () => {
       const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
+      await startServer(resolve(mockConfig, 'dev'));
 
       // Assert that none of the registered calls are the communicatePlugin
       const communicatePluginCall = registerMock.mock.calls.find(
@@ -1169,7 +1165,7 @@ describe('Server', () => {
       };
 
       const registerMock = mockApp.register;
-      await startServer(configWithCache, 3000, 'dev');
+      await startServer(resolve(configWithCache, 'dev'));
 
       const cachePluginCall = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === cachePlugin,
@@ -1179,7 +1175,7 @@ describe('Server', () => {
 
     it('should register cache plugin even when cache is not configured', async () => {
       const registerMock = mockApp.register;
-      await startServer(mockConfig, 3000, 'dev');
+      await startServer(resolve(mockConfig, 'dev'));
 
       const cachePluginCall = registerMock.mock.calls.find(
         (call: unknown[]) => call[0] === cachePlugin,

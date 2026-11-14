@@ -2,8 +2,10 @@ import Database from 'better-sqlite3';
 import mysql from 'mysql2/promise';
 import {Pool} from 'pg';
 
-import {DBEngine} from '@/interfaces/config';
-import {DatabaseQuery} from '@/interfaces/database';
+import {
+  CreateDatabaseClientOptions,
+  DatabaseQuery,
+} from '@/interfaces/database';
 
 import {AsyncMutex} from '@/utils/mutex';
 
@@ -14,13 +16,7 @@ import {
   normalizeSqliteValue,
 } from './query';
 
-export interface CreateDatabaseClientOptions {
-  engine: DBEngine;
-  url: string;
-  timeout?: number;
-  allowDdl?: boolean;
-  multipleStatements?: boolean;
-}
+export type {CreateDatabaseClientOptions};
 
 function makeQueryExecutor(
   runQuery: (

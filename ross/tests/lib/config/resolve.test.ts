@@ -252,6 +252,30 @@ test('preserves absolute migrations directory', () => {
   );
 });
 
+test('overrides dangerouslyAllowDDL to true when passed in cliOptions', () => {
+  const config = resolveConfig(
+    {
+      application: {name: 'rocket'},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://localhost/db'},
+          migrations: {
+            directory: './custom-migrations',
+            dangerouslyAllowDDL: false,
+          },
+        },
+      },
+      data: {models: {}},
+    },
+    {mode: 'prod', cliOptions: {dangerouslyAllowDdl: true}},
+  );
+
+  expect(config.infrastructure.database.migrations?.dangerouslyAllowDDL).toBe(
+    true,
+  );
+});
+
 test('dev mode keeps an explicit database engine and url', () => {
   const config = resolveConfig(
     devInput({

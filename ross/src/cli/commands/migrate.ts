@@ -19,14 +19,12 @@ export async function handleMigrate(options: MigrateCLIOptions): Promise<void> {
     const configPath = resolveConfigPath(options.config);
     const configDir = path.dirname(path.resolve(configPath));
     const loadedConfig = loadConfigFile(configPath);
-    const resolved = resolveAndValidateConfig(loadedConfig, 'prod', configDir);
-
-    if (
-      options.dangerouslyAllowDdl &&
-      resolved.infrastructure.database.migrations
-    ) {
-      resolved.infrastructure.database.migrations.dangerouslyAllowDDL = true;
-    }
+    const resolved = resolveAndValidateConfig(
+      loadedConfig,
+      'prod',
+      configDir,
+      options,
+    );
 
     console.log(chalk.blue('Running database migrations...'));
     await migrateDatabase(resolved);

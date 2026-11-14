@@ -1,3 +1,13 @@
+import {DBEngine} from '@/interfaces/config';
+
+export interface CreateDatabaseClientOptions {
+  engine: DBEngine;
+  url: string;
+  timeout?: number;
+  allowDdl?: boolean;
+  multipleStatements?: boolean;
+}
+
 export interface TransactionClient {
   query<Q>(
     sql: string,

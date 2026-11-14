@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-import {HTTPMethod, Mode} from '@/interfaces';
+import {CLIOptions, HTTPMethod, Mode} from '@/interfaces';
 import {
   ApiKeyProvider,
   ApisConfig,
@@ -144,10 +144,16 @@ export class ConfigError extends Error {
 
 export function resolveApplication(
   input: ApplicationConfigInput = {},
+  cliOptions?: CLIOptions,
 ): ResolvedApplicationConfig {
+  const logLevel =
+    cliOptions?.verbose === true
+      ? 'trace'
+      : (input.logLevel ?? DEFAULT_LOG_LEVEL);
+
   return {
     name: input.name as string,
-    logLevel: input.logLevel ?? DEFAULT_LOG_LEVEL,
+    logLevel,
     rateLimit: {
       enabled: input.rateLimit?.enabled ?? DEFAULT_RATE_LIMIT.enabled,
       max: input.rateLimit?.max ?? DEFAULT_RATE_LIMIT.max,
@@ -228,6 +234,7 @@ export function resolveInfrastructure(
   infrastructure: AppConfigInput['infrastructure'],
   mode: Mode,
   configDir?: string,
+  cliOptions?: CLIOptions,
 ): ResolvedInfrastructureConfig {
   const database = infrastructure?.database;
 
@@ -242,9 +249,15 @@ export function resolveInfrastructure(
 
     if (database.migrations) {
       const baseDir = configDir ?? process.cwd();
+      const dangerouslyAllowDDL =
+        (cliOptions &&
+          'dangerouslyAllowDdl' in cliOptions &&
+          Boolean(cliOptions.dangerouslyAllowDdl)) ||
+        Boolean(database.migrations.dangerouslyAllowDDL);
+
       resolvedDatabase.migrations = {
         directory: path.resolve(baseDir, database.migrations.directory),
-        dangerouslyAllowDDL: database.migrations.dangerouslyAllowDDL ?? false,
+        dangerouslyAllowDDL,
       };
     }
   } else if (mode !== 'prod') {
@@ -457,6 +470,7 @@ export function resolveRbac(input?: RbacConfig): RbacConfig {
 export interface ResolveConfigOptions {
   mode: Mode;
   configDir?: string;
+  cliOptions?: CLIOptions;
 }
 
 /**
@@ -468,14 +482,19 @@ export interface ResolveConfigOptions {
  */
 export function resolveConfig(
   raw: AppConfigInput,
-  {mode, configDir}: ResolveConfigOptions,
+  {mode, configDir, cliOptions}: ResolveConfigOptions,
 ): ResolvedAppConfig {
-  const application = resolveApplication(raw.application);
+  const application = resolveApplication(raw.application, cliOptions);
 
   const config: ResolvedAppConfig = {
     application,
     docs: resolveDocs(raw.docs, mode, application.name),
-    infrastructure: resolveInfrastructure(raw.infrastructure, mode, configDir),
+    infrastructure: resolveInfrastructure(
+      raw.infrastructure,
+      mode,
+      configDir,
+      cliOptions,
+    ),
     data: resolveData(raw.data),
     apis: (raw.apis ? clone(raw.apis) : {}) as ApisConfig,
     customEndpoints: raw.customEndpoints

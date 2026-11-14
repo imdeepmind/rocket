@@ -2,6 +2,12 @@ import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {
+  discoverMigrations,
+  validateMigrations,
+} from '@/migrator/custom/discovery';
+import {runCustomMigrations} from '@/migrator/custom/runner';
+
 import {resolveModelField} from '@/lib/config/resolve';
 
 import {
@@ -337,6 +343,7 @@ async function generateMigrationSQL(
         schema: '${schemaPath}',
         out: '${migrationsPath}',
         dbCredentials: { url: process.env.DRIZZLE_DATABASE_URL! },
+        tablesFilter: ${JSON.stringify(configs.map(c => c.name))},
       });
     `,
     );
@@ -361,7 +368,7 @@ async function generateMigrationSQL(
   }
 }
 
-const migrateDatabase = async (config: ResolvedAppConfig) => {
+const migrateDatabase = async (config: ResolvedAppConfig): Promise<void> => {
   const engine = config.infrastructure.database.engine;
   const models = Object.entries(config.data.models).map(([name, model]) => ({
     name,
@@ -373,6 +380,26 @@ const migrateDatabase = async (config: ResolvedAppConfig) => {
     engine,
     config.infrastructure.database.connection.url,
   );
+
+  const migrationsConfig = config.infrastructure.database.migrations;
+  if (migrationsConfig?.directory) {
+    const dangerouslyAllowDDL = migrationsConfig.dangerouslyAllowDDL;
+
+    const discovered = discoverMigrations({
+      migrationsDir: migrationsConfig.directory,
+      engine,
+      dangerouslyAllowDDL,
+    });
+
+    validateMigrations(discovered, dangerouslyAllowDDL);
+
+    await runCustomMigrations({
+      migrations: discovered,
+      engine,
+      connectionUrl: config.infrastructure.database.connection.url,
+      dangerouslyAllowDDL,
+    });
+  }
 };
 
 export default migrateDatabase;
