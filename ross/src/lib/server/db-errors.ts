@@ -1,4 +1,7 @@
-import {ClassifiedDatabaseError, DatabaseErrorLike} from '@/interfaces';
+import {
+  ClassifiedDatabaseError,
+  DatabaseErrorLike,
+} from '@/interfaces/database';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
