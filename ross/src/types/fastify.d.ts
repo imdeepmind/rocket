@@ -42,11 +42,7 @@ declare module 'fastify' {
     ) => Promise<void>;
     enforceSSP: (request: import('fastify').FastifyRequest) => void;
     communicate: {
-      sendEmail: (
-        email: string,
-        htmlBody: string,
-        body: string,
-      ) => Promise<void>;
+      sendEmail: import('@/interfaces/email').EmailSender;
     };
     otp: import('@/interfaces/otp').IOtpService;
   }

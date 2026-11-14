@@ -9,7 +9,7 @@ import {isRedisCacheConfigured, NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import {IOtpService, OtpData} from '@/interfaces/otp';
 
 import {compare, hash} from '@/utils/hash';
-import {OTP_LENGTH, OTP_TTL_SECONDS} from '@/constants';
+import {OTP_EMAIL_SUBJECT, OTP_LENGTH, OTP_TTL_SECONDS} from '@/constants';
 
 /**
  * Get the cache key for an OTP
@@ -64,7 +64,12 @@ export default fp(
 
           const body = `Your one-time password is: ${otp}\nThis code will expire in 10 minutes.`;
 
-          await fastify.communicate.sendEmail(email, htmlBody, body);
+          await fastify.communicate.sendEmail(
+            email,
+            OTP_EMAIL_SUBJECT,
+            htmlBody,
+            body,
+          );
 
           fastify.log.info(`OTP sent to email: ${email}`);
           return otpUlid;

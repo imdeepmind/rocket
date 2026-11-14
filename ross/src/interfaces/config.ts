@@ -51,7 +51,7 @@ export type JsonSchemaObject = {
 export type WebhookData = 'query' | 'body' | 'params' | 'response';
 export type AuthProviderType = 'api-key' | 'up-auth';
 export type ServerSideParamType = 'path' | 'query' | 'body';
-export type EmailEngine = 'dummy';
+export type EmailEngine = 'dummy' | 'aws-ses';
 export type RelationType = 'belongsTo';
 export type ForeignKeyAction =
   | 'cascade'
@@ -323,9 +323,27 @@ export interface RbacConfig {
   roles?: Record<string, RoleConfig>;
 }
 
-export interface EmailConfig {
-  provider: EmailEngine;
+export interface AwsSesEmailOptions {
+  region: string;
+  fromEmail: string;
+  /**
+   * Optional explicit credentials. When both are omitted, the AWS SDK default
+   * credential chain is used (env vars, shared profile, ECS/Lambda/EC2 roles).
+   */
+  accessKeyId?: string;
+  secretAccessKey?: string;
 }
+
+export interface DummyEmailConfig {
+  provider: 'dummy';
+}
+
+export interface AwsSesEmailConfig {
+  provider: 'aws-ses';
+  config: AwsSesEmailOptions;
+}
+
+export type EmailConfig = DummyEmailConfig | AwsSesEmailConfig;
 
 export interface IntegrationsConfig {
   email?: EmailConfig;

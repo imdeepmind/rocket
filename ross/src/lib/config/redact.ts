@@ -33,6 +33,7 @@ export function redactConnectionUrl(url: string): string {
  * Secrets that are redacted:
  *   - up-auth `jwtSecret`
  *   - api-key `key`
+ *   - aws-ses `secretAccessKey`
  *   - database / cache credentials inside connection URLs
  */
 export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
@@ -47,6 +48,12 @@ export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
 
   if (authentication.enabled && authentication.provider.type === 'api-key') {
     (authentication.provider.config as ApiKeyProviderConfig).key = REDACTED;
+  }
+
+  const email = redacted.integrations.email;
+
+  if (email?.provider === 'aws-ses' && email.config.secretAccessKey) {
+    email.config.secretAccessKey = REDACTED;
   }
 
   redacted.infrastructure.database.connection.url = redactConnectionUrl(
