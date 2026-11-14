@@ -355,6 +355,35 @@ describe('Custom Function Endpoints Runtime & Execution', () => {
           throw new Error('Unexpected crash in user code');
         }
 
+        export function syncHandler(request, app) {
+          return {
+            isSync: true,
+            appName: app.appConfig.application.name,
+          };
+        }
+
+        export async function diverseTypesHandler() {
+          return {
+            str: 'active',
+            num: 42.5,
+            bool: true,
+            arr: ['a', 'b', 'c'],
+            nested: {status: 'ok', count: 10},
+          };
+        }
+
+        export async function conflictHandler() {
+          const err = new Error('Resource conflict detected');
+          err.statusCode = 409;
+          throw err;
+        }
+
+        export async function unprocessableHandler() {
+          const err = new Error('Semantic validation error');
+          err.statusCode = 422;
+          throw err;
+        }
+
         export const notAFunction = 12345;
       `;
 
@@ -435,6 +464,46 @@ describe('Custom Function Endpoints Runtime & Execution', () => {
             type: 'function',
             file: './function/users/profile.ts',
             exportName: 'internalErrorHandler',
+          },
+        },
+        syncEndpoint: {
+          method: 'GET',
+          path: '/sync',
+          description: 'Synchronous handler',
+          handler: {
+            type: 'function',
+            file: './function/users/profile.ts',
+            exportName: 'syncHandler',
+          },
+        },
+        diverseTypes: {
+          method: 'GET',
+          path: '/diverse',
+          description: 'Diverse types return',
+          handler: {
+            type: 'function',
+            file: './function/users/profile.ts',
+            exportName: 'diverseTypesHandler',
+          },
+        },
+        conflictEndpoint: {
+          method: 'GET',
+          path: '/conflict',
+          description: 'Throws 409 error',
+          handler: {
+            type: 'function',
+            file: './function/users/profile.ts',
+            exportName: 'conflictHandler',
+          },
+        },
+        unprocessableEndpoint: {
+          method: 'GET',
+          path: '/unprocessable',
+          description: 'Throws 422 error',
+          handler: {
+            type: 'function',
+            file: './function/users/profile.ts',
+            exportName: 'unprocessableHandler',
           },
         },
         missingExport: {
@@ -614,6 +683,71 @@ describe('Custom Function Endpoints Runtime & Execution', () => {
       expect(JSON.parse(response.body)).toEqual({
         code: 500,
         message: 'Unexpected crash in user code',
+        data: null,
+      });
+    });
+
+    it('supports synchronous function handlers returning direct values', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/sync',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({
+        code: 200,
+        message: 'Success',
+        data: {
+          isSync: true,
+          appName: 'Test App',
+        },
+      });
+    });
+
+    it('handles diverse return types including arrays, floats, booleans, and nested objects', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/diverse',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({
+        code: 200,
+        message: 'Success',
+        data: {
+          str: 'active',
+          num: 42.5,
+          bool: true,
+          arr: ['a', 'b', 'c'],
+          nested: {status: 'ok', count: 10},
+        },
+      });
+    });
+
+    it('translates thrown error with statusCode: 409 to 409 conflict response', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/conflict',
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(JSON.parse(response.body)).toEqual({
+        code: 409,
+        message: 'Resource conflict detected',
+        data: null,
+      });
+    });
+
+    it('translates thrown error with statusCode: 422 to 422 unprocessable entity response', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/v1/custom-endpoints/unprocessable',
+      });
+
+      expect(response.statusCode).toBe(422);
+      expect(JSON.parse(response.body)).toEqual({
+        code: 422,
+        message: 'Semantic validation error',
         data: null,
       });
     });

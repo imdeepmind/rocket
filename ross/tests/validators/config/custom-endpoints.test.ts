@@ -490,5 +490,144 @@ describe('custom endpoints validation', () => {
         '/customEndpoints/testFn/handler/inputs/headers: parameter "x-missing-header" not declared in validation schema properties',
       );
     });
+
+    it('validates deeply nested parameterized paths with all path parameters mapped', () => {
+      const config = createConfigWithEndpoints({
+        nestedFn: {
+          method: 'GET',
+          path: '/orgs/:orgId/projects/:projectId/teams/:teamId',
+          description: 'Deeply nested route',
+          validation: {
+            type: 'object',
+            properties: {
+              orgId: {type: 'string', pattern: '^[a-z0-9-]+$'},
+              projectId: {type: 'integer', minimum: 1},
+              teamId: {type: 'integer', minimum: 100},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/nested.ts',
+            exportName: 'nestedHandler',
+            inputs: {
+              path: ['orgId', 'projectId', 'teamId'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('validates custom endpoint with all input sources simultaneously (path, query, body, headers)', () => {
+      const config = createConfigWithEndpoints({
+        fullEndpoint: {
+          method: 'POST',
+          path: '/tenants/:tenantId/reports',
+          description: 'Full inputs endpoint',
+          validation: {
+            type: 'object',
+            properties: {
+              tenantId: {type: 'integer'},
+              format: {type: 'string', enum: ['json', 'csv']},
+              title: {type: 'string', minLength: 3},
+              'x-client-id': {type: 'string'},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/reports.ts',
+            exportName: 'createReport',
+            inputs: {
+              path: ['tenantId'],
+              query: ['format'],
+              body: ['title'],
+              headers: ['x-client-id'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('throws when inputs.path contains a parameter not present in endpoint.path', () => {
+      const config = createConfigWithEndpoints({
+        unmatchedPath: {
+          method: 'GET',
+          path: '/items/:id',
+          description: 'Unmatched path parameter',
+          validation: {
+            type: 'object',
+            properties: {
+              id: {type: 'integer'},
+              extra: {type: 'string'},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/items.ts',
+            exportName: 'getItem',
+            inputs: {
+              path: ['id', 'extra'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).toThrow(
+        '/customEndpoints/unmatchedPath/handler/inputs/path: parameter "extra" does not exist in path "/items/:id"',
+      );
+    });
+
+    it('throws when endpoint.path contains a parameter missing from inputs.path', () => {
+      const config = createConfigWithEndpoints({
+        missingPathInput: {
+          method: 'GET',
+          path: '/items/:id',
+          description: 'Missing path input',
+          validation: {
+            type: 'object',
+            properties: {
+              id: {type: 'integer'},
+            },
+          },
+          handler: {
+            type: 'function',
+            file: './functions/items.ts',
+            exportName: 'getItem',
+            inputs: {
+              query: ['id'],
+            },
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).toThrow(
+        '/customEndpoints/missingPathInput/handler/inputs/path: path parameter "id" must be declared in handler.inputs.path',
+      );
+    });
+
+    it('accepts empty inputs object when validation schema has no properties', () => {
+      const config = createConfigWithEndpoints({
+        emptyInputs: {
+          method: 'GET',
+          path: '/ping',
+          description: 'Ping endpoint',
+          validation: {
+            type: 'object',
+            properties: {},
+          },
+          handler: {
+            type: 'function',
+            file: './functions/ping.ts',
+            exportName: 'pingHandler',
+            inputs: {},
+          },
+        },
+      });
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
   });
 });
