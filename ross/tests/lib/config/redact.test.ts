@@ -120,6 +120,31 @@ describe('redactConfig', () => {
     }
   });
 
+  test('redacts memcached connection credentials', () => {
+    const config = buildConfig({
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          connection: {url: 'postgresql://dbuser:dbpass@db.host:5432/rocket'},
+        },
+        cache: {
+          engine: 'memcached',
+          connection: {
+            url: 'memcached://memuser:mempass@cache.host:11211',
+          },
+        },
+      },
+    });
+
+    const redacted = redactConfig(config);
+
+    if (redacted.infrastructure.cache.engine === 'memcached') {
+      expect(redacted.infrastructure.cache.connection.url).toBe(
+        'memcached://***:***@cache.host:11211',
+      );
+    }
+  });
+
   test('redacts aws-ses secretAccessKey but keeps accessKeyId', () => {
     const config = buildConfig({
       integrations: {

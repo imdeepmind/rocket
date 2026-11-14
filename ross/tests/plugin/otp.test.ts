@@ -1,12 +1,13 @@
 import Fastify, {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, Mock, vi} from 'vitest';
 
-import {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
 import otpPlugin from '@/plugin/otp';
 
 import {resolveConfig} from '@/lib/config/resolve';
 
 import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
+
+import {NODE_CACHE_OTP_WARNING} from '@/constants';
 
 const resolvedConfig = (raw: AppConfigInput): ResolvedAppConfig =>
   resolveConfig(
@@ -184,6 +185,22 @@ describe('OTP Plugin', () => {
           cache: {
             engine: 'redis',
             connection: {url: 'redis://localhost:6379'},
+          },
+        },
+      });
+      const warnSpy = vi.spyOn(app.log, 'warn');
+
+      await (app as any).otp.sendOTPForVerification('test@example.com');
+
+      expect(warnSpy).not.toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should not warn when memcached is configured', async () => {
+      (app as any).appConfig = resolvedConfig({
+        infrastructure: {
+          cache: {
+            engine: 'memcached',
+            connection: {url: 'localhost:11211'},
           },
         },
       });

@@ -25,6 +25,27 @@ import {
   sqliteAllMock,
 } from '@tests/helpers/db-mocks';
 
+const {memcacheClientMock, memcacheCreateMock} = vi.hoisted(() => {
+  const client = {
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+    flush: vi.fn(),
+    quit: vi.fn(),
+  };
+
+  return {
+    memcacheClientMock: client,
+    memcacheCreateMock: vi.fn(() => client),
+  };
+});
+
+vi.mock('memjs', () => ({
+  Client: {
+    create: memcacheCreateMock,
+  },
+}));
+
 async function createHealthApp(
   overrides: Partial<AppConfigInput> = {},
 ): Promise<FastifyInstance> {
@@ -105,6 +126,9 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
     pgQueryMock.mockResolvedValue({rows: [], rowCount: 0});
     sqliteAllMock.mockReturnValue([]);
+
+    memcacheClientMock.get.mockResolvedValue({value: null, flags: null});
+    memcacheClientMock.quit.mockReturnValue(undefined);
   });
 
   afterEach(async () => {
@@ -159,6 +183,36 @@ describe('Healthcheck Route (GET /api/health)', () => {
       expect(typeof body.services.database.latencyMs).toBe('number');
       expect(body.services.cache.status).toBe('up');
     });
+
+    it('returns 200 OK with Memcached when the cache is operational', async () => {
+      app = await createHealthApp({
+        infrastructure: {
+          database: {
+            engine: 'sqlite',
+            connection: {url: ':memory:'},
+          },
+          cache: {
+            engine: 'memcached',
+            connection: {url: 'localhost:11211'},
+            timeout: 5000,
+          },
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(memcacheCreateMock).toHaveBeenCalledWith(
+        'localhost:11211',
+        expect.any(Object),
+      );
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.status).toBe('ok');
+      expect(body.services.cache).toEqual({status: 'up'});
+    });
   });
 
   describe('Unhealthy States', () => {
@@ -201,6 +255,39 @@ describe('Healthcheck Route (GET /api/health)', () => {
 
       expect(body.status).toBe('degraded');
       expect(body.services.database.status).toBe('up');
+      expect(body.services.cache).toEqual({
+        status: 'down',
+        error: 'Cache service is unavailable',
+      });
+    });
+
+    it('returns 503 Service Unavailable when Memcached fails the probe', async () => {
+      app = await createHealthApp({
+        infrastructure: {
+          database: {
+            engine: 'sqlite',
+            connection: {url: ':memory:'},
+          },
+          cache: {
+            engine: 'memcached',
+            connection: {url: 'localhost:11211'},
+            timeout: 5000,
+          },
+        },
+      });
+
+      vi.spyOn(app.cache, 'ping').mockRejectedValueOnce(
+        new Error('Memcached is offline'),
+      );
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+      });
+
+      expect(res.statusCode).toBe(503);
+      const body = res.json();
+      expect(body.status).toBe('degraded');
       expect(body.services.cache).toEqual({
         status: 'down',
         error: 'Cache service is unavailable',

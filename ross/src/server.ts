@@ -1,10 +1,7 @@
 import Fastify, {FastifyInstance} from 'fastify';
 
 import authPlugin from '@/plugin/auth';
-import cachePlugin, {
-  isRedisCacheConfigured,
-  NODE_CACHE_OTP_WARNING,
-} from '@/plugin/cache';
+import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import corsPlugin from '@/plugin/cors';
 import dbPlugin from '@/plugin/database';
@@ -15,6 +12,7 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {isDistributedCacheConfigured} from '@/lib/cache';
 import {
   registerErrorHandler,
   registerNotFoundHandler,
@@ -43,6 +41,8 @@ import {
 import {registerHealthRoute} from '@/routes/health';
 
 import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+
+import {NODE_CACHE_OTP_WARNING} from '@/constants';
 
 export interface StartServerResult {
   app: FastifyInstance;
@@ -78,7 +78,7 @@ export async function startServer(
     auth?.mfaRequired || auth?.userModel?.isVerifiedField,
   );
 
-  if (usesAccountOtp && !isRedisCacheConfigured(resolvedConfig)) {
+  if (usesAccountOtp && !isDistributedCacheConfigured(resolvedConfig)) {
     app.addHook('onListen', () => {
       app.log.warn(NODE_CACHE_OTP_WARNING);
     });

@@ -144,7 +144,7 @@ With the above setting, your generated endpoints become:
 
 Protects your server against denial-of-service (DoS) attacks, brute-force attempts, and runaway client loops by enforcing rolling request limits per IP address.
 
-Rate limiting is integrated with ROSS's caching layer (`infrastructure.cache`). When using a distributed cache engine, limits are tracked centrally across multiple server instances. When using in-memory cache, limits are tracked locally per process.
+Rate limiting is integrated with ROSS's caching layer (`infrastructure.cache`). When using a distributed cache engine (Redis or Memcached), limits are tracked centrally across multiple server instances. When using in-memory cache, limits are tracked locally per process. See [Cache](./cache/introduction.md) for engine configuration.
 
 #### Sub-fields
 

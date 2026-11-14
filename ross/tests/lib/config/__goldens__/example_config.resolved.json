@@ -75,7 +75,11 @@
       "timeout": 10000
     },
     "cache": {
-      "engine": "memory"
+      "engine": "memcached",
+      "connection": {
+        "url": "localhost:11211"
+      },
+      "timeout": 5000
     }
   },
   "data": {

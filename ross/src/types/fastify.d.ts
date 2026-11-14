@@ -32,7 +32,7 @@ declare module 'fastify' {
       message: string,
       data: T,
     ) => StructuredResponse<T>;
-    cache: import('@/plugin/cache').ICache;
+    cache: import('@/interfaces/cache').ICache;
     jwt: import('@fastify/jwt').JWT;
     appConfig: ResolvedAppConfig;
     callWebhook: (

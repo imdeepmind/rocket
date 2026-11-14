@@ -3466,7 +3466,7 @@ describe('validateCacheDbConfig', () => {
   it.each([
     {
       name: 'engine as invalid value',
-      patch: {engine: 'memcached', connection: {url: 'redis://localhost:6379'}},
+      patch: {engine: 'mongodb', connection: {url: 'redis://localhost:6379'}},
       expected: '/infrastructure/cache must match exactly one schema in oneOf',
     },
     {
@@ -3518,6 +3518,45 @@ describe('validateCacheDbConfig', () => {
       expected:
         "/infrastructure/cache must have required property 'connection'",
     },
+    {
+      name: 'memcached url with invalid protocol',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'http://localhost:11211'},
+      },
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^(memcached:\\/\\/)?[a-zA-Z0-9._-]+:[0-9]+(,[a-zA-Z0-9._-]+:[0-9]+)*$"',
+    },
+    {
+      name: 'memcached url without port',
+      patch: {engine: 'memcached', connection: {url: 'localhost'}},
+      expected:
+        '/infrastructure/cache/connection/url must match pattern "^(memcached:\\/\\/)?[a-zA-Z0-9._-]+:[0-9]+(,[a-zA-Z0-9._-]+:[0-9]+)*$"',
+    },
+    {
+      name: 'memcached missing required connection',
+      patch: {engine: 'memcached'} as unknown as typeof validBaseConfig,
+      expected:
+        "/infrastructure/cache must have required property 'connection'",
+    },
+    {
+      name: 'memcached timeout as zero',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'localhost:11211'},
+        timeout: 0,
+      },
+      expected: '/infrastructure/cache/timeout must be >= 1',
+    },
+    {
+      name: 'memcached port out of range',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'localhost:70000'},
+      },
+      expected:
+        'infrastructure.cache: memcached port "localhost:70000" must be between 1 and 65535',
+    },
   ])('Scenario: $name . should throw error', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -3557,6 +3596,35 @@ describe('validateCacheDbConfig', () => {
       patch: {
         engine: 'redis',
         connection: {url: 'redis://:mypassword@localhost:6379'},
+      },
+    },
+    {
+      name: 'valid cache with memcached localhost',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'localhost:11211'},
+      },
+    },
+    {
+      name: 'valid cache with memcached scheme',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'memcached://localhost:11211'},
+      },
+    },
+    {
+      name: 'valid cache with memcached and timeout',
+      patch: {
+        engine: 'memcached',
+        connection: {url: '127.0.0.1:11211'},
+        timeout: 5000,
+      },
+    },
+    {
+      name: 'valid cache with multiple memcached servers',
+      patch: {
+        engine: 'memcached',
+        connection: {url: 'cache-1.internal:11211,cache-2.internal:11212'},
       },
     },
   ])('Scenario: $name . should return', ({patch}) => {
@@ -5430,6 +5498,29 @@ describe('validateResolvedConfigShapes', () => {
       {mode: 'dev'},
     );
 
+    expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
+  });
+
+  it('validates a resolved memcached-cache infrastructure', () => {
+    const config: ResolvedAppConfig = resolveConfig(
+      {
+        ...rawBaseConfig,
+        infrastructure: {
+          database: getDefaultDatabaseConfig(),
+          cache: {
+            engine: 'memcached',
+            connection: {url: 'localhost:11211'},
+          },
+        },
+      },
+      {mode: 'dev'},
+    );
+
+    expect(config.infrastructure.cache).toEqual({
+      engine: 'memcached',
+      connection: {url: 'localhost:11211'},
+      timeout: 10000,
+    });
     expect(() => validateConfig(config as unknown as AppConfig)).not.toThrow();
   });
 

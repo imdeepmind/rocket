@@ -6,7 +6,7 @@ import Fastify, {
 } from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import cachePlugin, {NODE_CACHE_OTP_WARNING} from '@/plugin/cache';
+import cachePlugin from '@/plugin/cache';
 import communicatePlugin from '@/plugin/communicate';
 import corsPlugin from '@/plugin/cors';
 import otpPlugin from '@/plugin/otp';
@@ -42,6 +42,8 @@ import {
   AppConfigInput,
   ResolvedAppConfig,
 } from '@/interfaces/config';
+
+import {NODE_CACHE_OTP_WARNING} from '@/constants';
 
 vi.mock('fastify', () => {
   let appConfig: ResolvedAppConfig | undefined;

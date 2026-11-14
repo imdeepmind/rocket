@@ -280,7 +280,7 @@ function resolveCache(
   }
 
   return {
-    engine: 'redis',
+    engine: cache.engine,
     connection: {url: cache.connection?.url as string},
     timeout: cache.timeout ?? DEFAULT_CACHE_TIMEOUT,
   };

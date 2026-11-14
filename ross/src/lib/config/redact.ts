@@ -67,7 +67,7 @@ export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
 
   const cache = redacted.infrastructure.cache;
 
-  if (cache.engine === 'redis') {
+  if (cache.engine === 'redis' || cache.engine === 'memcached') {
     cache.connection.url = redactConnectionUrl(cache.connection.url);
   }
 
