@@ -194,6 +194,8 @@ export interface CustomEndpointFunctionInputs {
   path?: string[];
   query?: string[];
   body?: string[];
+  headers?: string[];
+  header?: string[];
 }
 
 export interface CustomEndpointFunctionHandler {
