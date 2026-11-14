@@ -1,7 +1,12 @@
-import {AwsSesEmailConfig, EmailConfig} from '@/interfaces/config';
+import {
+  AwsSesEmailConfig,
+  EmailConfig,
+  SendgridEmailConfig,
+} from '@/interfaces/config';
 import {EmailSender} from '@/interfaces/email';
 
 import {createDummyEmailSender} from './dummy';
+import {createSendgridEmailSender} from './sendgrid';
 import {createSesEmailSender} from './ses';
 
 export type {EmailSender};
@@ -15,6 +20,8 @@ export function createEmailSender(config: EmailConfig): EmailSender {
       return createDummyEmailSender();
     case 'aws-ses':
       return createSesEmailSender((config as AwsSesEmailConfig).config);
+    case 'sendgrid':
+      return createSendgridEmailSender((config as SendgridEmailConfig).config);
     default:
       // Unreachable at runtime when the config schema has been validated;
       // kept as a fail-fast guard for programmatic config construction.
