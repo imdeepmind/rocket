@@ -16,3 +16,22 @@ export interface DiscoverMigrationsOptions {
   engine: DBEngine;
   dangerouslyAllowDDL?: boolean;
 }
+
+export interface MigrationHistoryRecord {
+  id: string;
+  checksum: string;
+  contains_ddl: boolean;
+  executed_at: string | Date;
+}
+
+export interface RunMigrationsOptions {
+  migrations: DiscoveredMigration[];
+  engine: DBEngine;
+  connectionUrl: string;
+  dangerouslyAllowDDL?: boolean;
+}
+
+export interface MigrationRunResult {
+  applied: string[];
+  skipped: string[];
+}
