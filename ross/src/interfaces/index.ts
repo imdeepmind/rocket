@@ -10,6 +10,7 @@ export interface DevCLIOptions extends BaseCLIOptions {
   port?: number;
   host?: string;
   migrate?: boolean;
+  dangerouslyAllowDdl?: boolean;
 }
 
 export interface StartCLIOptions extends BaseCLIOptions {
@@ -17,7 +18,9 @@ export interface StartCLIOptions extends BaseCLIOptions {
   host?: string;
 }
 
-export interface MigrateCLIOptions extends BaseCLIOptions {}
+export interface MigrateCLIOptions extends BaseCLIOptions {
+  dangerouslyAllowDdl?: boolean;
+}
 
 export interface BuildCLIOptions extends BaseCLIOptions {}
 
@@ -42,15 +45,6 @@ export type CLIOptions =
   | ConfigShowCLIOptions
   | ConfigValidateCLIOptions
   | RoutesCLIOptions;
-
-export {
-  ClassifiedDatabaseError,
-  DatabaseErrorLike,
-  DatabaseQuery,
-  TransactionClient,
-} from './database';
-
-export {CustomFunctionHandler} from './functions';
 
 export interface StructuredResponse<T = unknown> {
   code: number;

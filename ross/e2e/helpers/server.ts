@@ -8,8 +8,10 @@ import {
 } from '@playwright/test';
 import {FastifyInstance} from 'fastify';
 
+import migrateDatabase from '@/migrator';
 import {startServer} from '@/server';
 
+import {resolveAndValidateConfig} from '@/lib/config/pipeline';
 import {RouteInfo} from '@/lib/server/welcome';
 
 import {AppConfigInput} from '@/interfaces/config';
@@ -25,6 +27,8 @@ export interface E2EServer {
 
 export interface CreateE2EServerOptions {
   migrate?: boolean;
+  dangerouslyAllowDdl?: boolean;
+  configDir?: string;
 }
 
 function cleanDbFiles(dbFile: string): void {
@@ -74,7 +78,18 @@ export async function createE2EServer(
   let app: FastifyInstance | undefined;
 
   try {
-    const serverResult = await startServer(config, 0, 'dev', false, migrate);
+    const resolvedConfig = resolveAndValidateConfig(
+      config,
+      'dev',
+      options.configDir,
+      options.dangerouslyAllowDdl !== undefined
+        ? {dangerouslyAllowDdl: options.dangerouslyAllowDdl}
+        : undefined,
+    );
+    if (migrate) {
+      await migrateDatabase(resolvedConfig);
+    }
+    const serverResult = await startServer(resolvedConfig);
     app = serverResult.app;
     await app.listen({port: 0, host: '127.0.0.1'});
 

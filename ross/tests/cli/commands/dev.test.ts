@@ -3,6 +3,7 @@ import * as configFinder from '@/cli/config-finder';
 import {FastifyInstance} from 'fastify';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+import migrateDatabase from '@/migrator';
 import {startServer} from '@/server';
 
 import {resolveAndValidateConfig} from '@/lib/config/pipeline';
@@ -15,6 +16,10 @@ vi.mock('@/lib/config/pipeline', () => ({
 
 vi.mock('@/lib/functions/builder', () => ({
   buildFunctions: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/migrator', () => ({
+  default: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server', () => ({
@@ -79,18 +84,16 @@ describe('cli/commands/dev', () => {
     expect(resolveAndValidateConfig).toHaveBeenCalledWith(
       {application: {name: 'Dev App'}},
       'dev',
+      '/app',
+      {},
     );
     expect(buildFunctions).toHaveBeenCalledWith({
       config: {application: {name: 'Dev App'}},
       configDir: '/app',
     });
-    expect(startServer).toHaveBeenCalledWith(
-      {application: {name: 'Dev App'}},
-      3000,
-      'dev',
-      false,
-      false,
-    );
+    expect(startServer).toHaveBeenCalledWith({
+      application: {name: 'Dev App'},
+    });
     expect(mockApp.listen).toHaveBeenCalledWith({
       port: 3000,
       host: '0.0.0.0',
@@ -129,13 +132,12 @@ describe('cli/commands/dev', () => {
     });
 
     expect(configFinder.resolveConfigPath).toHaveBeenCalledWith('custom.json');
-    expect(startServer).toHaveBeenCalledWith(
-      {application: {name: 'Dev App'}},
-      8080,
-      'dev',
-      true,
-      true,
-    );
+    expect(migrateDatabase).toHaveBeenCalledWith({
+      application: {name: 'Dev App'},
+    });
+    expect(startServer).toHaveBeenCalledWith({
+      application: {name: 'Dev App'},
+    });
     expect(mockApp.listen).toHaveBeenCalledWith({
       port: 8080,
       host: '127.0.0.1',
@@ -271,5 +273,80 @@ describe('cli/commands/dev', () => {
 
     errorSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+
+  it('exits with 1 when migrateDatabase fails', async () => {
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue({
+      application: {name: 'Dev App'},
+    });
+    vi.mocked(migrateDatabase).mockRejectedValueOnce(
+      new Error('Migration syntax error'),
+    );
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: number,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    await expect(handleDev({migrate: true})).rejects.toThrow('process.exit: 1');
+
+    expect(migrateDatabase).toHaveBeenCalled();
+    expect(startServer).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      'Migration syntax error',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('passes dangerouslyAllowDDL to resolveAndValidateConfig when dangerouslyAllowDdl CLI flag is passed', async () => {
+    const mockApp = {
+      listen: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      appConfig: {application: {name: 'Dev App'}},
+    } as unknown as FastifyInstance;
+
+    const mockResolved = {
+      application: {name: 'Dev App'},
+      server: {port: 3000},
+      infrastructure: {
+        database: {
+          engine: 'postgres',
+          migrations: {
+            directory: 'migrations',
+            dangerouslyAllowDDL: true,
+          },
+        },
+      },
+    };
+
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue({
+      application: {name: 'Dev App'},
+    });
+    vi.mocked(resolveAndValidateConfig).mockReturnValue(mockResolved as never);
+    vi.mocked(startServer).mockResolvedValue({
+      app: mockApp,
+      routes: [],
+    });
+
+    await handleDev({
+      migrate: true,
+      dangerouslyAllowDdl: true,
+    });
+
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
+      {application: {name: 'Dev App'}},
+      'dev',
+      '/app',
+      {migrate: true, dangerouslyAllowDdl: true},
+    );
+    expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
   });
 });

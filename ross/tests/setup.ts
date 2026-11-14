@@ -1,6 +1,7 @@
 import {vi} from 'vitest';
 
 import {
+  mysqlCreateConnectionMock,
   mysqlEndMock,
   mysqlGetConnectionMock,
   mysqlOnMock,
@@ -51,7 +52,9 @@ vi.mock('mysql2/promise', () => {
   return {
     default: {
       createPool,
+      createConnection: mysqlCreateConnectionMock,
     },
     createPool,
+    createConnection: mysqlCreateConnectionMock,
   };
 });

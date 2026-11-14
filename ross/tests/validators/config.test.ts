@@ -395,6 +395,37 @@ describe('validateInvalidDatabaseConfig', () => {
       expected:
         '/infrastructure/database/connection/url must match pattern "^(mysql(2)?|mariadb):\\/\\/"',
     },
+    {
+      name: 'migrations without directory',
+      patch: {migrations: {}},
+      expected:
+        "/infrastructure/database/migrations must have required property 'directory'",
+    },
+    {
+      name: 'migrations with empty directory',
+      patch: {migrations: {directory: ''}},
+      expected:
+        '/infrastructure/database/migrations/directory must NOT have fewer than 1 characters',
+    },
+    {
+      name: 'migrations with non-string directory',
+      patch: {migrations: {directory: 123}},
+      expected: '/infrastructure/database/migrations/directory must be string',
+    },
+    {
+      name: 'migrations with non-boolean dangerouslyAllowDDL',
+      patch: {
+        migrations: {directory: './migrations', dangerouslyAllowDDL: 'yes'},
+      },
+      expected:
+        '/infrastructure/database/migrations/dangerouslyAllowDDL must be boolean',
+    },
+    {
+      name: 'migrations with unexpected property',
+      patch: {migrations: {directory: './migrations', extra: 'bad'}},
+      expected:
+        '/infrastructure/database/migrations must NOT have additional properties',
+    },
   ])('Scenario: $name . should throw: "$expected"', ({patch, expected}) => {
     const config = {
       ...validBaseConfig,
@@ -452,6 +483,24 @@ describe('validateValidDatabaseConfig', () => {
         connection: {
           url: 'mysql2://devuser:devpassword@localhost:3306/rocketdb',
         },
+      },
+    },
+    {
+      name: 'with migrations directory only',
+      patch: {
+        migrations: {directory: './migrations'},
+      },
+    },
+    {
+      name: 'with migrations directory and dangerouslyAllowDDL true',
+      patch: {
+        migrations: {directory: './migrations', dangerouslyAllowDDL: true},
+      },
+    },
+    {
+      name: 'with migrations directory and dangerouslyAllowDDL false',
+      patch: {
+        migrations: {directory: './migrations', dangerouslyAllowDDL: false},
       },
     },
   ])('Scenario: $name . should return', ({patch}) => {

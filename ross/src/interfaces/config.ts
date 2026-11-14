@@ -82,13 +82,26 @@ export interface DocsConfig {
   };
 }
 
+export interface DatabaseMigrationsConfig {
+  directory: string;
+  dangerouslyAllowDDL?: boolean;
+}
+
+export interface ResolvedDatabaseMigrationsConfig {
+  directory: string;
+  dangerouslyAllowDDL: boolean;
+}
+
 export interface DatabaseConfig {
   engine: DBEngine;
   connection: {
     url: string;
   };
   timeout?: number;
+  migrations?: DatabaseMigrationsConfig;
 }
+
+export type DatabaseConfigInput = DatabaseConfig;
 
 export interface CacheDbConfig {
   engine: CacheDbEngine;
@@ -423,6 +436,7 @@ export interface ResolvedDatabaseConfig {
     url: string;
   };
   timeout: number;
+  migrations?: ResolvedDatabaseMigrationsConfig;
 }
 
 export type ResolvedCacheConfig =

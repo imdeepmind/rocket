@@ -47,6 +47,39 @@ test('examples/01-barebone/barebone_config.json resolves and validates in dev', 
   expect(resolved.data.models.notes.fields.status.query).toEqual(['eq', 'in']);
 });
 
+test('passes dangerouslyAllowDDL through to resolved config', () => {
+  const raw: AppConfigInput = {
+    application: {name: 'Pipeline Test'},
+    infrastructure: {
+      database: {
+        engine: 'postgres',
+        connection: {url: 'postgresql://localhost/db'},
+        migrations: {
+          directory: './migrations',
+          dangerouslyAllowDDL: false,
+        },
+      },
+    },
+    data: {
+      models: {
+        item: {
+          fields: {
+            name: {type: 'string'},
+          },
+        },
+      },
+    },
+  };
+
+  const resolved = resolveAndValidateConfig(raw, 'prod', '/app', {
+    dangerouslyAllowDdl: true,
+  });
+
+  expect(resolved.infrastructure.database.migrations?.dangerouslyAllowDDL).toBe(
+    true,
+  );
+});
+
 test('rejects empty string dangerouslyOverrideDefaultVariant in pipeline validation', () => {
   const raw: AppConfigInput = {
     application: {

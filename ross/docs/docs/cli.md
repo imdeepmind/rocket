@@ -79,6 +79,7 @@ ross dev [options]
 - `-p, --port <number>`: Port to run the server on (default: `3000` or config setting).
 - `-H, --host <host>`: Host interface to bind to (default: `0.0.0.0`).
 - `-m, --migrate`: Automatically run database migrations before booting the server.
+- `--dangerously-allow-ddl`: Allow custom migration scripts containing DDL statements (such as `CREATE TABLE`, `CREATE INDEX`, `ALTER TABLE`) to execute. Requires idempotent SQL (`IF NOT EXISTS`). By default, custom migrations only permit DML statements (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `WITH`).
 - `-v, --verbose`: Enable verbose logging output.
 
 #### Examples
@@ -89,6 +90,9 @@ ross dev
 
 # Run migrations first and bind to port 8080
 ross dev -m -p 8080
+
+# Run migrations with custom DDL allowed before starting dev server
+ross dev -m --dangerously-allow-ddl
 
 # Use a specific config file
 ross dev -c ./my-config.json
@@ -175,6 +179,7 @@ ross migrate [options]
 #### Options
 
 - `-c, --config <path>`: Path to configuration file.
+- `--dangerously-allow-ddl`: Allow custom migration scripts containing DDL statements (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`) to execute. By default, custom migrations enforce DML-only safety to protect declarative model schemas.
 - `-v, --verbose`: Enable verbose logging output.
 
 #### Examples
@@ -182,6 +187,9 @@ ross migrate [options]
 ```bash
 # Run migrations using auto-discovered config
 ross migrate
+
+# Run migrations with opt-in DDL support
+ross migrate --dangerously-allow-ddl
 
 # Using alias
 ross db:push -c ./production.json
