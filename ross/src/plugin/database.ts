@@ -4,7 +4,7 @@ import fp from 'fastify-plugin';
 import mysql from 'mysql2/promise';
 import {Pool} from 'pg';
 
-import {DatabaseQuery} from '@/interfaces';
+import {DatabaseQuery} from '@/interfaces/database';
 
 import {AsyncMutex} from '@/utils/mutex';
 
