@@ -70,28 +70,52 @@ describe('issueAccessToken', () => {
 describe('issueExchangeCode / readExchangeCode', () => {
   const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
-  test('round-trips the subject for the issuing provider', () => {
+  test('round-trips the subject for the issuing provider', async () => {
     const code = issueExchangeCode(config, 'google', '42');
 
-    expect(readExchangeCode(config, 'google', code)).toBe('42');
+    await expect(readExchangeCode(config, 'google', code)).resolves.toBe('42');
   });
 
-  test('rejects a code issued for another provider', () => {
+  test('rejects a code issued for another provider', async () => {
     const code = issueExchangeCode(config, 'google', '42');
 
-    expect(() => readExchangeCode(config, 'github', code)).toThrow(
+    await expect(readExchangeCode(config, 'github', code)).rejects.toThrow(
       'Invalid exchange code',
     );
   });
 
-  test('rejects a tampered code', () => {
-    expect(() => readExchangeCode(config, 'google', 'not-a-jwt')).toThrow();
+  test('rejects a tampered code', async () => {
+    await expect(
+      readExchangeCode(config, 'google', 'not-a-jwt'),
+    ).rejects.toThrow();
   });
 
   test('cannot be used as an access token', () => {
     const code = issueExchangeCode(config, 'google', '42');
 
     expect(() => jwt.verify(code, upAuthAuthentication.jwtSecret)).toThrow();
+  });
+
+  test('cannot be replayed when cache is provided', async () => {
+    const store = new Map<string, unknown>();
+    const mockCache = {
+      get: vi.fn(async (key: string) => store.get(key)),
+      set: vi.fn(async (key: string, val: unknown) => {
+        store.set(key, val);
+      }),
+      delete: vi.fn(),
+      clear: vi.fn(),
+    };
+
+    const code = issueExchangeCode(config, 'google', '42');
+
+    await expect(
+      readExchangeCode(config, 'google', code, mockCache as never),
+    ).resolves.toBe('42');
+
+    await expect(
+      readExchangeCode(config, 'google', code, mockCache as never),
+    ).rejects.toThrow('Exchange code has already been used');
   });
 
   test('throws when authentication is disabled', () => {

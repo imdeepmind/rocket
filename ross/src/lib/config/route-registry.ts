@@ -87,17 +87,17 @@ export function getGeneratedApiIdentifiers(
     const ssoProviders = providers.filter(provider => provider.type === 'sso');
     const authModel = authentication.userModel?.modelName;
 
+    if (authModel) {
+      const sharedOperations = ['providers', 'me', 'deleteMe', 'editMe'];
+
+      for (const operation of sharedOperations) {
+        addTargets('auth', authModel, 'unknown', operation);
+      }
+    }
+
     if (authModel && upAuth) {
       const upConfig = upAuth.config as UpAuthConfigInput;
-      const operations = [
-        'providers',
-        'registration',
-        'login',
-        'changePassword',
-        'me',
-        'deleteMe',
-        'editMe',
-      ];
+      const operations = ['registration', 'login', 'changePassword'];
 
       if (config.integrations?.email) {
         operations.push(
@@ -125,7 +125,7 @@ export function getGeneratedApiIdentifiers(
     }
 
     if (authModel && ssoProviders.length > 0) {
-      const operations = ['providers', 'ssoLogin', 'ssoCallback'];
+      const operations = ['ssoLogin', 'ssoCallback'];
 
       if (ssoProviders.some(provider => provider.protocol === 'saml')) {
         operations.push('ssoMetadata');

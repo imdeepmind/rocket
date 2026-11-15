@@ -1296,5 +1296,8 @@ describe('Server — SSO provider wiring', () => {
 
     expect(registerProvidersRoute).toHaveBeenCalled();
     expect(registerSsoRoutes).toHaveBeenCalled();
+    expect(registerMeRoute).toHaveBeenCalled();
+    expect(registerDeleteMeRoute).toHaveBeenCalled();
+    expect(registerEditMeRoute).toHaveBeenCalled();
   });
 });

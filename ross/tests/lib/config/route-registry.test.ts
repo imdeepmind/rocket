@@ -291,6 +291,9 @@ describe('sso identifiers', () => {
     const ids = getGeneratedApiIdentifiers(resolve({authentication: ssoAuth}));
 
     expect(ids.has('auth.v1.users.unknown.providers')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.me')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.deleteMe')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.editMe')).toBe(true);
     expect(ids.has('auth.v1.users.unknown.ssoLogin')).toBe(true);
     expect(ids.has('auth.v1.users.unknown.ssoCallback')).toBe(true);
     expect(ids.has('auth.v1.users.unknown.ssoMetadata')).toBe(true);

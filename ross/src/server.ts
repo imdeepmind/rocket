@@ -152,22 +152,25 @@ export async function startServer(
 
       // register auth routes: discovery and SSO are capability-driven, the
       // password routes exist only when an up-auth provider is configured.
-      if (resolvedConfig.authentication.enabled && ssoProviders.length > 0) {
+      const hasUserModel =
+        resolvedConfig.authentication.enabled &&
+        Boolean(resolvedConfig.authentication.userModel);
+
+      if (hasUserModel) {
         registerProvidersRoute(app, resolvedConfig);
+        registerMeRoute(app, resolvedConfig);
+        registerDeleteMeRoute(app, resolvedConfig);
+        registerEditMeRoute(app, resolvedConfig);
+      }
+
+      if (resolvedConfig.authentication.enabled && ssoProviders.length > 0) {
         registerSsoRoutes(app, resolvedConfig);
       }
 
       if (upAuth) {
-        if (ssoProviders.length === 0) {
-          registerProvidersRoute(app, resolvedConfig);
-        }
-
         registerRegistrationRoute(app, resolvedConfig);
         registerLoginRoute(app, resolvedConfig);
         registerChangePasswordRoute(app, resolvedConfig);
-        registerMeRoute(app, resolvedConfig);
-        registerDeleteMeRoute(app, resolvedConfig);
-        registerEditMeRoute(app, resolvedConfig);
 
         if (resolvedConfig.integrations?.email) {
           registerForgotPasswordRoute(app, resolvedConfig);

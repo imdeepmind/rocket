@@ -1293,3 +1293,81 @@ test('resolves every SSO provider shape with optional fields', () => {
   expect(okta.config.scopes).toEqual(['openid', 'profile']);
   expect(okta.config.attributeMapping).toEqual({});
 });
+
+test('oidc provider retains openid scope when custom scopes are configured', () => {
+  const resolved = resolveConfig(
+    {
+      authentication: {
+        enabled: true,
+        jwtSecret: 'super-secret-key-that-is-long-enough',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'google',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://accounts.google.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+              scopes: ['profile', 'email'],
+            },
+          },
+        ],
+      },
+    },
+    {mode: 'dev'},
+  );
+
+  const auth = resolved.authentication;
+  if (!auth.enabled) throw new Error('expected enabled');
+  const google = auth.providers[0];
+  if (google.type !== 'sso' || google.protocol !== 'oidc') {
+    throw new Error('expected oidc');
+  }
+  expect(google.config.scopes).toEqual(['openid', 'profile', 'email']);
+});
+
+test('oidc provider retains openid scope when custom scopes are configured', () => {
+  const resolved = resolveConfig(
+    {
+      authentication: {
+        enabled: true,
+        jwtSecret: 'super-secret-key-that-is-long-enough',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'google',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://accounts.google.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+              scopes: ['profile', 'email'],
+            },
+          },
+        ],
+      },
+    },
+    {mode: 'dev'},
+  );
+
+  const auth = resolved.authentication;
+  if (!auth.enabled) throw new Error('expected enabled');
+  const google = auth.providers[0];
+  if (google.type !== 'sso' || google.protocol !== 'oidc') {
+    throw new Error('expected oidc');
+  }
+  expect(google.config.scopes).toEqual(['openid', 'profile', 'email']);
+});

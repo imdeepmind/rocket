@@ -1,8 +1,11 @@
+import crypto from 'crypto';
+
 import {FastifyInstance} from 'fastify';
 import jwt from 'jsonwebtoken';
 
 import {extractJwtRolePayload} from '@/lib/rbac';
 
+import {ICache} from '@/interfaces/cache';
 import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {
@@ -16,6 +19,7 @@ import {deriveKey} from './state';
 export interface ExchangeCodePayload {
   provider: string;
   subject: string;
+  jti?: string;
 }
 
 function getSecret(config: ResolvedAppConfig): string {
@@ -70,7 +74,7 @@ export function issueExchangeCode(
   subject: string,
 ): string {
   return jwt.sign(
-    {provider, sub: subject},
+    {provider, sub: subject, jti: crypto.randomUUID()},
     deriveKey(getSecret(config), SSO_EXCHANGE_INFO),
     {
       expiresIn: SSO_EXCHANGE_CODE_TTL_SECONDS,
@@ -80,11 +84,12 @@ export function issueExchangeCode(
   );
 }
 
-export function readExchangeCode(
+export async function readExchangeCode(
   config: ResolvedAppConfig,
   provider: string,
   code: string,
-): string {
+  cache?: ICache,
+): Promise<string> {
   const decoded = jwt.verify(
     code,
     deriveKey(getSecret(config), SSO_EXCHANGE_INFO),
@@ -101,6 +106,21 @@ export function readExchangeCode(
     typeof (decoded as {sub?: unknown}).sub !== 'string'
   ) {
     throw new Error('Invalid exchange code');
+  }
+
+  if (cache) {
+    const jti =
+      (decoded as {jti?: string}).jti ||
+      /* c8 ignore next - fallback when code lacks jti */
+      crypto.createHash('sha256').update(code).digest('hex');
+    const cacheKey = `sso:exchange:${provider}:${jti}`;
+    const alreadyUsed = await cache.get(cacheKey);
+
+    if (alreadyUsed) {
+      throw new Error('Exchange code has already been used');
+    }
+
+    await cache.set(cacheKey, '1', SSO_EXCHANGE_CODE_TTL_SECONDS);
   }
 
   return String((decoded as {sub: string}).sub);

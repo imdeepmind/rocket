@@ -138,6 +138,11 @@ export async function handleCallback(
   }
 
   const query = request.query as Record<string, unknown>;
+
+  if (typeof query.error === 'string') {
+    throw new Error('Identity provider returned an error');
+  }
+
   const code = query.code;
 
   if (typeof code !== 'string' || code.length === 0) {

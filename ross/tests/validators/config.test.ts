@@ -4245,6 +4245,50 @@ describe('validateInvalidAuthConfig', () => {
       },
       expected: 'field must be nullable because SSO accounts do not set it',
     },
+    {
+      name: 'provider_id column must be nullable when up-auth exists',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: true},
+            password: {type: 'string', nullable: true},
+            provider: {type: 'string'},
+            provider_id: {type: 'string', nullable: false},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider, oidcProvider],
+        },
+      },
+      expected: 'field must be nullable because up-auth accounts do not set it',
+    },
+    {
+      name: 'unmapped non-nullable field without default must be nullable when sso exists',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: true},
+            password: {type: 'string', nullable: true},
+            provider: {type: 'string'},
+            provider_id: {type: 'string'},
+            tenant_id: {type: 'string', nullable: false},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [oidcProvider],
+        },
+      },
+      expected:
+        "field 'tenant_id' must be nullable or have a default because SSO accounts do not set it",
+    },
   ])('Scenario: $name . should throw', ({patch, expected, models}) => {
     const config = {
       ...authBase(),

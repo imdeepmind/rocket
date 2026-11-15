@@ -167,6 +167,18 @@ describe('oauth2 handleCallback', () => {
     ).rejects.toThrow('did not include a code');
   });
 
+  test('rejects when provider returns an error', async () => {
+    await expect(
+      handleCallback(
+        app,
+        oauth2,
+        callbackUrl,
+        buildState(),
+        request({error: 'access_denied'}),
+      ),
+    ).rejects.toThrow('Identity provider returned an error');
+  });
+
   test('rejects a non-oauth2 provider', async () => {
     const [oidc] = providersOf([oidcProvider]);
 

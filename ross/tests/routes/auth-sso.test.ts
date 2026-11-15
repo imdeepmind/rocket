@@ -355,6 +355,55 @@ describe('GET /auth/sso/:name/callback', () => {
     await app.close();
   });
 
+  test('preserves IdP error and error_description on failure redirect', async () => {
+    const app = await buildApp(
+      authenticationWith([
+        {
+          ...oauth2,
+          config: {
+            ...oauth2.config,
+            redirectUrl: 'https://app.example.com/done',
+            failureRedirectUrl: 'https://app.example.com/error',
+          },
+        },
+      ]),
+    );
+
+    const {cookie, state} = await startLogin(app, 'github');
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/auth/sso/github/callback?error=access_denied&error_description=User+denied+access&state=${state}`,
+      headers: {cookie},
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toContain('error=access_denied');
+    expect(response.headers.location).toContain(
+      'error_description=User+denied+access',
+    );
+
+    await app.close();
+  });
+
+  test('returns 400 with IdP error description when redirectUrl is not set', async () => {
+    const app = await buildApp(authenticationWith([oauth2]));
+    const {cookie, state} = await startLogin(app, 'github');
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/auth/sso/github/callback?error=access_denied&error_description=User+denied&state=${state}`,
+      headers: {cookie},
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe(
+      'SSO authentication failed: User denied',
+    );
+
+    await app.close();
+  });
+
   test('reports a user resolution failure', async () => {
     vi.stubGlobal(
       'fetch',
@@ -458,6 +507,15 @@ describe('POST /auth/sso/:name/token', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().data.accessToken).toBeDefined();
+
+    const replayResponse = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/sso/github/token',
+      payload: {code},
+    });
+
+    expect(replayResponse.statusCode).toBe(401);
+    expect(replayResponse.json().message).toBe('Invalid or expired code');
 
     await app.close();
   });

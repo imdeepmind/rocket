@@ -59,6 +59,7 @@ function assertNullable(
   model: ModelConfig,
   name: string | undefined,
   pointer: string,
+  message?: string,
 ): void {
   /* c8 ignore next - the schema guarantees required fields are present */
   if (!name) return;
@@ -66,9 +67,10 @@ function assertNullable(
   const field = model.fields[name];
   if (!field) return;
 
-  if (field.nullable === false) {
+  if (field.nullable === false && field.default === undefined) {
     errors.push(
-      `${pointer}: field must be nullable because SSO accounts do not set it`,
+      message ??
+        `${pointer}: field must be nullable because SSO accounts do not set it`,
     );
   }
 }
@@ -231,13 +233,21 @@ function validateAuthConstraints(config: AppConfig): string[] {
   }
 
   const hasSso = ssoProviders.length > 0;
+  const hasUpAuth = upAuthProviders.length > 0;
 
   for (const provider of upAuthProviders) {
     validateUpAuthProvider(errors, config, targetModel, provider, hasSso);
   }
 
   for (const provider of ssoProviders) {
-    validateSsoProvider(errors, targetModel, provider);
+    validateSsoProvider(
+      errors,
+      targetModel,
+      provider,
+      hasUpAuth,
+      userModel.providerField,
+      upAuthProviders,
+    );
   }
 
   return errors;
@@ -313,6 +323,9 @@ function validateSsoProvider(
   errors: string[],
   targetModel: ModelConfig,
   provider: SsoProviderInput,
+  hasUpAuth: boolean,
+  providerField: string,
+  upAuthProviders: UpAuthProviderInput[] = [],
 ): void {
   const {config: providerConfig} = provider;
   const base = `/authentication/providers/${provider.name}/config`;
@@ -326,6 +339,48 @@ function validateSsoProvider(
 
   if (providerIdField && providerIdField.type !== 'string') {
     errors.push(`${base}/fields/providerIdField: field must be of type string`);
+  }
+
+  if (hasUpAuth) {
+    assertNullable(
+      errors,
+      targetModel,
+      providerConfig.fields.providerIdField,
+      `${base}/fields/providerIdField`,
+      `${base}/fields/providerIdField: field must be nullable because up-auth accounts do not set it`,
+    );
+  }
+
+  const mappedColumns = new Set(
+    Object.values(providerConfig.attributeMapping ?? {}),
+  );
+  mappedColumns.add(providerConfig.fields.providerIdField);
+  mappedColumns.add(providerField);
+
+  for (const [columnName, columnField] of Object.entries(targetModel.fields)) {
+    if (
+      columnField.primaryKey ||
+      columnField.autoIncrement ||
+      mappedColumns.has(columnName)
+    ) {
+      continue;
+    }
+
+    if (columnField.nullable === false && columnField.default === undefined) {
+      const isUpAuthCredential = upAuthProviders.some(
+        p =>
+          p.config.fields.usernameField === columnName ||
+          p.config.fields.passwordField === columnName,
+      );
+
+      if (isUpAuthCredential) {
+        continue;
+      }
+
+      errors.push(
+        `${base}: field '${columnName}' must be nullable or have a default because SSO accounts do not set it`,
+      );
+    }
   }
 
   for (const [claim, column] of Object.entries(

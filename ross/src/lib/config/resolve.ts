@@ -514,7 +514,10 @@ function resolveSsoProvider(
       protocol: 'oidc',
       config: {
         ...base,
-        scopes: base.scopes.length > 0 ? base.scopes : ['openid', 'profile'],
+        scopes:
+          base.scopes.length > 0
+            ? Array.from(new Set(['openid', ...base.scopes]))
+            : ['openid', 'profile'],
         issuerUrl: provider.config.issuerUrl,
         clientId: provider.config.clientId,
         clientSecret: provider.config.clientSecret,

@@ -233,8 +233,8 @@ async function completeLogin(
   reply: FastifyReply,
 ): Promise<FastifyReply> {
   const secret = jwtSecret(config);
-  const fail = (reason: string): FastifyReply =>
-    failure(app, provider, reply, reason);
+  const fail = (reason: string, description?: string): FastifyReply =>
+    failure(app, provider, reply, reason, description);
 
   if (!secret) {
     return reply
@@ -304,8 +304,16 @@ async function completeLogin(
       state,
       request,
     );
-  } catch {
-    return fail('provider_error');
+  } catch (err) {
+    const query = request.query as Record<string, unknown>;
+    const idpError =
+      typeof query.error === 'string' ? query.error : 'provider_error';
+    const idpDesc =
+      typeof query.error_description === 'string'
+        ? query.error_description
+        : (err as Error).message;
+
+    return fail(idpError, idpDesc);
   }
 
   try {
@@ -353,7 +361,7 @@ async function exchange(
   let subject: string;
 
   try {
-    subject = readExchangeCode(config, provider.name, code);
+    subject = await readExchangeCode(config, provider.name, code, app.cache);
   } catch {
     return reply
       .status(401)
@@ -398,17 +406,26 @@ function failure(
   provider: ResolvedSsoProvider,
   reply: FastifyReply,
   reason: string,
+  description?: string,
 ): FastifyReply {
   if (provider.config.redirectUrl) {
     const target =
       provider.config.failureRedirectUrl ?? provider.config.redirectUrl;
 
-    return reply.redirect(buildRedirectUrl(target, {error: reason}), 302);
+    return reply.redirect(
+      buildRedirectUrl(target, {
+        error: reason,
+        error_description: description,
+      }),
+      302,
+    );
   }
 
-  return reply
-    .status(400)
-    .send(app.buildResponse(400, 'SSO authentication failed', null));
+  const message = description
+    ? `SSO authentication failed: ${description}`
+    : 'SSO authentication failed';
+
+  return reply.status(400).send(app.buildResponse(400, message, null));
 }
 
 function jwtSecret(config: ResolvedAppConfig): string | undefined {
