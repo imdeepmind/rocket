@@ -12,63 +12,63 @@ import {
   upAuthAuthentication,
 } from '@tests/helpers/auth-config';
 
-const buildApp = () => ({
-  jwt: {
-    sign: vi.fn().mockReturnValue('signed-token'),
-  },
+const buildSigner = () => ({
+  sign: vi.fn().mockReturnValue('signed-token'),
 });
 
 describe('issueAccessToken', () => {
   test('signs the standard payload', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
     const token = issueAccessToken(
-      app as never,
+      signer as never,
       config,
       {id: 7, email: 'user@example.com'},
       'email',
     );
 
     expect(token).toBe('signed-token');
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'user@example.com', providerId: null},
       {expiresIn: '1d'},
     );
   });
 
   test('sets email to null when it is absent', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
-    issueAccessToken(app as never, config, {id: 7}, 'email');
+    issueAccessToken(signer as never, config, {id: 7}, 'email');
 
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: null, providerId: null},
       {expiresIn: '1d'},
     );
   });
 
   test('uses the role user when provided', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]], {
       rbac: {enabled: true, roleField: 'role', defaultRole: 'viewer'},
     });
 
-    issueAccessToken(app as never, config, {id: 7}, undefined, {role: 'admin'});
+    issueAccessToken(signer as never, config, {id: 7}, undefined, {
+      role: 'admin',
+    });
 
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: null, providerId: null, role: 'admin'},
       {expiresIn: '1d'},
     );
   });
 
   test('includes providerId and email for SSO when configured', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
     issueAccessToken(
-      app as never,
+      signer as never,
       config,
       {id: 7, email: 'sso@example.com', provider_id: 'sub-123'},
       'email',
@@ -76,39 +76,39 @@ describe('issueAccessToken', () => {
       'provider_id',
     );
 
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'sso@example.com', providerId: 'sub-123'},
       {expiresIn: '1d'},
     );
   });
 
   test('includes custom usernameField in payload alongside email', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
     issueAccessToken(
-      app as never,
+      signer as never,
       config,
       {id: 7, username: 'alice'},
       'username',
     );
 
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, username: 'alice', email: 'alice', providerId: null},
       {expiresIn: '1d'},
     );
   });
 
   test('falls back to user.email when usernameField is omitted', () => {
-    const app = buildApp();
+    const signer = buildSigner();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
-    issueAccessToken(app as never, config, {
+    issueAccessToken(signer as never, config, {
       id: 7,
       email: 'fallback@example.com',
     });
 
-    expect(app.jwt.sign).toHaveBeenCalledWith(
+    expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'fallback@example.com', providerId: null},
       {expiresIn: '1d'},
     );
@@ -116,7 +116,7 @@ describe('issueAccessToken', () => {
 
   test('throws when authentication is disabled', () => {
     expect(() =>
-      issueAccessToken(buildApp() as never, buildEnabledAuth([]), {id: 1}),
+      issueAccessToken(buildSigner() as never, buildEnabledAuth([]), {id: 1}),
     ).toThrow('Authentication is not enabled');
   });
 });

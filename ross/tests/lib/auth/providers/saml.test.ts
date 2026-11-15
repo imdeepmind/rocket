@@ -51,20 +51,18 @@ const [oauth2] = (() => {
 
 const callbackUrl = 'https://api.example.com/api/v1/auth/sso/corp/callback';
 
-const buildApp = () => {
+const buildCache = () => {
   const store = new Map<string, unknown>();
 
   return {
-    app: {
-      cache: {
-        set: vi.fn(async (key: string, value: unknown) => {
-          store.set(key, value);
-        }),
-        get: vi.fn(async (key: string) => store.get(key) ?? null),
-        delete: vi.fn(async (key: string) => {
-          store.delete(key);
-        }),
-      },
+    cache: {
+      set: vi.fn(async (key: string, value: unknown) => {
+        store.set(key, value);
+      }),
+      get: vi.fn(async (key: string) => store.get(key) ?? null),
+      delete: vi.fn(async (key: string) => {
+        store.delete(key);
+      }),
     },
     store,
   };
@@ -92,15 +90,15 @@ afterEach(() => {
 describe('saml authorizeUrl', () => {
   test('creates a signed request through a cache-backed provider', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     mocks.getAuthorizeUrlAsync.mockResolvedValue('https://idp/login');
 
     const url = await adapter.authorizeUrl(
-      app as never,
       saml,
       callbackUrl,
       buildState(),
+      cache as never,
     );
 
     expect(url).toBe('https://idp/login');
@@ -119,11 +117,11 @@ describe('saml authorizeUrl', () => {
 
   test('persists request IDs through the cache provider', async () => {
     const {adapter} = await load();
-    const {app, store} = buildApp();
+    const {cache, store} = buildCache();
 
     mocks.getAuthorizeUrlAsync.mockResolvedValue('https://idp/login');
 
-    await adapter.authorizeUrl(app as never, saml, callbackUrl, buildState());
+    await adapter.authorizeUrl(saml, callbackUrl, buildState(), cache as never);
 
     const provider = mocks.options[0].cacheProvider as {
       saveAsync: (key: string, value: string) => Promise<unknown>;
@@ -143,10 +141,10 @@ describe('saml authorizeUrl', () => {
 
   test('rejects a non-saml provider', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     await expect(
-      adapter.authorizeUrl(app as never, oauth2, callbackUrl, buildState()),
+      adapter.authorizeUrl(oauth2, callbackUrl, buildState(), cache as never),
     ).rejects.toThrow('is not a SAML provider');
   });
 });
@@ -154,7 +152,7 @@ describe('saml authorizeUrl', () => {
 describe('saml handleCallback', () => {
   test('returns the NameID from the assertion', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     mocks.validatePostResponseAsync.mockResolvedValue({
       profile: {nameID: 'user-1', email: 'user@example.com'},
@@ -162,11 +160,11 @@ describe('saml handleCallback', () => {
     });
 
     const identity = await adapter.handleCallback(
-      app as never,
       saml,
       callbackUrl,
       buildState(),
       {body: {SAMLResponse: 'response', RelayState: 'relay'}} as never,
+      cache as never,
     );
 
     expect(identity).toMatchObject({provider: 'corp', providerId: 'user-1'});
@@ -178,7 +176,7 @@ describe('saml handleCallback', () => {
 
   test('omits RelayState when it is absent', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     mocks.validatePostResponseAsync.mockResolvedValue({
       profile: {nameID: 'user-1'},
@@ -186,11 +184,11 @@ describe('saml handleCallback', () => {
     });
 
     await adapter.handleCallback(
-      app as never,
       saml,
       callbackUrl,
       buildState(),
       {body: {SAMLResponse: 'response'}} as never,
+      cache as never,
     );
 
     expect(mocks.validatePostResponseAsync).toHaveBeenCalledWith({
@@ -200,18 +198,24 @@ describe('saml handleCallback', () => {
 
   test('requires a SAML response', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     await expect(
-      adapter.handleCallback(app as never, saml, callbackUrl, buildState(), {
-        body: {},
-      } as never),
+      adapter.handleCallback(
+        saml,
+        callbackUrl,
+        buildState(),
+        {
+          body: {},
+        } as never,
+        cache as never,
+      ),
     ).rejects.toThrow('SAML response is missing');
   });
 
   test('rejects a logged out or subject-less response', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     mocks.validatePostResponseAsync.mockResolvedValue({
       profile: null,
@@ -219,20 +223,32 @@ describe('saml handleCallback', () => {
     });
 
     await expect(
-      adapter.handleCallback(app as never, saml, callbackUrl, buildState(), {
-        body: {SAMLResponse: 'response'},
-      } as never),
+      adapter.handleCallback(
+        saml,
+        callbackUrl,
+        buildState(),
+        {
+          body: {SAMLResponse: 'response'},
+        } as never,
+        cache as never,
+      ),
     ).rejects.toThrow('did not include a subject');
   });
 
   test('rejects a non-saml provider', async () => {
     const {adapter} = await load();
-    const {app} = buildApp();
+    const {cache} = buildCache();
 
     await expect(
-      adapter.handleCallback(app as never, oauth2, callbackUrl, buildState(), {
-        body: {SAMLResponse: 'x'},
-      } as never),
+      adapter.handleCallback(
+        oauth2,
+        callbackUrl,
+        buildState(),
+        {
+          body: {SAMLResponse: 'x'},
+        } as never,
+        cache as never,
+      ),
     ).rejects.toThrow('is not a SAML provider');
   });
 });

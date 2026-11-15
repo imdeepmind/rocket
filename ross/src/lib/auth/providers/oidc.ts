@@ -1,4 +1,4 @@
-import {FastifyInstance, FastifyRequest} from 'fastify';
+import {FastifyRequest} from 'fastify';
 import * as client from 'openid-client';
 
 import {
@@ -44,7 +44,6 @@ export function isOidc(
 }
 
 export async function authorizeUrl(
-  _app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   state: SsoStatePayload,
@@ -71,7 +70,6 @@ export async function authorizeUrl(
 }
 
 export async function handleCallback(
-  _app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   state: SsoStatePayload,

@@ -1,4 +1,4 @@
-import {FastifyInstance, FastifyRequest} from 'fastify';
+import {FastifyRequest} from 'fastify';
 
 import {
   ResolvedOAuth2SsoProvider,
@@ -102,7 +102,6 @@ function extractSubject(
 }
 
 export async function authorizeUrl(
-  _app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   state: SsoStatePayload,
@@ -127,7 +126,6 @@ export async function authorizeUrl(
 }
 
 export async function handleCallback(
-  _app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   _state: SsoStatePayload,

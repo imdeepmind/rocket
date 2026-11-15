@@ -4,8 +4,9 @@ import {
   SAML,
   ValidateInResponseTo,
 } from '@node-saml/node-saml';
-import {FastifyInstance, FastifyRequest} from 'fastify';
+import {FastifyRequest} from 'fastify';
 
+import {ICache} from '@/interfaces/cache';
 import {
   ResolvedSamlSsoProvider,
   ResolvedSsoProvider,
@@ -31,29 +32,31 @@ function cacheKey(providerName: string, key: string): string {
  * cookies are not sent. The cache is therefore the only correct store here.
  */
 function cacheProvider(
-  app: FastifyInstance,
+  cache: ICache | undefined,
   providerName: string,
 ): CacheProvider {
   return {
     async saveAsync(key, value) {
-      await app.cache.set(
-        cacheKey(providerName, key),
-        value,
-        SSO_STATE_TTL_SECONDS,
-      );
+      if (cache) {
+        await cache.set(
+          cacheKey(providerName, key),
+          value,
+          SSO_STATE_TTL_SECONDS,
+        );
+      }
 
       return {value, createdAt: Date.now()};
     },
     async getAsync(key) {
-      return app.cache.get<string>(cacheKey(providerName, key));
+      return cache ? cache.get<string>(cacheKey(providerName, key)) : null;
     },
     async removeAsync(key) {
-      if (!key) {
+      if (!key || !cache) {
         return null;
       }
 
-      const existing = await app.cache.get<string>(cacheKey(providerName, key));
-      await app.cache.delete(cacheKey(providerName, key));
+      const existing = await cache.get<string>(cacheKey(providerName, key));
+      await cache.delete(cacheKey(providerName, key));
 
       return existing;
     },
@@ -61,7 +64,7 @@ function cacheProvider(
 }
 
 function createClient(
-  app: FastifyInstance,
+  cache: ICache | undefined,
   provider: ResolvedSamlSsoProvider,
   callbackUrl: string,
 ): SAML {
@@ -73,31 +76,31 @@ function createClient(
     audience: provider.config.issuer,
     wantAssertionsSigned: true,
     validateInResponseTo: ValidateInResponseTo.always,
-    cacheProvider: cacheProvider(app, provider.name),
+    cacheProvider: cacheProvider(cache, provider.name),
   });
 }
 
 export async function authorizeUrl(
-  app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   state: SsoStatePayload,
+  cache?: ICache,
 ): Promise<string> {
   if (!isSaml(provider)) {
     throw new Error(`Provider ${provider.name} is not a SAML provider`);
   }
 
-  const client = createClient(app, provider, callbackUrl);
+  const client = createClient(cache, provider, callbackUrl);
 
   return client.getAuthorizeUrlAsync(state.state, {});
 }
 
 export async function handleCallback(
-  app: FastifyInstance,
   provider: ResolvedSsoProvider,
   callbackUrl: string,
   _state: SsoStatePayload,
   request: FastifyRequest,
+  cache?: ICache,
 ): Promise<ExternalIdentity> {
   if (!isSaml(provider)) {
     throw new Error(`Provider ${provider.name} is not a SAML provider`);
@@ -109,7 +112,7 @@ export async function handleCallback(
     throw new Error('SAML response is missing');
   }
 
-  const client = createClient(app, provider, callbackUrl);
+  const client = createClient(cache, provider, callbackUrl);
   const {profile, loggedOut} = await client.validatePostResponseAsync({
     SAMLResponse: body.SAMLResponse,
     ...(body.RelayState ? {RelayState: body.RelayState} : {}),

@@ -32,7 +32,6 @@ const [oauth2] = (() => {
   return other.providers as ResolvedSsoProvider[];
 })();
 
-const app = {} as never;
 const callbackUrl = 'https://api.example.com/api/v1/auth/sso/google/callback';
 
 const buildState = (): {
@@ -74,7 +73,7 @@ describe('oidc authorizeUrl', () => {
     );
 
     const state = buildState();
-    const url = await adapter.authorizeUrl(app, oidc, callbackUrl, state);
+    const url = await adapter.authorizeUrl(oidc, callbackUrl, state);
 
     expect(url).toBe('https://accounts.google.com/authorize?x=1');
     expect(state.verifier).toBeDefined();
@@ -100,8 +99,8 @@ describe('oidc authorizeUrl', () => {
     client.discovery.mockResolvedValue({} as never);
     client.buildAuthorizationUrl.mockReturnValue(new URL('https://idp/a'));
 
-    await adapter.authorizeUrl(app, oidc, callbackUrl, buildState());
-    await adapter.authorizeUrl(app, oidc, callbackUrl, buildState());
+    await adapter.authorizeUrl(oidc, callbackUrl, buildState());
+    await adapter.authorizeUrl(oidc, callbackUrl, buildState());
 
     expect(client.discovery).toHaveBeenCalledTimes(1);
   });
@@ -115,10 +114,10 @@ describe('oidc authorizeUrl', () => {
     client.buildAuthorizationUrl.mockReturnValue(new URL('https://idp/a'));
 
     await expect(
-      adapter.authorizeUrl(app, oidc, callbackUrl, buildState()),
+      adapter.authorizeUrl(oidc, callbackUrl, buildState()),
     ).rejects.toThrow('discovery failed');
 
-    await adapter.authorizeUrl(app, oidc, callbackUrl, buildState());
+    await adapter.authorizeUrl(oidc, callbackUrl, buildState());
 
     expect(client.discovery).toHaveBeenCalledTimes(2);
   });
@@ -127,7 +126,7 @@ describe('oidc authorizeUrl', () => {
     const {adapter} = await load();
 
     await expect(
-      adapter.authorizeUrl(app, oauth2, callbackUrl, buildState()),
+      adapter.authorizeUrl(oauth2, callbackUrl, buildState()),
     ).rejects.toThrow('is not an OIDC provider');
   });
 });
@@ -145,7 +144,6 @@ describe('oidc handleCallback', () => {
     } as never);
 
     const identity = await adapter.handleCallback(
-      app,
       oidc,
       callbackUrl,
       {...buildState(), verifier: 'verifier'},
@@ -179,7 +177,6 @@ describe('oidc handleCallback', () => {
     const state = buildState();
 
     await adapter.handleCallback(
-      app,
       oidc,
       callbackUrl,
       state,
@@ -204,7 +201,6 @@ describe('oidc handleCallback', () => {
 
     await expect(
       adapter.handleCallback(
-        app,
         oidc,
         callbackUrl,
         buildState(),
@@ -218,7 +214,6 @@ describe('oidc handleCallback', () => {
 
     await expect(
       adapter.handleCallback(
-        app,
         oauth2,
         callbackUrl,
         buildState(),

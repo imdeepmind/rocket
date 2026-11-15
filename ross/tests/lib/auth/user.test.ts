@@ -4,7 +4,7 @@ import {resolveUserByIdentity} from '@/lib/auth/user';
 
 type Step = {rows: unknown[]} | Error;
 
-const buildApp = (steps: Step[]) => {
+const buildDb = (steps: Step[]) => {
   const query = vi.fn();
 
   for (const step of steps) {
@@ -15,7 +15,7 @@ const buildApp = (steps: Step[]) => {
     }
   }
 
-  return {app: {db: {query}}, query};
+  return {db: {query}, query};
 };
 
 const lookup = {
@@ -28,9 +28,9 @@ const lookup = {
 
 describe('resolveUserByIdentity', () => {
   test('returns an existing user without inserting', async () => {
-    const {app, query} = buildApp([{rows: [{id: 1, provider: 'google'}]}]);
+    const {db, query} = buildDb([{rows: [{id: 1, provider: 'google'}]}]);
 
-    const user = await resolveUserByIdentity(app as never, lookup);
+    const user = await resolveUserByIdentity(db as never, lookup);
 
     expect(user).toEqual({id: 1, provider: 'google'});
     expect(query).toHaveBeenCalledTimes(1);
@@ -41,13 +41,13 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('creates the user on first login', async () => {
-    const {app, query} = buildApp([
+    const {db, query} = buildDb([
       {rows: []},
       {rows: []},
       {rows: [{id: 9, provider: 'google', provider_id: 'sub-123'}]},
     ]);
 
-    const user = await resolveUserByIdentity(app as never, lookup);
+    const user = await resolveUserByIdentity(db as never, lookup);
 
     expect(user).toEqual({id: 9, provider: 'google', provider_id: 'sub-123'});
     expect(query).toHaveBeenCalledTimes(3);
@@ -58,9 +58,9 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('persists mapped claims only when present', async () => {
-    const {app, query} = buildApp([{rows: []}, {rows: []}, {rows: [{id: 9}]}]);
+    const {db, query} = buildDb([{rows: []}, {rows: []}, {rows: [{id: 9}]}]);
 
-    await resolveUserByIdentity(app as never, {
+    await resolveUserByIdentity(db as never, {
       ...lookup,
       attributeMapping: {name: 'display_name', email: 'email'},
       claims: {name: 'Alice', email: null},
@@ -73,9 +73,9 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('does not let a mapping overwrite the identity columns', async () => {
-    const {app, query} = buildApp([{rows: []}, {rows: []}, {rows: [{id: 9}]}]);
+    const {db, query} = buildDb([{rows: []}, {rows: []}, {rows: [{id: 9}]}]);
 
-    await resolveUserByIdentity(app as never, {
+    await resolveUserByIdentity(db as never, {
       ...lookup,
       attributeMapping: {provider: 'provider_id'},
       claims: {provider: 'spoofed'},
@@ -87,36 +87,36 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('recovers when a concurrent login wins the race', async () => {
-    const {app} = buildApp([
+    const {db} = buildDb([
       {rows: []},
       new Error('duplicate key'),
       {rows: [{id: 5, provider: 'google'}]},
     ]);
 
-    const user = await resolveUserByIdentity(app as never, lookup);
+    const user = await resolveUserByIdentity(db as never, lookup);
 
     expect(user).toEqual({id: 5, provider: 'google'});
   });
 
   test('rethrows the insert error when nothing was created', async () => {
     const failure = new Error('insert failed');
-    const {app} = buildApp([{rows: []}, failure, {rows: []}]);
+    const {db} = buildDb([{rows: []}, failure, {rows: []}]);
 
-    await expect(resolveUserByIdentity(app as never, lookup)).rejects.toThrow(
+    await expect(resolveUserByIdentity(db as never, lookup)).rejects.toThrow(
       'insert failed',
     );
   });
 
   test('throws when the row cannot be read back', async () => {
-    const {app} = buildApp([{rows: []}, {rows: []}, {rows: []}]);
+    const {db} = buildDb([{rows: []}, {rows: []}, {rows: []}]);
 
-    await expect(resolveUserByIdentity(app as never, lookup)).rejects.toThrow(
+    await expect(resolveUserByIdentity(db as never, lookup)).rejects.toThrow(
       'Failed to persist the authenticated identity',
     );
   });
 
   test('persists username when usernameField is provided', async () => {
-    const {app, query} = buildApp([
+    const {db, query} = buildDb([
       {rows: []}, // identity select
       {rows: []}, // username select
       {rows: []}, // insert
@@ -132,7 +132,7 @@ describe('resolveUserByIdentity', () => {
       }, // read back
     ]);
 
-    const user = await resolveUserByIdentity(app as never, {
+    const user = await resolveUserByIdentity(db as never, {
       ...lookup,
       usernameField: 'email',
       username: 'alice@example.com',
@@ -155,13 +155,13 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('throws ACCOUNT_COLLISION when account with username already exists', async () => {
-    const {app} = buildApp([
+    const {db} = buildDb([
       {rows: []}, // identity select
       {rows: [{id: 42, email: 'alice@example.com'}]}, // username select
     ]);
 
     await expect(
-      resolveUserByIdentity(app as never, {
+      resolveUserByIdentity(db as never, {
         ...lookup,
         usernameField: 'email',
         username: 'alice@example.com',
@@ -173,7 +173,7 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('throws ACCOUNT_COLLISION on insert race condition when username exists', async () => {
-    const {app} = buildApp([
+    const {db} = buildDb([
       {rows: []}, // identity select
       {rows: []}, // username select before insert
       new Error('duplicate key on email'), // insert fails
@@ -182,7 +182,7 @@ describe('resolveUserByIdentity', () => {
     ]);
 
     await expect(
-      resolveUserByIdentity(app as never, {
+      resolveUserByIdentity(db as never, {
         ...lookup,
         usernameField: 'email',
         username: 'alice@example.com',
@@ -194,7 +194,7 @@ describe('resolveUserByIdentity', () => {
   });
 
   test('rethrows error on insert failure when username does not exist', async () => {
-    const {app} = buildApp([
+    const {db} = buildDb([
       {rows: []}, // identity select
       {rows: []}, // username select before insert
       new Error('database error'), // insert fails
@@ -203,7 +203,7 @@ describe('resolveUserByIdentity', () => {
     ]);
 
     await expect(
-      resolveUserByIdentity(app as never, {
+      resolveUserByIdentity(db as never, {
         ...lookup,
         usernameField: 'email',
         username: 'alice@example.com',

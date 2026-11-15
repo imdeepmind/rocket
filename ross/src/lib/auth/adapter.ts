@@ -1,5 +1,6 @@
-import {FastifyInstance, FastifyRequest} from 'fastify';
+import {FastifyRequest} from 'fastify';
 
+import {ICache} from '@/interfaces/cache';
 import {ResolvedSsoProvider} from '@/interfaces/config';
 
 import {SsoStatePayload} from './state';
@@ -12,19 +13,19 @@ export interface SsoAdapter {
    * caller seals it into the state cookie.
    */
   authorizeUrl(
-    app: FastifyInstance,
     provider: ResolvedSsoProvider,
     callbackUrl: string,
     state: SsoStatePayload,
+    cache?: ICache,
   ): Promise<string>;
 
   /** Validate the provider response and return the external identity. */
   handleCallback(
-    app: FastifyInstance,
     provider: ResolvedSsoProvider,
     callbackUrl: string,
     state: SsoStatePayload,
     request: FastifyRequest,
+    cache?: ICache,
   ): Promise<ExternalIdentity>;
 
   /** SP metadata document, for protocols that need one. */

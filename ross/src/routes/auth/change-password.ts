@@ -103,7 +103,12 @@ function registerChangePasswordEndpoint(
 
       const user = res.rows[0] as Record<string, unknown>;
 
-      const blocked = blockPasswordManagement(app, reply, config, user);
+      const blocked = blockPasswordManagement(
+        reply,
+        config,
+        user,
+        app.buildResponse,
+      );
 
       if (blocked) {
         return blocked;

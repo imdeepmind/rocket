@@ -1,6 +1,18 @@
-import {FastifyInstance, FastifyReply} from 'fastify';
+import {FastifyReply} from 'fastify';
 
 import {ResolvedAppConfig} from '@/interfaces/config';
+
+export type ResponseBuilder = <T = unknown>(
+  code: number,
+  message: string,
+  data: T,
+) => unknown;
+
+const defaultBuildResponse: ResponseBuilder = (code, message, data) => ({
+  code,
+  message,
+  data,
+});
 
 /**
  * Whether a user record belongs to the local password provider. Legacy rows
@@ -53,10 +65,10 @@ function providerValue(
  * request was blocked, `null` when the caller may proceed.
  */
 export function blockPasswordManagement(
-  app: FastifyInstance,
   reply: FastifyReply,
   config: ResolvedAppConfig,
   user: Record<string, unknown> | undefined,
+  buildResponse: ResponseBuilder = defaultBuildResponse,
 ): FastifyReply | null {
   if (isPasswordAccount(config, user)) {
     return null;
@@ -65,7 +77,7 @@ export function blockPasswordManagement(
   return reply
     .status(400)
     .send(
-      app.buildResponse(
+      buildResponse(
         400,
         passwordManagementMessage(providerValue(config, user)),
         null,
@@ -78,9 +90,9 @@ export function blockPasswordManagement(
  * a reply directly would bypass rollback.
  */
 export function assertPasswordAccount(
-  app: FastifyInstance,
   config: ResolvedAppConfig,
   user: Record<string, unknown> | undefined,
+  buildResponse: ResponseBuilder = defaultBuildResponse,
 ): void {
   if (isPasswordAccount(config, user)) {
     return;
@@ -90,6 +102,6 @@ export function assertPasswordAccount(
 
   throw Object.assign(new Error(message), {
     statusCode: 400,
-    body: app.buildResponse(400, message, null),
+    body: buildResponse(400, message, null),
   });
 }

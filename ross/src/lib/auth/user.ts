@@ -1,4 +1,6 @@
-import {FastifyInstance} from 'fastify';
+import {DatabaseQuery} from '@/interfaces/database';
+
+export type Queryable = Pick<DatabaseQuery, 'query'>;
 
 export interface IdentityLookup {
   model: string;
@@ -13,23 +15,23 @@ export interface IdentityLookup {
 }
 
 async function selectUserByUsername(
-  app: FastifyInstance,
+  db: Queryable,
   model: string,
   usernameField: string,
   username: string,
 ): Promise<Record<string, unknown> | null> {
   const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
-  const result = await app.db.query<Record<string, unknown>>(query, [username]);
+  const result = await db.query<Record<string, unknown>>(query, [username]);
 
   return result.rows[0] ?? null;
 }
 
 async function selectUserByIdentity(
-  app: FastifyInstance,
+  db: Queryable,
   lookup: IdentityLookup,
 ): Promise<Record<string, unknown> | null> {
   const query = `SELECT * FROM "${lookup.model}" WHERE "${lookup.providerField}" = $1 AND "${lookup.providerIdField}" = $2 LIMIT 1;`;
-  const result = await app.db.query<Record<string, unknown>>(query, [
+  const result = await db.query<Record<string, unknown>>(query, [
     lookup.providerName,
     lookup.providerId,
   ]);
@@ -45,10 +47,10 @@ async function selectUserByIdentity(
  * claims are persisted only when the developer asked for them.
  */
 export async function resolveUserByIdentity(
-  app: FastifyInstance,
+  db: Queryable,
   lookup: IdentityLookup,
 ): Promise<Record<string, unknown>> {
-  const existing = await selectUserByIdentity(app, lookup);
+  const existing = await selectUserByIdentity(db, lookup);
 
   if (existing) {
     return existing;
@@ -73,7 +75,7 @@ export async function resolveUserByIdentity(
 
   if (lookup.usernameField && lookup.username) {
     const existingByUsername = await selectUserByUsername(
-      app,
+      db,
       lookup.model,
       lookup.usernameField,
       lookup.username,
@@ -99,10 +101,10 @@ export async function resolveUserByIdentity(
   const insert = `INSERT INTO "${lookup.model}" (${columnList}) VALUES (${placeholders});`;
 
   try {
-    await app.db.query(insert, values);
+    await db.query(insert, values);
   } catch (err) {
     // A concurrent first login may have won the unique constraint race.
-    const raced = await selectUserByIdentity(app, lookup);
+    const raced = await selectUserByIdentity(db, lookup);
 
     if (raced) {
       return raced;
@@ -110,7 +112,7 @@ export async function resolveUserByIdentity(
 
     if (lookup.usernameField && lookup.username) {
       const existingByUsername = await selectUserByUsername(
-        app,
+        db,
         lookup.model,
         lookup.usernameField,
         lookup.username,
@@ -128,7 +130,7 @@ export async function resolveUserByIdentity(
     throw err;
   }
 
-  const created = await selectUserByIdentity(app, lookup);
+  const created = await selectUserByIdentity(db, lookup);
 
   if (!created) {
     throw new Error('Failed to persist the authenticated identity');

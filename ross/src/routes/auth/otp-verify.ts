@@ -193,7 +193,7 @@ function registerOtpVerifyEndpoint(
         }
 
         const token = issueAccessToken(
-          app,
+          app.jwt,
           config,
           user,
           usernameField,

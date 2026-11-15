@@ -118,9 +118,9 @@ function registerEmailChangeEndpoint(
         }
 
         assertPasswordAccount(
-          app,
           config,
           res.rows[0] as Record<string, unknown>,
+          app.buildResponse,
         );
 
         const setClauses = [`"${usernameField}" = $1`];

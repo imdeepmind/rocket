@@ -209,10 +209,10 @@ async function startLogin(
   };
 
   const url = await getAdapter(provider).authorizeUrl(
-    app,
     provider,
     callbackUrl,
     state,
+    app.cache,
   );
 
   // The adapter may have attached a PKCE verifier; seal only after that.
@@ -324,11 +324,11 @@ async function completeLogin(
 
   try {
     identity = await getAdapter(provider).handleCallback(
-      app,
       provider,
       callbackUrl,
       state,
       request,
+      app.cache,
     );
   } catch (err) {
     const query = request.query as Record<string, unknown>;
@@ -346,7 +346,7 @@ async function completeLogin(
     const usernameField = provider.config.fields.usernameField;
     const username = extractUsername(identity.claims, usernameField);
 
-    const user = await resolveUserByIdentity(app, {
+    const user = await resolveUserByIdentity(app.db, {
       model: authentication.userModel.modelName,
       providerField: authentication.userModel.providerField,
       providerName: provider.name,
@@ -369,7 +369,7 @@ async function completeLogin(
     }
 
     const accessToken = issueAccessToken(
-      app,
+      app.jwt,
       config,
       user,
       provider.config.fields.usernameField,
@@ -437,7 +437,7 @@ async function exchange(
   }
 
   const accessToken = issueAccessToken(
-    app,
+    app.jwt,
     config,
     user,
     provider.config.fields.usernameField,

@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-import {FastifyInstance} from 'fastify';
+import {JWT} from '@fastify/jwt';
 import jwt from 'jsonwebtoken';
 
 import {extractJwtRolePayload} from '@/lib/rbac';
@@ -37,7 +37,7 @@ function getSecret(config: ResolvedAppConfig): string {
  * this is the convergence point of the two authentication flows.
  */
 export function issueAccessToken(
-  app: FastifyInstance,
+  signer: Pick<JWT, 'sign'>,
   config: ResolvedAppConfig,
   user: Record<string, unknown>,
   usernameField?: string,
@@ -71,7 +71,7 @@ export function issueAccessToken(
     payload[usernameField] = user[usernameField] ?? null;
   }
 
-  return app.jwt.sign(payload, {
+  return signer.sign(payload, {
     expiresIn: authentication.tokenExpiration,
   });
 }

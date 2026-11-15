@@ -14,14 +14,6 @@ import {
 
 const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
-const buildApp = () => ({
-  buildResponse: vi.fn((code: number, message: string, data: unknown) => ({
-    code,
-    message,
-    data,
-  })),
-});
-
 const buildReply = () => ({
   status: vi.fn().mockReturnThis(),
   send: vi.fn().mockReturnThis(),
@@ -81,32 +73,53 @@ describe('passwordManagementMessage', () => {
 describe('blockPasswordManagement', () => {
   test('returns null for password accounts', () => {
     expect(
-      blockPasswordManagement(
-        buildApp() as never,
-        buildReply() as never,
-        config,
-        {provider: 'up-auth'},
-      ),
+      blockPasswordManagement(buildReply() as never, config, {
+        provider: 'up-auth',
+      }),
     ).toBeNull();
   });
 
   test('sends a 400 for SSO accounts', () => {
-    const app = buildApp();
     const reply = buildReply();
+    const buildResponse = vi.fn(
+      (code: number, message: string, data: unknown) => ({
+        code,
+        message,
+        data,
+      }),
+    );
 
     const result = blockPasswordManagement(
-      app as never,
       reply as never,
       config,
       {provider: 'google'},
+      buildResponse,
     );
 
     expect(result).toBe(reply);
     expect(reply.status).toHaveBeenCalledWith(400);
-    expect(app.buildResponse).toHaveBeenCalledWith(
+    expect(buildResponse).toHaveBeenCalledWith(
       400,
       expect.stringContaining('authenticated via google'),
       null,
+    );
+  });
+
+  test('uses default buildResponse when omitted', () => {
+    const reply = buildReply();
+
+    const result = blockPasswordManagement(reply as never, config, {
+      provider: 'google',
+    });
+
+    expect(result).toBe(reply);
+    expect(reply.status).toHaveBeenCalledWith(400);
+    expect(reply.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 400,
+        message: expect.stringContaining('authenticated via google'),
+        data: null,
+      }),
     );
   });
 });
@@ -114,17 +127,29 @@ describe('blockPasswordManagement', () => {
 describe('assertPasswordAccount', () => {
   test('does nothing for password accounts', () => {
     expect(() =>
-      assertPasswordAccount(buildApp() as never, config, {provider: 'up-auth'}),
+      assertPasswordAccount(config, {provider: 'up-auth'}),
     ).not.toThrow();
   });
 
   test('throws a 400 error for SSO accounts', () => {
-    const app = buildApp();
+    const buildResponse = vi.fn(
+      (code: number, message: string, data: unknown) => ({
+        code,
+        message,
+        data,
+      }),
+    );
 
     expect(() =>
-      assertPasswordAccount(app as never, config, {provider: 'google'}),
+      assertPasswordAccount(config, {provider: 'google'}, buildResponse),
     ).toThrow('authenticated via google');
 
-    expect(app.buildResponse).toHaveBeenCalled();
+    expect(buildResponse).toHaveBeenCalled();
+  });
+
+  test('uses default buildResponse when omitted', () => {
+    expect(() => assertPasswordAccount(config, {provider: 'google'})).toThrow(
+      'authenticated via google',
+    );
   });
 });

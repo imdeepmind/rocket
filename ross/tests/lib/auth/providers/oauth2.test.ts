@@ -22,7 +22,6 @@ const providersOf = (providers: unknown[]): ResolvedSsoProvider[] => {
 };
 
 const [oauth2] = providersOf([oauth2Provider]);
-const app = {} as never;
 const callbackUrl = 'https://api.example.com/api/v1/auth/sso/github/callback';
 
 const jsonResponse = (body: unknown, ok = true) => ({
@@ -45,7 +44,7 @@ describe('oauth2 authorizeUrl', () => {
   test('builds the authorization redirect', async () => {
     const state = buildState();
 
-    const url = new URL(await authorizeUrl(app, oauth2, callbackUrl, state));
+    const url = new URL(await authorizeUrl(oauth2, callbackUrl, state));
 
     expect(url.origin + url.pathname).toBe(
       'https://github.com/login/oauth/authorize',
@@ -65,7 +64,7 @@ describe('oauth2 authorizeUrl', () => {
     } as ResolvedSsoProvider;
 
     const url = new URL(
-      await authorizeUrl(app, provider, callbackUrl, buildState()),
+      await authorizeUrl(provider, callbackUrl, buildState()),
     );
 
     expect(url.searchParams.has('scope')).toBe(false);
@@ -74,9 +73,9 @@ describe('oauth2 authorizeUrl', () => {
   test('rejects a non-oauth2 provider', async () => {
     const [oidc] = providersOf([oidcProvider]);
 
-    await expect(
-      authorizeUrl(app, oidc, callbackUrl, buildState()),
-    ).rejects.toThrow('is not an OAuth2 provider');
+    await expect(authorizeUrl(oidc, callbackUrl, buildState())).rejects.toThrow(
+      'is not an OAuth2 provider',
+    );
   });
 });
 
@@ -91,7 +90,6 @@ describe('oauth2 handleCallback', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const identity = await handleCallback(
-      app,
       oauth2,
       callbackUrl,
       buildState(),
@@ -121,7 +119,6 @@ describe('oauth2 handleCallback', () => {
     } as ResolvedSsoProvider;
 
     const identity = await handleCallback(
-      app,
       provider,
       callbackUrl,
       buildState(),
@@ -143,14 +140,12 @@ describe('oauth2 handleCallback', () => {
     );
 
     const first = await handleCallback(
-      app,
       oauth2,
       callbackUrl,
       buildState(),
       request({code: 'abc'}),
     );
     const second = await handleCallback(
-      app,
       oauth2,
       callbackUrl,
       buildState(),
@@ -163,14 +158,13 @@ describe('oauth2 handleCallback', () => {
 
   test('requires an authorization code', async () => {
     await expect(
-      handleCallback(app, oauth2, callbackUrl, buildState(), request({})),
+      handleCallback(oauth2, callbackUrl, buildState(), request({})),
     ).rejects.toThrow('did not include a code');
   });
 
   test('rejects when provider returns an error', async () => {
     await expect(
       handleCallback(
-        app,
         oauth2,
         callbackUrl,
         buildState(),
@@ -183,13 +177,7 @@ describe('oauth2 handleCallback', () => {
     const [oidc] = providersOf([oidcProvider]);
 
     await expect(
-      handleCallback(
-        app,
-        oidc,
-        callbackUrl,
-        buildState(),
-        request({code: 'a'}),
-      ),
+      handleCallback(oidc, callbackUrl, buildState(), request({code: 'a'})),
     ).rejects.toThrow('is not an OAuth2 provider');
   });
 
@@ -197,13 +185,7 @@ describe('oauth2 handleCallback', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}, false)));
 
     await expect(
-      handleCallback(
-        app,
-        oauth2,
-        callbackUrl,
-        buildState(),
-        request({code: 'abc'}),
-      ),
+      handleCallback(oauth2, callbackUrl, buildState(), request({code: 'abc'})),
     ).rejects.toThrow('Token endpoint rejected');
   });
 
@@ -211,13 +193,7 @@ describe('oauth2 handleCallback', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({})));
 
     await expect(
-      handleCallback(
-        app,
-        oauth2,
-        callbackUrl,
-        buildState(),
-        request({code: 'abc'}),
-      ),
+      handleCallback(oauth2, callbackUrl, buildState(), request({code: 'abc'})),
     ).rejects.toThrow('did not return an access token');
   });
 
@@ -231,13 +207,7 @@ describe('oauth2 handleCallback', () => {
     );
 
     await expect(
-      handleCallback(
-        app,
-        oauth2,
-        callbackUrl,
-        buildState(),
-        request({code: 'abc'}),
-      ),
+      handleCallback(oauth2, callbackUrl, buildState(), request({code: 'abc'})),
     ).rejects.toThrow('Userinfo endpoint rejected');
   });
 
@@ -254,7 +224,6 @@ describe('oauth2 handleCallback', () => {
 
     await expect(
       handleCallback(
-        app,
         provider,
         callbackUrl,
         buildState(),
