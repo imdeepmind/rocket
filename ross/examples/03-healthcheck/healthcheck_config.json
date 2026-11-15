@@ -1,0 +1,28 @@
+{
+  "application": {
+    "name": "Health Check Example API",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/api/health"
+    }
+  },
+  "data": {
+    "models": {
+      "items": {
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": false,
+            "apis": ["search", "edit"]
+          }
+        }
+      }
+    }
+  }
+}
+

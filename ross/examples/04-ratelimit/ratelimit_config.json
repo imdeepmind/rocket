@@ -1,0 +1,34 @@
+{
+  "application": {
+    "name": "Rate Limit Example API",
+    "rateLimit": {
+      "enabled": true,
+      "max": 50,
+      "timeWindow": "1m",
+      "rateLimitHealthAPI": false
+    },
+    "healthCheck": {
+      "enabled": true,
+      "path": "/api/health"
+    }
+  },
+  "data": {
+    "models": {
+      "messages": {
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true
+          },
+          "text": {
+            "type": "string",
+            "nullable": false,
+            "apis": ["search", "edit"]
+          }
+        }
+      }
+    }
+  }
+}
+
