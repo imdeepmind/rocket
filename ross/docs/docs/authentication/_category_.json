@@ -1,0 +1,8 @@
+{
+  "label": "Authentication",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Configure password login, SSO identity providers (OAuth2, OIDC, SAML), and static API keys for ROSS APIs."
+  }
+}
