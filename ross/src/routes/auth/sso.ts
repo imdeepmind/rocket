@@ -225,6 +225,32 @@ async function startLogin(
   return reply.redirect(url, 302);
 }
 
+function extractUsername(
+  claims: Record<string, unknown> | undefined,
+  field: string | undefined,
+): string | undefined {
+  if (!field || !claims) {
+    return undefined;
+  }
+
+  const candidateKeys = [
+    field,
+    'email',
+    'preferred_username',
+    'upn',
+    'username',
+  ];
+
+  for (const key of candidateKeys) {
+    const val = claims[key];
+    if (typeof val === 'string' && val.length > 0) {
+      return val;
+    }
+  }
+
+  return undefined;
+}
+
 async function completeLogin(
   app: FastifyInstance,
   config: ResolvedAppConfig,
@@ -317,12 +343,17 @@ async function completeLogin(
   }
 
   try {
+    const usernameField = provider.config.fields.usernameField;
+    const username = extractUsername(identity.claims, usernameField);
+
     const user = await resolveUserByIdentity(app, {
       model: authentication.userModel.modelName,
       providerField: authentication.userModel.providerField,
       providerName: provider.name,
       providerIdField: provider.config.fields.providerIdField,
       providerId: identity.providerId,
+      usernameField,
+      username,
       attributeMapping: provider.config.attributeMapping,
       claims: identity.claims,
     });
@@ -337,14 +368,27 @@ async function completeLogin(
       );
     }
 
-    const accessToken = issueAccessToken(app, config, user);
+    const accessToken = issueAccessToken(
+      app,
+      config,
+      user,
+      provider.config.fields.usernameField,
+      user,
+      provider.config.fields.providerIdField,
+    );
 
     return reply
       .status(200)
       .send(
         app.buildResponse(200, 'SSO authentication successful', {accessToken}),
       );
-  } catch {
+  } catch (err) {
+    if ((err as {code?: string}).code === 'ACCOUNT_COLLISION') {
+      return fail(
+        'account_already_exists',
+        'An account with this email/username already exists',
+      );
+    }
     return fail('user_resolution_failed');
   }
 }
@@ -392,7 +436,14 @@ async function exchange(
       .send(app.buildResponse(401, 'Invalid or expired code', null));
   }
 
-  const accessToken = issueAccessToken(app, config, user);
+  const accessToken = issueAccessToken(
+    app,
+    config,
+    user,
+    provider.config.fields.usernameField,
+    user,
+    provider.config.fields.providerIdField,
+  );
 
   return reply
     .status(200)

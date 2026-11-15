@@ -217,6 +217,7 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
                 },
                 email: {
                   type: 'string',
+                  unique: true,
                   nullable: false,
                 },
                 password: {

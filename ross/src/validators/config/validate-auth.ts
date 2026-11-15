@@ -253,6 +253,28 @@ function validateAuthConstraints(config: AppConfig): string[] {
   return errors;
 }
 
+function isFieldUnique(
+  model: ModelConfig,
+  fieldName: string,
+  field: ModelFieldConfig,
+): boolean {
+  if (field.unique === true) {
+    return true;
+  }
+
+  for (const index of Object.values(model.indexes ?? {})) {
+    if (
+      index.unique &&
+      index.fields.length === 1 &&
+      index.fields[0] === fieldName
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function validateUpAuthProvider(
   errors: string[],
   config: AppConfig,
@@ -263,7 +285,7 @@ function validateUpAuthProvider(
   const {fields} = provider.config;
   const base = '/authentication/providers/up-auth/config';
 
-  assertField(
+  const usernameField = assertField(
     errors,
     targetModel,
     fields.usernameField,
@@ -275,6 +297,10 @@ function validateUpAuthProvider(
     fields.passwordField,
     `${base}/fields/passwordField`,
   );
+
+  if (usernameField && usernameField.type !== 'string') {
+    errors.push(`${base}/fields/usernameField: field must be of type string`);
+  }
 
   if (hasSso) {
     assertNullable(
@@ -289,6 +315,15 @@ function validateUpAuthProvider(
       fields.passwordField,
       `${base}/fields/passwordField`,
     );
+  } else if (usernameField) {
+    if (!isFieldUnique(targetModel, fields.usernameField, usernameField)) {
+      errors.push(`${base}/fields/usernameField: field must be unique`);
+    }
+    if (usernameField.nullable !== false) {
+      errors.push(
+        `${base}/fields/usernameField: field must not be nullable when SSO is not configured`,
+      );
+    }
   }
 
   if (fields.isVerifiedField) {
@@ -341,6 +376,19 @@ function validateSsoProvider(
     errors.push(`${base}/fields/providerIdField: field must be of type string`);
   }
 
+  if (providerConfig.fields.usernameField) {
+    const ssoUsernameField = assertField(
+      errors,
+      targetModel,
+      providerConfig.fields.usernameField,
+      `${base}/fields/usernameField`,
+    );
+
+    if (ssoUsernameField && ssoUsernameField.type !== 'string') {
+      errors.push(`${base}/fields/usernameField: field must be of type string`);
+    }
+  }
+
   if (hasUpAuth) {
     assertNullable(
       errors,
@@ -356,6 +404,9 @@ function validateSsoProvider(
   );
   mappedColumns.add(providerConfig.fields.providerIdField);
   mappedColumns.add(providerField);
+  if (providerConfig.fields.usernameField) {
+    mappedColumns.add(providerConfig.fields.usernameField);
+  }
 
   for (const [columnName, columnField] of Object.entries(targetModel.fields)) {
     if (

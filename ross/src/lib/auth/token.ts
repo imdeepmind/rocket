@@ -42,6 +42,7 @@ export function issueAccessToken(
   user: Record<string, unknown>,
   usernameField?: string,
   roleUser: Record<string, unknown> = user,
+  providerIdField?: string,
 ): string {
   const {authentication} = config;
 
@@ -49,13 +50,25 @@ export function issueAccessToken(
     throw new Error('Authentication is not enabled');
   }
 
+  let email: unknown = null;
+  if (usernameField && user[usernameField] !== undefined) {
+    email = user[usernameField];
+  } else if (user.email !== undefined) {
+    email = user.email;
+  }
+
   const payload: Record<string, unknown> = {
     id: user[authentication.userModel.idField],
+    providerId:
+      providerIdField && user[providerIdField] !== undefined
+        ? user[providerIdField]
+        : null,
+    email: email ?? null,
     ...extractJwtRolePayload(roleUser, config.rbac),
   };
 
-  if (usernameField && user[usernameField] !== undefined) {
-    payload[usernameField] = user[usernameField];
+  if (usernameField) {
+    payload[usernameField] = user[usernameField] ?? null;
   }
 
   return app.jwt.sign(payload, {

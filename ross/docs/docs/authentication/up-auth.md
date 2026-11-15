@@ -50,8 +50,9 @@ Additional rules enforced at startup:
 
 - At most one `up-auth` provider is allowed.
 - `userModel` and `jwtSecret` are required.
-- `usernameField` and `passwordField` must exist in the user model.
-- When an SSO provider is configured in the same application, `usernameField` and `passwordField` must be `nullable: true`, because SSO rows do not populate them.
+- `usernameField` and `passwordField` must exist in the user model and be of type `string`.
+- When no SSO provider is configured, `usernameField` must be unique (`unique: true` or unique index) and not nullable (`nullable: false`), and `passwordField` must not be nullable (`nullable: false`).
+- When an SSO provider is configured in the same application, `passwordField` must be `nullable: true` (and `usernameField` must be `nullable: true` unless mapped/provided), because SSO accounts do not have passwords.
 - `isVerifiedField` must exist, must be of type `boolean`, and requires `integrations.email`.
 - `mfaRequired: true` requires `integrations.email`.
 

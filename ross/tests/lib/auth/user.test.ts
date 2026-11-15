@@ -114,4 +114,100 @@ describe('resolveUserByIdentity', () => {
       'Failed to persist the authenticated identity',
     );
   });
+
+  test('persists username when usernameField is provided', async () => {
+    const {app, query} = buildApp([
+      {rows: []}, // identity select
+      {rows: []}, // username select
+      {rows: []}, // insert
+      {
+        rows: [
+          {
+            id: 9,
+            provider: 'google',
+            provider_id: 'sub-123',
+            email: 'alice@example.com',
+          },
+        ],
+      }, // read back
+    ]);
+
+    const user = await resolveUserByIdentity(app as never, {
+      ...lookup,
+      usernameField: 'email',
+      username: 'alice@example.com',
+    });
+
+    expect(user).toEqual({
+      id: 9,
+      provider: 'google',
+      provider_id: 'sub-123',
+      email: 'alice@example.com',
+    });
+    expect(query.mock.calls[2][0]).toBe(
+      'INSERT INTO "users" ("provider", "provider_id", "email") VALUES ($1, $2, $3);',
+    );
+    expect(query.mock.calls[2][1]).toEqual([
+      'google',
+      'sub-123',
+      'alice@example.com',
+    ]);
+  });
+
+  test('throws ACCOUNT_COLLISION when account with username already exists', async () => {
+    const {app} = buildApp([
+      {rows: []}, // identity select
+      {rows: [{id: 42, email: 'alice@example.com'}]}, // username select
+    ]);
+
+    await expect(
+      resolveUserByIdentity(app as never, {
+        ...lookup,
+        usernameField: 'email',
+        username: 'alice@example.com',
+      }),
+    ).rejects.toMatchObject({
+      message: 'An account with this email/username already exists',
+      code: 'ACCOUNT_COLLISION',
+    });
+  });
+
+  test('throws ACCOUNT_COLLISION on insert race condition when username exists', async () => {
+    const {app} = buildApp([
+      {rows: []}, // identity select
+      {rows: []}, // username select before insert
+      new Error('duplicate key on email'), // insert fails
+      {rows: []}, // identity re-check returns empty
+      {rows: [{id: 42, email: 'alice@example.com'}]}, // username re-check finds user
+    ]);
+
+    await expect(
+      resolveUserByIdentity(app as never, {
+        ...lookup,
+        usernameField: 'email',
+        username: 'alice@example.com',
+      }),
+    ).rejects.toMatchObject({
+      message: 'An account with this email/username already exists',
+      code: 'ACCOUNT_COLLISION',
+    });
+  });
+
+  test('rethrows error on insert failure when username does not exist', async () => {
+    const {app} = buildApp([
+      {rows: []}, // identity select
+      {rows: []}, // username select before insert
+      new Error('database error'), // insert fails
+      {rows: []}, // identity re-check returns empty
+      {rows: []}, // username re-check returns empty
+    ]);
+
+    await expect(
+      resolveUserByIdentity(app as never, {
+        ...lookup,
+        usernameField: 'email',
+        username: 'alice@example.com',
+      }),
+    ).rejects.toThrow('database error');
+  });
 });

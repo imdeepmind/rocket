@@ -3885,6 +3885,20 @@ const authModels = {
   },
 } as unknown as Record<string, ModelConfig>;
 
+const upAuthOnlyModels = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', unique: true, nullable: false},
+      password: {type: 'string', nullable: false},
+      is_active: {type: 'boolean'},
+      provider: {type: 'string'},
+      provider_id: {type: 'string', nullable: true},
+      display_name: {type: 'string'},
+    },
+  },
+} as unknown as Record<string, ModelConfig>;
+
 const authBase = () => ({
   application: {name: 'Auth Test'},
   data: {models: authModels},
@@ -4289,6 +4303,131 @@ describe('validateInvalidAuthConfig', () => {
       expected:
         "field 'tenant_id' must be nullable or have a default because SSO accounts do not set it",
     },
+    {
+      name: 'up-auth usernameField must be string',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'integer', unique: true, nullable: false},
+            password: {type: 'string', nullable: false},
+            provider: {type: 'string'},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        '/authentication/providers/up-auth/config/fields/usernameField: field must be of type string',
+    },
+    {
+      name: 'up-auth usernameField must be unique when no SSO',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', unique: false, nullable: false},
+            password: {type: 'string', nullable: false},
+            provider: {type: 'string'},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        '/authentication/providers/up-auth/config/fields/usernameField: field must be unique',
+    },
+    {
+      name: 'up-auth usernameField must not be nullable when no SSO',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', unique: true, nullable: true},
+            password: {type: 'string', nullable: false},
+            provider: {type: 'string'},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        '/authentication/providers/up-auth/config/fields/usernameField: field must not be nullable when SSO is not configured',
+    },
+    {
+      name: 'sso usernameField does not exist in model',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'sso',
+              name: 'google',
+              protocol: 'oidc',
+              config: {
+                fields: {
+                  providerIdField: 'provider_id',
+                  usernameField: 'nonexistent',
+                },
+                issuerUrl: 'https://accounts.google.com',
+                clientId: 'client-id',
+                clientSecret: 'client-secret',
+              },
+            },
+          ],
+        },
+      },
+      expected:
+        '/authentication/providers/google/config/fields/usernameField: field does not exist in model',
+    },
+    {
+      name: 'sso usernameField must be of type string',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'integer', nullable: true},
+            provider: {type: 'string'},
+            provider_id: {type: 'string'},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'sso',
+              name: 'google',
+              protocol: 'oidc',
+              config: {
+                fields: {
+                  providerIdField: 'provider_id',
+                  usernameField: 'email',
+                },
+                issuerUrl: 'https://accounts.google.com',
+                clientId: 'client-id',
+                clientSecret: 'client-secret',
+              },
+            },
+          ],
+        },
+      },
+      expected:
+        '/authentication/providers/google/config/fields/usernameField: field must be of type string',
+    },
   ])('Scenario: $name . should throw', ({patch, expected, models}) => {
     const config = {
       ...authBase(),
@@ -4305,6 +4444,7 @@ describe('validateValidAuthConfig', () => {
     {
       name: 'valid up-auth auth config',
       providers: [upAuthProvider],
+      models: upAuthOnlyModels,
     },
     {
       name: 'valid api-key auth config',
@@ -4314,6 +4454,35 @@ describe('validateValidAuthConfig', () => {
       name: 'valid up-auth with tokenExpiration',
       providers: [upAuthProvider],
       extra: {tokenExpiration: '8h'},
+      models: upAuthOnlyModels,
+    },
+    {
+      name: 'valid up-auth with unique index instead of unique: true',
+      providers: [upAuthProvider],
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', unique: false, nullable: false},
+            password: {type: 'string', nullable: false},
+            provider: {type: 'string'},
+          },
+          indexes: {
+            non_unique_idx: {
+              fields: ['email'],
+              unique: false,
+            },
+            composite_idx: {
+              fields: ['email', 'provider'],
+              unique: true,
+            },
+            email_idx: {
+              fields: ['email'],
+              unique: true,
+            },
+          },
+        },
+      },
     },
     {
       name: 'valid up-auth + oidc + saml',
@@ -4323,9 +4492,26 @@ describe('validateValidAuthConfig', () => {
       name: 'valid sso only',
       providers: [oidcProvider],
     },
-  ])('Scenario: $name . should return', ({providers, extra}) => {
+    {
+      name: 'valid sso with usernameField',
+      providers: [
+        {
+          type: 'sso',
+          name: 'google',
+          protocol: 'oidc',
+          config: {
+            fields: {providerIdField: 'provider_id', usernameField: 'email'},
+            issuerUrl: 'https://accounts.google.com',
+            clientId: 'client-id',
+            clientSecret: 'client-secret',
+          },
+        },
+      ],
+    },
+  ])('Scenario: $name . should return', ({providers, extra, models}) => {
     const config = {
       ...authBase(),
+      data: {models: models ?? authModels},
       authentication: {
         ...authBase().authentication,
         ...(extra ?? {}),

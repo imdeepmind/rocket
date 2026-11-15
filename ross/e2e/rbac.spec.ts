@@ -75,6 +75,7 @@ const rbacE2EConfig: AppConfigInput = {
           },
           email: {
             type: 'string',
+            unique: true,
             nullable: false,
             apis: ['edit'],
           },
@@ -908,6 +909,7 @@ test.describe
             },
             email: {
               type: 'string',
+              unique: true,
               nullable: false,
             },
             password: {

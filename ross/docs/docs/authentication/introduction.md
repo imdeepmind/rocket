@@ -108,7 +108,7 @@ A model that supports both password and SSO accounts typically looks like this:
 
 :::note[SSO accounts are privacy-first]
 
-SSO accounts are keyed strictly by `(providerField, providerIdField)`. No email or username is written unless you explicitly map a claim with `attributeMapping`. When you combine `up-auth` with SSO providers, the password and username columns must be `nullable: true` because SSO rows never populate them.
+SSO accounts are keyed strictly by `(providerField, providerIdField)`. You can optionally configure `usernameField` (e.g. `"email"`) in the SSO provider's `fields` to persist the user's email/username from the IdP. When set, ROSS prevents account collision if an account with that email already exists. When you combine `up-auth` with SSO providers, the password column must be `nullable: true` (and `usernameField` must be `nullable: true` unless every provider sets it) because SSO rows do not populate passwords.
 
 :::
 
@@ -129,6 +129,7 @@ Every identity provider issues the same JWT. The payload is built from `userMode
 ```json
 {
   "id": 42,
+  "providerId": null,
   "email": "user@example.com",
   "role": "admin",
   "iat": 1730000000,
@@ -137,7 +138,8 @@ Every identity provider issues the same JWT. The payload is built from `userMode
 ```
 
 - `id` is the value of `userModel.idField`.
-- The username claim is named after the `up-auth` `usernameField` (for example `email`) and is present only when that column has a value. SSO accounts without that column simply do not get the claim.
+- `providerId` holds the external SSO subject identifier (for SSO logins) or `null` (for `up-auth` logins).
+- `email` holds the user's email/username (or `null` if unconfigured or absent). If a custom `usernameField` is configured (such as `"username"`), that property is also included.
 - `role` or `roles` appear only when RBAC is enabled. They are extracted from `rbac.roleField`, falling back to `rbac.defaultRole`.
 - The token is signed with `jwtSecret` and expires after `tokenExpiration`.
 - Clients send it as `Authorization: Bearer <token>`.

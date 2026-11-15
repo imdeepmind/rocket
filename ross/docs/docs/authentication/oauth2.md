@@ -54,6 +54,7 @@ ROSS starts the flow, exchanges the authorization code for an access token, read
 | `name` | `string` | **Yes** | — | Unique lowercase provider name used in routes and in `providerField`. Pattern: `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$`, maximum 32 characters. |
 | `protocol` | `"oauth2"` | **Yes** | — | Selects this adapter. |
 | `config.fields.providerIdField` | `string` | **Yes** | — | String column that stores the provider's subject together with `providerField`. |
+| `config.fields.usernameField` | `string` | No | — | Optional string column (e.g. `"email"`) to persist the user's username/email from the IdP. When set, ROSS prevents account collision if an account with that username already exists. |
 | `config.authorizeUrl` | `string` | **Yes** | — | Authorization endpoint the browser is redirected to. |
 | `config.tokenUrl` | `string` | **Yes** | — | Token endpoint used for the server-side code exchange. |
 | `config.userInfoUrl` | `string` | No | — | Endpoint that returns the user profile. Without it the flow has no claims and therefore no subject, so it is required in practice. |

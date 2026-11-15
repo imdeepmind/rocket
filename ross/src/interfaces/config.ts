@@ -314,6 +314,7 @@ export interface UpAuthConfigInput {
 export interface SsoBaseConfigInput {
   fields: {
     providerIdField: string;
+    usernameField?: string;
   };
   attributeMapping?: Record<string, string>;
   scopes?: string[];
@@ -613,6 +614,7 @@ export interface ResolvedApiKeyProvider {
 interface ResolvedSsoBase {
   fields: {
     providerIdField: string;
+    usernameField?: string;
   };
   attributeMapping: Record<string, string>;
   scopes: string[];

@@ -50,6 +50,7 @@ SAML is the right choice for enterprise identity providers that do not expose OA
 | `name` | `string` | **Yes** | — | Unique lowercase provider name used in routes and in `providerField`. Pattern: `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$`, maximum 32 characters. |
 | `protocol` | `"saml"` | **Yes** | — | Selects this adapter. |
 | `config.fields.providerIdField` | `string` | **Yes** | — | String column that stores the assertion `NameID` together with `providerField`. |
+| `config.fields.usernameField` | `string` | No | — | Optional string column (e.g. `"email"`) to persist the user's username/email from the IdP. When set, ROSS prevents account collision if an account with that username already exists. |
 | `config.entryPoint` | `string` | **Yes** | — | Identity provider SSO URL. The `AuthnRequest` is sent here. |
 | `config.issuer` | `string` | **Yes** | — | Service provider entity ID. It is also used as the expected assertion audience. |
 | `config.cert` | `string` | **Yes** | — | Identity provider X.509 signing certificate (PEM body or base64). |

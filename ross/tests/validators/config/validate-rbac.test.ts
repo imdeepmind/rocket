@@ -26,8 +26,8 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => ({
   users: {
     fields: {
       id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
-      email: {type: 'string', unique: true, nullable: true},
-      password: {type: 'string', secret: true, nullable: true},
+      email: {type: 'string', unique: true, nullable: false},
+      password: {type: 'string', secret: true, nullable: false},
       provider: {type: 'string', nullable: false},
       role: {type: 'string', nullable: false},
       status: {

@@ -6,8 +6,22 @@ export interface IdentityLookup {
   providerName: string;
   providerIdField: string;
   providerId: string;
+  usernameField?: string;
+  username?: string;
   attributeMapping?: Record<string, string>;
   claims?: Record<string, unknown>;
+}
+
+async function selectUserByUsername(
+  app: FastifyInstance,
+  model: string,
+  usernameField: string,
+  username: string,
+): Promise<Record<string, unknown> | null> {
+  const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
+  const result = await app.db.query<Record<string, unknown>>(query, [username]);
+
+  return result.rows[0] ?? null;
 }
 
 async function selectUserByIdentity(
@@ -57,6 +71,25 @@ export async function resolveUserByIdentity(
   push(lookup.providerField, lookup.providerName);
   push(lookup.providerIdField, lookup.providerId);
 
+  if (lookup.usernameField && lookup.username) {
+    const existingByUsername = await selectUserByUsername(
+      app,
+      lookup.model,
+      lookup.usernameField,
+      lookup.username,
+    );
+
+    if (existingByUsername) {
+      const collisionError = new Error(
+        'An account with this email/username already exists',
+      );
+      (collisionError as {code?: string}).code = 'ACCOUNT_COLLISION';
+      throw collisionError;
+    }
+
+    push(lookup.usernameField, lookup.username);
+  }
+
   for (const [claim, column] of Object.entries(lookup.attributeMapping ?? {})) {
     push(column, lookup.claims?.[claim]);
   }
@@ -73,6 +106,23 @@ export async function resolveUserByIdentity(
 
     if (raced) {
       return raced;
+    }
+
+    if (lookup.usernameField && lookup.username) {
+      const existingByUsername = await selectUserByUsername(
+        app,
+        lookup.model,
+        lookup.usernameField,
+        lookup.username,
+      );
+
+      if (existingByUsername) {
+        const collisionError = new Error(
+          'An account with this email/username already exists',
+        );
+        (collisionError as {code?: string}).code = 'ACCOUNT_COLLISION';
+        throw collisionError;
+      }
     }
 
     throw err;

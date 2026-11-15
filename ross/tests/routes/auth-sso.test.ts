@@ -278,6 +278,151 @@ describe('GET /auth/sso/:name/callback', () => {
     await app.close();
   });
 
+  test('issues an access token with usernameField and providerId when configured', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({access_token: 'token'}))
+        .mockResolvedValueOnce(
+          jsonResponse({id: 7, email: 'octocat@github.com'}),
+        ),
+    );
+
+    pgQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 1,
+          provider: 'github',
+          provider_id: '7',
+          email: 'octocat@github.com',
+        },
+      ],
+      rowCount: 1,
+    });
+
+    const oauth2WithUsername = {
+      ...oauth2,
+      config: {
+        ...oauth2.config,
+        fields: {providerIdField: 'provider_id', usernameField: 'email'},
+      },
+    };
+
+    const app = await buildApp(authenticationWith([oauth2WithUsername]));
+    const {cookie, state} = await startLogin(app, 'github');
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/auth/sso/github/callback?code=abc&state=${state}`,
+      headers: {cookie},
+    });
+
+    expect(response.statusCode).toBe(200);
+    const token = response.json().data.accessToken;
+    expect(token).toBeDefined();
+
+    const decoded = app.jwt.decode(token) as Record<string, unknown>;
+    expect(decoded.id).toBe(1);
+    expect(decoded.providerId).toBe('7');
+    expect(decoded.email).toBe('octocat@github.com');
+
+    await app.close();
+  });
+
+  test('issues an access token with null email when usernameField is configured but IdP returns no username', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({access_token: 'token'}))
+        .mockResolvedValueOnce(jsonResponse({id: 7})),
+    );
+
+    pgQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 1,
+          provider: 'github',
+          provider_id: '7',
+        },
+      ],
+      rowCount: 1,
+    });
+
+    const oauth2WithUsername = {
+      ...oauth2,
+      config: {
+        ...oauth2.config,
+        fields: {providerIdField: 'provider_id', usernameField: 'email'},
+      },
+    };
+
+    const app = await buildApp(authenticationWith([oauth2WithUsername]));
+    const {cookie, state} = await startLogin(app, 'github');
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/auth/sso/github/callback?code=abc&state=${state}`,
+      headers: {cookie},
+    });
+
+    expect(response.statusCode).toBe(200);
+    const token = response.json().data.accessToken;
+    expect(token).toBeDefined();
+
+    const decoded = app.jwt.decode(token) as Record<string, unknown>;
+    expect(decoded.id).toBe(1);
+    expect(decoded.providerId).toBe('7');
+    expect(decoded.email).toBeNull();
+
+    await app.close();
+  });
+
+  test('fails with account_already_exists when username/email is already taken', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({access_token: 'token'}))
+        .mockResolvedValueOnce(
+          jsonResponse({id: 7, email: 'taken@example.com'}),
+        ),
+    );
+
+    // 1. Identity lookup returns empty
+    pgQueryMock.mockResolvedValueOnce({rows: [], rowCount: 0});
+    // 2. Collision pre-check by username returns existing user
+    pgQueryMock.mockResolvedValueOnce({
+      rows: [{id: 99, email: 'taken@example.com'}],
+      rowCount: 1,
+    });
+
+    const oauth2WithUsername = {
+      ...oauth2,
+      config: {
+        ...oauth2.config,
+        fields: {providerIdField: 'provider_id', usernameField: 'email'},
+      },
+    };
+
+    const app = await buildApp(authenticationWith([oauth2WithUsername]));
+    const {cookie, state} = await startLogin(app, 'github');
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/auth/sso/github/callback?code=abc&state=${state}`,
+      headers: {cookie},
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toContain(
+      'An account with this email/username already exists',
+    );
+
+    await app.close();
+  });
+
   test('redirects with a one-time code when redirectUrl is configured', async () => {
     vi.stubGlobal(
       'fetch',

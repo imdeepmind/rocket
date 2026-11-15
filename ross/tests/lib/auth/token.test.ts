@@ -32,18 +32,21 @@ describe('issueAccessToken', () => {
 
     expect(token).toBe('signed-token');
     expect(app.jwt.sign).toHaveBeenCalledWith(
-      {id: 7, email: 'user@example.com'},
+      {id: 7, email: 'user@example.com', providerId: null},
       {expiresIn: '1d'},
     );
   });
 
-  test('omits the username claim when it is absent', () => {
+  test('sets email to null when it is absent', () => {
     const app = buildApp();
     const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
 
     issueAccessToken(app as never, config, {id: 7}, 'email');
 
-    expect(app.jwt.sign).toHaveBeenCalledWith({id: 7}, {expiresIn: '1d'});
+    expect(app.jwt.sign).toHaveBeenCalledWith(
+      {id: 7, email: null, providerId: null},
+      {expiresIn: '1d'},
+    );
   });
 
   test('uses the role user when provided', () => {
@@ -55,7 +58,58 @@ describe('issueAccessToken', () => {
     issueAccessToken(app as never, config, {id: 7}, undefined, {role: 'admin'});
 
     expect(app.jwt.sign).toHaveBeenCalledWith(
-      {id: 7, role: 'admin'},
+      {id: 7, email: null, providerId: null, role: 'admin'},
+      {expiresIn: '1d'},
+    );
+  });
+
+  test('includes providerId and email for SSO when configured', () => {
+    const app = buildApp();
+    const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
+
+    issueAccessToken(
+      app as never,
+      config,
+      {id: 7, email: 'sso@example.com', provider_id: 'sub-123'},
+      'email',
+      undefined,
+      'provider_id',
+    );
+
+    expect(app.jwt.sign).toHaveBeenCalledWith(
+      {id: 7, email: 'sso@example.com', providerId: 'sub-123'},
+      {expiresIn: '1d'},
+    );
+  });
+
+  test('includes custom usernameField in payload alongside email', () => {
+    const app = buildApp();
+    const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
+
+    issueAccessToken(
+      app as never,
+      config,
+      {id: 7, username: 'alice'},
+      'username',
+    );
+
+    expect(app.jwt.sign).toHaveBeenCalledWith(
+      {id: 7, username: 'alice', email: 'alice', providerId: null},
+      {expiresIn: '1d'},
+    );
+  });
+
+  test('falls back to user.email when usernameField is omitted', () => {
+    const app = buildApp();
+    const config = buildEnabledAuth([upAuthAuthentication.providers[0]]);
+
+    issueAccessToken(app as never, config, {
+      id: 7,
+      email: 'fallback@example.com',
+    });
+
+    expect(app.jwt.sign).toHaveBeenCalledWith(
+      {id: 7, email: 'fallback@example.com', providerId: null},
       {expiresIn: '1d'},
     );
   });

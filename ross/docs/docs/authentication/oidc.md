@@ -51,6 +51,7 @@ ROSS discovers the provider's endpoints and signing keys from `{issuerUrl}/.well
 | `name` | `string` | **Yes** | — | Unique lowercase provider name used in routes and in `providerField`. Pattern: `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$`, maximum 32 characters. |
 | `protocol` | `"oidc"` | **Yes** | — | Selects this adapter. |
 | `config.fields.providerIdField` | `string` | **Yes** | — | String column that stores the subject together with `providerField`. |
+| `config.fields.usernameField` | `string` | No | — | Optional string column (e.g. `"email"`) to persist the user's username/email from the IdP. When set, ROSS prevents account collision if an account with that username already exists. |
 | `config.issuerUrl` | `string` | **Yes** | — | Issuer identifier. ROSS fetches `{issuerUrl}/.well-known/openid-configuration` from it. |
 | `config.clientId` | `string` | **Yes** | — | OIDC client identifier. |
 | `config.clientSecret` | `string` | **Yes** | — | OIDC client secret. |

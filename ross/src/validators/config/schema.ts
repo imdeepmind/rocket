@@ -765,6 +765,11 @@ const ssoBaseProperties = {
         isEntityName: true,
         minLength: 1,
       },
+      usernameField: {
+        type: 'string',
+        isEntityName: true,
+        minLength: 1,
+      },
     },
   },
   attributeMapping: {
