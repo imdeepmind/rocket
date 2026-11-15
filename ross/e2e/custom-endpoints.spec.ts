@@ -98,6 +98,7 @@ const customEndpointsE2EConfig: AppConfigInput = {
           email: {type: 'string', unique: true, nullable: false},
           password: {type: 'string', nullable: false, secret: true},
           role: {type: 'string', nullable: false, default: 'viewer'},
+          provider: {type: 'string', nullable: true},
         },
       },
       projects: {

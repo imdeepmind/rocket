@@ -89,6 +89,10 @@ const rbacE2EConfig: AppConfigInput = {
             nullable: false,
             apis: ['edit'],
           },
+          provider: {
+            type: 'string',
+            nullable: true,
+          },
         },
       },
       articles: {
@@ -910,6 +914,10 @@ test.describe
               type: 'string',
               nullable: false,
               secret: true,
+            },
+            provider: {
+              type: 'string',
+              nullable: true,
             },
           },
         },

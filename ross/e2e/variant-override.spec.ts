@@ -224,6 +224,10 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
                   nullable: false,
                   secret: true,
                 },
+                provider: {
+                  type: 'string',
+                  nullable: true,
+                },
               },
             },
           },
