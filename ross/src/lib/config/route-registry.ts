@@ -3,7 +3,7 @@ import {buildApiIdentifier} from '@/lib/config/identifier';
 import {
   AppConfig,
   ResolvedAppConfig,
-  UpAuthProviderConfig,
+  UpAuthConfigInput,
 } from '@/interfaces/config';
 
 /**
@@ -81,39 +81,67 @@ export function getGeneratedApiIdentifiers(
 
   const authentication = config.authentication;
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
-    const upConfig = authentication.provider.config as UpAuthProviderConfig;
-    const authModel = upConfig.userModel?.model;
+  if (authentication?.enabled) {
+    const providers = authentication.providers ?? [];
+    const upAuth = providers.find(provider => provider.type === 'up-auth');
+    const ssoProviders = providers.filter(provider => provider.type === 'sso');
+    const authModel = authentication.userModel?.modelName;
 
-    if (!authModel) return identifiers;
+    if (authModel) {
+      const sharedOperations = ['providers', 'me', 'deleteMe', 'editMe'];
 
-    const operations = [
-      'registration',
-      'login',
-      'changePassword',
-      'me',
-      'deleteMe',
-      'editMe',
-    ];
-
-    if (config.integrations?.email) {
-      operations.push(
-        'forgotPassword',
-        'otpVerifyForgotPassword',
-        'resendOtpForgotPassword',
-      );
+      for (const operation of sharedOperations) {
+        addTargets('auth', authModel, 'unknown', operation);
+      }
     }
 
-    if (upConfig.mfaRequired) {
-      operations.push('otpVerifyLogin', 'resendOtpLogin');
+    if (authModel && upAuth) {
+      const upConfig = upAuth.config as UpAuthConfigInput;
+      const operations = ['registration', 'login', 'changePassword'];
+
+      if (config.integrations?.email) {
+        operations.push(
+          'forgotPassword',
+          'otpVerifyForgotPassword',
+          'resendOtpForgotPassword',
+        );
+      }
+
+      if (upConfig.mfaRequired) {
+        operations.push('otpVerifyLogin', 'resendOtpLogin');
+      }
+
+      if (upConfig.fields?.isVerifiedField) {
+        operations.push(
+          'otpVerifyRegister',
+          'resendOtpRegister',
+          'emailChange',
+        );
+      }
+
+      for (const operation of operations) {
+        addTargets('auth', authModel, 'unknown', operation);
+      }
     }
 
-    if (upConfig.userModel.isVerifiedField) {
-      operations.push('otpVerifyRegister', 'resendOtpRegister', 'emailChange');
-    }
+    if (authModel && ssoProviders.length > 0) {
+      const operations = ['ssoLogin', 'ssoCallback'];
 
-    for (const operation of operations) {
-      addTargets('auth', authModel, 'unknown', operation);
+      if (ssoProviders.some(provider => provider.protocol === 'saml')) {
+        operations.push('ssoMetadata');
+      }
+
+      if (
+        ssoProviders.some(
+          provider => (provider.config as {redirectUrl?: string}).redirectUrl,
+        )
+      ) {
+        operations.push('ssoToken');
+      }
+
+      for (const operation of operations) {
+        addTargets('auth', authModel, 'unknown', operation);
+      }
     }
   }
 

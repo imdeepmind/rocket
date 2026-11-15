@@ -43,18 +43,23 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const authModelsWithVerified: Record<string, ModelConfig> = {
@@ -70,19 +75,24 @@ const authModelsWithVerified: Record<string, ModelConfig> = {
 
 const upAuthConfigWithVerified: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-        isVerifiedField: 'isVerified',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+          isVerifiedField: 'isVerified',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -129,7 +139,10 @@ async function createAuthApp(
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
@@ -184,7 +197,10 @@ async function createAuthAppWithMfa(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerLoginRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
@@ -294,19 +310,24 @@ describe('POST /auth/login', () => {
     test('should use custom tokenExpiration when configured', async () => {
       const authWithExpiration: AuthenticationConfig = {
         ...upAuthConfig,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-            tokenExpiration: '2h',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        tokenExpiration: '2h',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
+          },
+        ],
       };
       const app = await createAuthApp(authWithExpiration);
 
@@ -673,19 +694,24 @@ describe('POST /auth/login', () => {
     test('should return requiresMfa and ulid when mfaRequired is true', async () => {
       const mfaAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-            mfaRequired: true,
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              mfaRequired: true,
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(mfaAuthConfig);
 
@@ -718,19 +744,24 @@ describe('POST /auth/login', () => {
     test('should return 401 when MFA required and password is wrong', async () => {
       const mfaAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-            mfaRequired: true,
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              mfaRequired: true,
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(mfaAuthConfig);
 
@@ -1144,20 +1175,25 @@ describe('POST /auth/login', () => {
     test('should return 401 User is not verified when mfaRequired is true and user is unverified', async () => {
       const mfaAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-              isVerifiedField: 'isVerified',
-            },
-            jwtSecret: 'this-will-never-be-used',
-            mfaRequired: true,
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'isVerified',
+              },
+              mfaRequired: true,
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(
         mfaAuthConfig,
@@ -1196,20 +1232,25 @@ describe('POST /auth/login', () => {
     test('should succeed and send OTP when mfaRequired is true and user is verified', async () => {
       const mfaAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-              isVerifiedField: 'isVerified',
-            },
-            jwtSecret: 'this-will-never-be-used',
-            mfaRequired: true,
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'isVerified',
+              },
+              mfaRequired: true,
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(
         mfaAuthConfig,
@@ -1313,5 +1354,34 @@ describe('POST /auth/login', () => {
 
       await app.close();
     });
+  });
+});
+
+describe('POST /auth/login — SSO account guardrail', () => {
+  test('rejects an account owned by an SSO provider', async () => {
+    const app = await createAuthApp(upAuthConfig);
+
+    pgQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 1,
+          email: 'sso@example.com',
+          password: 'hashed_password',
+          provider: 'google',
+        },
+      ],
+      rowCount: 1,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: {email: 'sso@example.com', password: 'p@ssw0rd'},
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toContain('authenticated via google');
+
+    await app.close();
   });
 });

@@ -43,18 +43,23 @@ const noDeletableFieldsModel: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 describe('test delete api', () => {
@@ -297,10 +302,7 @@ describe('test delete api', () => {
     test('should handle api-key auth (security schema check)', async () => {
       const apiKeyAuth: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {key: 'test-key'},
-        },
+        providers: [{type: 'api-key', config: {key: 'test-key'}}],
       };
 
       const fastify = await createTestApp(
@@ -323,18 +325,23 @@ describe('test delete api', () => {
     test('should skip auth check when authentication.enabled is false', async () => {
       const disabledAuth: AuthenticationConfig = {
         enabled: false,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
+          },
+        ],
       };
 
       const fastify = await createTestApp(

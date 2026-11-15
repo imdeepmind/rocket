@@ -2,6 +2,7 @@ import * as path from 'path';
 
 import {expect, test} from 'vitest';
 
+import {getProviderCapabilities} from '@/lib/auth/capabilities';
 import {
   resolveConfig,
   resolveModelField,
@@ -12,7 +13,6 @@ import {
   AppConfigInput,
   ModelConfigInput,
   ModelFieldConfig,
-  ResolvedAuthenticationConfig,
   ResolvedModelFieldConfig,
   WebhookConfig,
 } from '@/interfaces/config';
@@ -23,18 +23,23 @@ import {
 
 const upAuth = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
-    },
+  jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 } as const;
 
 const simpleUserModel = {
@@ -835,7 +840,7 @@ test('authentication defaults to disabled when absent', () => {
 test('explicitly disabled authentication never materialises a provider', () => {
   const config = resolveConfig(
     devInput({
-      authentication: {enabled: false, provider: upAuth.provider as never},
+      authentication: {enabled: false, providers: upAuth.providers as never},
     }),
     {mode: 'dev'},
   );
@@ -852,20 +857,21 @@ test('up-auth is normalized with tokenExpiration and mfaRequired', () => {
     {mode: 'dev'},
   );
 
-  const auth = config.authentication as ResolvedAuthenticationConfig;
+  const auth = config.authentication;
   expect(auth.enabled).toBe(true);
   if (!auth.enabled) throw new Error('authentication should be enabled');
 
-  expect(auth.provider.type).toBe('up-auth');
-  if (auth.provider.type !== 'up-auth') throw new Error('expected up-auth');
-  expect(auth.provider.config.jwtSecret).toBe(
-    'a-very-long-secret-used-for-testing-purposes',
-  );
-  expect(auth.provider.config.tokenExpiration).toBe('1d');
-  expect(auth.provider.config.mfaRequired).toBe(false);
-  expect(auth.provider.config.userModel).toEqual(
-    upAuth.provider.config.userModel,
-  );
+  expect(auth.jwtSecret).toBe('a-very-long-secret-used-for-testing-purposes');
+  expect(auth.tokenExpiration).toBe('1d');
+  expect(auth.userModel).toEqual(upAuth.userModel);
+
+  const provider = auth.providers[0];
+  expect(provider.type).toBe('up-auth');
+  if (provider.type !== 'up-auth') throw new Error('expected up-auth');
+  expect(provider.config.mfaRequired).toBe(false);
+  expect(provider.config.fields.usernameField).toBe('email');
+  expect(getProviderCapabilities(provider)).toContain('password');
+  expect(getProviderCapabilities(provider)).toContain('register');
 });
 
 test('up-auth explicit tokenExpiration and mfaRequired are preserved', () => {
@@ -873,37 +879,46 @@ test('up-auth explicit tokenExpiration and mfaRequired are preserved', () => {
     devInput({
       authentication: {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            ...upAuth.provider.config,
-            tokenExpiration: '8h',
-            mfaRequired: true,
-          },
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        tokenExpiration: '8h',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              mfaRequired: true,
+            },
+          },
+        ],
       },
     }),
     {mode: 'dev'},
   );
 
-  const provider = (
-    config.authentication as ResolvedAuthenticationConfig & {
-      provider: {config: {tokenExpiration: string; mfaRequired: boolean}};
-    }
-  ).provider;
-  expect(provider.config.tokenExpiration).toBe('8h');
+  const auth = config.authentication;
+  if (!auth.enabled) throw new Error('authentication should be enabled');
+
+  expect(auth.tokenExpiration).toBe('8h');
+
+  const provider = auth.providers[0];
+  if (provider.type !== 'up-auth') throw new Error('expected up-auth');
   expect(provider.config.mfaRequired).toBe(true);
 });
 
-test('enabled authentication with an unknown provider type resolves to disabled', () => {
+test('enabled authentication with only unknown providers resolves to disabled', () => {
   const config = resolveConfig(
     devInput({
       authentication: {
         enabled: true,
-        provider: {
-          type: 'unknown',
-          config: {},
-        },
+        providers: [{type: 'unknown', config: {}}],
       } as unknown as AppConfigInput['authentication'],
     }),
     {mode: 'dev'},
@@ -917,19 +932,77 @@ test('api-key authentication passes through', () => {
     devInput({
       authentication: {
         enabled: true,
-        provider: {type: 'api-key', config: {key: 'test-key'}},
+        providers: [{type: 'api-key', config: {key: 'test-key'}}],
       },
     }),
     {mode: 'dev'},
   );
 
-  const auth = config.authentication as ResolvedAuthenticationConfig;
-  expect(auth.enabled).toBe(true);
-  if (!('provider' in auth)) throw new Error('provider expected');
-  expect(auth.provider).toEqual({type: 'api-key', config: {key: 'test-key'}});
+  const auth = config.authentication;
+  if (!auth.enabled) throw new Error('authentication should be enabled');
+
+  expect(auth.providers[0]).toEqual({
+    type: 'api-key',
+    config: {key: 'test-key'},
+  });
 });
 
-test('enabled authentication without a provider resolves to disabled', () => {
+test('sso providers compute capabilities from protocol and redirectUrl', () => {
+  const config = resolveConfig(
+    devInput({
+      authentication: {
+        enabled: true,
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'google',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://accounts.google.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+              redirectUrl: 'https://app.example.com/done',
+            },
+          },
+          {
+            type: 'sso',
+            name: 'corp',
+            protocol: 'saml',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              entryPoint: 'https://idp.example.com/saml',
+              issuer: 'ross',
+              cert: 'cert',
+            },
+          },
+        ],
+      },
+    }),
+    {mode: 'dev'},
+  );
+
+  const auth = config.authentication;
+  if (!auth.enabled) throw new Error('authentication should be enabled');
+
+  const oidcCapabilities = getProviderCapabilities(auth.providers[0]);
+  expect(oidcCapabilities).toContain('initiate');
+  expect(oidcCapabilities).toContain('callback');
+  expect(oidcCapabilities).toContain('token-exchange');
+  expect(oidcCapabilities).not.toContain('metadata');
+
+  const samlCapabilities = getProviderCapabilities(auth.providers[1]);
+  expect(samlCapabilities).toContain('metadata');
+  expect(samlCapabilities).not.toContain('token-exchange');
+});
+
+test('enabled authentication without providers resolves to disabled', () => {
   const config = resolveConfig(
     devInput({
       authentication: {
@@ -1148,4 +1221,153 @@ test('resolving the same input twice in dev yields identical values', () => {
   const configB = resolveConfig(input, {mode: 'dev'});
 
   expect(configA).toEqual(configB);
+});
+
+test('resolves every SSO provider shape with optional fields', () => {
+  const config = resolveConfig(
+    devInput({
+      authentication: {
+        enabled: true,
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'github',
+            protocol: 'oauth2',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              authorizeUrl: 'https://github.com/login/oauth/authorize',
+              tokenUrl: 'https://github.com/login/oauth/access_token',
+              userInfoUrl: 'https://api.github.com/user',
+              idClaim: 'login',
+              clientId: 'client',
+              clientSecret: 'secret',
+              attributeMapping: {name: 'display_name'},
+              scopes: ['read:user'],
+              callbackUrl:
+                'https://api.example.com/v1/auth/sso/github/callback',
+              redirectUrl: 'https://app.example.com/done',
+              failureRedirectUrl: 'https://app.example.com/error',
+            },
+          },
+          {
+            type: 'sso',
+            name: 'okta',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://company.okta.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+            },
+          },
+        ],
+      },
+    }),
+    {mode: 'dev'},
+  );
+
+  const auth = config.authentication;
+  if (!auth.enabled) throw new Error('authentication should be enabled');
+
+  expect(auth.providers[0].type).toBe('sso');
+  if (auth.providers[0].type !== 'sso') throw new Error('expected sso');
+  expect(auth.providers[0].config).toMatchObject({
+    userInfoUrl: 'https://api.github.com/user',
+    idClaim: 'login',
+    attributeMapping: {name: 'display_name'},
+    scopes: ['read:user'],
+    redirectUrl: 'https://app.example.com/done',
+    failureRedirectUrl: 'https://app.example.com/error',
+  });
+
+  const okta = auth.providers[1];
+  if (okta.type !== 'sso' || okta.protocol !== 'oidc') {
+    throw new Error('expected oidc');
+  }
+  expect(okta.config.scopes).toEqual(['openid', 'profile']);
+  expect(okta.config.attributeMapping).toEqual({});
+});
+
+test('oidc provider retains openid scope when custom scopes are configured', () => {
+  const resolved = resolveConfig(
+    {
+      authentication: {
+        enabled: true,
+        jwtSecret: 'super-secret-key-that-is-long-enough',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'google',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://accounts.google.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+              scopes: ['profile', 'email'],
+            },
+          },
+        ],
+      },
+    },
+    {mode: 'dev'},
+  );
+
+  const auth = resolved.authentication;
+  if (!auth.enabled) throw new Error('expected enabled');
+  const google = auth.providers[0];
+  if (google.type !== 'sso' || google.protocol !== 'oidc') {
+    throw new Error('expected oidc');
+  }
+  expect(google.config.scopes).toEqual(['openid', 'profile', 'email']);
+});
+
+test('oidc provider retains openid scope when custom scopes are configured', () => {
+  const resolved = resolveConfig(
+    {
+      authentication: {
+        enabled: true,
+        jwtSecret: 'super-secret-key-that-is-long-enough',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'google',
+            protocol: 'oidc',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              issuerUrl: 'https://accounts.google.com',
+              clientId: 'client',
+              clientSecret: 'secret',
+              scopes: ['profile', 'email'],
+            },
+          },
+        ],
+      },
+    },
+    {mode: 'dev'},
+  );
+
+  const auth = resolved.authentication;
+  if (!auth.enabled) throw new Error('expected enabled');
+  const google = auth.providers[0];
+  if (google.type !== 'sso' || google.protocol !== 'oidc') {
+    throw new Error('expected oidc');
+  }
+  expect(google.config.scopes).toEqual(['openid', 'profile', 'email']);
 });

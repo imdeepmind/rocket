@@ -1,10 +1,11 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {getActiveUserModel} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 
-import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -14,14 +15,13 @@ export function registerDeleteMeRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const userModel = getActiveUserModel(config);
+
+  if (!userModel) {
     return;
   }
 
-  const {model, idField} = (
-    authentication.provider.config as UpAuthProviderConfig
-  ).userModel;
+  const {modelName: model, idField} = userModel;
 
   const authModelConfig = models[model];
 

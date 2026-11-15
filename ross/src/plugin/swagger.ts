@@ -10,23 +10,23 @@ export default fp(
     const components: Record<string, unknown> = {};
 
     if (authentication.enabled) {
-      const provider = authentication.provider;
-      if (provider.type === 'up-auth') {
-        components['securitySchemes'] = {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-          },
-        };
-      }
+      const providers = authentication.providers;
+      const hasApiKey = providers.some(provider => provider.type === 'api-key');
 
-      if (provider.type === 'api-key') {
+      if (hasApiKey) {
         components['securitySchemes'] = {
           apiKeyAuth: {
             type: 'apiKey',
             name: 'x-api-key',
             in: 'header',
+          },
+        };
+      } else {
+        components['securitySchemes'] = {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
           },
         };
       }

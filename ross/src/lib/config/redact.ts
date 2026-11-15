@@ -1,8 +1,4 @@
-import {
-  ApiKeyProviderConfig,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 export const REDACTED = '***';
 
@@ -42,13 +38,26 @@ export function redactConfig(config: ResolvedAppConfig): ResolvedAppConfig {
 
   const authentication = redacted.authentication;
 
-  if (authentication.enabled && authentication.provider.type === 'up-auth') {
-    (authentication.provider.config as UpAuthProviderConfig).jwtSecret =
-      REDACTED;
-  }
+  if (authentication.enabled) {
+    if (authentication.jwtSecret) {
+      authentication.jwtSecret = REDACTED;
+    }
 
-  if (authentication.enabled && authentication.provider.type === 'api-key') {
-    (authentication.provider.config as ApiKeyProviderConfig).key = REDACTED;
+    for (const provider of authentication.providers) {
+      if (provider.type === 'api-key') {
+        provider.config.key = REDACTED;
+      }
+
+      if (provider.type === 'sso') {
+        if ('clientSecret' in provider.config) {
+          provider.config.clientSecret = REDACTED;
+        }
+
+        if ('cert' in provider.config) {
+          provider.config.cert = REDACTED;
+        }
+      }
+    }
   }
 
   const email = redacted.integrations.email;

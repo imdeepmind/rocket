@@ -45,19 +45,24 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-        isVerifiedField: 'is_active',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+          isVerifiedField: 'is_active',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -125,7 +130,10 @@ async function createOtpApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerLoginOtpVerifyRoute(app, config as ResolvedAppConfig);
     registerRegistrationOtpVerifyRoute(app, config as ResolvedAppConfig);
     registerForgotPasswordOtpVerifyRoute(app, config as ResolvedAppConfig);
@@ -820,18 +828,23 @@ describe('POST /auth/register/verify/otp', () => {
     test('should return 200 without UPDATE when isVerifiedField is not configured', async () => {
       const authWithoutVerified: AuthenticationConfig = {
         ...upAuthConfig,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
+          },
+        ],
       };
       const app = await createOtpApp(authWithoutVerified);
 

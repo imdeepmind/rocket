@@ -14,18 +14,23 @@ import {
 
 const upAuthAuthentication = {
   enabled: true as const,
-  provider: {
-    type: 'up-auth' as const,
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-    },
+  jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth' as const,
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const baseInput = (
@@ -514,4 +519,31 @@ describe('getApiRouteTargets', () => {
     expect(targets[0].policy.tags).toEqual(['Posts', 'Read']);
     expect(targets[1].policy.tags).toEqual(['Admin']);
   });
+});
+
+test('getAuthModel tolerates a config without a userModel', () => {
+  const config = {
+    application: {
+      name: 'x',
+      logLevel: 'info',
+      dangerouslyOverrideDefaultVariant: 'v1',
+    },
+    apis: {},
+    authentication: {
+      enabled: true,
+      tokenExpiration: '1d',
+      providers: [
+        {
+          type: 'sso',
+          name: 'google',
+          protocol: 'oidc',
+          config: {fields: {providerIdField: 'provider_id'}},
+        },
+      ],
+    },
+  } as unknown as ResolvedAppConfig;
+
+  const policy = resolveApiPolicy(config, 'model.v1.users.unknown.getAll');
+
+  expect(policy.enabled).toBe(true);
 });

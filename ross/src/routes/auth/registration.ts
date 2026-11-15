@@ -1,5 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {getUpAuth, UpAuthRuntime} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {
   generateJSONValidationSchema,
@@ -7,12 +8,7 @@ import {
 } from '@/lib/schema/body';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {
-  ModelBody,
-  ModelConfig,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ModelBody, ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -23,15 +19,15 @@ export function registerRegistrationRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-  const {model, passwordField} = upConfig.userModel;
-  const requiresOtp = !!upConfig.userModel.isVerifiedField;
-  const isVerifiedField = upConfig.userModel.isVerifiedField;
+  const {model, passwordField} = upAuth;
+  const requiresOtp = !!upAuth.isVerifiedField;
+  const isVerifiedField = upAuth.isVerifiedField;
 
   const authModelConfig = models[model];
 
@@ -54,7 +50,7 @@ export function registerRegistrationRoute(
       passwordField,
       isVerifiedField,
       requiresOtp,
-      upConfig,
+      upAuth,
       variant,
       identifier,
       policy,
@@ -70,7 +66,7 @@ function registerRegistrationEndpoint(
   passwordField: string,
   isVerifiedField: string | undefined,
   requiresOtp: boolean,
-  upConfig: UpAuthProviderConfig,
+  upAuth: UpAuthRuntime,
   variant: string,
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
@@ -98,6 +94,12 @@ function registerRegistrationEndpoint(
       const body = stripAdditionalPostFields(authModelConfig, incomingBody, {
         ignorePrimaryKey: true,
       });
+
+      // Every identity row records which provider owns it. Without this the
+      // password guardrails cannot distinguish SSO accounts.
+      if (body[upAuth.providerField] === undefined) {
+        body[upAuth.providerField] = 'up-auth';
+      }
 
       /* c8 ignore start */
       if (body[passwordField] !== undefined && body[passwordField] !== null) {
@@ -129,7 +131,7 @@ function registerRegistrationEndpoint(
       }
 
       if (requiresOtp) {
-        const usernameField = upConfig.userModel.usernameField;
+        const usernameField = upAuth.usernameField;
         const userEmail = String(incomingBody[usernameField]);
         const ulid = await app.otp.sendOTPForVerification(userEmail);
 

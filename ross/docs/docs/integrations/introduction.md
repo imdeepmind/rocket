@@ -43,14 +43,14 @@ Every integration follows the same shape:
 
 ## What the email integration powers
 
-ROSS sends email only for account and security flows that are driven by one-time passwords (OTPs):
+ROSS sends email only for account and security flows that are driven by one-time passwords (OTPs). See [Password authentication](../authentication/up-auth.md) for the auth configuration behind these routes:
 
 | Flow | Routes (default `v1` variant) | Enabled when |
 | --- | --- | --- |
 | Forgot password | `POST /api/v1/auth/forgot-password`, `/forgot-password/verify/otp`, `/forgot-password/resend/otp` | `integrations.email` is configured |
-| Login MFA | `POST /api/v1/auth/login`, `/login/verify/otp`, `/login/resend/otp` | `integrations.email` and `authentication.provider.config.mfaRequired: true` |
-| Registration verification | `POST /api/v1/auth/register`, `/register/verify/otp`, `/register/resend/otp` | `integrations.email` and `authentication.provider.config.userModel.isVerifiedField` is set |
-| Email change | `PATCH /api/v1/auth/user/email` | `integrations.email` and `isVerifiedField` is set |
+| Login MFA | `POST /api/v1/auth/login`, `/login/verify/otp`, `/login/resend/otp` | `integrations.email` and the `up-auth` provider has `config.mfaRequired: true` |
+| Registration verification | `POST /api/v1/auth/register`, `/register/verify/otp`, `/register/resend/otp` | `integrations.email` and the `up-auth` provider has `config.fields.isVerifiedField` set |
+| Email change | `PATCH /api/v1/auth/user/email` | `integrations.email` and `config.fields.isVerifiedField` is set |
 
 Each OTP email contains:
 
@@ -75,7 +75,7 @@ It depends on your authentication configuration:
 | Authentication disabled | Not needed |
 | `up-auth` without `mfaRequired` and without `isVerifiedField` | Optional, but required for forgot-password |
 | `up-auth` with `mfaRequired: true` | **Required** (validation fails otherwise) |
-| `up-auth` with `userModel.isVerifiedField` set | **Required** (validation fails otherwise) |
+| `up-auth` with `config.fields.isVerifiedField` set | **Required** (validation fails otherwise) |
 
 If you omit `integrations.email`:
 

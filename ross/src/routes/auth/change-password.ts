@@ -1,11 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {blockPasswordManagement} from '@/lib/auth/guards';
+import {getUpAuth} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {compare, hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -16,14 +18,13 @@ export function registerChangePasswordRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const {model, idField, passwordField} = (
-    authentication.provider.config as UpAuthProviderConfig
-  ).userModel;
+  const {model, idField, passwordField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -101,6 +102,18 @@ function registerChangePasswordEndpoint(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
+
+      const blocked = blockPasswordManagement(
+        reply,
+        config,
+        user,
+        app.buildResponse,
+      );
+
+      if (blocked) {
+        return blocked;
+      }
+
       const currentHashedPassword = user[passwordField] as string;
 
       const isMatch = await compare(

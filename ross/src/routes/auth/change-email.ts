@@ -1,15 +1,13 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {assertPasswordAccount} from '@/lib/auth/guards';
+import {getUpAuth} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {
-  ModelConfig,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -19,13 +17,13 @@ export function registerEmailChangeRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-  const {model, idField, usernameField, isVerifiedField} = upConfig.userModel;
+  const {model, idField, usernameField, isVerifiedField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -118,6 +116,12 @@ function registerEmailChangeEndpoint(
             body: app.buildResponse(404, 'User not found', null),
           });
         }
+
+        assertPasswordAccount(
+          config,
+          res.rows[0] as Record<string, unknown>,
+          app.buildResponse,
+        );
 
         const setClauses = [`"${usernameField}" = $1`];
         const values: unknown[] = [newEmail];

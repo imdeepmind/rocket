@@ -274,41 +274,103 @@ export interface ApisConfig {
   };
 }
 
-export interface UserModelConfig {
-  model: string;
+export type AuthProtocol = 'oauth2' | 'oidc' | 'saml';
+
+/**
+ * What an authentication provider can do. The HTTP surface is derived from
+ * these flags so that password-only providers never expose SSO endpoints and
+ * vice versa.
+ */
+export type AuthCapability =
+  | 'password'
+  | 'register'
+  | 'mfa'
+  | 'initiate'
+  | 'callback'
+  | 'metadata'
+  | 'token-exchange';
+
+/**
+ * User-table columns shared by every provider type. All providers read and
+ * write the same table, so these live once at `authentication.userModel`.
+ */
+export interface AuthUserModelConfig {
+  modelName: string;
   idField: string;
+  providerField: string;
+}
+
+export interface UpAuthFieldsConfig {
   usernameField: string;
   passwordField: string;
   isVerifiedField?: string;
 }
 
-export interface UpAuthProviderConfig {
-  userModel: UserModelConfig;
-  jwtSecret?: string;
-  tokenExpiration?: string;
+export interface UpAuthConfigInput {
+  fields: UpAuthFieldsConfig;
   mfaRequired?: boolean;
+}
+
+export interface SsoBaseConfigInput {
+  fields: {
+    providerIdField: string;
+    usernameField?: string;
+  };
+  attributeMapping?: Record<string, string>;
+  scopes?: string[];
+  /** Absolute URL registered at the identity provider. Derived when absent. */
+  callbackUrl?: string;
+  /** Where to send the browser on success. JSON is returned when absent. */
+  redirectUrl?: string;
+  /** Defaults to `redirectUrl`. Ignored when `redirectUrl` is absent. */
+  failureRedirectUrl?: string;
+}
+
+export interface OAuth2ConfigInput extends SsoBaseConfigInput {
+  authorizeUrl: string;
+  tokenUrl: string;
+  userInfoUrl?: string;
+  /** Claim holding the stable subject. Defaults to `sub`, `id`, `user_id`. */
+  idClaim?: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+export interface OidcConfigInput extends SsoBaseConfigInput {
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+export interface SamlConfigInput extends SsoBaseConfigInput {
+  entryPoint: string;
+  issuer: string;
+  cert: string;
 }
 
 export interface ApiKeyProviderConfig {
   key: string;
 }
 
-export interface UpAuthProvider {
-  type: 'up-auth';
-  config: UpAuthProviderConfig;
+export type AuthProviderInput =
+  | {type: 'up-auth'; config: UpAuthConfigInput}
+  | {type: 'api-key'; config: ApiKeyProviderConfig}
+  | {type: 'sso'; name: string; protocol: 'oauth2'; config: OAuth2ConfigInput}
+  | {type: 'sso'; name: string; protocol: 'oidc'; config: OidcConfigInput}
+  | {type: 'sso'; name: string; protocol: 'saml'; config: SamlConfigInput};
+
+/** Convenience aliases kept for readability at call sites. */
+export type AuthProvider = AuthProviderInput;
+
+export interface AuthenticationConfigInput {
+  enabled?: boolean;
+  jwtSecret?: string;
+  tokenExpiration?: string;
+  userModel?: AuthUserModelConfig;
+  providers?: AuthProviderInput[];
 }
 
-export interface ApiKeyProvider {
-  type: 'api-key';
-  config: ApiKeyProviderConfig;
-}
-
-export type AuthProvider = UpAuthProvider | ApiKeyProvider;
-
-export interface AuthenticationConfig {
-  enabled: boolean;
-  provider?: AuthProvider;
-}
+export type AuthenticationConfig = AuthenticationConfigInput;
 
 export interface RoleConfig {
   description?: string;
@@ -406,11 +468,6 @@ export interface ModelConfigInput extends Omit<
 
 export interface DataConfigInput {
   models?: Record<string, ModelConfigInput>;
-}
-
-export interface AuthenticationConfigInput {
-  enabled?: boolean;
-  provider?: AuthProvider;
 }
 
 export interface AppConfigInput {
@@ -539,16 +596,14 @@ export interface ResolvedDataConfig {
   models: Record<string, ResolvedModelConfig>;
 }
 
-export interface ResolvedUpAuthProviderConfig {
-  userModel: UserModelConfig;
-  jwtSecret: string;
-  tokenExpiration: string;
+export interface ResolvedUpAuthConfig {
+  fields: UpAuthFieldsConfig;
   mfaRequired: boolean;
 }
 
 export interface ResolvedUpAuthProvider {
   type: 'up-auth';
-  config: ResolvedUpAuthProviderConfig;
+  config: ResolvedUpAuthConfig;
 }
 
 export interface ResolvedApiKeyProvider {
@@ -556,13 +611,73 @@ export interface ResolvedApiKeyProvider {
   config: ApiKeyProviderConfig;
 }
 
+interface ResolvedSsoBase {
+  fields: {
+    providerIdField: string;
+    usernameField?: string;
+  };
+  attributeMapping: Record<string, string>;
+  scopes: string[];
+  callbackUrl?: string;
+  redirectUrl?: string;
+  failureRedirectUrl?: string;
+}
+
+export interface ResolvedOAuth2SsoProvider {
+  type: 'sso';
+  name: string;
+  protocol: 'oauth2';
+  config: ResolvedSsoBase & {
+    authorizeUrl: string;
+    tokenUrl: string;
+    userInfoUrl?: string;
+    idClaim?: string;
+    clientId: string;
+    clientSecret: string;
+  };
+}
+
+export interface ResolvedOidcSsoProvider {
+  type: 'sso';
+  name: string;
+  protocol: 'oidc';
+  config: ResolvedSsoBase & {
+    issuerUrl: string;
+    clientId: string;
+    clientSecret: string;
+  };
+}
+
+export interface ResolvedSamlSsoProvider {
+  type: 'sso';
+  name: string;
+  protocol: 'saml';
+  config: ResolvedSsoBase & {
+    entryPoint: string;
+    issuer: string;
+    cert: string;
+  };
+}
+
+export type ResolvedSsoProvider =
+  | ResolvedOAuth2SsoProvider
+  | ResolvedOidcSsoProvider
+  | ResolvedSamlSsoProvider;
+
 export type ResolvedAuthProvider =
   | ResolvedUpAuthProvider
-  | ResolvedApiKeyProvider;
+  | ResolvedApiKeyProvider
+  | ResolvedSsoProvider;
 
 export type ResolvedAuthenticationConfig =
   | {enabled: false}
-  | {enabled: true; provider: ResolvedAuthProvider};
+  | {
+      enabled: true;
+      jwtSecret?: string;
+      tokenExpiration: string;
+      userModel?: AuthUserModelConfig;
+      providers: ResolvedAuthProvider[];
+    };
 
 export interface ResolvedAppConfig {
   application: ResolvedApplicationConfig;

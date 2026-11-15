@@ -6,7 +6,7 @@ import authPlugin from '@/plugin/auth';
 
 import {resolveConfig} from '@/lib/config/resolve';
 
-import {AuthenticationConfig, ResolvedAppConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 // Minimal resolved config that enables the up-auth engine. Standalone plugin
 // tests need an explicit fixture because the plugin no longer registers JWT
@@ -27,18 +27,25 @@ const upAuthFixture = (): ResolvedAppConfig =>
     data: {models: {}},
     authentication: {
       enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'users',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
-          },
-          jwtSecret: 'this-will-never-be-used',
-        },
+      jwtSecret: 'this-will-never-be-used',
+      tokenExpiration: '1d',
+      userModel: {
+        modelName: 'users',
+        idField: 'id',
+        providerField: 'provider',
       },
+      providers: [
+        {
+          type: 'up-auth',
+          config: {
+            fields: {
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+            mfaRequired: false,
+          },
+        },
+      ],
     },
   }) as unknown as ResolvedAppConfig;
 
@@ -86,18 +93,25 @@ describe('Auth Plugin — up-auth engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          },
+        jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+        tokenExpiration: '1d',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+              mfaRequired: false,
+            },
+          },
+        ],
       },
     } as ResolvedAppConfig;
     await app.register(authPlugin);
@@ -176,12 +190,13 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {
-            key: 'my-secret-key',
+        tokenExpiration: '1d',
+        providers: [
+          {
+            type: 'api-key',
+            config: {key: 'my-secret-key'},
           },
-        },
+        ],
       },
     } as ResolvedAppConfig;
 
@@ -219,12 +234,13 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {
-            key: 'my-secret-key',
+        tokenExpiration: '1d',
+        providers: [
+          {
+            type: 'api-key',
+            config: {key: 'my-secret-key'},
           },
-        },
+        ],
       },
     } as ResolvedAppConfig;
 
@@ -266,12 +282,13 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {
-            key: 'my-secret-key',
+        tokenExpiration: '1d',
+        providers: [
+          {
+            type: 'api-key',
+            config: {key: 'my-secret-key'},
           },
-        },
+        ],
       },
     } as ResolvedAppConfig;
 
@@ -296,34 +313,22 @@ describe('Auth Plugin — api-key engine', () => {
   });
 });
 
-describe('Auth Plugin — unknown provider type', () => {
-  it('should fall through without error when provider type is unknown', async () => {
+describe('Auth Plugin — empty provider list', () => {
+  it('registers no JWT when no provider can issue tokens', async () => {
     const app = Fastify();
-    app.appConfig = {
-      application: {name: 'test', logLevel: 'error'},
-      docs: {
-        openapi: {
-          enabled: false,
-          path: '/docs',
-          info: {title: 'Test', description: 'Test', version: '1.0.0'},
-        },
+    app.appConfig = resolveConfig(
+      {
+        application: {name: 'test'},
+        data: {models: {}},
+        authentication: {enabled: true, providers: []},
       },
-      infrastructure: {
-        database: {engine: 'postgres', connection: {url: ':memory:'}},
-      },
-      data: {models: {}},
-      authentication: {
-        enabled: true,
-        provider: {
-          type: 'oauth',
-          config: {},
-        },
-      } as unknown as AuthenticationConfig,
-    } as ResolvedAppConfig;
+      {mode: 'dev'},
+    );
+
     await app.register(authPlugin);
     await app.ready();
 
-    // JWT should not be registered since it's not up-auth
+    // Resolved to disabled because no provider was supplied.
     expect(app.jwt).toBeUndefined();
   });
 });
@@ -358,7 +363,5 @@ describe('Auth Plugin — disabled auth', () => {
 
     expect(res.statusCode).toBe(401);
     expect(res.json()).toEqual({ok: false});
-
-    await app.close();
   });
 });

@@ -7,7 +7,6 @@ import {
   QueryOperation,
   ResolvedAppConfig,
   ServerSideParamConfig,
-  UpAuthProviderConfig,
   WebhookConfig,
 } from '@/interfaces/config';
 
@@ -40,12 +39,17 @@ export interface ApiRouteTarget {
 function getAuthModel(config: ResolvedAppConfig): string | null {
   const {authentication} = config;
 
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  if (!authentication.enabled) {
     return null;
   }
 
-  return (authentication.provider.config as UpAuthProviderConfig).userModel
-    .model;
+  const hasIdentityProvider = authentication.providers.some(
+    provider => provider.type !== 'api-key',
+  );
+
+  return hasIdentityProvider
+    ? (authentication.userModel?.modelName ?? null)
+    : null;
 }
 
 /**

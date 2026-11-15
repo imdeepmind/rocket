@@ -61,20 +61,25 @@
     },
     "authentication": {
         "enabled": true,
-        "provider": {
-            "type": "up-auth",
-            "config": {
-                "userModel": {
-                    "model": "users",
-                    "idField": "id",
-                    "usernameField": "email",
-                    "passwordField": "password",
-                    "isVerifiedField": "isActive"
-                },
-                "jwtSecret": "your-super-secret-key-must-be-long-enough",
-                "mfaRequired": true
+        "jwtSecret": "your-super-secret-key-must-be-long-enough",
+        "userModel": {
+            "modelName": "users",
+            "idField": "id",
+            "providerField": "provider"
+        },
+        "providers": [
+            {
+                "type": "up-auth",
+                "config": {
+                    "fields": {
+                        "usernameField": "email",
+                        "passwordField": "password",
+                        "isVerifiedField": "isActive"
+                    },
+                    "mfaRequired": true
+                }
             }
-        }
+        ]
     },
     "rbac": {
         "enabled": true,
@@ -140,6 +145,12 @@
                       "unique": false,
                       "nullable": false,
                       "secret": true
+                    },
+                    "provider": {
+                        "type": "string",
+                        "nullable": false,
+                        "default": "up-auth",
+                        "query": ["eq"]
                     },
                     "name": {
                         "type": "string",

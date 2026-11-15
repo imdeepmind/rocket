@@ -673,12 +673,12 @@ const customEndpointsSchema = {
   additionalProperties: customEndpointSchema,
 };
 
-const userModelSchema = {
+const authUserModelSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['model', 'idField', 'usernameField', 'passwordField'],
+  required: ['modelName', 'idField', 'providerField'],
   properties: {
-    model: {
+    modelName: {
       type: 'string',
       isEntityName: true,
       minLength: 1,
@@ -688,22 +688,197 @@ const userModelSchema = {
       isEntityName: true,
       minLength: 1,
     },
-    usernameField: {
-      type: 'string',
-      isEntityName: true,
-      minLength: 1,
-    },
-    passwordField: {
-      type: 'string',
-      isEntityName: true,
-      minLength: 1,
-    },
-    isVerifiedField: {
+    providerField: {
       type: 'string',
       isEntityName: true,
       minLength: 1,
     },
   },
+};
+
+const authProviderNamePattern = '^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$';
+
+const upAuthProviderSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'config'],
+  properties: {
+    type: {const: 'up-auth'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['fields'],
+      properties: {
+        fields: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['usernameField', 'passwordField'],
+          properties: {
+            usernameField: {
+              type: 'string',
+              isEntityName: true,
+              minLength: 1,
+            },
+            passwordField: {
+              type: 'string',
+              isEntityName: true,
+              minLength: 1,
+            },
+            isVerifiedField: {
+              type: 'string',
+              isEntityName: true,
+              minLength: 1,
+            },
+          },
+        },
+        mfaRequired: {type: 'boolean'},
+      },
+    },
+  },
+};
+
+const apiKeyProviderSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'config'],
+  properties: {
+    type: {const: 'api-key'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['key'],
+      properties: {
+        key: {type: 'string', minLength: 1},
+      },
+    },
+  },
+};
+
+const ssoBaseProperties = {
+  fields: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['providerIdField'],
+    properties: {
+      providerIdField: {
+        type: 'string',
+        isEntityName: true,
+        minLength: 1,
+      },
+      usernameField: {
+        type: 'string',
+        isEntityName: true,
+        minLength: 1,
+      },
+    },
+  },
+  attributeMapping: {
+    type: 'object',
+    additionalProperties: {
+      type: 'string',
+      isEntityName: true,
+      minLength: 1,
+    },
+  },
+  scopes: {
+    type: 'array',
+    items: {type: 'string', minLength: 1},
+    uniqueItems: true,
+  },
+  callbackUrl: {type: 'string', format: 'uri'},
+  redirectUrl: {type: 'string', format: 'uri'},
+  failureRedirectUrl: {type: 'string', format: 'uri'},
+} as const;
+
+const ssoIdentityProperties = {
+  type: {const: 'sso'},
+  name: {
+    type: 'string',
+    pattern: authProviderNamePattern,
+    maxLength: 32,
+  },
+} as const;
+
+const ssoOAuth2ProviderSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'name', 'protocol', 'config'],
+  properties: {
+    ...ssoIdentityProperties,
+    protocol: {const: 'oauth2'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'fields',
+        'authorizeUrl',
+        'tokenUrl',
+        'clientId',
+        'clientSecret',
+      ],
+      properties: {
+        ...ssoBaseProperties,
+        authorizeUrl: {type: 'string', format: 'uri'},
+        tokenUrl: {type: 'string', format: 'uri'},
+        userInfoUrl: {type: 'string', format: 'uri'},
+        idClaim: {type: 'string', minLength: 1},
+        clientId: {type: 'string', minLength: 1},
+        clientSecret: {type: 'string', minLength: 1},
+      },
+    },
+  },
+};
+
+const ssoOidcProviderSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'name', 'protocol', 'config'],
+  properties: {
+    ...ssoIdentityProperties,
+    protocol: {const: 'oidc'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['fields', 'issuerUrl', 'clientId', 'clientSecret'],
+      properties: {
+        ...ssoBaseProperties,
+        issuerUrl: {type: 'string', format: 'uri'},
+        clientId: {type: 'string', minLength: 1},
+        clientSecret: {type: 'string', minLength: 1},
+      },
+    },
+  },
+};
+
+const ssoSamlProviderSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'name', 'protocol', 'config'],
+  properties: {
+    ...ssoIdentityProperties,
+    protocol: {const: 'saml'},
+    config: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['fields', 'entryPoint', 'issuer', 'cert'],
+      properties: {
+        ...ssoBaseProperties,
+        entryPoint: {type: 'string', format: 'uri'},
+        issuer: {type: 'string', minLength: 1},
+        cert: {type: 'string', minLength: 1},
+      },
+    },
+  },
+};
+
+const authProviderSchema = {
+  oneOf: [
+    upAuthProviderSchema,
+    apiKeyProviderSchema,
+    ssoOAuth2ProviderSchema,
+    ssoOidcProviderSchema,
+    ssoSamlProviderSchema,
+  ],
 };
 
 const authenticationSchema = {
@@ -719,41 +894,22 @@ const authenticationSchema = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['enabled', 'provider'],
+      required: ['enabled', 'providers'],
       properties: {
         enabled: {const: true},
-        provider: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['type', 'config'],
-          properties: {
-            type: {
-              type: 'string',
-              enum: ['api-key', 'up-auth'],
-            },
-            config: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                userModel: userModelSchema,
-                jwtSecret: {
-                  type: 'string',
-                  minLength: 32,
-                },
-                tokenExpiration: {
-                  type: 'string',
-                  pattern: '^\\d+[smhd]$',
-                },
-                mfaRequired: {
-                  type: 'boolean',
-                },
-                key: {
-                  type: 'string',
-                  minLength: 1,
-                },
-              },
-            },
-          },
+        jwtSecret: {
+          type: 'string',
+          minLength: 32,
+        },
+        tokenExpiration: {
+          type: 'string',
+          pattern: '^\\d+[smhd]$',
+        },
+        userModel: authUserModelSchema,
+        providers: {
+          type: 'array',
+          minItems: 1,
+          items: authProviderSchema,
         },
       },
     },

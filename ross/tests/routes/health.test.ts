@@ -412,18 +412,23 @@ describe('Healthcheck Route (GET /api/health)', () => {
       app = await createHealthApp({
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret-1234567890-test-secret',
-            },
+          jwtSecret: 'test-secret-1234567890-test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       });
 
@@ -440,10 +445,7 @@ describe('Healthcheck Route (GET /api/health)', () => {
       app = await createHealthApp({
         authentication: {
           enabled: true,
-          provider: {
-            type: 'api-key',
-            config: {key: 'super-secret-key'},
-          },
+          providers: [{type: 'api-key', config: {key: 'super-secret-key'}}],
         },
       });
 

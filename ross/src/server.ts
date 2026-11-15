@@ -12,6 +12,7 @@ import sspPlugin from '@/plugin/ssp';
 import swaggerPlugin from '@/plugin/swagger';
 import webhookPlugin from '@/plugin/webhook';
 
+import {getSsoProviders, getUpAuth} from '@/lib/auth/up-auth';
 import {isDistributedCacheConfigured} from '@/lib/cache';
 import {
   registerErrorHandler,
@@ -32,15 +33,17 @@ import {
   registerLoginOtpVerifyRoute,
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
+import {registerProvidersRoute} from '@/routes/auth/providers';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 import {
   registerForgotPasswordResendOtpRoute,
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerSsoRoutes} from '@/routes/auth/sso';
 import {registerHealthRoute} from '@/routes/health';
 
-import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {NODE_CACHE_OTP_WARNING} from '@/constants';
 
@@ -69,13 +72,10 @@ export async function startServer(
 
   app.appConfig = resolvedConfig;
 
-  const auth =
-    resolvedConfig.authentication.enabled &&
-    resolvedConfig.authentication.provider?.type === 'up-auth'
-      ? (resolvedConfig.authentication.provider.config as UpAuthProviderConfig)
-      : undefined;
+  const upAuth = getUpAuth(resolvedConfig);
+  const ssoProviders = getSsoProviders(resolvedConfig);
   const usesAccountOtp = Boolean(
-    auth?.mfaRequired || auth?.userModel?.isVerifiedField,
+    upAuth && (upAuth.mfaRequired || upAuth.isVerifiedField),
   );
 
   if (usesAccountOtp && !isDistributedCacheConfigured(resolvedConfig)) {
@@ -126,12 +126,8 @@ export async function startServer(
   await app.register(sspPlugin);
   await app.register(webhookPlugin);
   await app.register(authPlugin);
-  // config-driven OTP (required for MFA or forgot-password)
-  if (
-    resolvedConfig.authentication.enabled &&
-    auth?.mfaRequired !== undefined &&
-    resolvedConfig.integrations?.email
-  ) {
+  // config-driven OTP (required for MFA, verification and forgot-password)
+  if (upAuth && resolvedConfig.integrations?.email) {
     await app.register(otpPlugin);
   }
   // register swagger
@@ -154,20 +150,27 @@ export async function startServer(
 
       registerRoutes(app, resolvedConfig);
 
-      // register auth routes (only when up-auth is configured and enabled)
-      if (
+      // register auth routes: discovery and SSO are capability-driven, the
+      // password routes exist only when an up-auth provider is configured.
+      const hasUserModel =
         resolvedConfig.authentication.enabled &&
-        resolvedConfig.authentication.provider.type === 'up-auth'
-      ) {
-        const upConfig = resolvedConfig.authentication.provider
-          .config as UpAuthProviderConfig;
+        Boolean(resolvedConfig.authentication.userModel);
 
-        registerRegistrationRoute(app, resolvedConfig);
-        registerLoginRoute(app, resolvedConfig);
-        registerChangePasswordRoute(app, resolvedConfig);
+      if (hasUserModel) {
+        registerProvidersRoute(app, resolvedConfig);
         registerMeRoute(app, resolvedConfig);
         registerDeleteMeRoute(app, resolvedConfig);
         registerEditMeRoute(app, resolvedConfig);
+      }
+
+      if (resolvedConfig.authentication.enabled && ssoProviders.length > 0) {
+        registerSsoRoutes(app, resolvedConfig);
+      }
+
+      if (upAuth) {
+        registerRegistrationRoute(app, resolvedConfig);
+        registerLoginRoute(app, resolvedConfig);
+        registerChangePasswordRoute(app, resolvedConfig);
 
         if (resolvedConfig.integrations?.email) {
           registerForgotPasswordRoute(app, resolvedConfig);
@@ -175,12 +178,12 @@ export async function startServer(
           registerForgotPasswordResendOtpRoute(app, resolvedConfig);
         }
 
-        if (upConfig.mfaRequired) {
+        if (upAuth.mfaRequired) {
           registerLoginOtpVerifyRoute(app, resolvedConfig);
           registerLoginResendOtpRoute(app, resolvedConfig);
         }
 
-        if (upConfig.userModel.isVerifiedField) {
+        if (upAuth.isVerifiedField) {
           registerRegistrationOtpVerifyRoute(app, resolvedConfig);
           registerRegistrationResendOtpRoute(app, resolvedConfig);
           registerEmailChangeRoute(app, resolvedConfig);

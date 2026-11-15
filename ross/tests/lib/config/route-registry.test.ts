@@ -41,18 +41,23 @@ const resolve = (overrides: Partial<AppConfigInput> = {}) =>
 
 const upAuth = {
   enabled: true as const,
-  provider: {
-    type: 'up-auth' as const,
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'secret_token',
-      },
-      jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-    },
+  jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth' as const,
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'secret_token',
+        },
+      },
+    },
+  ],
 };
 
 describe('getGeneratedApiIdentifiers', () => {
@@ -158,14 +163,16 @@ describe('getGeneratedApiIdentifiers', () => {
     const ids = getGeneratedApiIdentifiers(
       resolve({
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              ...upAuth.provider.config,
-              mfaRequired: true,
+          ...upAuth,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                ...upAuth.providers[0].config,
+                mfaRequired: true,
+              },
             },
-          },
+          ],
         },
       }),
     );
@@ -179,17 +186,19 @@ describe('getGeneratedApiIdentifiers', () => {
     const ids = getGeneratedApiIdentifiers(
       resolve({
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              ...upAuth.provider.config,
-              userModel: {
-                ...upAuth.provider.config.userModel,
-                isVerifiedField: 'id',
+          ...upAuth,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                ...upAuth.providers[0].config,
+                fields: {
+                  ...upAuth.providers[0].config.fields,
+                  isVerifiedField: 'id',
+                },
               },
             },
-          },
+          ],
         },
       }),
     );
@@ -239,5 +248,76 @@ describe('isGeneratedApiIdentifier', () => {
     expect(
       isGeneratedApiIdentifier(config, 'model.v1.nonexistent.id.index'),
     ).toBe(false);
+  });
+});
+
+describe('sso identifiers', () => {
+  const ssoAuth = {
+    enabled: true as const,
+    jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
+    },
+    providers: [
+      {
+        type: 'sso' as const,
+        name: 'google',
+        protocol: 'oidc' as const,
+        config: {
+          fields: {providerIdField: 'provider_id'},
+          issuerUrl: 'https://accounts.google.com',
+          clientId: 'client',
+          clientSecret: 'secret',
+          redirectUrl: 'https://app.example.com/done',
+        },
+      },
+      {
+        type: 'sso' as const,
+        name: 'corp',
+        protocol: 'saml' as const,
+        config: {
+          fields: {providerIdField: 'provider_id'},
+          entryPoint: 'https://idp.example.com/saml',
+          issuer: 'ross',
+          cert: 'cert',
+        },
+      },
+    ],
+  };
+
+  test('enumerates discovery, login, callback, token and metadata routes', () => {
+    const ids = getGeneratedApiIdentifiers(resolve({authentication: ssoAuth}));
+
+    expect(ids.has('auth.v1.users.unknown.providers')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.me')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.deleteMe')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.editMe')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.ssoLogin')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.ssoCallback')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.ssoMetadata')).toBe(true);
+    expect(ids.has('auth.v1.users.unknown.ssoToken')).toBe(true);
+  });
+
+  test('omits the token route without a redirectUrl', () => {
+    const ids = getGeneratedApiIdentifiers(
+      resolve({
+        authentication: {
+          ...ssoAuth,
+          providers: [
+            {
+              ...ssoAuth.providers[0],
+              config: {
+                ...ssoAuth.providers[0].config,
+                redirectUrl: undefined,
+              },
+            },
+          ],
+        } as never,
+      }),
+    );
+
+    expect(ids.has('auth.v1.users.unknown.ssoToken')).toBe(false);
   });
 });
