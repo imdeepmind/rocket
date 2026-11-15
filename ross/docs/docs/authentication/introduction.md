@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Authentication
+# Introduction
 
 ROSS has a built-in authentication layer that is entirely configuration-driven. You declare one or more **authentication providers** in the `authentication` block, and ROSS mounts the matching login routes, validates the configuration against your data model, and issues signed JWT access tokens that the generated APIs understand.
 
