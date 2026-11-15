@@ -1,0 +1,148 @@
+.header {
+  position: relative;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 17px;
+  text-decoration: none !important;
+  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+}
+
+.logoBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #FF4D6D, #C0123C);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+  color: #ffffff;
+}
+
+.navLinks {
+  display: flex;
+  gap: 36px;
+  font-size: 15px;
+  align-items: center;
+}
+
+.navLinks a {
+  color: #A9A9BB;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.navLinks a:hover {
+  color: #ffffff;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.signInLink {
+  font-size: 15px;
+  color: #A9A9BB;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.signInLink:hover {
+  color: #ffffff;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #ffffff !important;
+  background: #E11D48;
+  box-shadow: 0 8px 28px rgba(225, 29, 72, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-decoration: none !important;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.mobileMenuToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #F7F7FA;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mobileMenuToggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobileMenu a {
+  color: #A9A9BB;
+  text-decoration: none;
+  font-size: 15px;
+  padding: 8px 0;
+  transition: color 0.15s ease;
+}
+
+.mobileMenu a:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .navLinks,
+  .headerActions {
+    display: none;
+  }
+
+  .mobileMenuToggle {
+    display: flex;
+  }
+
+  .mobileMenu.isOpen {
+    display: flex;
+  }
+}
+

@@ -1,0 +1,241 @@
+.w {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-left: 32px;
+  padding-right: 32px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 40px 100px rgba(0, 0, 0, 0.55);
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.heroSection {
+  position: relative;
+  padding-top: 80px;
+  padding-bottom: 120px;
+  display: flex;
+  gap: 72px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.heroContent {
+  flex: 1 1 460px;
+  min-width: 0;
+}
+
+.heroTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  color: #CFCFDC;
+  margin-bottom: 32px;
+}
+
+.tagPulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 10px #34D399;
+}
+
+.heroTitle {
+  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(40px, 5.5vw, 76px);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: #F7F7FA;
+  margin: 0;
+}
+
+.accent {
+  color: #E11D48;
+}
+
+.heroSubtitle {
+  font-size: clamp(18px, 2vw, 20px);
+  color: #B4B4C6;
+  max-width: 520px;
+  margin: 32px 0 40px;
+  line-height: 1.65;
+}
+
+.ctaGroup {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #ffffff !important;
+  background: #E11D48;
+  box-shadow: 0 8px 28px rgba(225, 29, 72, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-decoration: none !important;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.ghost {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #F7F7FA !important;
+}
+
+.ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff !important;
+}
+
+.heroVisualCol {
+  flex: 1 1 440px;
+  min-width: 0;
+  position: relative;
+  padding-bottom: 40px;
+}
+
+.windowCard {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.windowDots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.windowDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.successRow {
+  background: rgba(52, 211, 153, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.25);
+}
+
+.dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #34D399;
+  color: #04130C;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #E11D48;
+  flex: none;
+  animation: spin 1s linear infinite;
+}
+
+.rowTitle {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.rowSubtitle {
+  font-size: 13px;
+  color: #9C9CB0;
+}
+
+.successTitle {
+  font-weight: 600;
+  font-size: 15px;
+  color: #6EE7B7;
+}
+
+.successSubtitle {
+  font-size: 13px;
+  color: #A5C7B9;
+}
+
+.floatingCard {
+  position: absolute;
+  right: -16px;
+  bottom: 0;
+  padding: 14px 20px;
+  font-size: 13px;
+  border-radius: 16px;
+  background: #171722;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 20px 50px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+.endpointLabel {
+  font-size: 11px;
+  color: #9C9CB0;
+  margin-bottom: 2px;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.endpointUrl {
+  color: #F7F7FA;
+}
+
+@media (max-width: 900px) {
+  .heroSection {
+    gap: 48px;
+    padding-top: 48px;
+    padding-bottom: 80px;
+  }
+
+  .floatingCard {
+    right: 0;
+  }
+}
+
