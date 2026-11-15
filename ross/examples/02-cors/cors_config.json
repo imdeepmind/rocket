@@ -1,0 +1,59 @@
+{
+  "application": {
+    "name": "CORS Example API",
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "http://localhost:5173",
+        "https://app.example.com"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "allowedHeaders": [
+        "Content-Type",
+        "Authorization",
+        "x-api-key"
+      ],
+      "exposedHeaders": [
+        "x-ratelimit-limit",
+        "x-ratelimit-remaining",
+        "x-ratelimit-reset"
+      ],
+      "credentials": false,
+      "maxAge": 86400,
+      "routes": [
+        "/api/**"
+      ]
+    }
+  },
+  "data": {
+    "models": {
+      "notes": {
+        "fields": {
+          "id": {
+            "type": "integer",
+            "primaryKey": true,
+            "autoIncrement": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": false,
+            "apis": ["search", "edit"],
+            "query": ["eq", "sort"]
+          },
+          "content": {
+            "type": "text",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}
+
