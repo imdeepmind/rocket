@@ -1,4 +1,5 @@
 import React from 'react';
+import Text from '@/app/components/bits/Text';
 import styles from './styles.module.css';
 
 const BENEFITS = [
@@ -19,26 +20,34 @@ export default function WhyRocket(): React.JSX.Element {
           <span className={styles.windowDot} style={{ background: '#FEBC2E' }} />
           <span className={styles.windowDot} style={{ background: '#28C840' }} />
         </div>
-        <div className={styles.comment}># Deploy with just a few lines</div>
-        <div className={styles.command}>
+        <Text as="div" variant="mono" color="muted" className={styles.comment}>
+          # Deploy with just a few lines
+        </Text>
+        <Text as="div" variant="mono" color="white" className={styles.command}>
           <span className={styles.prompt}>$</span> rocket deploy --project my-app
-        </div>
-        <div className={styles.success}>✓ Deployed successfully in 42s</div>
+        </Text>
+        <Text as="div" variant="mono" className={styles.success}>
+          ✓ Deployed successfully in 42s
+        </Text>
       </div>
 
       {/* Right: Why Rocket info */}
       <div className={styles.infoCol}>
-        <div className={styles.eyebrow}>Why Rocket</div>
-        <h2 className={styles.title}>
+        <Text variant="eyebrow" className={styles.eyebrow}>
+          Why Rocket
+        </Text>
+        <Text as="h2" variant="h2" className={styles.title}>
           Spend less time managing infrastructure.
-        </h2>
+        </Text>
         <ul className={styles.checkList}>
           {BENEFITS.map((benefit) => (
             <li key={benefit} className={styles.checkItem}>
               <span className={styles.checkDot} aria-hidden="true">
                 ✓
               </span>
-              <span>{benefit}</span>
+              <Text as="span" variant="body">
+                {benefit}
+              </Text>
             </li>
           ))}
         </ul>
@@ -46,4 +55,3 @@ export default function WhyRocket(): React.JSX.Element {
     </section>
   );
 }
-

@@ -1,5 +1,6 @@
 import React from 'react';
-import Link from 'next/link';
+import Button from '@/app/components/bits/Button';
+import Text from '@/app/components/bits/Text';
 import styles from './styles.module.css';
 
 export default function NextStep(): React.JSX.Element {
@@ -7,23 +8,22 @@ export default function NextStep(): React.JSX.Element {
     <section className={styles.nextSection}>
       <div className={styles.nextGlow} aria-hidden="true" />
       <div className={`${styles.w} ${styles.contentWrapper}`}>
-        <h2 className={styles.title}>
+        <Text as="h2" variant="h2" className={styles.title}>
           Ship your backend. Not your infrastructure headaches.
-        </h2>
-        <p className={styles.description}>
+        </Text>
+        <Text as="p" variant="lead" className={styles.description}>
           Get your backend deployed and focus on what matters: building your
           product.
-        </p>
+        </Text>
         <div className={styles.ctaGroup}>
-          <Link className={styles.btn} href="/docs/get-started">
+          <Button href="/docs/get-started" size="lg" variant="primary">
             Get started
-          </Link>
-          <Link className={`${styles.btn} ${styles.ghost}`} href="/docs">
+          </Button>
+          <Button href="/docs" size="lg" variant="ghost">
             Read the documentation
-          </Link>
+          </Button>
         </div>
       </div>
     </section>
   );
 }
-

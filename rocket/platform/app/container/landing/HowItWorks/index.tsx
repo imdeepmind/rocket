@@ -1,4 +1,5 @@
 import React from 'react';
+import Text from '@/app/components/bits/Text';
 import styles from './styles.module.css';
 
 interface Step {
@@ -30,21 +31,26 @@ const STEPS: Step[] = [
 export default function HowItWorks(): React.JSX.Element {
   return (
     <section id="how" className={`${styles.w} ${styles.howSection}`}>
-      <div className={styles.eyebrow}>How it works</div>
-      <h2 className={styles.title}>
+      <Text variant="eyebrow" className={styles.eyebrow}>
+        How it works
+      </Text>
+      <Text as="h2" variant="h2" className={styles.title}>
         From configuration to production in a few steps.
-      </h2>
+      </Text>
       <div className={styles.howGrid}>
         <div className={styles.howLine} />
         {STEPS.map((step) => (
           <div key={step.num} className={styles.stepCard}>
             <div className={styles.howStepNum}>{step.num}</div>
-            <h3 className={styles.stepTitle}>{step.title}</h3>
-            <p className={styles.stepDescription}>{step.description}</p>
+            <Text as="h3" variant="h3" className={styles.stepTitle}>
+              {step.title}
+            </Text>
+            <Text as="p" variant="caption" color="muted" className={styles.stepDescription}>
+              {step.description}
+            </Text>
           </div>
         ))}
       </div>
     </section>
   );
 }
-

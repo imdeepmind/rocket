@@ -1,6 +1,7 @@
 import React from 'react';
-import Link from 'next/link';
 import { ArrowRightIcon } from '@/app/icons';
+import Button from '@/app/components/bits/Button';
+import Text from '@/app/components/bits/Text';
 import styles from './styles.module.css';
 
 export default function Hero(): React.JSX.Element {
@@ -9,27 +10,29 @@ export default function Hero(): React.JSX.Element {
       <div className={styles.heroContent}>
         <div className={styles.heroTag}>
           <span className={styles.tagPulse} />
-          Managed backend hosting
+          <Text as="span" variant="caption" color="white">
+            Managed backend hosting
+          </Text>
         </div>
-        <h1 className={styles.heroTitle}>
+        <Text as="h1" variant="hero" className={styles.heroTitle}>
           Your backend.
           <br />
           Deployed. Managed.
           <br />
           <span className={styles.accent}>Ready.</span>
-        </h1>
-        <p className={styles.heroSubtitle}>
+        </Text>
+        <Text as="p" variant="lead" className={styles.heroSubtitle}>
           Deploy and manage your backend APIs without the complexity of managing
           infrastructure. Focus on building your product while Rocket takes care
           of deployment and hosting.
-        </p>
+        </Text>
         <div className={styles.ctaGroup}>
-          <Link className={styles.btn} href="/docs/get-started">
+          <Button href="/docs/get-started" size="lg" variant="primary">
             Get started <ArrowRightIcon />
-          </Link>
-          <Link className={`${styles.btn} ${styles.ghost}`} href="/docs">
+          </Button>
+          <Button href="/docs" size="lg" variant="ghost">
             Explore documentation
-          </Link>
+          </Button>
         </div>
       </div>
 
@@ -44,42 +47,61 @@ export default function Hero(): React.JSX.Element {
           <div className={styles.row}>
             <span className={styles.dot} aria-hidden="true">✓</span>
             <div>
-              <div className={styles.rowTitle}>Configuration</div>
-              <div className={styles.rowSubtitle}>Your deployment is ready</div>
+              <Text as="div" weight="semibold" className={styles.rowTitle}>
+                Configuration
+              </Text>
+              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+                Your deployment is ready
+              </Text>
             </div>
           </div>
 
           <div className={styles.row}>
             <span className={styles.dot} aria-hidden="true">✓</span>
             <div>
-              <div className={styles.rowTitle}>Provisioning infrastructure</div>
-              <div className={styles.rowSubtitle}>Resources set up</div>
+              <Text as="div" weight="semibold" className={styles.rowTitle}>
+                Provisioning infrastructure
+              </Text>
+              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+                Resources set up
+              </Text>
             </div>
           </div>
 
           <div className={styles.row}>
             <span className={styles.spinner} aria-hidden="true" />
             <div>
-              <div className={styles.rowTitle}>Deploying service</div>
-              <div className={styles.rowSubtitle}>This may take a minute…</div>
+              <Text as="div" weight="semibold" className={styles.rowTitle}>
+                Deploying service
+              </Text>
+              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+                This may take a minute…
+              </Text>
             </div>
           </div>
 
           <div className={`${styles.row} ${styles.successRow}`}>
             <span className={styles.dot} aria-hidden="true">✓</span>
             <div>
-              <div className={styles.successTitle}>Deployment successful</div>
-              <div className={styles.successSubtitle}>Your API is live</div>
+              <Text as="div" weight="semibold" className={styles.successTitle}>
+                Deployment successful
+              </Text>
+              <Text as="div" variant="caption" color="muted" className={styles.successSubtitle}>
+                Your API is live
+              </Text>
             </div>
           </div>
         </div>
 
         <div className={`${styles.mono} ${styles.floatingCard}`}>
-          <div className={styles.endpointLabel}>API endpoint</div>
-          <div className={styles.endpointUrl}>https://api.rocket.dev</div>
+          <Text as="div" variant="caption" color="muted" className={styles.endpointLabel}>
+            API endpoint
+          </Text>
+          <Text as="div" variant="mono" color="white" className={styles.endpointUrl}>
+            https://api.rocket.dev
+          </Text>
         </div>
       </div>
     </section>
   );
 }
-

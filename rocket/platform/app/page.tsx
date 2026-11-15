@@ -1,13 +1,13 @@
 import React from 'react';
-import Navbar from '@/app/components/Navbar';
-import Hero from '@/app/components/Hero';
-import Features from '@/app/components/Features';
-import HowItWorks from '@/app/components/HowItWorks';
-import Projects from '@/app/components/Projects';
-import WhyRocket from '@/app/components/WhyRocket';
-import OpenSource from '@/app/components/OpenSource';
-import NextStep from '@/app/components/NextStep';
-import Footer from '@/app/components/Footer';
+import Navbar from '@/app/components/items/Navbar';
+import Footer from '@/app/components/items/Footer';
+import Hero from '@/app/container/landing/Hero';
+import Features from '@/app/container/landing/Features';
+import HowItWorks from '@/app/container/landing/HowItWorks';
+import Projects from '@/app/container/landing/Projects';
+import WhyRocket from '@/app/container/landing/WhyRocket';
+import OpenSource from '@/app/container/landing/OpenSource';
+import NextStep from '@/app/container/landing/NextStep';
 import styles from './page.module.css';
 
 export default function Home(): React.JSX.Element {

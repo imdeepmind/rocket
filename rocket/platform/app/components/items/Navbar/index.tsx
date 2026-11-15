@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MenuIcon, CloseIcon } from '@/app/icons';
+import Button from '@/app/components/bits/Button';
 import styles from './styles.module.css';
 
 export default function Navbar(): React.JSX.Element {
@@ -48,6 +49,13 @@ export default function Navbar(): React.JSX.Element {
         </a>
         <Link href="/docs">Docs</Link>
         <Link href="/pricing">Pricing</Link>
+        <a
+          href="https://github.com/imdeepmind/rocket"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub
+        </a>
       </nav>
 
       {/* Header Actions */}
@@ -55,9 +63,9 @@ export default function Navbar(): React.JSX.Element {
         <Link href="/sign-in" className={styles.signInLink}>
           Sign In
         </Link>
-        <Link href="/docs/get-started" className={styles.btn}>
+        <Button href="/docs/get-started" size="md">
           Get started
-        </Link>
+        </Button>
       </div>
 
       {/* Mobile Toggle */}
@@ -90,19 +98,27 @@ export default function Navbar(): React.JSX.Element {
         <Link href="/pricing" onClick={closeMenu}>
           Pricing
         </Link>
+        <a
+          href="https://github.com/imdeepmind/rocket"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={closeMenu}
+        >
+          GitHub
+        </a>
         <Link href="/sign-in" onClick={closeMenu}>
           Sign In
         </Link>
-        <Link
+        <Button
           href="/docs/get-started"
-          className={styles.btn}
+          size="md"
+          fullWidth
           onClick={closeMenu}
-          style={{ width: '100%', marginTop: '8px' }}
+          style={{ marginTop: '8px' }}
         >
           Get started
-        </Link>
+        </Button>
       </div>
     </header>
   );
 }
-

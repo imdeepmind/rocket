@@ -1,5 +1,6 @@
 import React from 'react';
 import { ZapIcon, LayersIcon, ActivityIcon, CodeIcon } from '@/app/icons';
+import Text from '@/app/components/bits/Text';
 import styles from './styles.module.css';
 
 interface FeatureItem {
@@ -39,10 +40,12 @@ export default function Features(): React.JSX.Element {
   return (
     <section id="features" className={`${styles.w} ${styles.featuresSection}`}>
       <div className={styles.header}>
-        <div className={styles.eyebrow}>Platform</div>
-        <h2 className={styles.title}>
+        <Text variant="eyebrow" className={styles.eyebrow}>
+          Platform
+        </Text>
+        <Text as="h2" variant="h2" className={styles.title}>
           Everything you need to get your backend running.
-        </h2>
+        </Text>
       </div>
       <div className={styles.featuresGrid}>
         {FEATURES.map((feature) => {
@@ -52,8 +55,12 @@ export default function Features(): React.JSX.Element {
               <div className={styles.ic}>
                 <IconComponent />
               </div>
-              <h3 className={styles.featureTitle}>{feature.title}</h3>
-              <p className={styles.featureDescription}>{feature.description}</p>
+              <Text as="h3" variant="h3" className={styles.featureTitle}>
+                {feature.title}
+              </Text>
+              <Text as="p" variant="caption" color="muted" className={styles.featureDescription}>
+                {feature.description}
+              </Text>
             </div>
           );
         })}
@@ -61,4 +68,3 @@ export default function Features(): React.JSX.Element {
     </section>
   );
 }
-
