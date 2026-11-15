@@ -28,12 +28,14 @@ import {
   registerLoginOtpVerifyRoute,
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
+import {registerProvidersRoute} from '@/routes/auth/providers';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 import {
   registerForgotPasswordResendOtpRoute,
   registerLoginResendOtpRoute,
   registerRegistrationResendOtpRoute,
 } from '@/routes/auth/resend-otp';
+import {registerSsoRoutes} from '@/routes/auth/sso';
 import {registerHealthRoute} from '@/routes/health';
 import {registerRoutes} from '@/routes/index';
 
@@ -150,6 +152,14 @@ vi.mock('@/routes/auth/edit-me', () => ({
 
 vi.mock('@/routes/auth/change-email', () => ({
   registerEmailChangeRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/providers', () => ({
+  registerProvidersRoute: vi.fn(),
+}));
+
+vi.mock('@/routes/auth/sso', () => ({
+  registerSsoRoutes: vi.fn(),
 }));
 
 vi.mock('@/lib/server/welcome', () => ({
@@ -334,7 +344,7 @@ describe('Server', () => {
 
     // db, cache, response, ssp, webhook, auth (always), swagger, swagger-ui,
     // and the /api prefix
-    expect(mockApp.register).toHaveBeenCalledTimes(10);
+    expect(mockApp.register).toHaveBeenCalledTimes(11);
 
     const prefixCall = mockApp.register.mock.calls.find(
       ([, opts]) => opts?.prefix === '/api',
@@ -355,7 +365,7 @@ describe('Server', () => {
     await startServer(resolve(disabledSwaggerConfig, 'prod'));
 
     // db, cache, response, ssp, webhook, auth (always), and the /api prefix
-    expect(mockApp.register).toHaveBeenCalledTimes(7);
+    expect(mockApp.register).toHaveBeenCalledTimes(8);
   });
 
   it('should not register routes if models are missing/empty', async () => {
@@ -822,18 +832,23 @@ describe('Server', () => {
         ...mockConfig,
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'this-will-never-be-used',
-            },
+          jwtSecret: 'this-will-never-be-used',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -863,19 +878,23 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
+          jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -895,19 +914,24 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret',
-              mfaRequired: true,
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+                mfaRequired: true,
+              },
+            },
+          ],
         },
       };
 
@@ -927,19 +951,24 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-                isVerifiedField: 'is_active',
-              },
-              jwtSecret: 'test-secret',
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -966,19 +995,23 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret',
-              mfaRequired: true,
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -997,20 +1030,25 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-                isVerifiedField: 'is_active',
-              },
-              jwtSecret: 'test-secret',
-              mfaRequired: true,
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
+                mfaRequired: true,
+              },
+            },
+          ],
         },
       };
 
@@ -1042,19 +1080,23 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret',
-              mfaRequired: true,
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -1075,18 +1117,23 @@ describe('Server', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret',
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -1101,19 +1148,23 @@ describe('Server', () => {
         ...mockConfig,
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'test-secret',
-              mfaRequired: true,
-            },
+          jwtSecret: 'test-secret',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       };
 
@@ -1196,5 +1247,54 @@ describe('Server', () => {
       expect(mockApp.listen).not.toHaveBeenCalled();
       expect(mockApp.appConfig?.docs.openapi.enabled).toBe(true);
     });
+  });
+});
+
+describe('Server — SSO provider wiring', () => {
+  it('registers provider discovery and SSO routes for SSO providers', async () => {
+    const ssoConfig: AppConfig = {
+      ...mockConfig,
+      data: {
+        models: {
+          users: {
+            fields: {
+              id: {type: 'integer', primaryKey: true},
+              provider: {type: 'string'},
+              provider_id: {type: 'string'},
+            },
+          },
+        },
+      },
+      authentication: {
+        enabled: true,
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'sso',
+            name: 'github',
+            protocol: 'oauth2',
+            config: {
+              fields: {providerIdField: 'provider_id'},
+              authorizeUrl: 'https://github.com/login/oauth/authorize',
+              tokenUrl: 'https://github.com/login/oauth/access_token',
+              clientId: 'client',
+              clientSecret: 'secret',
+            },
+          },
+        ],
+      },
+    };
+
+    await startServer(
+      resolveConfig(ssoConfig as unknown as AppConfigInput, {mode: 'dev'}),
+    );
+
+    expect(registerProvidersRoute).toHaveBeenCalled();
+    expect(registerSsoRoutes).toHaveBeenCalled();
   });
 });

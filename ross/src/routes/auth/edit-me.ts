@@ -1,5 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {getActiveUserModel, getUpAuth} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {isManagedTimestampField} from '@/lib/schema/fields';
 import {getResponseStructureSchema} from '@/lib/schema/response';
@@ -7,12 +8,7 @@ import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {
-  ModelBody,
-  ModelConfig,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ModelBody, ModelConfig, ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -22,15 +18,17 @@ export function registerEditMeRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const userModel = getActiveUserModel(config);
+
+  if (!userModel) {
     return;
   }
 
-  const authConfig = (authentication.provider.config as UpAuthProviderConfig)
-    .userModel;
-  const {model, idField, usernameField, passwordField, isVerifiedField} =
-    authConfig;
+  const upAuth = getUpAuth(config);
+  const {modelName: model, idField} = userModel;
+  const usernameField = upAuth?.usernameField ?? '';
+  const passwordField = upAuth?.passwordField ?? '';
+  const isVerifiedField = upAuth?.isVerifiedField;
 
   const authModelConfig = models[model];
 

@@ -1,9 +1,11 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {blockPasswordManagement} from '@/lib/auth/guards';
+import {getUpAuth} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -13,14 +15,13 @@ export function registerForgotPasswordRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const {model, usernameField} = (
-    authentication.provider.config as UpAuthProviderConfig
-  ).userModel;
+  const {model, usernameField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -94,6 +95,13 @@ function registerForgotPasswordEndpoint(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
+
+      const blocked = blockPasswordManagement(app, reply, config, user);
+
+      if (blocked) {
+        return blocked;
+      }
+
       const userEmail = String(user[usernameField]);
       const ulid = await app.otp.sendOTPForVerification(userEmail);
 

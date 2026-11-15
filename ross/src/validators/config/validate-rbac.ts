@@ -26,7 +26,11 @@ function validateRbacConstraints(
   // 1. Authentication requirement:
   if (!config.authentication || !config.authentication.enabled) {
     errors.push('/rbac: authentication must be enabled when rbac is enabled');
-  } else if (config.authentication.provider?.type === 'api-key') {
+  } else if (
+    (config.authentication.providers ?? []).some(
+      provider => provider.type === 'api-key',
+    )
+  ) {
     errors.push(
       "/rbac: static 'api-key' authentication cannot be used when rbac is enabled",
     );

@@ -65,17 +65,22 @@ describe('Swagger Plugin', () => {
     app.appConfig = structuredClone(baseConfig);
     app.appConfig.authentication = {
       enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'users',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
+      userModel: {
+        modelName: 'users',
+        idField: 'id',
+        providerField: 'provider',
+      },
+      providers: [
+        {
+          type: 'up-auth',
+          config: {
+            fields: {
+              usernameField: 'email',
+              passwordField: 'password',
+            },
           },
         },
-      },
+      ],
     } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();
@@ -98,12 +103,7 @@ describe('Swagger Plugin', () => {
     app.appConfig = structuredClone(baseConfig);
     app.appConfig.authentication = {
       enabled: true,
-      provider: {
-        type: 'api-key',
-        config: {
-          key: 'test-key',
-        },
-      },
+      providers: [{type: 'api-key', config: {key: 'test-key'}}],
     } as ResolvedAppConfig['authentication'];
     await app.register(swaggerPlugin);
     await app.ready();

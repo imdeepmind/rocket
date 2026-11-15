@@ -41,18 +41,23 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -119,7 +124,10 @@ async function createResendOtpApp(
   await app.register(authPlugin);
   await app.register(otpPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     if (action === 'login') {
       registerLoginResendOtpRoute(app, config as ResolvedAppConfig);
     } else if (action === 'register') {

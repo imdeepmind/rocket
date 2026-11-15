@@ -2,11 +2,12 @@ import * as path from 'path';
 
 import {CLIOptions, HTTPMethod, Mode} from '@/interfaces';
 import {
-  ApiKeyProvider,
+  ApiKeyProviderConfig,
   ApisConfig,
   AppConfigInput,
   ApplicationConfigInput,
   AuthenticationConfigInput,
+  AuthProviderInput,
   CacheDbConfig,
   CustomEndpointConfig,
   DocsConfigInput,
@@ -29,10 +30,10 @@ import {
   ResolvedModelFieldConfig,
   ResolvedModelIndexConfig,
   ResolvedModelRelationConfig,
+  ResolvedOAuth2SsoProvider,
+  ResolvedOidcSsoProvider,
+  ResolvedSamlSsoProvider,
   ResolvedUpAuthProvider,
-  ResolvedUpAuthProviderConfig,
-  UpAuthProvider,
-  UpAuthProviderConfig,
   WebhookConfig,
 } from '@/interfaces/config';
 
@@ -386,55 +387,151 @@ export function resolveAuthentication(
     return {...DEFAULT_AUTH_DISABLED};
   }
 
-  const provider = input.provider as ResolvedAuthProvider | undefined;
+  const {userModel, providers} = input;
 
-  if (!provider) {
+  // Validation reports the precise errors; resolution falls back to "disabled"
+  // so downstream code never observes a half-configured auth engine.
+  if (!providers || providers.length === 0) {
     return {...DEFAULT_AUTH_DISABLED};
   }
 
+  const hasIdentityProvider = providers.some(
+    provider => provider.type !== 'api-key',
+  );
+
+  if (hasIdentityProvider && !userModel) {
+    return {...DEFAULT_AUTH_DISABLED};
+  }
+
+  return {
+    enabled: true,
+    ...(input.jwtSecret ? {jwtSecret: input.jwtSecret} : {}),
+    tokenExpiration: input.tokenExpiration ?? DEFAULT_TOKEN_EXPIRATION,
+    ...(userModel ? {userModel: {...userModel}} : {}),
+    providers: providers
+      .filter(
+        provider =>
+          provider.type === 'up-auth' ||
+          provider.type === 'api-key' ||
+          provider.type === 'sso',
+      )
+      .map(resolveAuthProvider),
+  };
+}
+
+function resolveAuthProvider(
+  provider: AuthProviderInput,
+): ResolvedAuthProvider {
   switch (provider.type) {
     case 'up-auth':
-      return {
-        enabled: true,
-        provider: resolveUpAuthProvider(provider as UpAuthProvider),
-      };
+      return resolveUpAuthProvider(provider);
     case 'api-key':
-      return {
-        enabled: true,
-        provider: resolveApiKeyProvider(provider as ApiKeyProvider),
-      };
-    default:
-      return {...DEFAULT_AUTH_DISABLED};
+      return resolveApiKeyProvider(provider);
+    case 'sso':
+      return resolveSsoProvider(provider);
   }
 }
 
 function resolveUpAuthProvider(
-  provider: UpAuthProvider,
+  provider: Extract<AuthProviderInput, {type: 'up-auth'}>,
 ): ResolvedUpAuthProvider {
   return {
     type: 'up-auth',
-    config: resolveUpAuthProviderConfig(provider.config),
-  };
-}
-
-function resolveUpAuthProviderConfig(
-  config: UpAuthProviderConfig,
-): ResolvedUpAuthProviderConfig {
-  return {
-    userModel: clone(config.userModel),
-    // jwtSecret is never defaulted; it must come from the user (or env).
-    jwtSecret: config.jwtSecret as string,
-    tokenExpiration: config.tokenExpiration ?? DEFAULT_TOKEN_EXPIRATION,
-    mfaRequired: config.mfaRequired ?? false,
+    config: {
+      fields: {...provider.config.fields},
+      mfaRequired: provider.config.mfaRequired ?? false,
+    },
   };
 }
 
 function resolveApiKeyProvider(
-  provider: ApiKeyProvider,
+  provider: Extract<AuthProviderInput, {type: 'api-key'}>,
 ): ResolvedApiKeyProvider {
   return {
     type: 'api-key',
-    config: clone(provider.config),
+    config: {...provider.config} as ApiKeyProviderConfig,
+  };
+}
+
+function resolveSsoBase(
+  provider: Extract<AuthProviderInput, {type: 'sso'}>,
+): Pick<
+  ResolvedOAuth2SsoProvider['config'],
+  | 'fields'
+  | 'attributeMapping'
+  | 'scopes'
+  | 'callbackUrl'
+  | 'redirectUrl'
+  | 'failureRedirectUrl'
+> {
+  return {
+    fields: {...provider.config.fields},
+    attributeMapping: {...(provider.config.attributeMapping ?? {})},
+    scopes: [...(provider.config.scopes ?? [])],
+    ...(provider.config.callbackUrl
+      ? {callbackUrl: provider.config.callbackUrl}
+      : {}),
+    ...(provider.config.redirectUrl
+      ? {redirectUrl: provider.config.redirectUrl}
+      : {}),
+    ...(provider.config.failureRedirectUrl
+      ? {failureRedirectUrl: provider.config.failureRedirectUrl}
+      : {}),
+  };
+}
+
+function resolveSsoProvider(
+  provider: Extract<AuthProviderInput, {type: 'sso'}>,
+):
+  | ResolvedOAuth2SsoProvider
+  | ResolvedOidcSsoProvider
+  | ResolvedSamlSsoProvider {
+  const base = resolveSsoBase(provider);
+
+  if (provider.protocol === 'oauth2') {
+    return {
+      type: 'sso',
+      name: provider.name,
+      protocol: 'oauth2',
+      config: {
+        ...base,
+        authorizeUrl: provider.config.authorizeUrl,
+        tokenUrl: provider.config.tokenUrl,
+        ...(provider.config.userInfoUrl
+          ? {userInfoUrl: provider.config.userInfoUrl}
+          : {}),
+        ...(provider.config.idClaim ? {idClaim: provider.config.idClaim} : {}),
+        clientId: provider.config.clientId,
+        clientSecret: provider.config.clientSecret,
+      },
+    };
+  }
+
+  if (provider.protocol === 'oidc') {
+    return {
+      type: 'sso',
+      name: provider.name,
+      protocol: 'oidc',
+      config: {
+        ...base,
+        scopes: base.scopes.length > 0 ? base.scopes : ['openid', 'profile'],
+        issuerUrl: provider.config.issuerUrl,
+        clientId: provider.config.clientId,
+        clientSecret: provider.config.clientSecret,
+      },
+    };
+  }
+
+  return {
+    type: 'sso',
+    name: provider.name,
+    protocol: 'saml',
+    config: {
+      ...base,
+      entryPoint: provider.config.entryPoint,
+      issuer: provider.config.issuer,
+      cert: provider.config.cert,
+    },
   };
 }
 

@@ -1,15 +1,12 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {issueAccessToken} from '@/lib/auth/token';
+import {getUpAuth, UpAuthRuntime} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
-import {extractJwtRolePayload} from '@/lib/rbac';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 import {buildUpdatedAtClause} from '@/lib/sql/timestamps';
 
-import {
-  ModelBody,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ModelBody, ResolvedAppConfig} from '@/interfaces/config';
 
 import {hash} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -22,13 +19,13 @@ function registerOtpVerifyBase(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-  const {model, usernameField} = upConfig.userModel;
+  const {model, usernameField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -50,7 +47,7 @@ function registerOtpVerifyBase(
       config,
       model,
       usernameField,
-      upConfig,
+      upAuth,
       action,
       path,
       variant,
@@ -65,7 +62,7 @@ function registerOtpVerifyEndpoint(
   config: ResolvedAppConfig,
   model: string,
   usernameField: string,
-  upConfig: UpAuthProviderConfig,
+  upAuth: UpAuthRuntime,
   action: 'login' | 'register' | 'forgotPassword',
   path: string,
   variant: string,
@@ -147,7 +144,7 @@ function registerOtpVerifyEndpoint(
         }
 
         if (action === 'register') {
-          const isVerifiedField = upConfig.userModel.isVerifiedField;
+          const isVerifiedField = upAuth.isVerifiedField;
           if (isVerifiedField) {
             const updatedAtClause = buildUpdatedAtClause(
               config.data.models[model],
@@ -165,7 +162,7 @@ function registerOtpVerifyEndpoint(
         }
 
         if (action === 'forgotPassword') {
-          const {passwordField} = upConfig.userModel;
+          const {passwordField} = upAuth;
           const updatedAtClause = buildUpdatedAtClause(
             config.data.models[model],
             config.infrastructure.database.engine,
@@ -190,24 +187,18 @@ function registerOtpVerifyEndpoint(
           config.rbac.modelName &&
           config.rbac.modelName !== model
         ) {
-          const rbacQuery = `SELECT * FROM "${config.rbac.modelName}" WHERE "${upConfig.userModel.idField}" = $1 LIMIT 1;`;
-          const rbacRes = await tx.query(rbacQuery, [
-            user[upConfig.userModel.idField],
-          ]);
+          const rbacQuery = `SELECT * FROM "${config.rbac.modelName}" WHERE "${upAuth.idField}" = $1 LIMIT 1;`;
+          const rbacRes = await tx.query(rbacQuery, [user[upAuth.idField]]);
           rbacUser = (rbacRes.rows[0] as Record<string, unknown>) ?? user;
         }
 
-        const rolePayload = extractJwtRolePayload(rbacUser, config.rbac);
-
-        const payload = {
-          id: user[upConfig.userModel.idField],
-          [usernameField]: user[usernameField],
-          ...rolePayload,
-        };
-
-        const token = app.jwt.sign(payload, {
-          expiresIn: upConfig.tokenExpiration || '1d',
-        });
+        const token = issueAccessToken(
+          app,
+          config,
+          user,
+          usernameField,
+          rbacUser,
+        );
 
         await tx.commit();
 

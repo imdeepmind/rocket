@@ -50,18 +50,23 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -113,7 +118,10 @@ async function createAuthApp(
   registerErrorHandler(app);
   registerNotFoundHandler(app);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerRegistrationRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
@@ -161,7 +169,7 @@ describe('POST /auth/register', () => {
     test('should NOT register the route when provider type is not "up-auth"', async () => {
       const authentication: AuthenticationConfig = {
         ...upAuthConfig,
-        provider: {type: 'api-key', config: {key: 'xxx'}},
+        providers: [{type: 'api-key', config: {key: 'xxx'}}],
       };
       const app = await createAuthApp(authentication);
 
@@ -663,18 +671,23 @@ describe('POST /auth/register', () => {
 
     const customAuth: AuthenticationConfig = {
       enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'accounts',
-            idField: 'account_id',
-            usernameField: 'username',
-            passwordField: 'secret',
-          },
-          jwtSecret: 'this-will-never-be-used',
-        },
+      jwtSecret: 'this-will-never-be-used',
+      userModel: {
+        modelName: 'accounts',
+        idField: 'account_id',
+        providerField: 'provider',
       },
+      providers: [
+        {
+          type: 'up-auth',
+          config: {
+            fields: {
+              usernameField: 'username',
+              passwordField: 'secret',
+            },
+          },
+        },
+      ],
     };
 
     test('should insert into the correct table and omit the custom password column from response', async () => {
@@ -770,7 +783,7 @@ describe('POST /auth/register', () => {
 
       if (
         authentication?.enabled &&
-        authentication.provider?.type === 'up-auth'
+        authentication.providers?.some(provider => provider.type === 'up-auth')
       ) {
         registerRegistrationRoute(app, config as ResolvedAppConfig);
       }
@@ -781,19 +794,24 @@ describe('POST /auth/register', () => {
     test('should return requiresMfa and ulid when isVerifiedField is set', async () => {
       const otpAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-              isVerifiedField: 'is_active',
-            },
-            jwtSecret: 'this-will-never-be-used',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(otpAuthConfig);
 
@@ -822,19 +840,24 @@ describe('POST /auth/register', () => {
     test('should strip isVerifiedField from body and force to false in INSERT query', async () => {
       const otpAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-              isVerifiedField: 'is_active',
-            },
-            jwtSecret: 'this-will-never-be-used',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
+            },
+          },
+        ],
       };
       const app = await createAuthAppWithMfa(otpAuthConfig);
 

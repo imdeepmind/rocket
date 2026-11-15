@@ -53,17 +53,22 @@ describe('buildPreValidation', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'user',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
+        userModel: {
+          modelName: 'user',
+          idField: 'id',
+          providerField: 'provider',
+        },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
             },
           },
-        },
+        ],
       },
     },
     {mode: 'dev'},
@@ -180,7 +185,13 @@ describe('buildPreValidation', () => {
       ...baseAppConfig,
       authentication: {
         enabled: true,
-        provider: {type: 'api-key', config: {key: 'test-key'}},
+        tokenExpiration: '1d',
+        providers: [
+          {
+            type: 'api-key',
+            config: {key: 'test-key'},
+          },
+        ],
       },
     };
     const app = buildMockApp();
@@ -205,17 +216,22 @@ describe('buildPreValidation', () => {
         data: {models: {}},
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'user',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
+          userModel: {
+            modelName: 'user',
+            idField: 'id',
+            providerField: 'provider',
+          },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
               },
             },
-          },
+          ],
         },
         rbac: {
           enabled: true,

@@ -43,18 +43,23 @@ describe('test custom-endpoints api', () => {
 
   const upAuthConfig: AuthenticationConfig = {
     enabled: true,
-    provider: {
-      type: 'up-auth',
-      config: {
-        userModel: {
-          model: 'users',
-          idField: 'id',
-          usernameField: 'email',
-          passwordField: 'password',
-        },
-        jwtSecret: 'this-will-never-be-used',
-      },
+    jwtSecret: 'this-will-never-be-used',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
     },
+    providers: [
+      {
+        type: 'up-auth',
+        config: {
+          fields: {
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
+      },
+    ],
   };
 
   describe('happy path', () => {
@@ -341,10 +346,7 @@ describe('test custom-endpoints api', () => {
     test('should register security schema when api-key auth is enabled', async () => {
       const apiKeyAuthConfig: AuthenticationConfig = {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {key: 'test-key-123'},
-        },
+        providers: [{type: 'api-key', config: {key: 'test-key-123'}}],
       };
 
       const fastify = await createTestApp(

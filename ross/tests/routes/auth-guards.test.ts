@@ -76,18 +76,23 @@ describe('auth route registration guards', () => {
         data: {models: {}},
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
+          jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       },
       {mode: 'dev'},

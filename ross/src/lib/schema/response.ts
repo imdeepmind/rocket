@@ -42,22 +42,19 @@ export function buildSecurityArray(
 ): Array<{[key: string]: string[]}> {
   const security: Array<{[key: string]: string[]}> = [];
 
-  if (
-    config.authentication.enabled &&
-    config.authentication.enabled &&
-    config.authentication.provider.type === 'up-auth' &&
-    authorization
-  ) {
-    security.push({bearerAuth: []});
+  if (!config.authentication.enabled || !authorization) {
+    return security;
   }
 
-  if (
-    config.authentication.enabled &&
-    config.authentication.enabled &&
-    config.authentication.provider.type === 'api-key' &&
-    authorization
-  ) {
+  const providers = config.authentication.providers;
+
+  if (providers.some(provider => provider.type === 'api-key')) {
     security.push({apiKeyAuth: []});
+    return security;
+  }
+
+  if (providers.some(provider => provider.type !== 'api-key')) {
+    security.push({bearerAuth: []});
   }
 
   return security;

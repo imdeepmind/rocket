@@ -139,6 +139,20 @@
             "query": [],
             "aggregations": []
           },
+          "provider": {
+            "type": "string",
+            "primaryKey": false,
+            "autoIncrement": false,
+            "nullable": false,
+            "unique": false,
+            "secret": false,
+            "apis": [],
+            "query": [
+              "eq"
+            ],
+            "aggregations": [],
+            "default": "up-auth"
+          },
           "name": {
             "type": "string",
             "primaryKey": false,
@@ -571,21 +585,26 @@
   },
   "authentication": {
     "enabled": true,
-    "provider": {
-      "type": "up-auth",
-      "config": {
-        "userModel": {
-          "model": "users",
-          "idField": "id",
-          "usernameField": "email",
-          "passwordField": "password",
-          "isVerifiedField": "isActive"
-        },
-        "jwtSecret": "your-super-secret-key-must-be-long-enough",
-        "tokenExpiration": "1d",
-        "mfaRequired": true
+    "jwtSecret": "your-super-secret-key-must-be-long-enough",
+    "tokenExpiration": "1d",
+    "userModel": {
+      "modelName": "users",
+      "idField": "id",
+      "providerField": "provider"
+    },
+    "providers": [
+      {
+        "type": "up-auth",
+        "config": {
+          "fields": {
+            "usernameField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "isActive"
+          },
+          "mfaRequired": true
+        }
       }
-    }
+    ]
   },
   "integrations": {
     "email": {

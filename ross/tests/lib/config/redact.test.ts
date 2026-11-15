@@ -3,22 +3,49 @@ import {describe, expect, test} from 'vitest';
 import {redactConfig, redactConnectionUrl} from '@/lib/config/redact';
 import {resolveConfig} from '@/lib/config/resolve';
 
-import {AppConfigInput, ResolvedAppConfig} from '@/interfaces/config';
+import {AppConfigInput} from '@/interfaces/config';
 
 const upAuth = {
   enabled: true as const,
-  provider: {
-    type: 'up-auth' as const,
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'super-secret-jwt-signing-key-value',
-    },
+  jwtSecret: 'super-secret-jwt-signing-key-value',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth' as const,
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+    {
+      type: 'sso' as const,
+      name: 'google',
+      protocol: 'oidc' as const,
+      config: {
+        fields: {providerIdField: 'provider_id'},
+        issuerUrl: 'https://accounts.google.com',
+        clientId: 'client-id',
+        clientSecret: 'super-secret-client-value',
+      },
+    },
+    {
+      type: 'sso' as const,
+      name: 'corp',
+      protocol: 'saml' as const,
+      config: {
+        fields: {providerIdField: 'provider_id'},
+        entryPoint: 'https://idp.example.com/saml',
+        issuer: 'ross',
+        cert: 'super-secret-certificate',
+      },
+    },
+  ],
 };
 
 const buildConfig = (overrides: Partial<AppConfigInput> = {}) =>
@@ -60,32 +87,41 @@ describe('redactConnectionUrl', () => {
 });
 
 describe('redactConfig', () => {
-  test('redacts up-auth jwtSecret', () => {
+  test('redacts jwtSecret and client secrets', () => {
     const config = buildConfig({authentication: upAuth});
     const redacted = redactConfig(config);
 
-    expect(redacted.authentication).toEqual({
-      enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: expect.objectContaining({jwtSecret: '***'}),
-      },
-    });
+    expect(redacted.authentication).toEqual(
+      expect.objectContaining({
+        enabled: true,
+        jwtSecret: '***',
+      }),
+    );
+
+    const providers = (
+      redacted.authentication as {
+        providers: Array<{config: {clientSecret?: string; cert?: string}}>;
+      }
+    ).providers;
+
+    expect(providers[1].config.clientSecret).toBe('***');
+    expect(providers[2].config.cert).toBe('***');
   });
 
   test('redacts api-key secrets', () => {
     const config = buildConfig({
       authentication: {
         enabled: true,
-        provider: {type: 'api-key', config: {key: 'live-key-1234'}},
+        providers: [{type: 'api-key', config: {key: 'live-key-1234'}}],
       },
     });
 
-    const redacted = redactConfig(config) as ResolvedAppConfig & {
-      authentication: {provider: {config: {key: string}}};
-    };
+    const redacted = redactConfig(config);
 
-    expect(redacted.authentication.provider.config.key).toBe('***');
+    expect(
+      (redacted.authentication as {providers: Array<{config: {key: string}}>})
+        .providers[0].config.key,
+    ).toBe('***');
   });
 
   test('leaves disabled authentication untouched', () => {

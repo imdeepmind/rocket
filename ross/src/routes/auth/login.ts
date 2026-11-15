@@ -1,14 +1,12 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {blockPasswordManagement} from '@/lib/auth/guards';
+import {issueAccessToken} from '@/lib/auth/token';
+import {getUpAuth, UpAuthRuntime} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
-import {extractJwtRolePayload} from '@/lib/rbac';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {
-  ModelBody,
-  ResolvedAppConfig,
-  UpAuthProviderConfig,
-} from '@/interfaces/config';
+import {ModelBody, ResolvedAppConfig} from '@/interfaces/config';
 
 import {compare} from '@/utils/hash';
 import {capitalizeFirstLetter} from '@/utils/string';
@@ -20,13 +18,13 @@ export function registerLoginRoute(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-  const {model, usernameField, passwordField} = upConfig.userModel;
+  const {model, usernameField, passwordField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -41,7 +39,7 @@ export function registerLoginRoute(
       model,
       usernameField,
       passwordField,
-      upConfig,
+      upAuth,
       variant,
       identifier,
       policy,
@@ -55,7 +53,7 @@ function registerLoginEndpoint(
   model: string,
   usernameField: string,
   passwordField: string,
-  upConfig: UpAuthProviderConfig,
+  upAuth: UpAuthRuntime,
   variant: string,
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
@@ -64,7 +62,7 @@ function registerLoginEndpoint(
     usernameField,
     passwordField,
     model,
-    upConfig.mfaRequired ?? false,
+    upAuth.mfaRequired ?? false,
     policy,
   );
 
@@ -84,6 +82,15 @@ function registerLoginEndpoint(
       const res = await app.db.query(query, [username]);
 
       const user = res.rows[0] as Record<string, unknown> | undefined;
+
+      if (user) {
+        const blocked = blockPasswordManagement(app, reply, config, user);
+
+        if (blocked) {
+          return blocked;
+        }
+      }
+
       const hashedPassword =
         (user?.[passwordField] as string) || DUMMY_PASSWORD_HASH;
 
@@ -95,7 +102,7 @@ function registerLoginEndpoint(
           .send(app.buildResponse(401, 'Invalid username or password', null));
       }
 
-      const {isVerifiedField} = upConfig.userModel;
+      const {isVerifiedField} = upAuth;
 
       if (isVerifiedField && Boolean(user[isVerifiedField]) !== true) {
         return reply
@@ -103,7 +110,7 @@ function registerLoginEndpoint(
           .send(app.buildResponse(401, 'User is not verified', null));
       }
 
-      if (upConfig.mfaRequired) {
+      if (upAuth.mfaRequired) {
         const userEmail = String(user[usernameField]);
         const ulid = await app.otp.sendOTPForVerification(userEmail);
 
@@ -121,24 +128,18 @@ function registerLoginEndpoint(
         config.rbac.modelName &&
         config.rbac.modelName !== model
       ) {
-        const rbacQuery = `SELECT * FROM "${config.rbac.modelName}" WHERE "${upConfig.userModel.idField}" = $1 LIMIT 1;`;
-        const rbacRes = await app.db.query(rbacQuery, [
-          user[upConfig.userModel.idField],
-        ]);
+        const rbacQuery = `SELECT * FROM "${config.rbac.modelName}" WHERE "${upAuth.idField}" = $1 LIMIT 1;`;
+        const rbacRes = await app.db.query(rbacQuery, [user[upAuth.idField]]);
         rbacUser = (rbacRes.rows[0] as Record<string, unknown>) ?? user;
       }
 
-      const rolePayload = extractJwtRolePayload(rbacUser, config.rbac);
-
-      const payload = {
-        id: user[upConfig.userModel.idField],
-        [usernameField]: user[usernameField],
-        ...rolePayload,
-      };
-
-      const token = app.jwt.sign(payload, {
-        expiresIn: upConfig.tokenExpiration || '1d',
-      });
+      const token = issueAccessToken(
+        app,
+        config,
+        user,
+        usernameField,
+        rbacUser,
+      );
 
       return reply.status(200).send(
         app.buildResponse(200, 'Login successful', {

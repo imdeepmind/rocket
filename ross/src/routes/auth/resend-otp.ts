@@ -1,9 +1,10 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {getUpAuth} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
 
-import {ResolvedAppConfig, UpAuthProviderConfig} from '@/interfaces/config';
+import {ResolvedAppConfig} from '@/interfaces/config';
 
 import {capitalizeFirstLetter} from '@/utils/string';
 
@@ -15,13 +16,13 @@ function registerResendOtpBase(
 ): void {
   const {models} = config.data;
 
-  const {authentication} = config;
-  if (!authentication.enabled || authentication.provider.type !== 'up-auth') {
+  const upAuth = getUpAuth(config);
+
+  if (!upAuth) {
     return;
   }
 
-  const upConfig = authentication.provider.config as UpAuthProviderConfig;
-  const {model, usernameField} = upConfig.userModel;
+  const {model, usernameField} = upAuth;
 
   const authModelConfig = models[model];
 

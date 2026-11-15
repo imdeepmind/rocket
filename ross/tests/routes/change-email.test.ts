@@ -50,19 +50,24 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-        isVerifiedField: 'is_active',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+          isVerifiedField: 'is_active',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -136,7 +141,10 @@ async function createChangeEmailApp(
   registerErrorHandler(app);
   registerNotFoundHandler(app);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerEmailChangeRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
@@ -332,18 +340,23 @@ describe('PATCH /auth/user/email', () => {
     test('should return 200 without isVerifiedField when not configured', async () => {
       const authWithoutVerified: AuthenticationConfig = {
         ...upAuthConfig,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'this-will-never-be-used',
-          },
+        jwtSecret: 'this-will-never-be-used',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
+          },
+        ],
       };
       const app = await createChangeEmailApp(authWithoutVerified);
 

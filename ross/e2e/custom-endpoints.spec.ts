@@ -48,18 +48,23 @@ const customEndpointsE2EConfig: AppConfigInput = {
   },
   authentication: {
     enabled: true,
-    provider: {
-      type: 'up-auth',
-      config: {
-        userModel: {
-          model: 'users',
-          idField: 'id',
-          usernameField: 'email',
-          passwordField: 'password',
-        },
-        jwtSecret: 'e2e-custom-endpoints-super-secret-jwt-key-min-32-chars!',
-      },
+    jwtSecret: 'e2e-custom-endpoints-super-secret-jwt-key-min-32-chars!',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
     },
+    providers: [
+      {
+        type: 'up-auth',
+        config: {
+          fields: {
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
+      },
+    ],
   },
   rbac: {
     enabled: true,

@@ -21,19 +21,23 @@ const rbacE2EConfig: AppConfigInput = {
   },
   authentication: {
     enabled: true,
-    provider: {
-      type: 'up-auth',
-      config: {
-        userModel: {
-          model: 'users',
-          idField: 'id',
-          usernameField: 'email',
-          passwordField: 'password',
-        },
-        jwtSecret:
-          'e2e-rbac-super-secret-jwt-key-for-testing-at-least-32-chars!',
-      },
+    jwtSecret: 'e2e-rbac-super-secret-jwt-key-for-testing-at-least-32-chars!',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
     },
+    providers: [
+      {
+        type: 'up-auth',
+        config: {
+          fields: {
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
+      },
+    ],
   },
   rbac: {
     enabled: true,
@@ -866,19 +870,24 @@ test.describe
     },
     authentication: {
       enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'users',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
-          },
-          jwtSecret:
-            'disabled-rbac-super-secret-jwt-key-for-testing-at-least-32-chars!',
-        },
+      jwtSecret:
+        'disabled-rbac-super-secret-jwt-key-for-testing-at-least-32-chars!',
+      userModel: {
+        modelName: 'users',
+        idField: 'id',
+        providerField: 'provider',
       },
+      providers: [
+        {
+          type: 'up-auth',
+          config: {
+            fields: {
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      ],
     },
     rbac: {
       enabled: false,

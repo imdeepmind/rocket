@@ -26,8 +26,9 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => ({
   users: {
     fields: {
       id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
-      email: {type: 'string', unique: true, nullable: false},
-      password: {type: 'string', secret: true, nullable: false},
+      email: {type: 'string', unique: true, nullable: true},
+      password: {type: 'string', secret: true, nullable: true},
+      provider: {type: 'string', nullable: false},
       role: {type: 'string', nullable: false},
       status: {
         type: 'enum',
@@ -64,18 +65,23 @@ const createBaseConfig = (): AppConfig => ({
   data: {models: getDefaultModelConfig()},
   authentication: {
     enabled: true,
-    provider: {
-      type: 'up-auth',
-      config: {
-        userModel: {
-          model: 'users',
-          idField: 'id',
-          usernameField: 'email',
-          passwordField: 'password',
-        },
-        jwtSecret: 'a-super-secret-key-that-is-at-least-32-chars-long',
-      },
+    jwtSecret: 'a-super-secret-key-that-is-at-least-32-chars-long',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
     },
+    providers: [
+      {
+        type: 'up-auth',
+        config: {
+          fields: {
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
+      },
+    ],
   },
 });
 
@@ -312,12 +318,7 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
     const config = createBaseConfig();
     config.authentication = {
       enabled: true,
-      provider: {
-        type: 'api-key',
-        config: {
-          key: 'some-api-key',
-        },
-      },
+      providers: [{type: 'api-key', config: {key: 'some-api-key'}}],
     };
     config.rbac = createValidRbacConfig();
 
@@ -531,18 +532,23 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
       data: {models: getDefaultModelConfig()},
       authentication: {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'email',
-              passwordField: 'password',
-            },
-            jwtSecret: 'a-super-secret-key-that-is-at-least-32-chars-long',
-          },
+        jwtSecret: 'a-super-secret-key-that-is-at-least-32-chars-long',
+        userModel: {
+          modelName: 'users',
+          idField: 'id',
+          providerField: 'provider',
         },
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {
+                usernameField: 'email',
+                passwordField: 'password',
+              },
+            },
+          },
+        ],
       },
       rbac: createValidRbacConfig(),
       apis: {

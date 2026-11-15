@@ -2,12 +2,12 @@ import * as fs from 'fs';
 
 import {describe, expect, it, vi} from 'vitest';
 
+import {getProviderCapabilities} from '@/lib/auth/capabilities';
 import {resolveConfig} from '@/lib/config/resolve';
 
 import {
   ApisConfig,
   AppConfig,
-  AuthProvider,
   CustomEndpointConfig,
   DatabaseConfig,
   ModelConfig,
@@ -3871,1052 +3871,657 @@ describe('validateValidmodelConfig', () => {
   });
 });
 
+const authModels = {
+  users: {
+    fields: {
+      id: {type: 'integer', primaryKey: true},
+      email: {type: 'string', nullable: true},
+      password: {type: 'string', nullable: true},
+      is_active: {type: 'boolean'},
+      provider: {type: 'string'},
+      provider_id: {type: 'string'},
+      display_name: {type: 'string'},
+    },
+  },
+} as unknown as Record<string, ModelConfig>;
+
+const authBase = () => ({
+  application: {name: 'Auth Test'},
+  data: {models: authModels},
+  authentication: {
+    enabled: true as const,
+    jwtSecret: 'this-is-a-long-enough-secret-key',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
+    },
+    providers: [] as unknown[],
+  },
+});
+
+const upAuthProvider = {
+  type: 'up-auth',
+  config: {
+    fields: {usernameField: 'email', passwordField: 'password'},
+  },
+};
+
+const oidcProvider = {
+  type: 'sso',
+  name: 'google',
+  protocol: 'oidc',
+  config: {
+    fields: {providerIdField: 'provider_id'},
+    issuerUrl: 'https://accounts.google.com',
+    clientId: 'client-id',
+    clientSecret: 'client-secret',
+  },
+};
+
+const samlProvider = {
+  type: 'sso',
+  name: 'corp',
+  protocol: 'saml',
+  config: {
+    fields: {providerIdField: 'provider_id'},
+    entryPoint: 'https://idp.example.com/saml',
+    issuer: 'ross',
+    cert: 'certificate',
+  },
+};
+
+const expectInvalid = (config: unknown, expected: string): void => {
+  expect(() => validateConfig(config as AppConfig)).toThrow(expected);
+};
+
 describe('validateInvalidAuthConfig', () => {
   it.each([
     {
       name: 'invalid value for enabled',
-      patch: {
-        authentication: {
-          enabled: 'true',
-          provider: {
-            type: 'api-key',
-            config: {key: 'xxx'},
-          },
-        },
-      },
+      patch: {authentication: {enabled: 'true', providers: [upAuthProvider]}},
       expected: '/authentication must match exactly one schema in oneOf',
     },
     {
-      name: 'invalid provider type',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'invalid',
-            config: {key: 'xxx'},
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/type must be equal to one of the allowed values',
+      name: 'no providers',
+      patch: {authentication: {enabled: true, providers: []}},
+      expected: '/authentication/providers must NOT have fewer than 1 items',
     },
     {
-      name: 'missing provider config',
+      name: 'unknown provider type',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'api-key',
-          },
+          ...authBase().authentication,
+          providers: [{type: 'invalid', config: {key: 'xxx'}}],
         },
       },
-      expected: "/authentication/provider must have required property 'config'",
+      expected: '/authentication/providers/0 must match exactly one schema',
     },
     {
-      name: 'providing userModel when provider type is api-key',
+      name: 'up-auth without fields',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'api-key',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              key: 'xxx',
-            },
-          },
+          ...authBase().authentication,
+          providers: [{type: 'up-auth', config: {}}],
         },
       },
-      expected:
-        '/authentication/provider/config/userModel: userModel should not be present when provider type is api-key',
+      expected: '/authentication/providers/0 must match exactly one schema',
     },
     {
-      name: 'not providing key when provider type is api-key',
+      name: 'sso without a valid name',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'api-key',
-            config: {},
-          },
+          ...authBase().authentication,
+          providers: [{...oidcProvider, name: 'Google SSO'}],
         },
       },
-      expected:
-        '/authentication/provider/config/key: key is required when provider type is api-key',
+      expected: '/authentication/providers/0/name must match pattern',
     },
     {
-      name: 'not providing userModel when provider type is up-auth',
+      name: 'missing jwtSecret for an identity provider',
       patch: {
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {},
-          },
+          userModel: authBase().authentication.userModel,
+          providers: [upAuthProvider],
         },
       },
-      expected:
-        '/authentication/provider/config/userModel: userModel is required when provider type is up-auth',
-    },
-    {
-      name: 'invalid userModel.model',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'does-not-exist',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/model: model does not exist',
-    },
-    {
-      name: 'invalid userModel.idField',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'invalid',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/idField: field does not exist in model',
-    },
-    {
-      name: 'invalid userModel.usernameField',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'invalid',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/usernameField: field does not exist in model',
-    },
-    {
-      name: 'invalid userModel.passwordField',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'invalid',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/passwordField: field does not exist in model',
-    },
-    {
-      name: 'idField exists in a different model, not the specified model',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'user_id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/idField: field does not exist in model',
-    },
-    {
-      name: 'usernameField exists in a different model, not the specified model',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'posts',
-                idField: 'user_id',
-                usernameField: 'name',
-                passwordField: 'body',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/usernameField: field does not exist in model',
-    },
-    {
-      name: 'providing key when provider type is up-auth',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'invalid',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              key: 'xxx',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/key: key should not be present when provider type is up-auth',
-    },
-    {
-      name: 'not providing jwtSecret when provider type is up-auth',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'invalid',
-                passwordField: 'name',
-              },
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/jwtSecret: jwtSecret is required when provider type is up-auth',
-    },
-    {
-      name: 'providing jwtSecret when provider type is api-key',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'api-key',
-            config: {
-              key: 'xxx',
-              jwtSecret: 'this-key-should-not-be-here-in-api-key-config',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
+      expected: '/authentication/jwtSecret: jwtSecret is required',
     },
     {
       name: 'jwtSecret too short',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'too-short',
-            },
-          },
+          ...authBase().authentication,
+          jwtSecret: 'short',
+          providers: [upAuthProvider],
         },
       },
       expected:
-        '/authentication/provider/config/jwtSecret must NOT have fewer than 32 characters',
+        '/authentication/jwtSecret must NOT have fewer than 32 characters',
     },
     {
       name: 'invalid tokenExpiration pattern',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              tokenExpiration: '2x',
-            },
-          },
+          ...authBase().authentication,
+          tokenExpiration: 'one day',
+          providers: [upAuthProvider],
+        },
+      },
+      expected: '/authentication/tokenExpiration must match pattern',
+    },
+    {
+      name: 'api-key combined with an identity provider',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider, {type: 'api-key', config: {key: 'k'}}],
+        },
+      },
+      expected: "'api-key' cannot be combined with identity providers",
+    },
+    {
+      name: 'jwtSecret with api-key only',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [{type: 'api-key', config: {key: 'k'}}],
         },
       },
       expected:
-        '/authentication/provider/config/tokenExpiration must match pattern',
+        "jwtSecret must not be provided when only 'api-key' is configured",
     },
     {
-      name: 'non-string idField',
+      name: 'duplicate sso provider name',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 123,
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
+          ...authBase().authentication,
+          providers: [oidcProvider, {...samlProvider, name: 'google'}],
+        },
+      },
+      expected: 'duplicate sso provider name',
+    },
+    {
+      name: 'reserved sso provider name',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [{...oidcProvider, name: 'login'}],
+        },
+      },
+      expected: 'is reserved',
+    },
+    {
+      name: 'missing modelName',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          userModel: {idField: 'id', providerField: 'provider'},
+          providers: [upAuthProvider],
+        },
+      },
+      expected: '/authentication/userModel must have required property',
+    },
+    {
+      name: 'unknown user model',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          userModel: {
+            modelName: 'missing',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [upAuthProvider],
+        },
+      },
+      expected: '/authentication/userModel/modelName: model does not exist',
+    },
+    {
+      name: 'providerField does not exist in the model',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'nope',
+          },
+          providers: [upAuthProvider],
         },
       },
       expected:
-        '/authentication/provider/config/userModel/idField must be string',
+        '/authentication/userModel/providerField: field does not exist in model',
     },
     {
-      name: 'non-string usernameField',
+      name: 'usernameField does not exist in the model',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: false,
-                passwordField: 'name',
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {usernameField: 'nope', passwordField: 'password'},
               },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
-          },
+          ],
         },
       },
       expected:
-        '/authentication/provider/config/userModel/usernameField must be string',
+        '/authentication/providers/up-auth/config/fields/usernameField: field does not exist in model',
     },
     {
-      name: 'non-string passwordField',
+      name: 'isVerifiedField is not boolean',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 789,
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                  isVerifiedField: 'email',
+                },
               },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
             },
-          },
+          ],
+        },
+      },
+      expected: 'field must be of type boolean',
+    },
+    {
+      name: 'mfaRequired without email integration',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {usernameField: 'email', passwordField: 'password'},
+                mfaRequired: true,
+              },
+            },
+          ],
         },
       },
       expected:
-        '/authentication/provider/config/userModel/passwordField must be string',
+        'integrations.email must be configured when mfaRequired is true',
     },
     {
-      name: 'mfaRequired not boolean',
+      name: 'sso providerIdField does not exist',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
+          ...authBase().authentication,
+          providers: [
+            {
+              ...oidcProvider,
+              config: {
+                ...oidcProvider.config,
+                fields: {providerIdField: 'nope'},
               },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: 'yes',
             },
+          ],
+        },
+      },
+      expected: 'fields/providerIdField: field does not exist in model',
+    },
+    {
+      name: 'sso callbackUrl is not https',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              ...oidcProvider,
+              config: {
+                ...oidcProvider.config,
+                callbackUrl: 'http://evil.example.com/auth/sso/google/callback',
+              },
+            },
+          ],
+        },
+      },
+      expected: 'must use https',
+    },
+    {
+      name: 'sso callbackUrl has the wrong path',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              ...oidcProvider,
+              config: {
+                ...oidcProvider.config,
+                callbackUrl: 'https://api.example.com/wrong',
+              },
+            },
+          ],
+        },
+      },
+      expected: 'must end with /auth/sso/google/callback',
+    },
+    {
+      name: 'failureRedirectUrl without redirectUrl',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              ...oidcProvider,
+              config: {
+                ...oidcProvider.config,
+                failureRedirectUrl: 'https://app.example.com/error',
+              },
+            },
+          ],
+        },
+      },
+      expected: 'redirectUrl is required when failureRedirectUrl is set',
+    },
+    {
+      name: 'up-auth credential columns must be nullable when sso exists',
+      models: {
+        users: {
+          fields: {
+            id: {type: 'integer', primaryKey: true},
+            email: {type: 'string', nullable: false},
+            password: {type: 'string', nullable: false},
+            provider: {type: 'string'},
+            provider_id: {type: 'string'},
           },
         },
       },
-      expected: '/authentication/provider/config/mfaRequired must be boolean',
-    },
-    {
-      name: 'mfaRequired true but no communicate configured',
       patch: {
         authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
-          },
+          ...authBase().authentication,
+          providers: [upAuthProvider, oidcProvider],
         },
       },
-      expected:
-        '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
+      expected: 'field must be nullable because SSO accounts do not set it',
     },
-    {
-      name: 'non-string isVerifiedField',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-                isVerifiedField: 123,
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/isVerifiedField must be string',
-    },
-    {
-      name: 'isVerifiedField field does not exist in model',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-                isVerifiedField: 'nonexistent',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
-    },
-    {
-      name: 'isVerifiedField field is not boolean type',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'posts',
-                idField: 'user_id',
-                usernameField: 'title',
-                passwordField: 'body',
-                isVerifiedField: 'title',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
-    },
-    {
-      name: 'isVerifiedField set but no integrations.email configured',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-                isVerifiedField: 'is_active',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      expected:
-        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
-    },
-  ])('Scenario: $name . should throw error', ({patch, expected}) => {
+  ])('Scenario: $name . should throw', ({patch, expected, models}) => {
     const config = {
-      ...validBaseConfig,
-      authentication: patch.authentication as unknown as NonNullable<
-        typeof validBaseConfig.authentication
-      >,
+      ...authBase(),
+      ...(models ? {data: {models}} : {}),
+      ...patch,
     };
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expectInvalid(config, expected);
   });
 });
 
 describe('validateValidAuthConfig', () => {
   it.each([
     {
-      name: 'valid api-key auth config',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'api-key',
-            config: {key: 'xxx'},
-          },
-        },
-      },
-    },
-    {
       name: 'valid up-auth auth config',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
+      providers: [upAuthProvider],
     },
     {
-      name: 'valid up-auth auth config with tokenExpiration',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              tokenExpiration: '2h',
-            },
-          },
-        },
-      },
+      name: 'valid api-key auth config',
+      providers: [{type: 'api-key', config: {key: 'my-key'}}],
     },
     {
-      name: 'valid up-auth auth config with mfaRequired false',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: false,
-            },
-          },
-        },
-      },
+      name: 'valid up-auth with tokenExpiration',
+      providers: [upAuthProvider],
+      extra: {tokenExpiration: '8h'},
     },
     {
-      name: 'valid up-auth auth config with mfaRequired true',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
-          },
-        },
-      },
-      extra: {
-        cache: {
-          engine: 'redis' as const,
-          connection: {url: 'redis://localhost:6379'},
-          timeout: 10000,
-        },
-        integrations: {email: {provider: 'dummy' as const}},
-      },
+      name: 'valid up-auth + oidc + saml',
+      providers: [upAuthProvider, oidcProvider, samlProvider],
     },
     {
-      name: 'valid up-auth auth config with mfaRequired true and node-cache fallback',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-              mfaRequired: true,
-            },
-          },
-        },
-      },
-      extra: {
-        integrations: {email: {provider: 'dummy' as const}},
-      },
+      name: 'valid sso only',
+      providers: [oidcProvider],
     },
-    {
-      name: 'valid up-auth auth config with isVerifiedField',
-      patch: {
-        authentication: {
-          enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'name',
-                passwordField: 'name',
-                isVerifiedField: 'is_active',
-              },
-              jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-            },
-          },
-        },
-      },
-      extra: {
-        integrations: {email: {provider: 'dummy' as const}},
-      },
-    },
-  ])('Scenario: $name . should return', ({patch, extra}) => {
-    const base = {...validBaseConfig};
-    if (extra) {
-      if (extra.cache) {
-        base.infrastructure = {...base.infrastructure, cache: extra.cache};
-      }
-      base.integrations = extra.integrations;
-    }
+  ])('Scenario: $name . should return', ({providers, extra}) => {
     const config = {
-      ...base,
-      authentication: patch.authentication as unknown as NonNullable<
-        typeof validBaseConfig.authentication
-      >,
+      ...authBase(),
+      authentication: {
+        ...authBase().authentication,
+        ...(extra ?? {}),
+        providers,
+      },
     };
 
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+    if (providers[0].type === 'api-key') {
+      delete (config.authentication as {jwtSecret?: string}).jwtSecret;
+      delete (config.authentication as {userModel?: unknown}).userModel;
+    }
+
+    expect(validateConfig(config as unknown as AppConfig)).toEqual(
+      config as unknown as AppConfig,
+    );
   });
 });
 
 describe('validateAuthConstraints directly (bypass AJV)', () => {
-  it('should catch missing providerConfig', () => {
+  it('flags an empty provider list', () => {
     const config = {
-      ...validBaseConfig,
+      ...authBase(),
       authentication: {
-        enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: undefined as unknown as AuthProvider['config'],
-        },
+        ...authBase().authentication,
+        providers: [],
       },
     };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
-    );
+
+    const errors = validateAuthConstraints(config as unknown as AppConfig);
+
     expect(errors).toContain(
-      '/authentication/provider/config: provider config is required',
+      '/authentication/providers: at least one provider is required when authentication is enabled',
     );
   });
 
-  it('should catch non-string idField', () => {
+  it('flags a non-string providerField', () => {
     const config = {
-      ...validBaseConfig,
+      ...authBase(),
       data: {
         models: {
           users: {
             fields: {
-              id: {type: 'integer', primaryKey: true},
-              name: {type: 'string'},
+              id: {type: 'integer'},
+              provider: {type: 'integer'},
             },
           },
         },
       },
       authentication: {
-        enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 123,
-              usernameField: 'name',
-              passwordField: 'name',
-            },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as AuthProvider['config'],
-        },
+        ...authBase().authentication,
+        providers: [upAuthProvider],
       },
     };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
-    );
+
+    const errors = validateAuthConstraints(config as unknown as AppConfig);
+
     expect(errors).toContain(
-      '/authentication/provider/config/userModel/idField: must be a string',
+      '/authentication/userModel/providerField: field must be of type string',
     );
   });
 
-  it('should catch non-string usernameField', () => {
+  it('flags duplicate up-auth and api-key providers', () => {
+    const duplicateUp = {
+      ...authBase(),
+      authentication: {
+        ...authBase().authentication,
+        providers: [upAuthProvider, upAuthProvider],
+      },
+    };
+
+    expect(
+      validateAuthConstraints(duplicateUp as unknown as AppConfig),
+    ).toContain(
+      '/authentication/providers: at most one up-auth provider may be configured',
+    );
+
+    const duplicateKey = {
+      ...authBase(),
+      authentication: {
+        ...authBase().authentication,
+        providers: [
+          {type: 'api-key', config: {key: 'a'}},
+          {type: 'api-key', config: {key: 'b'}},
+        ],
+      },
+    };
+
+    expect(
+      validateAuthConstraints(duplicateKey as unknown as AppConfig),
+    ).toContain(
+      '/authentication/providers: at most one api-key provider may be configured',
+    );
+  });
+
+  it('requires a userModel for identity providers', () => {
     const config = {
-      ...validBaseConfig,
+      ...authBase(),
+      authentication: {
+        enabled: true,
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        providers: [upAuthProvider],
+      },
+    };
+
+    expect(validateAuthConstraints(config as unknown as AppConfig)).toContain(
+      '/authentication/userModel: userModel is required when up-auth or sso providers are configured',
+    );
+  });
+
+  it('rejects a nullable providerField when SSO is configured', () => {
+    const config = {
+      ...authBase(),
       data: {
         models: {
           users: {
             fields: {
-              id: {type: 'integer', primaryKey: true},
-              name: {type: 'string'},
+              id: {type: 'integer'},
+              provider: {type: 'string', nullable: true},
+              provider_id: {type: 'string'},
             },
           },
         },
       },
       authentication: {
-        enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 456,
-              passwordField: 'name',
-            },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as AuthProvider['config'],
-        },
+        ...authBase().authentication,
+        providers: [oidcProvider],
       },
     };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
-    );
-    expect(errors).toContain(
-      '/authentication/provider/config/userModel/usernameField: must be a string',
+
+    expect(validateAuthConstraints(config as unknown as AppConfig)).toContain(
+      '/authentication/userModel/providerField: field must not be nullable',
     );
   });
 
-  it('should catch non-string passwordField', () => {
+  it('validates SSO identity fields and attribute mappings', () => {
     const config = {
-      ...validBaseConfig,
+      ...authBase(),
       data: {
         models: {
           users: {
             fields: {
-              id: {type: 'integer', primaryKey: true},
-              name: {type: 'string'},
+              id: {type: 'integer'},
+              provider: {type: 'string'},
+              provider_id: {type: 'integer'},
+              display_name: {type: 'string'},
             },
           },
         },
       },
       authentication: {
-        enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'name',
-              passwordField: 789,
-            },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as AuthProvider['config'],
-        },
-      },
-    };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
-    );
-    expect(errors).toContain(
-      '/authentication/provider/config/userModel/passwordField: must be a string',
-    );
-  });
-
-  it('should catch non-string isVerifiedField', () => {
-    const config = {
-      ...validBaseConfig,
-      data: {
-        models: {
-          users: {
-            fields: {
-              id: {type: 'integer', primaryKey: true},
-              name: {type: 'string'},
+        ...authBase().authentication,
+        providers: [
+          {
+            ...oidcProvider,
+            config: {
+              ...oidcProvider.config,
+              fields: {providerIdField: 'provider_id'},
+              attributeMapping: {name: 'display_name', missing: 'nope'},
             },
           },
-        },
-      },
-      authentication: {
-        enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: 'users',
-              idField: 'id',
-              usernameField: 'name',
-              passwordField: 'name',
-              isVerifiedField: 123,
-            },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as AuthProvider['config'],
-        },
+        ],
       },
     };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
+
+    const errors = validateAuthConstraints(config as unknown as AppConfig);
+
+    expect(errors).toContain(
+      '/authentication/providers/google/config/fields/providerIdField: field must be of type string',
     );
     expect(errors).toContain(
-      '/authentication/provider/config/userModel/isVerifiedField: must be a string',
+      '/authentication/providers/google/config/attributeMapping/missing: field does not exist in model',
     );
   });
 
-  it('should handle falsy model name in userModel', () => {
+  it('flags a callbackUrl that is not an absolute URL', () => {
     const config = {
-      ...validBaseConfig,
+      ...authBase(),
+      authentication: {
+        ...authBase().authentication,
+        providers: [
+          {
+            ...oidcProvider,
+            config: {...oidcProvider.config, callbackUrl: 'relative/path'},
+          },
+        ],
+      },
+    };
+
+    expect(validateAuthConstraints(config as unknown as AppConfig)).toContain(
+      '/authentication/providers/google/config/callbackUrl: must be an absolute URL',
+    );
+  });
+
+  it('treats a missing providers array as empty', () => {
+    const config = {
+      ...authBase(),
       authentication: {
         enabled: true,
-        provider: {
-          type: 'up-auth',
-          config: {
-            userModel: {
-              model: '',
-              idField: 'id',
-              usernameField: 'name',
-              passwordField: 'name',
+        jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+        userModel: authBase().authentication.userModel,
+      },
+    };
+
+    expect(validateAuthConstraints(config as unknown as AppConfig)).toContain(
+      '/authentication/providers: at least one provider is required when authentication is enabled',
+    );
+  });
+
+  it('skips nullability checks for missing credential columns', () => {
+    const config = {
+      ...authBase(),
+      authentication: {
+        ...authBase().authentication,
+        providers: [
+          {
+            type: 'up-auth',
+            config: {
+              fields: {usernameField: 'nope', passwordField: 'password'},
             },
-            jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-          } as unknown as AuthProvider['config'],
-        },
+          },
+          oidcProvider,
+        ],
       },
     };
-    const errors = validateAuthConstraints(
-      config as unknown as import('@/interfaces/config').AppConfig,
+
+    const errors = validateAuthConstraints(config as unknown as AppConfig);
+
+    expect(errors).toContain(
+      '/authentication/providers/up-auth/config/fields/usernameField: field does not exist in model',
     );
-    expect(errors).toHaveLength(0);
+    expect(errors.join('\n')).not.toContain('must be nullable');
   });
-});
 
-// check invalid ssp configs
-describe('validateInvalidSspConfig', () => {
-  it.each([
-    {
-      name: 'invalid ssp config param type',
-      patch: {serverSideParams: [{type: 'invalid', name: 'id', value: '1'}]},
-      expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
-    },
-    {
-      name: 'invalid ssp config param type',
-      patch: {serverSideParams: [{type: 132, name: 'id', value: '1'}]},
-      expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/type must be equal to one of the allowed values',
-    },
-    {
-      name: 'invalid ssp config param name',
-      patch: {serverSideParams: [{type: 'body', name: 123, value: '1'}]},
-      expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/name must be string',
-    },
-    {
-      name: 'invalid ssp config param value',
-      patch: {serverSideParams: [{type: 'body', name: 'id', value: null}]},
-      expected:
-        '/apis/customAPIs.customQueries.all.sample_query/serverSideParams/0/value must be string',
-    },
-  ])('Scenario: $name . should throw error', ({patch, expected}) => {
-    const config = {
-      ...validBaseConfig,
-      apis: {
-        'customAPIs.customQueries.all.sample_query': {
-          serverSideParams: patch.serverSideParams,
-        },
-      },
-    };
-
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
-  });
-});
-
-// check valid ssp configs
-describe('validateValidSspConfig', () => {
-  it.each([
-    {
-      name: 'valid ssp config',
-      patch: {serverSideParams: [{type: 'body', name: 'id', value: '1'}]},
-    },
-    {
-      name: 'valid ssp config',
-      patch: {serverSideParams: [{type: 'body', name: 'id', value: 1}]},
-    },
-    {
-      name: 'valid ssp config',
-      patch: {serverSideParams: [{type: 'body', name: 'id', value: true}]},
-    },
-    {
-      name: 'valid ssp config',
-      patch: {serverSideParams: [{type: 'query', name: 'id', value: '1'}]},
-    },
-    {
-      name: 'valid ssp config',
-      patch: {serverSideParams: [{type: 'path', name: 'id', value: '1'}]},
-    },
-  ])('Scenario: $name . should return', ({patch}) => {
-    const config = {
-      ...validBaseConfig,
-      apis: {
-        'model.v1.posts.unknown.getAll': {
-          serverSideParams: patch.serverSideParams,
-        },
-      },
-    };
-
-    expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
-  });
-});
-
-// validate the authorization property
-describe('validateInvalidAuthorizationConfig', () => {
-  it.each([
-    {
-      name: 'invalid authorization config',
-      patch: {authorization: 'wrong'},
-      expected:
-        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
-    },
-    {
-      name: 'invalid authorization config',
-      patch: {authorization: null},
-      expected:
-        '/apis/model.v1.posts.unknown.getAll/authorization must be boolean',
-    },
-  ])('Scenario: $name . should throw error', ({patch, expected}) => {
-    const config = {
-      ...validBaseConfig,
-      apis: {
-        'model.v1.posts.unknown.getAll': {
-          authorization: patch.authorization,
-        },
-      },
-    };
-
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
-  });
-});
-
-describe('validateInvalidAuthorizationConfig', () => {
-  it.each([
-    {
-      name: 'authorization is enabled when authentication is disabled',
-      patch: {authorization: true},
-      expected:
-        'apis/model.v1.posts.unknown.getAll/authorization: authorization is only allowed when auth is enabled',
-    },
-  ])('Scenario: $name . should throw error', ({patch, expected}) => {
-    const config = {
-      ...validBaseConfig,
+  it('accepts a disabled configuration', () => {
+    const errors = validateAuthConstraints({
+      ...authBase(),
       authentication: {enabled: false},
-      apis: {
-        'model.v1.posts.unknown.getAll': {
-          authorization: patch.authorization,
-        },
-      },
-    };
+    } as unknown as AppConfig);
 
-    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
-      expected,
-    );
+    expect(errors).toEqual([]);
   });
 });
 
@@ -4935,10 +4540,7 @@ describe('validateValidAuthorizationConfig', () => {
       ...validBaseConfig,
       authentication: {
         enabled: true,
-        provider: {
-          type: 'api-key',
-          config: {key: '1234'},
-        },
+        providers: [{type: 'api-key', config: {key: '1234'}}],
       },
       apis: {
         'model.v1.posts.unknown.getAll': {
@@ -4948,6 +4550,22 @@ describe('validateValidAuthorizationConfig', () => {
     };
 
     expect(validateConfig(config as unknown as AppConfig)).toEqual(config);
+  });
+});
+
+describe('validateDisabledAuthAuthorization', () => {
+  it('rejects authorization when authentication is disabled', () => {
+    const config = {
+      ...validBaseConfig,
+      authentication: {enabled: false},
+      apis: {
+        'model.v1.posts.unknown.getAll': {authorization: true},
+      },
+    };
+
+    expect(() => validateConfig(config as unknown as AppConfig)).toThrow(
+      'authorization is only allowed when auth is enabled',
+    );
   });
 });
 
@@ -5558,7 +5176,7 @@ describe('validateResolvedConfigShapes', () => {
     );
   });
 
-  it('validates the resolved example configuration', () => {
+  it('validates the example configuration and resolves its providers', () => {
     const raw = JSON.parse(
       fs.readFileSync(
         new URL('../../example_config.json', import.meta.url),
@@ -5566,9 +5184,17 @@ describe('validateResolvedConfigShapes', () => {
       ),
     ) as AppConfig;
 
+    expect(validateConfig(raw)).toBe(raw);
+
     const resolved = resolveConfig(raw, {mode: 'dev'});
 
-    expect(validateConfig(resolved as unknown as AppConfig)).toBe(resolved);
+    if (!resolved.authentication.enabled) {
+      throw new Error('example config should enable authentication');
+    }
+
+    expect(
+      getProviderCapabilities(resolved.authentication.providers[0]),
+    ).toContain('password');
   });
 
   it('allows PostgreSQL dollar-quotes and full-text search operators in customEndpoints SQL', () => {

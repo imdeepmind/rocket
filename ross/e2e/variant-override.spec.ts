@@ -230,19 +230,23 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
         },
         authentication: {
           enabled: true,
-          provider: {
-            type: 'up-auth',
-            config: {
-              userModel: {
-                model: 'users',
-                idField: 'id',
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-              jwtSecret:
-                'e2e-variant-override-secret-key-at-least-32-chars-long!',
-            },
+          jwtSecret: 'e2e-variant-override-secret-key-at-least-32-chars-long!',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
           },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
         },
       }),
     );

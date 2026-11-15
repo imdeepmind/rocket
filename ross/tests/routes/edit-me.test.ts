@@ -40,18 +40,23 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -96,7 +101,10 @@ async function createEditMeApp(
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerEditMeRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();

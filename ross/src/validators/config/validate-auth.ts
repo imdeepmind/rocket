@@ -1,19 +1,102 @@
 import {
-  ApiKeyProviderConfig,
   AppConfig,
-  UpAuthProviderConfig,
+  AuthProviderInput,
+  ModelConfig,
+  ModelFieldConfig,
+  ResolvedModelFieldConfig,
 } from '@/interfaces/config';
 
-function isUpAuthConfig(
-  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
-): config is UpAuthProviderConfig {
-  return config !== undefined && 'userModel' in config;
+type UpAuthProviderInput = Extract<AuthProviderInput, {type: 'up-auth'}>;
+type SsoProviderInput = Extract<AuthProviderInput, {type: 'sso'}>;
+type AnyFieldConfig = ModelFieldConfig | ResolvedModelFieldConfig;
+
+/**
+ * Provider names that would shadow static segments of the auth route tree
+ * (`/auth/login`, `/auth/providers`, ...) or collide with provider types.
+ */
+const RESERVED_PROVIDER_NAMES = new Set([
+  'api-key',
+  'callback',
+  'change-email',
+  'change-password',
+  'edit-me',
+  'forgot-password',
+  'login',
+  'me',
+  'metadata',
+  'providers',
+  'register',
+  'registration',
+  'resend-otp',
+  'sso',
+  'token',
+  'up-auth',
+  'user',
+  'verify',
+]);
+
+function assertField(
+  errors: string[],
+  model: ModelConfig,
+  name: string | undefined,
+  pointer: string,
+): AnyFieldConfig | undefined {
+  /* c8 ignore next - the schema guarantees required fields are present */
+  if (!name) return undefined;
+
+  const field = model.fields[name];
+
+  if (!field) {
+    errors.push(`${pointer}: field does not exist in model`);
+    return undefined;
+  }
+
+  return field;
 }
 
-function isApiKeyConfig(
-  config: UpAuthProviderConfig | ApiKeyProviderConfig | undefined,
-): config is ApiKeyProviderConfig {
-  return config !== undefined && 'key' in config;
+function assertNullable(
+  errors: string[],
+  model: ModelConfig,
+  name: string | undefined,
+  pointer: string,
+): void {
+  /* c8 ignore next - the schema guarantees required fields are present */
+  if (!name) return;
+
+  const field = model.fields[name];
+  if (!field) return;
+
+  if (field.nullable === false) {
+    errors.push(
+      `${pointer}: field must be nullable because SSO accounts do not set it`,
+    );
+  }
+}
+
+function validateAbsoluteUrl(
+  errors: string[],
+  value: string | undefined,
+  pointer: string,
+): URL | undefined {
+  if (!value) return undefined;
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    errors.push(`${pointer}: must be an absolute URL`);
+    return undefined;
+  }
+
+  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+
+  if (url.protocol !== 'https:' && !isLocal) {
+    errors.push(
+      `${pointer}: must use https (http is only allowed for localhost)`,
+    );
+  }
+
+  return url;
 }
 
 function validateAuthConstraints(config: AppConfig): string[] {
@@ -21,180 +104,272 @@ function validateAuthConstraints(config: AppConfig): string[] {
 
   const authentication = config.authentication;
 
-  if (!authentication) {
+  if (!authentication || authentication.enabled !== true) {
     return errors;
   }
 
-  // Disabled auth resolves to `{enabled: false}` (never has a provider);
-  // nothing to validate in that branch of the resolved union.
-  if (!authentication.enabled) {
+  const providers = authentication.providers ?? [];
+
+  if (providers.length === 0) {
+    errors.push(
+      '/authentication/providers: at least one provider is required when authentication is enabled',
+    );
     return errors;
   }
 
-  const providerType = authentication.provider?.type;
-  const providerConfig = authentication.provider?.config;
+  const upAuthProviders = providers.filter(
+    (provider): provider is UpAuthProviderInput => provider.type === 'up-auth',
+  );
+  const apiKeyProviders = providers.filter(
+    provider => provider.type === 'api-key',
+  );
+  const ssoProviders = providers.filter(
+    (provider): provider is SsoProviderInput => provider.type === 'sso',
+  );
 
-  if (!providerConfig) {
-    errors.push('/authentication/provider/config: provider config is required');
+  if (upAuthProviders.length > 1) {
+    errors.push(
+      '/authentication/providers: at most one up-auth provider may be configured',
+    );
+  }
+
+  if (apiKeyProviders.length > 1) {
+    errors.push(
+      '/authentication/providers: at most one api-key provider may be configured',
+    );
+  }
+
+  if (
+    apiKeyProviders.length > 0 &&
+    (upAuthProviders.length > 0 || ssoProviders.length > 0)
+  ) {
+    errors.push(
+      "/authentication/providers: 'api-key' cannot be combined with identity providers",
+    );
+  }
+
+  const hasIdentityProvider =
+    upAuthProviders.length > 0 || ssoProviders.length > 0;
+
+  if (hasIdentityProvider && !authentication.jwtSecret) {
+    errors.push(
+      '/authentication/jwtSecret: jwtSecret is required when up-auth or sso providers are configured',
+    );
+  }
+
+  if (!hasIdentityProvider && authentication.jwtSecret) {
+    errors.push(
+      "/authentication/jwtSecret: jwtSecret must not be provided when only 'api-key' is configured",
+    );
+  }
+
+  const seenProviderNames = new Set<string>();
+
+  for (const provider of ssoProviders) {
+    const normalized = provider.name.toLowerCase();
+
+    if (RESERVED_PROVIDER_NAMES.has(normalized)) {
+      errors.push(
+        `/authentication/providers: provider name '${provider.name}' is reserved`,
+      );
+    }
+
+    if (seenProviderNames.has(normalized)) {
+      errors.push(
+        `/authentication/providers: duplicate sso provider name '${provider.name}'`,
+      );
+    }
+
+    seenProviderNames.add(normalized);
+  }
+
+  // api-key has no user model: nothing further to validate.
+  if (!hasIdentityProvider) {
     return errors;
   }
 
-  if (providerType === 'api-key') {
-    const apiConfig = providerConfig as ApiKeyProviderConfig;
+  const userModel = authentication.userModel;
 
-    if (!apiConfig.key) {
-      errors.push(
-        '/authentication/provider/config/key: key is required when provider type is api-key',
-      );
-    }
-
-    if (isUpAuthConfig(providerConfig)) {
-      errors.push(
-        '/authentication/provider/config/userModel: userModel should not be present when provider type is api-key',
-      );
-    }
-
-    if ((providerConfig as UpAuthProviderConfig)?.jwtSecret) {
-      errors.push(
-        '/authentication/provider/config/jwtSecret: jwtSecret should not be present when provider type is api-key',
-      );
-    }
+  if (!userModel) {
+    errors.push(
+      '/authentication/userModel: userModel is required when up-auth or sso providers are configured',
+    );
+    return errors;
   }
 
-  if (providerType === 'up-auth') {
-    const upConfig = providerConfig as UpAuthProviderConfig;
+  const targetModel = config.data.models[userModel.modelName];
 
-    if (!upConfig.userModel) {
-      errors.push(
-        '/authentication/provider/config/userModel: userModel is required when provider type is up-auth',
-      );
-    }
+  if (!targetModel) {
+    errors.push('/authentication/userModel/modelName: model does not exist');
+    return errors;
+  }
 
-    if (!upConfig.jwtSecret) {
-      errors.push(
-        '/authentication/provider/config/jwtSecret: jwtSecret is required when provider type is up-auth',
-      );
-    }
+  assertField(
+    errors,
+    targetModel,
+    userModel.idField,
+    '/authentication/userModel/idField',
+  );
 
-    if (upConfig.mfaRequired) {
-      if (!config.integrations?.email) {
-        errors.push(
-          '/authentication/provider/config/mfaRequired: integrations.email must be configured when mfaRequired is true',
-        );
-      }
-    }
+  const providerField = assertField(
+    errors,
+    targetModel,
+    userModel.providerField,
+    '/authentication/userModel/providerField',
+  );
 
-    if (upConfig.userModel?.isVerifiedField && !config.integrations?.email) {
-      errors.push(
-        '/authentication/provider/config/userModel/isVerifiedField: integrations.email must be configured when isVerifiedField is set',
-      );
-    }
+  if (providerField && providerField.type !== 'string') {
+    errors.push(
+      '/authentication/userModel/providerField: field must be of type string',
+    );
+  }
 
-    if (isApiKeyConfig(providerConfig)) {
-      errors.push(
-        '/authentication/provider/config/key: key should not be present when provider type is up-auth',
-      );
-    }
+  if (ssoProviders.length > 0 && providerField?.nullable === true) {
+    errors.push(
+      '/authentication/userModel/providerField: field must not be nullable',
+    );
+  }
 
-    if (upConfig.userModel) {
-      const targetModel = upConfig.userModel.model
-        ? config.data.models[upConfig.userModel.model]
-        : undefined;
+  const hasSso = ssoProviders.length > 0;
 
-      if (upConfig.userModel.model && !targetModel) {
-        errors.push(
-          '/authentication/provider/config/userModel/model: model does not exist',
-        );
-      }
+  for (const provider of upAuthProviders) {
+    validateUpAuthProvider(errors, config, targetModel, provider, hasSso);
+  }
 
-      if (
-        upConfig.userModel.idField &&
-        typeof upConfig.userModel.idField !== 'string'
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/idField: must be a string',
-        );
-      }
-
-      if (
-        upConfig.userModel.usernameField &&
-        typeof upConfig.userModel.usernameField !== 'string'
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/usernameField: must be a string',
-        );
-      }
-
-      if (
-        upConfig.userModel.passwordField &&
-        typeof upConfig.userModel.passwordField !== 'string'
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/passwordField: must be a string',
-        );
-      }
-
-      if (
-        upConfig.userModel.isVerifiedField &&
-        typeof upConfig.userModel.isVerifiedField !== 'string'
-      ) {
-        errors.push(
-          '/authentication/provider/config/userModel/isVerifiedField: must be a string',
-        );
-      }
-
-      if (targetModel) {
-        if (
-          typeof upConfig.userModel.idField === 'string' &&
-          !(upConfig.userModel.idField in targetModel.fields)
-        ) {
-          errors.push(
-            '/authentication/provider/config/userModel/idField: field does not exist in model',
-          );
-        }
-
-        if (
-          typeof upConfig.userModel.usernameField === 'string' &&
-          !(upConfig.userModel.usernameField in targetModel.fields)
-        ) {
-          errors.push(
-            '/authentication/provider/config/userModel/usernameField: field does not exist in model',
-          );
-        }
-
-        if (
-          typeof upConfig.userModel.passwordField === 'string' &&
-          !(upConfig.userModel.passwordField in targetModel.fields)
-        ) {
-          errors.push(
-            '/authentication/provider/config/userModel/passwordField: field does not exist in model',
-          );
-        }
-
-        if (
-          typeof upConfig.userModel.isVerifiedField === 'string' &&
-          !(upConfig.userModel.isVerifiedField in targetModel.fields)
-        ) {
-          errors.push(
-            '/authentication/provider/config/userModel/isVerifiedField: field does not exist in model',
-          );
-        }
-
-        if (
-          typeof upConfig.userModel.isVerifiedField === 'string' &&
-          upConfig.userModel.isVerifiedField in targetModel.fields &&
-          targetModel.fields[upConfig.userModel.isVerifiedField]?.type !==
-            'boolean'
-        ) {
-          errors.push(
-            '/authentication/provider/config/userModel/isVerifiedField: field must be of type boolean',
-          );
-        }
-      }
-    }
+  for (const provider of ssoProviders) {
+    validateSsoProvider(errors, targetModel, provider);
   }
 
   return errors;
+}
+
+function validateUpAuthProvider(
+  errors: string[],
+  config: AppConfig,
+  targetModel: ModelConfig,
+  provider: UpAuthProviderInput,
+  hasSso: boolean,
+): void {
+  const {fields} = provider.config;
+  const base = '/authentication/providers/up-auth/config';
+
+  assertField(
+    errors,
+    targetModel,
+    fields.usernameField,
+    `${base}/fields/usernameField`,
+  );
+  assertField(
+    errors,
+    targetModel,
+    fields.passwordField,
+    `${base}/fields/passwordField`,
+  );
+
+  if (hasSso) {
+    assertNullable(
+      errors,
+      targetModel,
+      fields.usernameField,
+      `${base}/fields/usernameField`,
+    );
+    assertNullable(
+      errors,
+      targetModel,
+      fields.passwordField,
+      `${base}/fields/passwordField`,
+    );
+  }
+
+  if (fields.isVerifiedField) {
+    const verifiedField = assertField(
+      errors,
+      targetModel,
+      fields.isVerifiedField,
+      `${base}/fields/isVerifiedField`,
+    );
+
+    if (verifiedField && verifiedField.type !== 'boolean') {
+      errors.push(
+        `${base}/fields/isVerifiedField: field must be of type boolean`,
+      );
+    }
+
+    if (!config.integrations?.email) {
+      errors.push(
+        `${base}/fields/isVerifiedField: integrations.email must be configured when isVerifiedField is set`,
+      );
+    }
+  }
+
+  if (provider.config.mfaRequired && !config.integrations?.email) {
+    errors.push(
+      `${base}/mfaRequired: integrations.email must be configured when mfaRequired is true`,
+    );
+  }
+}
+
+function validateSsoProvider(
+  errors: string[],
+  targetModel: ModelConfig,
+  provider: SsoProviderInput,
+): void {
+  const {config: providerConfig} = provider;
+  const base = `/authentication/providers/${provider.name}/config`;
+
+  const providerIdField = assertField(
+    errors,
+    targetModel,
+    providerConfig.fields.providerIdField,
+    `${base}/fields/providerIdField`,
+  );
+
+  if (providerIdField && providerIdField.type !== 'string') {
+    errors.push(`${base}/fields/providerIdField: field must be of type string`);
+  }
+
+  for (const [claim, column] of Object.entries(
+    providerConfig.attributeMapping ?? {},
+  )) {
+    assertField(
+      errors,
+      targetModel,
+      column,
+      `${base}/attributeMapping/${claim}`,
+    );
+  }
+
+  if (providerConfig.failureRedirectUrl && !providerConfig.redirectUrl) {
+    errors.push(
+      `${base}/failureRedirectUrl: redirectUrl is required when failureRedirectUrl is set`,
+    );
+  }
+
+  const callback = validateAbsoluteUrl(
+    errors,
+    providerConfig.callbackUrl,
+    `${base}/callbackUrl`,
+  );
+
+  if (
+    callback &&
+    !callback.pathname.endsWith(`/auth/sso/${provider.name}/callback`)
+  ) {
+    errors.push(
+      `${base}/callbackUrl: must end with /auth/sso/${provider.name}/callback`,
+    );
+  }
+
+  validateAbsoluteUrl(
+    errors,
+    providerConfig.redirectUrl,
+    `${base}/redirectUrl`,
+  );
+  validateAbsoluteUrl(
+    errors,
+    providerConfig.failureRedirectUrl,
+    `${base}/failureRedirectUrl`,
+  );
 }
 
 export default validateAuthConstraints;

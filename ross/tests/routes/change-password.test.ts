@@ -44,18 +44,23 @@ const authModels: Record<string, ModelConfig> = {
 
 const upAuthConfig: AuthenticationConfig = {
   enabled: true,
-  provider: {
-    type: 'up-auth',
-    config: {
-      userModel: {
-        model: 'users',
-        idField: 'id',
-        usernameField: 'email',
-        passwordField: 'password',
-      },
-      jwtSecret: 'this-will-never-be-used',
-    },
+  jwtSecret: 'this-will-never-be-used',
+  userModel: {
+    modelName: 'users',
+    idField: 'id',
+    providerField: 'provider',
   },
+  providers: [
+    {
+      type: 'up-auth',
+      config: {
+        fields: {
+          usernameField: 'email',
+          passwordField: 'password',
+        },
+      },
+    },
+  ],
 };
 
 const pgConfig: DatabaseConfig = {
@@ -109,7 +114,10 @@ async function createAuthApp(
   await app.register(responsePlugin);
   await app.register(authPlugin);
 
-  if (authentication?.enabled && authentication.provider?.type === 'up-auth') {
+  if (
+    authentication?.enabled &&
+    authentication.providers?.some(provider => provider.type === 'up-auth')
+  ) {
     registerChangePasswordRoute(app, config as ResolvedAppConfig);
   }
   await app.ready();
@@ -557,5 +565,29 @@ describe('POST /auth/change-password', () => {
 
       await app.close();
     });
+  });
+});
+
+describe('POST /auth/change-password — SSO account guardrail', () => {
+  test('rejects an account owned by an SSO provider', async () => {
+    const app = await createAuthApp(upAuthConfig);
+    const token = app.jwt.sign({id: 1, email: 'sso@example.com'});
+
+    pgQueryMock.mockResolvedValueOnce({
+      rows: [{id: 1, email: 'sso@example.com', provider: 'okta'}],
+      rowCount: 1,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/change-password',
+      headers: {authorization: `Bearer ${token}`},
+      payload: {existingPassword: 'old', newPassword: 'new'},
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toContain('authenticated via okta');
+
+    await app.close();
   });
 });

@@ -278,18 +278,23 @@ describe('Custom Function Endpoints Runtime & Execution', () => {
 
     const upAuthConfig: AuthenticationConfig = {
       enabled: true,
-      provider: {
-        type: 'up-auth',
-        config: {
-          userModel: {
-            model: 'users',
-            idField: 'id',
-            usernameField: 'email',
-            passwordField: 'password',
-          },
-          jwtSecret: 'super-secret-test-jwt-key-minimum-32-chars-long',
-        },
+      jwtSecret: 'super-secret-test-jwt-key-minimum-32-chars-long',
+      userModel: {
+        modelName: 'users',
+        idField: 'id',
+        providerField: 'provider',
       },
+      providers: [
+        {
+          type: 'up-auth',
+          config: {
+            fields: {
+              usernameField: 'email',
+              passwordField: 'password',
+            },
+          },
+        },
+      ],
     };
 
     beforeAll(async () => {

@@ -35,18 +35,23 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
 
   const upAuthConfig: AuthenticationConfig = {
     enabled: true,
-    provider: {
-      type: 'up-auth',
-      config: {
-        userModel: {
-          model: 'users',
-          idField: 'id',
-          usernameField: 'email',
-          passwordField: 'password',
-        },
-        jwtSecret: 'test-secret-key-that-is-long-enough-for-jwt',
-      },
+    jwtSecret: 'test-secret-key-that-is-long-enough-for-jwt',
+    userModel: {
+      modelName: 'users',
+      idField: 'id',
+      providerField: 'provider',
     },
+    providers: [
+      {
+        type: 'up-auth',
+        config: {
+          fields: {
+            usernameField: 'email',
+            passwordField: 'password',
+          },
+        },
+      },
+    ],
   };
 
   const rbacConfig: RbacConfig = {
