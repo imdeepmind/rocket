@@ -5,6 +5,9 @@ database.db
 .ross
 example_functions
 
+# Local config (not tracked)
+ross/example_config.json
+
 # Logs
 logs
 *.log
