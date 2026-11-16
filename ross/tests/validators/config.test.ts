@@ -5406,10 +5406,10 @@ describe('validateResolvedConfigShapes', () => {
     );
   });
 
-  it('validates the example configuration and resolves its providers', () => {
+  it('validates a full configuration and resolves its providers', () => {
     const raw = JSON.parse(
       fs.readFileSync(
-        new URL('../../example_config.json', import.meta.url),
+        new URL('../fixtures/config/full.json', import.meta.url),
         'utf-8',
       ),
     ) as AppConfig;

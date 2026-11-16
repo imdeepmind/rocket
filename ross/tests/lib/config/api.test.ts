@@ -1,6 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 import {describe, expect, test} from 'vitest';
 
 import {getApiRouteTargets, resolveApiPolicy} from '@/lib/config/api';
@@ -340,11 +337,39 @@ describe('resolveApiPolicy', () => {
     expect(policy.roles).toBeUndefined();
   });
 
-  test('resolves example_config.json with variety of wildcard and concrete roles', () => {
-    const raw = JSON.parse(
-      fs.readFileSync(path.resolve('example_config.json'), 'utf-8'),
-    ) as AppConfigInput;
-    const config = resolveConfig(raw, {mode: 'dev'});
+  test('resolves wildcard and concrete role policies across a full role hierarchy', () => {
+    const config = resolveConfig(
+      {
+        ...baseInput({
+          'aggregate.admin.users.id.getAggregation': {roles: ['admin']},
+          'model.test.posts.unknown.insert': {roles: ['editor:*']},
+          'model.test.users.id.index': {roles: ['*']},
+          'model.test.users.unknown.getAll': {authorization: true},
+          'custom.test.all.unknown.updatePostTitle': {
+            roles: ['editor:senior', 'admin'],
+          },
+        }),
+        application: {
+          name: 'Test App',
+          dangerouslyOverrideDefaultVariant: 'test',
+        },
+        rbac: {
+          enabled: true,
+          modelName: 'users',
+          roleField: 'role',
+          defaultRole: 'viewer',
+          roles: {
+            admin: {includes: ['*']},
+            lead_editor: {includes: ['editor:*']},
+            'editor:senior': {includes: ['editor:junior', 'viewer']},
+            'editor:junior': {includes: ['viewer']},
+            auditor: {includes: ['viewer']},
+            viewer: {},
+          },
+        },
+      },
+      {mode: 'dev'},
+    );
 
     // 1. Exact role
     const adminPolicy = resolveApiPolicy(
