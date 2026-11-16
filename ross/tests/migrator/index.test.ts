@@ -1,5 +1,6 @@
 import {execSync} from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -175,7 +176,53 @@ describe('migrateDatabase', () => {
       expect.stringContaining('npm run generate:sql -- --config='),
       expect.objectContaining({
         stdio: 'inherit',
-        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'test.db'}),
+        env: expect.objectContaining({
+          DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), 'test.db'),
+        }),
+      }),
+    );
+  });
+
+  it('should anchor relative sqlite database URLs to the process working directory', async () => {
+    const config = getBaseConfig('sqlite');
+    config.infrastructure.database.connection.url = './database.db';
+    config.data.models = {
+      notes: {
+        fields: {id: {type: 'integer', primaryKey: true}},
+      },
+    };
+
+    await runMigrate(config);
+
+    // Drizzle runs in a child process whose cwd may differ from the runtime's
+    // (npm executes scripts from the package root), so the target must be
+    // absolute for both to open the same database file.
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), './database.db'),
+        }),
+      }),
+    );
+  });
+
+  it('should leave absolute sqlite database URLs unchanged', async () => {
+    const absoluteUrl = path.resolve(process.cwd(), 'data/app.db');
+    const config = getBaseConfig('sqlite');
+    config.infrastructure.database.connection.url = absoluteUrl;
+    config.data.models = {
+      notes: {
+        fields: {id: {type: 'integer', primaryKey: true}},
+      },
+    };
+
+    await runMigrate(config);
+
+    expect(execSync).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        env: expect.objectContaining({DRIZZLE_DATABASE_URL: absoluteUrl}),
       }),
     );
   });
@@ -753,7 +800,7 @@ describe('migrateDatabase', () => {
   });
 
   it('should not write dbUrl with double quotes to drizzle config (env var only)', async () => {
-    const urlWithDoubleQuotes = 'sqlite://path/to/"my db".db';
+    const urlWithDoubleQuotes = 'path/to/"my db".db';
     const config = getBaseConfig('sqlite');
     config.infrastructure.database.connection.url = urlWithDoubleQuotes;
     config.data.models = {
@@ -777,7 +824,10 @@ describe('migrateDatabase', () => {
       expect.any(String),
       expect.objectContaining({
         env: expect.objectContaining({
-          DRIZZLE_DATABASE_URL: urlWithDoubleQuotes,
+          DRIZZLE_DATABASE_URL: path.resolve(
+            process.cwd(),
+            urlWithDoubleQuotes,
+          ),
         }),
       }),
     );
