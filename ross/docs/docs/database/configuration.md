@@ -114,6 +114,8 @@ Contains connection parameters.
 
 The connection URL or file path for the database.
 
+For SQLite, relative file paths (such as the `./database.db` default) resolve against the directory the ROSS process is started from (`process.cwd()`). Both the runtime connection and the migrator use that same location, so `ross dev --migrate` always targets the database the server will open.
+
 :::tip[Use Environment Variables for Secrets]
 
 Never commit passwords or database URLs to version control. Use the `env:` prefix to resolve credentials from your environment at runtime (e.g. `"url": "env:DATABASE_URL"`). When viewing your configuration with `ross config show`, ROSS automatically redacts sensitive credentials.

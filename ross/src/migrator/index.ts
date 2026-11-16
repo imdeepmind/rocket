@@ -299,6 +299,21 @@ ${columns}
   }
 }
 
+/**
+ * Anchor relative SQLite paths to the directory the ROSS process was started
+ * from. The runtime opens SQLite with better-sqlite3, which resolves relative
+ * paths against `process.cwd()`, while drizzle-kit runs in a child process
+ * whose working directory can differ (npm executes scripts from the package
+ * root). Passing an absolute path guarantees both target the same file.
+ */
+function resolveDrizzleDatabaseUrl(engine: DBEngine, dbUrl: string): string {
+  if (engine !== 'sqlite') {
+    return dbUrl;
+  }
+
+  return path.resolve(process.cwd(), dbUrl);
+}
+
 async function generateMigrationSQL(
   configs: Array<{name: string; model: ResolvedModelConfig}>,
   engine: DBEngine,
@@ -351,7 +366,10 @@ async function generateMigrationSQL(
     // Step 3: spawn drizzle-kit generate
     execSync(`npm run generate:sql -- --config=${configPath} --verbose`, {
       stdio: 'inherit',
-      env: {...process.env, DRIZZLE_DATABASE_URL: dbUrl},
+      env: {
+        ...process.env,
+        DRIZZLE_DATABASE_URL: resolveDrizzleDatabaseUrl(engine, dbUrl),
+      },
     });
   } catch (error: unknown) {
     console.log('Migration failed to run: ', error);
