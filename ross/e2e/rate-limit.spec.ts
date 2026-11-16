@@ -223,6 +223,55 @@ for (const {name, cacheConfig} of cacheEngines) {
       }
     });
 
+    test('Swagger docs and health check are exempt from rate limiting', async () => {
+      const config = getRateLimitConfig(cacheConfig);
+      config.docs = {openapi: {enabled: true, path: '/docs'}};
+
+      const server = await createE2EServer(config);
+
+      try {
+        await server.app.cache.clear();
+
+        // A Swagger UI page load triggers the HTML, spec, and multiple assets.
+        const docsPaths = [
+          '/docs',
+          '/docs/json',
+          '/docs/yaml',
+          '/docs/static/swagger-initializer.js',
+        ];
+
+        for (let round = 0; round < 3; round++) {
+          for (const path of docsPaths) {
+            const res = await server.request.get(path);
+            expect(res.status()).toBe(200);
+            expect(res.headers()['x-ratelimit-limit']).toBeUndefined();
+            expect(res.headers()['x-ratelimit-remaining']).toBeUndefined();
+          }
+        }
+
+        // Exhaust the API quota.
+        for (let i = 0; i < 3; i++) {
+          const res = await server.request.get('/api/v1/users/');
+          expect(res.status()).toBe(200);
+        }
+
+        const blockedRes = await server.request.get('/api/v1/users/');
+        expect(blockedRes.status()).toBe(429);
+
+        // Health checks and docs keep working while the API is blocked.
+        const healthRes = await server.request.get('/api/health');
+        expect(healthRes.status()).toBe(200);
+        expect(healthRes.headers()['x-ratelimit-limit']).toBeUndefined();
+
+        const docsRes = await server.request.get('/docs/json');
+        expect(docsRes.status()).toBe(200);
+        expect(docsRes.headers()['x-ratelimit-limit']).toBeUndefined();
+      } finally {
+        await server.app.cache.clear().catch(() => {});
+        await server.cleanup();
+      }
+    });
+
     test('Cross-method enforcement blocks any HTTP verb once limit reached', async () => {
       const server = await createE2EServer(getRateLimitConfig(cacheConfig));
 
