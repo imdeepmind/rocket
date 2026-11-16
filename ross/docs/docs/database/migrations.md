@@ -287,10 +287,16 @@ Each migration file executes inside a dedicated database transaction:
 
 ### In Local Development
 
-Use the `-m, --migrate` flag with `ross dev` to automatically sync models and run custom migrations whenever the development server boots:
+Run `ross migrate` (which resolves the configuration in `dev` mode by default) to sync models and run custom migrations without starting the server:
 
 ```bash
-# Start dev server and run migrations automatically
+# Run migrations using the dev-mode database defaults
+ross migrate
+
+# Explicitly select dev mode
+ross migrate -m dev
+
+# Or start the dev server and run migrations automatically
 ross dev -m
 
 # Start dev server with migrations including custom DDL
@@ -299,14 +305,14 @@ ross dev -m --dangerously-allow-ddl
 
 ### In Production / CI/CD Deployment
 
-In production pipelines or container entrypoints, run `ross migrate` before starting the production server:
+In production pipelines or container entrypoints, run `ross migrate -m prod` before starting the production server. Production mode enforces that `infrastructure.database` is configured:
 
 ```bash
 # 1. Run migrations in your deployment step
-ross migrate
+ross migrate -m prod
 
 # Or with opt-in DDL support:
-ross migrate --dangerously-allow-ddl
+ross migrate -m prod --dangerously-allow-ddl
 
 # 2. Start the production server
 ross start

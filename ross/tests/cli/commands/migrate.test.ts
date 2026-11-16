@@ -1,6 +1,6 @@
 import {handleMigrate} from '@/cli/commands/migrate';
 import * as configFinder from '@/cli/config-finder';
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import migrateDatabase from '@/migrator';
 
@@ -24,12 +24,20 @@ vi.mock('chalk', () => ({
     blue: vi.fn(s => s),
     green: vi.fn(s => s),
     red: vi.fn(s => s),
+    gray: vi.fn(s => s),
   },
 }));
 
 describe('cli/commands/migrate', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   it('runs database migrations successfully and exits with 0', async () => {
@@ -56,12 +64,17 @@ describe('cli/commands/migrate', () => {
     expect(configFinder.loadConfigFile).toHaveBeenCalledWith('/app/ross.json');
     expect(resolveAndValidateConfig).toHaveBeenCalledWith(
       mockRaw,
-      'prod',
+      'dev',
       '/app',
       {config: 'ross.json'},
     );
     expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
-    expect(logSpy).toHaveBeenCalledWith('Running database migrations...');
+    expect(warnSpy).toHaveBeenCalledWith(
+      'No infrastructure.database configured; using the dev default (./database.db).',
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      'Running database migrations in dev mode...',
+    );
     expect(logSpy).toHaveBeenCalledWith(
       'Database migrations completed successfully.',
     );
@@ -106,11 +119,78 @@ describe('cli/commands/migrate', () => {
 
     expect(resolveAndValidateConfig).toHaveBeenCalledWith(
       mockRaw,
-      'prod',
+      'dev',
       '/app',
       {config: 'ross.json', dangerouslyAllowDdl: true},
     );
     expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('resolves configuration in the requested prod mode without the dev fallback notice', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockRaw = {application: {name: 'Migrate App'}};
+    const mockResolved = {application: {name: 'Migrate App (Resolved)'}};
+
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue(mockRaw as never);
+    vi.mocked(resolveAndValidateConfig).mockReturnValue(mockResolved as never);
+    vi.mocked(migrateDatabase).mockResolvedValue(undefined);
+
+    await expect(
+      handleMigrate({config: 'ross.json', mode: 'prod'}),
+    ).rejects.toThrow('process.exit: 0');
+
+    expect(resolveAndValidateConfig).toHaveBeenCalledWith(
+      mockRaw,
+      'prod',
+      '/app',
+      {config: 'ross.json', mode: 'prod'},
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(
+      'Running database migrations in prod mode...',
+    );
+    expect(migrateDatabase).toHaveBeenCalledWith(mockResolved);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('does not warn about the dev fallback when infrastructure.database is configured', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+      code?: string | number | null,
+    ) => {
+      throw new Error(`process.exit: ${code}`);
+    }) as unknown as (code?: string | number | null) => never);
+
+    const mockRaw = {
+      application: {name: 'Migrate App'},
+      infrastructure: {
+        database: {engine: 'sqlite', connection: {url: './custom.db'}},
+      },
+    };
+    const mockResolved = {application: {name: 'Migrate App (Resolved)'}};
+
+    vi.mocked(configFinder.resolveConfigPath).mockReturnValue('/app/ross.json');
+    vi.mocked(configFinder.loadConfigFile).mockReturnValue(mockRaw as never);
+    vi.mocked(resolveAndValidateConfig).mockReturnValue(mockResolved as never);
+    vi.mocked(migrateDatabase).mockResolvedValue(undefined);
+
+    await expect(handleMigrate({config: 'ross.json'})).rejects.toThrow(
+      'process.exit: 0',
+    );
+
+    expect(warnSpy).not.toHaveBeenCalled();
 
     logSpy.mockRestore();
     exitSpy.mockRestore();

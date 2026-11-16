@@ -20,6 +20,12 @@ The framework applies different defaults depending on your execution mode:
 | **Development (`dev`)** | Optional | Defaults to a local SQLite database at `./database.db` with a 10-second timeout. |
 | **Production (`prod`)** | **Required** | Startup immediately halts with `ConfigError: infrastructure.database is required in prod mode`. |
 
+`ross migrate` resolves the configuration in `dev` mode by default. Pass `-m prod` to enforce the production database requirement while running migrations:
+
+```bash
+ross migrate -m prod -c ./production.json
+```
+
 ### Development Mode Default
 
 In `dev` mode, the database configuration defaults to SQLite at `./database.db`:

@@ -171,6 +171,7 @@ Connects to the configured database engine (PostgreSQL, SQLite, MySQL, or MariaD
 
 - Exits with status `0` on success.
 - Exits with status `1` on failure with error details.
+- Resolves the configuration in the selected mode. In `dev` mode, configurations that omit `infrastructure.database` fall back to a local SQLite database at `./database.db`. In `prod` mode, `infrastructure.database` is required.
 
 ```bash
 ross migrate [options]
@@ -179,20 +180,27 @@ ross migrate [options]
 #### Options
 
 - `-c, --config <path>`: Path to configuration file.
+- `-m, --mode <mode>`: Mode to resolve the configuration in: `dev` or `prod` (default: `dev`). Use `prod` in deployment pipelines so the production database requirements are enforced.
 - `--dangerously-allow-ddl`: Allow custom migration scripts containing DDL statements (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`) to execute. By default, custom migrations enforce DML-only safety to protect declarative model schemas.
 - `-v, --verbose`: Enable verbose logging output.
 
 #### Examples
 
 ```bash
-# Run migrations using auto-discovered config
+# Run migrations using auto-discovered config (dev mode)
 ross migrate
+
+# Run migrations against a development config that omits infrastructure.database
+ross migrate -c ./examples/02-cors/cors_config.json
+
+# Run migrations in production mode
+ross migrate -m prod -c ./production.json
 
 # Run migrations with opt-in DDL support
 ross migrate --dangerously-allow-ddl
 
 # Using alias
-ross db:push -c ./production.json
+ross db:push -m prod -c ./production.json
 ```
 
 ---

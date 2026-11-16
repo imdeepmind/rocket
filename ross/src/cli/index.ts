@@ -70,6 +70,12 @@ export function buildCli(): Command {
     .description('Run database migrations and exit')
     .option('-c, --config <path>', 'Path to config file', validateConfigPath)
     .option(
+      '-m, --mode <mode>',
+      'Mode: dev or prod (default: dev)',
+      validateMode,
+      'dev',
+    )
+    .option(
       '--dangerously-allow-ddl',
       'Allow custom migrations containing DDL statements',
       false,

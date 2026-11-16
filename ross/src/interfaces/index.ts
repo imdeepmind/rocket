@@ -20,6 +20,7 @@ export interface StartCLIOptions extends BaseCLIOptions {
 
 export interface MigrateCLIOptions extends BaseCLIOptions {
   dangerouslyAllowDdl?: boolean;
+  mode?: Mode;
 }
 
 export interface BuildCLIOptions extends BaseCLIOptions {}

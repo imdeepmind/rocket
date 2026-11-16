@@ -16,17 +16,27 @@ import {loadConfigFile, resolveConfigPath} from '../config-finder';
 export async function handleMigrate(options: MigrateCLIOptions): Promise<void> {
   let migrationFailed = false;
   try {
+    const mode = options.mode ?? 'dev';
     const configPath = resolveConfigPath(options.config);
     const configDir = path.dirname(path.resolve(configPath));
     const loadedConfig = loadConfigFile(configPath);
+
+    if (mode === 'dev' && !loadedConfig.infrastructure?.database) {
+      console.warn(
+        chalk.gray(
+          'No infrastructure.database configured; using the dev default (./database.db).',
+        ),
+      );
+    }
+
     const resolved = resolveAndValidateConfig(
       loadedConfig,
-      'prod',
+      mode,
       configDir,
       options,
     );
 
-    console.log(chalk.blue('Running database migrations...'));
+    console.log(chalk.blue(`Running database migrations in ${mode} mode...`));
     await migrateDatabase(resolved);
     console.log(chalk.green('Database migrations completed successfully.'));
   } catch (err) {
