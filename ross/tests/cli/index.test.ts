@@ -139,6 +139,40 @@ describe('cli/index', () => {
     );
   });
 
+  it('defaults "ross migrate" to dev mode', async () => {
+    const cli = buildCli();
+    await cli.parseAsync(['node', 'ross', 'migrate', '-c', 'test.json']);
+
+    expect(migrateCommand.handleMigrate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: 'test.json',
+        mode: 'dev',
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('dispatches "ross migrate --mode prod" to handleMigrate with mode: prod', async () => {
+    const cli = buildCli();
+    await cli.parseAsync([
+      'node',
+      'ross',
+      'migrate',
+      '-c',
+      'test.json',
+      '--mode',
+      'prod',
+    ]);
+
+    expect(migrateCommand.handleMigrate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: 'test.json',
+        mode: 'prod',
+      }),
+      expect.anything(),
+    );
+  });
+
   it('dispatches "ross config show" to handleConfigShow', async () => {
     const cli = buildCli();
     await cli.parseAsync(['node', 'ross', 'config', 'show', '-c', 'test.json']);
