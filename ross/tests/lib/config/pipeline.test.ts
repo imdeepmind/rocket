@@ -8,18 +8,20 @@ import {resolveConfig} from '@/lib/config/resolve';
 
 import {AppConfigInput} from '@/interfaces/config';
 
-const EXAMPLE_CONFIG_PATH = path.resolve('example_config.json');
+const FULL_CONFIG_FIXTURE_PATH = path.resolve(
+  'tests/fixtures/config/full.json',
+);
 const GOLDEN_SNAPSHOT_PATH = path.resolve(
-  'tests/lib/config/__goldens__/example_config.resolved.json',
+  'tests/fixtures/config/__goldens__/full.resolved.json',
 );
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-test('example_config.json resolves to the checked-in golden snapshot', () => {
+test('full config fixture resolves to the checked-in golden snapshot', () => {
   const raw = JSON.parse(
-    fs.readFileSync(EXAMPLE_CONFIG_PATH, 'utf-8'),
+    fs.readFileSync(FULL_CONFIG_FIXTURE_PATH, 'utf-8'),
   ) as AppConfigInput;
 
   const resolved = resolveConfig(raw, {mode: 'dev'});
@@ -29,13 +31,33 @@ test('example_config.json resolves to the checked-in golden snapshot', () => {
   expect(resolved).toEqual(golden);
 });
 
-test('examples/01-barebone/barebone_config.json resolves and validates in dev', () => {
-  const raw = JSON.parse(
-    fs.readFileSync(
-      path.resolve('examples/01-barebone/barebone_config.json'),
-      'utf-8',
-    ),
-  ) as AppConfigInput;
+test('barebone config resolves and validates in dev', () => {
+  const raw: AppConfigInput = {
+    application: {name: 'Barebone API'},
+    data: {
+      models: {
+        notes: {
+          fields: {
+            id: {type: 'integer', primaryKey: true, autoIncrement: true},
+            title: {
+              type: 'string',
+              nullable: false,
+              apis: ['search', 'edit'],
+              query: ['eq', 'sort'],
+            },
+            body: {type: 'text', nullable: true},
+            status: {
+              type: 'enum',
+              values: ['draft', 'published'],
+              nullable: false,
+              apis: ['edit', 'delete'],
+              query: ['eq', 'in'],
+            },
+          },
+        },
+      },
+    },
+  };
 
   const resolved = resolveAndValidateConfig(raw, 'dev');
 
