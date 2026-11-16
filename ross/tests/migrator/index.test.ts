@@ -1,4 +1,4 @@
-import {execSync} from 'child_process';
+import {execFileSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -47,13 +47,14 @@ vi.mock('fs', async importOriginal => {
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
     mkdtempSync: vi.fn(),
+    symlinkSync: vi.fn(),
     writeFileSync: vi.fn(),
     rmSync: vi.fn(),
   };
 });
 
 vi.mock('child_process', () => ({
-  execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
 vi.mock('@/migrator/custom/discovery', () => ({
@@ -101,6 +102,32 @@ describe('migrateDatabase', () => {
       data: {models: {}},
       routes: {},
     }) as unknown as MigratorTestConfig;
+
+  // drizzle-kit is executed directly with the Node binary that runs ross; the
+  // CLI path is resolved from ross's own install, never from the cwd.
+  const expectDrizzlePushEnv = (expectedEnv: Record<string, unknown>) => {
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      [
+        expect.stringMatching(/drizzle-kit[/\\]bin\.cjs$/),
+        'push',
+        expect.stringMatching(/^--config=/),
+        '--verbose',
+      ],
+      expect.objectContaining({
+        stdio: 'inherit',
+        env: expect.objectContaining(expectedEnv),
+      }),
+    );
+  };
+
+  const getDrizzlePushEnv = (): Record<string, string> => {
+    const calls = vi.mocked(execFileSync).mock.calls as unknown as Array<
+      [string, string[], {env: Record<string, string>}]
+    >;
+
+    return calls[calls.length - 1][2].env;
+  };
 
   it('should generate schema file for sqlite full coverage', async () => {
     const config = getBaseConfig('sqlite');
@@ -166,21 +193,63 @@ describe('migrateDatabase', () => {
 
     // Call 2: drizzle.config.ts
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
-    expect(drizzleConfigContent).toContain("dialect: 'sqlite'");
+    expect(drizzleConfigContent).toContain('dialect: "sqlite"');
     expect(drizzleConfigContent).toContain(
-      'url: process.env.DRIZZLE_DATABASE_URL!',
+      'url: process.env.DRIZZLE_DATABASE_URL',
     );
     expect(drizzleConfigContent).toContain('tablesFilter: ["users"]');
+    // The config is written outside ross's install, so it must not import
+    // anything: neither drizzle-kit nor drizzle-orm are resolvable from there.
+    expect(drizzleConfigContent).not.toContain('defineConfig');
+    expect(drizzleConfigContent).not.toContain("from 'drizzle-kit'");
 
-    expect(execSync).toHaveBeenCalledWith(
-      expect.stringContaining('npm run generate:sql -- --config='),
-      expect.objectContaining({
-        stdio: 'inherit',
-        env: expect.objectContaining({
-          DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), 'test.db'),
-        }),
-      }),
+    expectDrizzlePushEnv({
+      DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), 'test.db'),
+    });
+  });
+
+  it('should expose drizzle-orm to the temp schema through a local node_modules link', async () => {
+    await runMigrate(getBaseConfig('sqlite'));
+
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/mock/tmp/dir/node_modules', {
+      recursive: true,
+    });
+    // The link points at the drizzle-orm copy installed next to ross so the
+    // generated schema compiles even outside a project with dependencies.
+    expect(fs.symlinkSync).toHaveBeenCalledWith(
+      expect.stringMatching(/node_modules[/\\]drizzle-orm$/),
+      '/mock/tmp/dir/node_modules/drizzle-orm',
+      'dir',
     );
+  });
+
+  it('should pass the ross node_modules through NODE_PATH as a fallback', async () => {
+    await runMigrate(getBaseConfig('sqlite'));
+
+    const env = getDrizzlePushEnv();
+    const [first] = (env.NODE_PATH ?? '').split(path.delimiter);
+
+    expect(path.basename(first)).toBe('node_modules');
+    expect(path.join(first, 'drizzle-orm')).toEqual(
+      expect.stringMatching(/node_modules[/\\]drizzle-orm$/),
+    );
+  });
+
+  it('should preserve an existing NODE_PATH when adding the ross node_modules', async () => {
+    const originalNodePath = process.env.NODE_PATH;
+    process.env.NODE_PATH = '/custom/node_modules';
+
+    try {
+      await runMigrate(getBaseConfig('sqlite'));
+
+      const env = getDrizzlePushEnv();
+
+      expect((env.NODE_PATH ?? '').split(path.delimiter)).toContain(
+        '/custom/node_modules',
+      );
+    } finally {
+      process.env.NODE_PATH = originalNodePath;
+    }
   });
 
   it('should anchor relative sqlite database URLs to the process working directory', async () => {
@@ -194,17 +263,11 @@ describe('migrateDatabase', () => {
 
     await runMigrate(config);
 
-    // Drizzle runs in a child process whose cwd may differ from the runtime's
-    // (npm executes scripts from the package root), so the target must be
-    // absolute for both to open the same database file.
-    expect(execSync).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), './database.db'),
-        }),
-      }),
-    );
+    // Drizzle runs in a child process whose cwd may differ from the runtime's,
+    // so the target must be absolute for both to open the same database file.
+    expectDrizzlePushEnv({
+      DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), './database.db'),
+    });
   });
 
   it('should leave absolute sqlite database URLs unchanged', async () => {
@@ -219,12 +282,7 @@ describe('migrateDatabase', () => {
 
     await runMigrate(config);
 
-    expect(execSync).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        env: expect.objectContaining({DRIZZLE_DATABASE_URL: absoluteUrl}),
-      }),
-    );
+    expectDrizzlePushEnv({DRIZZLE_DATABASE_URL: absoluteUrl});
   });
 
   it('should generate schema file for pg full coverage', async () => {
@@ -284,19 +342,13 @@ describe('migrateDatabase', () => {
     expect(schemaContent).toContain("index('body_idx').on(t.body)");
 
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
-    expect(drizzleConfigContent).toContain("dialect: 'postgresql'");
+    expect(drizzleConfigContent).toContain('dialect: "postgresql"');
     expect(drizzleConfigContent).toContain(
-      'url: process.env.DRIZZLE_DATABASE_URL!',
+      'url: process.env.DRIZZLE_DATABASE_URL',
     );
     expect(drizzleConfigContent).toContain('tablesFilter: ["posts"]');
 
-    expect(execSync).toHaveBeenCalledWith(
-      expect.stringContaining('npm run generate:sql -- --config='),
-      expect.objectContaining({
-        stdio: 'inherit',
-        env: expect.objectContaining({DRIZZLE_DATABASE_URL: 'postgres://db'}),
-      }),
-    );
+    expectDrizzlePushEnv({DRIZZLE_DATABASE_URL: 'postgres://db'});
   });
 
   it('should generate schema file for mysql full coverage', async () => {
@@ -394,21 +446,13 @@ describe('migrateDatabase', () => {
     );
 
     const drizzleConfigContent = writeFileSyncMock.mock.calls[1][1] as string;
-    expect(drizzleConfigContent).toContain("dialect: 'mysql'");
+    expect(drizzleConfigContent).toContain('dialect: "mysql"');
     expect(drizzleConfigContent).toContain(
-      'url: process.env.DRIZZLE_DATABASE_URL!',
+      'url: process.env.DRIZZLE_DATABASE_URL',
     );
     expect(drizzleConfigContent).toContain('tablesFilter: ["posts","tags"]');
 
-    expect(execSync).toHaveBeenCalledWith(
-      expect.stringContaining('npm run generate:sql -- --config='),
-      expect.objectContaining({
-        stdio: 'inherit',
-        env: expect.objectContaining({
-          DRIZZLE_DATABASE_URL: 'mysql://localhost/db',
-        }),
-      }),
-    );
+    expectDrizzlePushEnv({DRIZZLE_DATABASE_URL: 'mysql://localhost/db'});
   });
 
   it('should generate empty schemas gracefully', async () => {
@@ -425,7 +469,11 @@ describe('migrateDatabase', () => {
   });
 
   it('should create .migrations directory if it does not exist', async () => {
-    vi.mocked(fs.existsSync).mockReturnValue(false);
+    // Package lookups read manifests from real paths, only the .migrations
+    // directory is expected to be missing.
+    vi.mocked(fs.existsSync).mockImplementation(
+      pathToCheck => !String(pathToCheck).includes('.migrations'),
+    );
 
     await runMigrate(getBaseConfig('sqlite'));
 
@@ -451,7 +499,10 @@ describe('migrateDatabase', () => {
 
     await runMigrate(getBaseConfig('sqlite'));
 
-    expect(fs.mkdirSync).not.toHaveBeenCalled();
+    expect(fs.mkdirSync).not.toHaveBeenCalledWith(
+      expect.stringContaining('.migrations'),
+      expect.anything(),
+    );
   });
 
   it('should cleanup temp directory on success', async () => {
@@ -467,17 +518,17 @@ describe('migrateDatabase', () => {
     });
   });
 
-  it('should handle errors thrown by execSync and still cleanup', async () => {
+  it('should handle errors thrown by execFileSync and still cleanup', async () => {
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const error = new Error('execSync failed');
-    vi.mocked(execSync).mockImplementationOnce(() => {
+    const error = new Error('drizzle-kit failed');
+    vi.mocked(execFileSync).mockImplementationOnce(() => {
       throw error;
     });
 
     vi.mocked(fs.existsSync).mockImplementation(() => true);
 
     await expect(runMigrate(getBaseConfig('sqlite'))).rejects.toThrow(
-      'execSync failed',
+      'drizzle-kit failed',
     );
 
     expect(fs.rmSync).toHaveBeenCalledWith('/mock/tmp/dir', {
@@ -788,15 +839,10 @@ describe('migrateDatabase', () => {
     expect(drizzleConfigContent).not.toContain(urlWithQuotes);
     // Config uses env var instead
     expect(drizzleConfigContent).toContain(
-      'url: process.env.DRIZZLE_DATABASE_URL!',
+      'url: process.env.DRIZZLE_DATABASE_URL',
     );
     // URL is passed securely via env
-    expect(execSync).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        env: expect.objectContaining({DRIZZLE_DATABASE_URL: urlWithQuotes}),
-      }),
-    );
+    expectDrizzlePushEnv({DRIZZLE_DATABASE_URL: urlWithQuotes});
   });
 
   it('should not write dbUrl with double quotes to drizzle config (env var only)', async () => {
@@ -817,20 +863,12 @@ describe('migrateDatabase', () => {
     expect(drizzleConfigContent).not.toContain(urlWithDoubleQuotes);
     // Config uses env var instead
     expect(drizzleConfigContent).toContain(
-      'url: process.env.DRIZZLE_DATABASE_URL!',
+      'url: process.env.DRIZZLE_DATABASE_URL',
     );
     // URL is passed securely via env
-    expect(execSync).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          DRIZZLE_DATABASE_URL: path.resolve(
-            process.cwd(),
-            urlWithDoubleQuotes,
-          ),
-        }),
-      }),
-    );
+    expectDrizzlePushEnv({
+      DRIZZLE_DATABASE_URL: path.resolve(process.cwd(), urlWithDoubleQuotes),
+    });
   });
 
   it('should generate schema without foreign keys when none are defined', async () => {
@@ -982,7 +1020,7 @@ describe('migrateDatabase', () => {
       });
 
       const callOrder: string[] = [];
-      vi.mocked(execSync).mockImplementation(() => {
+      vi.mocked(execFileSync).mockImplementation(() => {
         callOrder.push('drizzle-push');
         return '' as never;
       });
@@ -1146,7 +1184,7 @@ describe('migrateDatabase', () => {
     it('should not execute custom migrations when Drizzle push fails', async () => {
       const config = getBaseConfigWithMigrations('postgres');
       const drizzleError = new Error('Drizzle push failed');
-      vi.mocked(execSync).mockImplementationOnce(() => {
+      vi.mocked(execFileSync).mockImplementationOnce(() => {
         throw drizzleError;
       });
 
