@@ -1,4 +1,4 @@
-import {execSync} from 'child_process';
+import {execFileSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -7,6 +7,10 @@ import {
   validateMigrations,
 } from '@/migrator/custom/discovery';
 import {runCustomMigrations} from '@/migrator/custom/runner';
+import {
+  resolveDrizzleKitCli,
+  resolveDrizzleOrmDir,
+} from '@/migrator/drizzle-paths';
 
 import {resolveModelField} from '@/lib/config/resolve';
 
@@ -302,9 +306,9 @@ ${columns}
 /**
  * Anchor relative SQLite paths to the directory the ROSS process was started
  * from. The runtime opens SQLite with better-sqlite3, which resolves relative
- * paths against `process.cwd()`, while drizzle-kit runs in a child process
- * whose working directory can differ (npm executes scripts from the package
- * root). Passing an absolute path guarantees both target the same file.
+ * paths against `process.cwd()`, while drizzle-kit runs in a separate child
+ * process. Passing an absolute path keeps the two from depending on that
+ * child's working directory.
  */
 function resolveDrizzleDatabaseUrl(engine: DBEngine, dbUrl: string): string {
   if (engine !== 'sqlite') {
@@ -348,29 +352,57 @@ async function generateMigrationSQL(
           ? 'mysql'
           : 'sqlite';
 
-    // write drizzle.config.ts
+    // Expose drizzle-orm to the generated schema. The schema file lives in a
+    // temp directory outside any project, so it cannot resolve dependencies
+    // installed next to ross; a local node_modules entry makes it resolvable
+    // and pins the exact drizzle-orm version ross ships with.
+    const drizzleOrmDir = resolveDrizzleOrmDir();
+    const drizzleNodeModulesDir = path.dirname(drizzleOrmDir);
+    const tmpNodeModulesDir = path.join(tmpDir, 'node_modules');
+
+    fs.mkdirSync(tmpNodeModulesDir, {recursive: true});
+
+    try {
+      fs.symlinkSync(
+        drizzleOrmDir,
+        path.join(tmpNodeModulesDir, 'drizzle-orm'),
+        process.platform === 'win32' ? 'junction' : 'dir',
+      );
+    } catch {
+      // Some filesystems reject symlinks; NODE_PATH below still covers it.
+    }
+
+    // Keep the config free of imports: it is loaded from the temp directory,
+    // where packages installed next to ross are not resolvable.
     fs.writeFileSync(
       configPath,
-      `
-      import { defineConfig } from 'drizzle-kit';
-      export default defineConfig({
-        dialect: '${dialect}',
-        schema: '${schemaPath}',
-        out: '${migrationsPath}',
-        dbCredentials: { url: process.env.DRIZZLE_DATABASE_URL! },
-        tablesFilter: ${JSON.stringify(configs.map(c => c.name))},
-      });
-    `,
+      `export default {
+  dialect: ${JSON.stringify(dialect)},
+  schema: ${JSON.stringify(schemaPath)},
+  out: ${JSON.stringify(migrationsPath)},
+  dbCredentials: {url: process.env.DRIZZLE_DATABASE_URL},
+  tablesFilter: ${JSON.stringify(configs.map(c => c.name))},
+};
+`,
     );
 
-    // Step 3: spawn drizzle-kit generate
-    execSync(`npm run generate:sql -- --config=${configPath} --verbose`, {
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        DRIZZLE_DATABASE_URL: resolveDrizzleDatabaseUrl(engine, dbUrl),
+    // Run the drizzle-kit CLI that ships with this ross install directly with
+    // the current Node binary, instead of relying on a project script, on npm
+    // being available, or on shell quoting.
+    execFileSync(
+      process.execPath,
+      [resolveDrizzleKitCli(), 'push', `--config=${configPath}`, '--verbose'],
+      {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DRIZZLE_DATABASE_URL: resolveDrizzleDatabaseUrl(engine, dbUrl),
+          NODE_PATH: [drizzleNodeModulesDir, process.env.NODE_PATH]
+            .filter(Boolean)
+            .join(path.delimiter),
+        },
       },
-    });
+    );
   } catch (error: unknown) {
     console.log('Migration failed to run: ', error);
     throw error;
