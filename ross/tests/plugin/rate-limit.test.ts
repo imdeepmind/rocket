@@ -37,6 +37,7 @@ vi.mock('@/utils/duration', () => ({
 function createMockAppConfig(overrides?: {
   max?: number;
   timeWindow?: string;
+  docs?: {enabled: boolean; path: string};
 }): ResolvedAppConfig {
   return {
     application: {
@@ -50,8 +51,8 @@ function createMockAppConfig(overrides?: {
     },
     docs: {
       openapi: {
-        enabled: false,
-        path: '/docs',
+        enabled: overrides?.docs?.enabled ?? false,
+        path: overrides?.docs?.path ?? '/docs',
         info: {title: '', description: '', version: ''},
       },
     },
@@ -60,6 +61,27 @@ function createMockAppConfig(overrides?: {
     },
     data: {models: {}},
   } as unknown as ResolvedAppConfig;
+}
+
+function createStatefulCache(): ICache {
+  const state: Record<string, {current: number; expiresAt: number}> = {};
+
+  return {
+    get: vi
+      .fn()
+      .mockImplementation(async <T>(key: string): Promise<T | null> => {
+        return (state[key] as unknown as T) ?? null;
+      }),
+    set: vi.fn().mockImplementation(async (key: string, value: unknown) => {
+      state[key] = value as {current: number; expiresAt: number};
+    }),
+    delete: vi.fn().mockResolvedValue(undefined),
+    has: vi.fn().mockResolvedValue(false),
+    clear: vi.fn().mockResolvedValue(undefined),
+    ping: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+    raw: {} as unknown as NodeCache,
+  };
 }
 
 describe('rate-limit plugin', () => {
@@ -395,6 +417,233 @@ describe('rate-limit plugin', () => {
       ) => {child: () => unknown};
       const storeInstance = new StoreClassConstructor({});
       expect(storeInstance.child()).toBe(storeInstance);
+
+      await fastify.close();
+    });
+  });
+
+  describe('route exemptions', () => {
+    it('exempts swagger docs and static assets from rate limiting', async () => {
+      const cache = createStatefulCache();
+      const fastify = Fastify();
+      fastify.decorate('cache', cache);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({
+          max: 2,
+          docs: {enabled: true, path: '/docs'},
+        }),
+      );
+
+      await fastify.register(rateLimitPlugin);
+
+      fastify.get('/docs', async () => 'ui');
+      fastify.get('/docs/', async () => 'ui');
+      fastify.get('/docs/json', async () => ({}));
+      fastify.get('/docs/yaml', async () => 'yaml');
+      fastify.get('/docs/static/swagger-ui.css', async () => 'css');
+      fastify.get('/api/v1/users', async () => 'users');
+
+      await fastify.ready();
+
+      const docsUrls = [
+        '/docs',
+        '/docs/',
+        '/docs/json',
+        '/docs/yaml',
+        '/docs/static/swagger-ui.css',
+        '/docs?query=1',
+      ];
+
+      for (const url of docsUrls) {
+        for (let i = 0; i < 5; i++) {
+          const res = await fastify.inject({method: 'GET', url});
+          expect(res.statusCode).toBe(200);
+          expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+          expect(res.headers['x-ratelimit-remaining']).toBeUndefined();
+        }
+      }
+
+      // Docs requests must not touch the rate-limit store at all.
+      expect(cache.set).not.toHaveBeenCalled();
+
+      // The API still gets its full quota.
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(429);
+
+      // Docs remain reachable while the API quota is exhausted.
+      expect(
+        (await fastify.inject({method: 'GET', url: '/docs/json'})).statusCode,
+      ).toBe(200);
+
+      await fastify.close();
+    });
+
+    it('exempts a custom docs path without exempting lookalike prefixes', async () => {
+      const cache = createStatefulCache();
+      const fastify = Fastify();
+      fastify.decorate('cache', cache);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({
+          max: 2,
+          docs: {enabled: true, path: '/api-docs'},
+        }),
+      );
+
+      await fastify.register(rateLimitPlugin);
+
+      fastify.get('/api-docs/json', async () => ({}));
+      fastify.get('/api-docs-other', async () => 'other');
+      fastify.get('/docs/json', async () => ({}));
+
+      await fastify.ready();
+
+      for (let i = 0; i < 5; i++) {
+        const res = await fastify.inject({
+          method: 'GET',
+          url: '/api-docs/json',
+        });
+        expect(res.statusCode).toBe(200);
+      }
+
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api-docs-other'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api-docs-other'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api-docs-other'}))
+          .statusCode,
+      ).toBe(429);
+
+      // The configured docs path is not /docs, so /docs stays limited.
+      expect(
+        (await fastify.inject({method: 'GET', url: '/docs/json'})).statusCode,
+      ).toBe(429);
+
+      await fastify.close();
+    });
+
+    it('does not exempt docs routes when documentation is disabled', async () => {
+      const cache = createStatefulCache();
+      const fastify = Fastify();
+      fastify.decorate('cache', cache);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({
+          max: 2,
+          docs: {enabled: false, path: '/docs'},
+        }),
+      );
+
+      await fastify.register(rateLimitPlugin);
+
+      fastify.get('/docs', async () => 'ui');
+
+      await fastify.ready();
+
+      expect(
+        (await fastify.inject({method: 'GET', url: '/docs'})).statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/docs'})).statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/docs'})).statusCode,
+      ).toBe(429);
+
+      await fastify.close();
+    });
+
+    it('does not exempt every route when docs are mounted at the root', async () => {
+      const cache = createStatefulCache();
+      const fastify = Fastify();
+      fastify.decorate('cache', cache);
+      fastify.decorate(
+        'appConfig',
+        createMockAppConfig({
+          max: 2,
+          docs: {enabled: true, path: '/'},
+        }),
+      );
+
+      await fastify.register(rateLimitPlugin);
+
+      fastify.get('/api/v1/users', async () => 'users');
+
+      await fastify.ready();
+
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(429);
+
+      await fastify.close();
+    });
+
+    it('keeps routes with rateLimit:false exempt (health check)', async () => {
+      const cache = createStatefulCache();
+      const fastify = Fastify();
+      fastify.decorate('cache', cache);
+      fastify.decorate('appConfig', createMockAppConfig({max: 2}));
+
+      await fastify.register(rateLimitPlugin);
+
+      fastify.get(
+        '/api/health',
+        {config: {rateLimit: false}},
+        async () => 'ok',
+      );
+      fastify.get('/api/v1/users', async () => 'users');
+
+      await fastify.ready();
+
+      // Health checks do not consume the API quota.
+      for (let i = 0; i < 10; i++) {
+        const res = await fastify.inject({method: 'GET', url: '/api/health'});
+        expect(res.statusCode).toBe(200);
+        expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+      }
+
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/v1/users'}))
+          .statusCode,
+      ).toBe(429);
+
+      // Health checks still succeed while the API quota is exhausted.
+      expect(
+        (await fastify.inject({method: 'GET', url: '/api/health'})).statusCode,
+      ).toBe(200);
 
       await fastify.close();
     });

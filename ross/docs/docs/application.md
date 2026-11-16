@@ -146,6 +146,8 @@ Protects your server against denial-of-service (DoS) attacks, brute-force attemp
 
 Rate limiting is integrated with ROSS's caching layer (`infrastructure.cache`). When using a distributed cache engine (Redis or Memcached), limits are tracked centrally across multiple server instances. When using in-memory cache, limits are tracked locally per process. See [Cache](./cache/introduction.md) for engine configuration.
 
+OpenAPI documentation routes (`docs.openapi.path`, including the `/json`, `/yaml`, and `/static/*` assets) are always exempt from rate limiting. Loading the Swagger UI issues several requests at once, so counting them against the caller's quota would prevent the documentation from rendering. The health check endpoint is likewise exempt by default; set `rateLimitHealthAPI` to `true` to apply the limit to it.
+
 #### Sub-fields
 
 | Field | Type | Required | Default | Description |
