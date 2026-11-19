@@ -1,3 +1,5 @@
+'use client';
+
 import React, { forwardRef } from 'react';
 import Link from 'next/link';
 import styles from './styles.module.css';
@@ -80,6 +82,7 @@ export const Button = forwardRef<
       className={combinedClassName}
       ref={ref as React.Ref<HTMLButtonElement>}
       disabled={disabled}
+      suppressHydrationWarning
       {...rest}
     >
       {children}

@@ -8,12 +8,26 @@
   width: 100%;
 }
 
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
 .label {
   font-size: 13px;
   font-weight: 500;
   color: #CFCFDC;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   user-select: none;
+}
+
+.labelRight {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .inputWrapper {

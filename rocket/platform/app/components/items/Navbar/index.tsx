@@ -60,7 +60,7 @@ export default function Navbar(): React.JSX.Element {
 
       {/* Header Actions */}
       <div className={styles.headerActions}>
-        <Link href="/sign-in" className={styles.signInLink}>
+        <Link href="/auth/sign-in" className={styles.signInLink}>
           Sign In
         </Link>
         <Button href="/docs/get-started" size="md">
@@ -106,7 +106,7 @@ export default function Navbar(): React.JSX.Element {
         >
           GitHub
         </a>
-        <Link href="/sign-in" onClick={closeMenu}>
+        <Link href="/auth/sign-in" onClick={closeMenu}>
           Sign In
         </Link>
         <Button

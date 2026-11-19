@@ -33,7 +33,7 @@ export default function Footer(): React.JSX.Element {
           >
             GitHub
           </a>
-          <Link href="/sign-in">Sign In</Link>
+          <Link href="/auth/sign-in">Sign In</Link>
         </nav>
       </div>
     </footer>
