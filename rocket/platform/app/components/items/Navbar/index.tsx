@@ -63,7 +63,7 @@ export default function Navbar(): React.JSX.Element {
         <Link href="/auth/sign-in" className={styles.signInLink}>
           Sign In
         </Link>
-        <Button href="/docs/get-started" size="md">
+        <Button href="/auth/sign-up" size="md">
           Get started
         </Button>
       </div>
@@ -110,7 +110,7 @@ export default function Navbar(): React.JSX.Element {
           Sign In
         </Link>
         <Button
-          href="/docs/get-started"
+          href="/auth/sign-up"
           size="md"
           fullWidth
           onClick={closeMenu}
