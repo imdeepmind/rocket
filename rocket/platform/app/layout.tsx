@@ -1,6 +1,8 @@
 import type {Metadata} from 'next';
 import {Inter, Space_Grotesk} from 'next/font/google';
 
+import AmbientBackground from '@/app/components/bits/AmbientBackground';
+
 import '@/app/globals.css';
 
 const inter = Inter({
@@ -34,7 +36,8 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${spaceGrotesk.variable} antialiased dark`}
     >
-      <body className="min-h-screen flex flex-col bg-[#08080D] text-[#F7F7FA]">
+      <body className="min-h-screen flex flex-col bg-[#08080D] text-[#F7F7FA] relative overflow-x-hidden">
+        <AmbientBackground />
         {children}
       </body>
     </html>

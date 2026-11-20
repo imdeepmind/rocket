@@ -37,9 +37,6 @@ export default function AuthShell({
 
   return (
     <div className={styles.wrapper}>
-      {/* Ambient background glow */}
-      <div className={styles.ambientGlow} aria-hidden="true" />
-
       <div className={styles.container}>
         {/* Brand header */}
         <Link href="/" className={styles.brandHeader} aria-label="Rocket Home">

@@ -1,5 +1,5 @@
 .wrapper {
-  background-color: #08080d;
+  background-color: transparent;
   color: #f7f7fa;
   font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
   font-size: 16px;
@@ -16,20 +16,4 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-}
-
-.heroGlow {
-  position: absolute;
-  top: -260px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1400px;
-  height: 900px;
-  background: radial-gradient(
-    closest-side,
-    rgba(225, 29, 72, 0.28),
-    rgba(225, 29, 72, 0.06) 60%,
-    transparent
-  );
-  pointer-events: none;
 }

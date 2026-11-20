@@ -1,32 +1,10 @@
 .shell {
   display: flex;
   min-height: 100vh;
-  background-color: #08080d;
+  background-color: transparent;
   color: #f7f7fa;
   position: relative;
   overflow-x: hidden;
-}
-
-/* Ambient glow in background */
-.ambientGlow {
-  position: fixed;
-  top: 0;
-  left: 260px;
-  right: 0;
-  height: 380px;
-  background: radial-gradient(
-    ellipse 60% 50% at 50% 0%,
-    rgba(225, 29, 72, 0.08) 0%,
-    rgba(225, 29, 72, 0.02) 45%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 1;
-  transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.ambientGlowCollapsed {
-  left: 0;
 }
 
 .contentWrapper {
@@ -35,7 +13,7 @@
   flex-direction: column;
   min-width: 0;
   position: relative;
-  z-index: 2;
+  z-index: 1;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -45,6 +23,8 @@
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 /* Backdrop for mobile drawer */

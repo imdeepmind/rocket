@@ -29,16 +29,6 @@ export function AppShell({
 
   return (
     <div className={styles.shell}>
-      <div
-        className={[
-          styles.ambientGlow,
-          !isSidebarOpen ? styles.ambientGlowCollapsed : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-hidden="true"
-      />
-
       {/* Mobile Drawer Backdrop */}
       <div
         className={[
