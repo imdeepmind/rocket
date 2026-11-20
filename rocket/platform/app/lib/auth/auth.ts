@@ -1,6 +1,5 @@
 import {betterAuth} from 'better-auth';
 import {drizzleAdapter} from 'better-auth/adapters/drizzle';
-import {username} from 'better-auth/plugins';
 
 import {db, schema} from '@/app/lib/db';
 import {sendPasswordResetEmail} from '@/app/lib/email';
@@ -19,7 +18,6 @@ export const auth = betterAuth({
       });
     },
   },
-  plugins: [username()],
   socialProviders: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,

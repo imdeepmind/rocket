@@ -10,13 +10,13 @@ import OAuthButtons from '@/app/container/auth/OAuthButtons';
 import Button from '@/app/components/bits/Button';
 import TextBox from '@/app/components/bits/TextBox';
 
-import {signInWithUsername} from '@/app/lib/auth';
+import {signInWithEmail} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
 export default function SignIn(): React.JSX.Element {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +26,7 @@ export default function SignIn(): React.JSX.Element {
     setError(null);
 
     setIsSubmitting(true);
-    const result = await signInWithUsername({username, password});
+    const result = await signInWithEmail({email, password});
     setIsSubmitting(false);
 
     if (!result.success) {
@@ -53,7 +53,7 @@ export default function SignIn(): React.JSX.Element {
       subtitle="Sign in to deploy and manage your backends."
       footer={footer}
     >
-      <OAuthButtons />
+      <OAuthButtons dividerText="or continue with email" />
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
         {error && (
@@ -66,15 +66,15 @@ export default function SignIn(): React.JSX.Element {
         )}
 
         <TextBox
-          id="signin-username"
-          label="Username"
-          name="username"
-          type="text"
-          placeholder="yourname"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
+          id="signin-email"
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
           fullWidth
-          autoComplete="username"
+          autoComplete="email"
           required
         />
 

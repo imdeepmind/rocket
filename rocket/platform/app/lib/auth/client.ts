@@ -1,9 +1,7 @@
-import {usernameClient} from 'better-auth/client/plugins';
 import {createAuthClient} from 'better-auth/react';
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
-  plugins: [usernameClient()],
 });
 
 export interface AuthActionResult<T = unknown> {
@@ -12,16 +10,15 @@ export interface AuthActionResult<T = unknown> {
   data?: T;
 }
 
-export interface SignInUsernameParams {
-  username: string;
+export interface SignInEmailParams {
+  email: string;
   password: string;
 }
 
 export interface SignUpEmailParams {
+  name: string;
   email: string;
   password: string;
-  username: string;
-  name?: string;
 }
 
 export interface ResetPasswordParams {
@@ -107,28 +104,28 @@ export async function resetPassword({
   }
 }
 
-export async function signInWithUsername({
-  username,
+export async function signInWithEmail({
+  email,
   password,
-}: SignInUsernameParams): Promise<AuthActionResult> {
+}: SignInEmailParams): Promise<AuthActionResult> {
   try {
-    const trimmedUsername = username.trim();
-    if (!trimmedUsername) {
-      return {success: false, error: 'Please enter your username'};
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      return {success: false, error: 'Please enter a valid email address'};
     }
     if (!password) {
       return {success: false, error: 'Please enter your password'};
     }
 
-    const result = await authClient.signIn.username({
-      username: trimmedUsername,
+    const result = await authClient.signIn.email({
+      email: trimmedEmail,
       password,
     });
 
     if (result?.error) {
       return {
         success: false,
-        error: result.error.message || 'Invalid username or password',
+        error: result.error.message || 'Invalid email or password',
       };
     }
 
@@ -142,20 +139,19 @@ export async function signInWithUsername({
   }
 }
 
-export const signIn = signInWithUsername;
+export const signIn = signInWithEmail;
 
 export async function signUpWithEmail({
+  name,
   email,
   password,
-  username,
-  name,
 }: SignUpEmailParams): Promise<AuthActionResult> {
   try {
-    const trimmedUsername = username.trim();
+    const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
-    if (!trimmedUsername) {
-      return {success: false, error: 'Please choose a username'};
+    if (!trimmedName) {
+      return {success: false, error: 'Please enter your name'};
     }
     if (!trimmedEmail || !trimmedEmail.includes('@')) {
       return {success: false, error: 'Please provide a valid email address'};
@@ -168,10 +164,9 @@ export async function signUpWithEmail({
     }
 
     const result = await authClient.signUp.email({
+      name: trimmedName,
       email: trimmedEmail,
       password,
-      name: name?.trim() || trimmedUsername,
-      username: trimmedUsername,
     });
 
     if (result?.error) {

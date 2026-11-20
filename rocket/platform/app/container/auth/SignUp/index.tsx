@@ -16,7 +16,7 @@ import styles from './styles.module.css';
 
 export default function SignUp(): React.JSX.Element {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function SignUp(): React.JSX.Element {
     setError(null);
 
     setIsSubmitting(true);
-    const result = await signUpWithEmail({username, email, password});
+    const result = await signUpWithEmail({name, email, password});
     setIsSubmitting(false);
 
     if (!result.success) {
@@ -54,7 +54,7 @@ export default function SignUp(): React.JSX.Element {
       subtitle="Start deploying your backend in minutes."
       footer={footer}
     >
-      <OAuthButtons />
+      <OAuthButtons dividerText="or continue with email" />
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
         {error && (
@@ -67,15 +67,15 @@ export default function SignUp(): React.JSX.Element {
         )}
 
         <TextBox
-          id="signup-username"
-          label="Username"
-          name="username"
+          id="signup-name"
+          label="Name"
+          name="name"
           type="text"
-          placeholder="yourname"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
+          placeholder="Alex Doe"
+          value={name}
+          onChange={e => setName(e.target.value)}
           fullWidth
-          autoComplete="username"
+          autoComplete="name"
           required
         />
 

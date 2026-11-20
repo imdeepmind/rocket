@@ -13,7 +13,7 @@ export interface OAuthButtonsProps {
 }
 
 export default function OAuthButtons({
-  dividerText = 'or continue with username',
+  dividerText = 'or continue with email',
 }: OAuthButtonsProps): React.JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
 
