@@ -1,3 +1,4 @@
+import {Analytics} from '@vercel/analytics/next';
 import type {Metadata} from 'next';
 import {Inter, Space_Grotesk} from 'next/font/google';
 
@@ -36,6 +37,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col bg-[#08080D] text-[#F7F7FA]">
         {children}
+        <Analytics />
       </body>
     </html>
   );
