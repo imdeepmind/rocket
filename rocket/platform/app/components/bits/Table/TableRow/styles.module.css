@@ -1,0 +1,12 @@
+.row {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.row:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.row:last-child td {
+  border-bottom: none;
+}

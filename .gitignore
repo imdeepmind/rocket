@@ -161,3 +161,4 @@ Rocket Platform*
 # Next.js types
 next-env.d.ts
 
+.DS_Store
