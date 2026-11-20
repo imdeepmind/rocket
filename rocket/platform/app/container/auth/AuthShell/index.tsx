@@ -1,6 +1,11 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import {useRouter} from 'next/navigation';
+import React, {useEffect} from 'react';
+
+import {useSession} from '@/app/lib/auth/client';
 
 import styles from './styles.module.css';
 
@@ -16,7 +21,20 @@ export default function AuthShell({
   subtitle,
   children,
   footer,
-}: AuthShellProps): React.JSX.Element {
+}: AuthShellProps): React.JSX.Element | null {
+  const router = useRouter();
+  const {data: session, isPending} = useSession();
+
+  useEffect(() => {
+    if (!isPending && session?.user) {
+      router.replace('/dashboard');
+    }
+  }, [session, isPending, router]);
+
+  if (!isPending && session?.user) {
+    return null;
+  }
+
   return (
     <div className={styles.wrapper}>
       {/* Ambient background glow */}

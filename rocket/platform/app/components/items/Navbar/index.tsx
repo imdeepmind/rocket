@@ -2,16 +2,24 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import React, {useEffect, useState} from 'react';
 
 import Button from '@/app/components/bits/Button';
 
 import {CloseIcon, MenuIcon} from '@/app/icons';
 
+import {signOut, useSession} from '@/app/lib/auth/client';
+
 import styles from './styles.module.css';
 
 export default function Navbar(): React.JSX.Element {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const {data: session} = useSession();
+
+  const isLoggedIn = Boolean(session?.user);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -25,6 +33,19 @@ export default function Navbar(): React.JSX.Element {
 
   function closeMenu() {
     setIsOpen(false);
+  }
+
+  async function handleLogout() {
+    try {
+      setIsLoggingOut(true);
+      await signOut();
+      closeMenu();
+      router.refresh();
+    } catch (err) {
+      console.error('Failed to log out:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   return (
@@ -63,12 +84,20 @@ export default function Navbar(): React.JSX.Element {
 
       {/* Header Actions */}
       <div className={styles.headerActions}>
-        <Link href="/auth/sign-in" className={styles.signInLink}>
-          Sign In
-        </Link>
-        <Button href="/auth/sign-up" size="md">
-          Get started
-        </Button>
+        {isLoggedIn ? (
+          <Button size="md" onClick={handleLogout} disabled={isLoggingOut}>
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
+          </Button>
+        ) : (
+          <>
+            <Link href="/auth/sign-in" className={styles.signInLink}>
+              Sign In
+            </Link>
+            <Button href="/auth/sign-up" size="md">
+              Get started
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Mobile Toggle */}
@@ -109,18 +138,32 @@ export default function Navbar(): React.JSX.Element {
         >
           GitHub
         </a>
-        <Link href="/auth/sign-in" onClick={closeMenu}>
-          Sign In
-        </Link>
-        <Button
-          href="/auth/sign-up"
-          size="md"
-          fullWidth
-          onClick={closeMenu}
-          style={{marginTop: '8px'}}
-        >
-          Get started
-        </Button>
+        {isLoggedIn ? (
+          <Button
+            size="md"
+            fullWidth
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            style={{marginTop: '8px'}}
+          >
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
+          </Button>
+        ) : (
+          <>
+            <Link href="/auth/sign-in" onClick={closeMenu}>
+              Sign In
+            </Link>
+            <Button
+              href="/auth/sign-up"
+              size="md"
+              fullWidth
+              onClick={closeMenu}
+              style={{marginTop: '8px'}}
+            >
+              Get started
+            </Button>
+          </>
+        )}
       </div>
     </header>
   );

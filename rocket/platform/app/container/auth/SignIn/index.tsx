@@ -34,7 +34,7 @@ export default function SignIn(): React.JSX.Element {
       return;
     }
 
-    router.push('/');
+    router.push('/dashboard');
     router.refresh();
   }
 

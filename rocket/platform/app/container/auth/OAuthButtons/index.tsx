@@ -19,7 +19,7 @@ export default function OAuthButtons({
 
   async function handleOAuthClick(provider: SocialProvider) {
     setNotice(null);
-    const result = await signInWithSocial(provider);
+    const result = await signInWithSocial(provider, '/dashboard');
     if (!result.success && result.error) {
       setNotice(result.error);
     }

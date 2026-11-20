@@ -268,7 +268,7 @@ export const signUp = signUpWithEmail;
 
 export async function signInWithSocial(
   provider: SocialProvider,
-  callbackURL = '/',
+  callbackURL = '/dashboard',
 ): Promise<AuthActionResult> {
   const normalizedProvider = provider.toLowerCase() as 'google' | 'github';
   const displayProvider = normalizedProvider === 'google' ? 'Google' : 'GitHub';
