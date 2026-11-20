@@ -6,14 +6,17 @@ import { useSearchParams } from 'next/navigation';
 import TextBox from '@/app/components/bits/TextBox';
 import Button from '@/app/components/bits/Button';
 import { CheckIcon, CloseIcon } from '@/app/icons';
+import { authClient } from '@/app/lib/auth/client';
 import AuthShell from '../AuthShell';
 import styles from './styles.module.css';
 
 export default function ResetPassword(): React.JSX.Element {
   const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const errorParam = searchParams.get('error');
+
   const initialMode =
-    searchParams.get('status') === 'error' ||
-    searchParams.get('state') === 'error'
+    errorParam || searchParams.get('status') === 'error' || searchParams.get('state') === 'error'
       ? 'error'
       : 'success';
 
@@ -24,7 +27,7 @@ export default function ResetPassword(): React.JSX.Element {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
@@ -38,10 +41,28 @@ export default function ResetPassword(): React.JSX.Element {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      if (token) {
+        const result = await authClient.resetPassword({
+          newPassword,
+          token,
+        });
+
+        if (result.error) {
+          setError(result.error.message || 'Failed to reset password');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       setIsCompleted(true);
-    }, 800);
+      setIsSubmitting(false);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to reset password';
+      setError(message);
+      setIsSubmitting(false);
+    }
   }
 
   const footer = (

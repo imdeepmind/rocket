@@ -2,23 +2,27 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import TextBox from '@/app/components/bits/TextBox';
 import Button from '@/app/components/bits/Button';
+import { authClient } from '@/app/lib/auth/client';
 import AuthShell from '../AuthShell';
 import OAuthButtons from '../OAuthButtons';
 import styles from './styles.module.css';
 
 export default function SignIn(): React.JSX.Element {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!username.trim()) {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
       setError('Please enter your username');
       return;
     }
@@ -28,10 +32,28 @@ export default function SignIn(): React.JSX.Element {
     }
 
     setIsSubmitting(true);
-    // UI state simulation for phase 1 design
-    setTimeout(() => {
+    try {
+      const result = await authClient.signIn.username({
+        username: trimmedUsername,
+        password,
+      });
+
+      if (result.error) {
+        setError(result.error.message || 'Invalid username or password');
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push('/');
+      router.refresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred during sign in';
+      setError(message);
       setIsSubmitting(false);
-    }, 800);
+    }
   }
 
   const footer = (
