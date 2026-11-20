@@ -3,6 +3,7 @@
 import React, {useMemo, useState} from 'react';
 
 import Badge from '@/app/components/bits/Badge';
+import Card from '@/app/components/bits/Card';
 import Table, {TableColumn} from '@/app/components/items/Table';
 
 import {
@@ -256,7 +257,8 @@ export function ProjectsTable({
   ];
 
   return (
-    <div
+    <Card
+      padding="none"
       className={styles.container}
       onClick={() => {
         if (openMenuId) setOpenMenuId(null);
@@ -366,7 +368,7 @@ export function ProjectsTable({
           </button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
