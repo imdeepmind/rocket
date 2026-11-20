@@ -27,9 +27,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: false,
     async sendVerificationEmail({user, token}) {
       const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        process.env.BETTER_AUTH_URL ||
-        'http://localhost:3000';
+        process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL!;
       const verificationUrl = `${appUrl}/auth/verify-email?token=${token}`;
 
       await sendEmailVerificationEmail({

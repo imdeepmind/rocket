@@ -158,9 +158,6 @@ e2e/*.db*
 # Design files
 Rocket Platform*
 
-# Drizzle migrations
-drizzle/
-
 # Next.js types
 next-env.d.ts
 

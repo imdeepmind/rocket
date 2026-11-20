@@ -1,9 +1,11 @@
 import {Pool} from 'pg';
 
-let poolInstance: Pool | null = null;
+const globalForDb = globalThis as unknown as {
+  pgPool?: Pool;
+};
 
 export function getDbPool(): Pool {
-  if (!poolInstance) {
+  if (!globalForDb.pgPool) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
@@ -11,10 +13,10 @@ export function getDbPool(): Pool {
       );
     }
 
-    poolInstance = new Pool({
+    globalForDb.pgPool = new Pool({
       connectionString,
     });
   }
 
-  return poolInstance;
+  return globalForDb.pgPool;
 }

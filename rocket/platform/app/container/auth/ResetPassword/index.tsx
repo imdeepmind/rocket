@@ -20,14 +20,13 @@ export default function ResetPassword(): React.JSX.Element {
   const token = searchParams.get('token');
   const errorParam = searchParams.get('error');
 
-  const initialMode =
-    errorParam ||
+  const hasError =
+    !token ||
+    Boolean(errorParam) ||
     searchParams.get('status') === 'error' ||
-    searchParams.get('state') === 'error'
-      ? 'error'
-      : 'success';
+    searchParams.get('state') === 'error';
 
-  const [mode, setMode] = useState<'success' | 'error'>(initialMode);
+  const mode = hasError ? 'error' : 'success';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -71,36 +70,6 @@ export default function ResetPassword(): React.JSX.Element {
       }
       footer={footer}
     >
-      {/* Dev preview toggle for switching between success and error */}
-      <div
-        className={styles.previewSwitcher}
-        role="group"
-        aria-label="Preview State Switcher"
-      >
-        <button
-          type="button"
-          className={`${styles.previewTab} ${mode === 'success' ? styles.previewTabActive : ''}`}
-          onClick={() => {
-            setMode('success');
-            setError(null);
-          }}
-          aria-pressed={mode === 'success'}
-        >
-          Success state
-        </button>
-        <button
-          type="button"
-          className={`${styles.previewTab} ${mode === 'error' ? styles.previewTabActive : ''}`}
-          onClick={() => {
-            setMode('error');
-            setError(null);
-          }}
-          aria-pressed={mode === 'error'}
-        >
-          Error state
-        </button>
-      </div>
-
       {mode === 'success' ? (
         <div className={styles.container}>
           <div
