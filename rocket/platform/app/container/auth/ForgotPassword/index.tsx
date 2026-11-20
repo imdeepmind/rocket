@@ -8,7 +8,7 @@ import AuthShell from '@/app/container/auth/AuthShell';
 import Button from '@/app/components/bits/Button';
 import TextBox from '@/app/components/bits/TextBox';
 
-import {authClient} from '@/app/lib/auth/client';
+import {forgotPassword} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
@@ -23,35 +23,16 @@ export default function ForgotPassword(): React.JSX.Element {
     setError(null);
     setSuccess(false);
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
-      setError('Please provide a valid email address');
+    setIsSubmitting(true);
+    const result = await forgotPassword(email);
+    setIsSubmitting(false);
+
+    if (!result.success) {
+      setError(result.error);
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const result = await authClient.requestPasswordReset({
-        email: trimmedEmail,
-        redirectTo: '/auth/reset-password',
-      });
-
-      if (result.error) {
-        setError(result.error.message || 'Failed to dispatch reset link');
-        setIsSubmitting(false);
-        return;
-      }
-
-      setSuccess(true);
-      setIsSubmitting(false);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'An unexpected error occurred while requesting password reset';
-      setError(message);
-      setIsSubmitting(false);
-    }
+    setSuccess(true);
   }
 
   const footer = (

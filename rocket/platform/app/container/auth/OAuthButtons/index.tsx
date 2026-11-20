@@ -4,7 +4,7 @@ import React, {useState} from 'react';
 
 import {GithubIcon, GoogleIcon} from '@/app/icons';
 
-import {authClient} from '@/app/lib/auth/client';
+import {signInWithSocial, SocialProvider} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
@@ -17,24 +17,11 @@ export default function OAuthButtons({
 }: OAuthButtonsProps): React.JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function handleOAuthClick(provider: 'Google' | 'GitHub') {
+  async function handleOAuthClick(provider: SocialProvider) {
     setNotice(null);
-    try {
-      const providerId = provider === 'Google' ? 'google' : 'github';
-      const result = await authClient.signIn.social({
-        provider: providerId,
-        callbackURL: '/',
-      });
-
-      if (result?.error) {
-        setNotice(result.error.message || `${provider} authentication failed.`);
-      }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : `${provider} OAuth is not available. Please verify your credentials.`;
-      setNotice(message);
+    const result = await signInWithSocial(provider);
+    if (!result.success && result.error) {
+      setNotice(result.error);
     }
   }
 

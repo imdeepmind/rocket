@@ -10,7 +10,7 @@ import OAuthButtons from '@/app/container/auth/OAuthButtons';
 import Button from '@/app/components/bits/Button';
 import TextBox from '@/app/components/bits/TextBox';
 
-import {authClient} from '@/app/lib/auth/client';
+import {signUpWithEmail} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
@@ -26,47 +26,17 @@ export default function SignUp(): React.JSX.Element {
     e.preventDefault();
     setError(null);
 
-    const trimmedUsername = username.trim();
-    const trimmedEmail = email.trim();
-
-    if (!trimmedUsername) {
-      setError('Please choose a username');
-      return;
-    }
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
-      setError('Please provide a valid email address');
-      return;
-    }
-    if (!password || password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
     setIsSubmitting(true);
-    try {
-      const result = await authClient.signUp.email({
-        email: trimmedEmail,
-        password,
-        name: trimmedUsername,
-        username: trimmedUsername,
-      });
+    const result = await signUpWithEmail({username, email, password});
+    setIsSubmitting(false);
 
-      if (result.error) {
-        setError(result.error.message || 'Failed to create account');
-        setIsSubmitting(false);
-        return;
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'An unexpected error occurred during account creation';
-      setError(message);
-      setIsSubmitting(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
     }
+
+    router.push('/');
+    router.refresh();
   }
 
   const footer = (

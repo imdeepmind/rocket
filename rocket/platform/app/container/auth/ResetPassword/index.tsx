@@ -11,7 +11,7 @@ import TextBox from '@/app/components/bits/TextBox';
 
 import {CheckIcon, CloseIcon} from '@/app/icons';
 
-import {authClient} from '@/app/lib/auth/client';
+import {resetPassword} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
@@ -38,38 +38,21 @@ export default function ResetPassword(): React.JSX.Element {
     e.preventDefault();
     setError(null);
 
-    if (!newPassword || newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      if (token) {
-        const result = await authClient.resetPassword({
-          newPassword,
-          token,
-        });
+    const result = await resetPassword({newPassword, token});
+    setIsSubmitting(false);
 
-        if (result.error) {
-          setError(result.error.message || 'Failed to reset password');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      setIsCompleted(true);
-      setIsSubmitting(false);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to reset password';
-      setError(message);
-      setIsSubmitting(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
     }
+
+    setIsCompleted(true);
   }
 
   const footer = (

@@ -10,7 +10,7 @@ import OAuthButtons from '@/app/container/auth/OAuthButtons';
 import Button from '@/app/components/bits/Button';
 import TextBox from '@/app/components/bits/TextBox';
 
-import {authClient} from '@/app/lib/auth/client';
+import {signInWithUsername} from '@/app/lib/auth';
 
 import styles from './styles.module.css';
 
@@ -25,39 +25,17 @@ export default function SignIn(): React.JSX.Element {
     e.preventDefault();
     setError(null);
 
-    const trimmedUsername = username.trim();
-    if (!trimmedUsername) {
-      setError('Please enter your username');
-      return;
-    }
-    if (!password) {
-      setError('Please enter your password');
-      return;
-    }
-
     setIsSubmitting(true);
-    try {
-      const result = await authClient.signIn.username({
-        username: trimmedUsername,
-        password,
-      });
+    const result = await signInWithUsername({username, password});
+    setIsSubmitting(false);
 
-      if (result.error) {
-        setError(result.error.message || 'Invalid username or password');
-        setIsSubmitting(false);
-        return;
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'An unexpected error occurred during sign in';
-      setError(message);
-      setIsSubmitting(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
     }
+
+    router.push('/');
+    router.refresh();
   }
 
   const footer = (
