@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function ActivityIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function ActivityIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="22"
@@ -17,4 +19,3 @@ export function ActivityIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.El
     </svg>
   );
 }
-

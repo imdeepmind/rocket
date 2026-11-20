@@ -155,3 +155,9 @@ playwright-report/
 e2e/.data/
 e2e/*.db*
 
+# Design files
+Rocket Platform*
+
+# Next.js types
+next-env.d.ts
+

@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function CloseIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function CloseIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="22"
@@ -19,4 +21,3 @@ export function CloseIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Eleme
     </svg>
   );
 }
-

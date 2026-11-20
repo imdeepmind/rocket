@@ -18,7 +18,11 @@
 .nextGlow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 90% at 50% 100%, rgba(225, 29, 72, 0.3), transparent);
+  background: radial-gradient(
+    60% 90% at 50% 100%,
+    rgba(225, 29, 72, 0.3),
+    transparent
+  );
   pointer-events: none;
 }
 
@@ -28,18 +32,19 @@
 }
 
 .title {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(38px, 5vw, 60px);
   line-height: 1.05;
   font-weight: 700;
   letter-spacing: -0.035em;
-  color: #F7F7FA;
+  color: #f7f7fa;
   max-width: 780px;
   margin: 0 auto 20px;
 }
 
 .description {
-  color: #B4B4C6;
+  color: #b4b4c6;
   font-size: clamp(16px, 1.8vw, 19px);
   max-width: 520px;
   margin: 0 auto 40px;
@@ -52,5 +57,3 @@
   justify-content: center;
   flex-wrap: wrap;
 }
-
-

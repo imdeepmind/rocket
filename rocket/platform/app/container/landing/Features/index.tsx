@@ -1,6 +1,9 @@
 import React from 'react';
-import { ZapIcon, LayersIcon, ActivityIcon, CodeIcon } from '@/app/icons';
+
 import Text from '@/app/components/bits/Text';
+
+import {ActivityIcon, CodeIcon, LayersIcon, ZapIcon} from '@/app/icons';
+
 import styles from './styles.module.css';
 
 interface FeatureItem {
@@ -48,7 +51,7 @@ export default function Features(): React.JSX.Element {
         </Text>
       </div>
       <div className={styles.featuresGrid}>
-        {FEATURES.map((feature) => {
+        {FEATURES.map(feature => {
           const IconComponent = feature.icon;
           return (
             <div key={feature.title} className={styles.featureCard}>
@@ -58,7 +61,12 @@ export default function Features(): React.JSX.Element {
               <Text as="h3" variant="h3" className={styles.featureTitle}>
                 {feature.title}
               </Text>
-              <Text as="p" variant="caption" color="muted" className={styles.featureDescription}>
+              <Text
+                as="p"
+                variant="caption"
+                color="muted"
+                className={styles.featureDescription}
+              >
                 {feature.description}
               </Text>
             </div>

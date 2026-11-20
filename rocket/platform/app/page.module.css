@@ -1,6 +1,6 @@
 .wrapper {
-  background-color: #08080D;
-  color: #F7F7FA;
+  background-color: #08080d;
+  color: #f7f7fa;
   font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.6;
@@ -25,7 +25,11 @@
   transform: translateX(-50%);
   width: 1400px;
   height: 900px;
-  background: radial-gradient(closest-side, rgba(225, 29, 72, 0.28), rgba(225, 29, 72, 0.06) 60%, transparent);
+  background: radial-gradient(
+    closest-side,
+    rgba(225, 29, 72, 0.28),
+    rgba(225, 29, 72, 0.06) 60%,
+    transparent
+  );
   pointer-events: none;
 }
-

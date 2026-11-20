@@ -1,9 +1,11 @@
-import React, { forwardRef } from 'react';
+'use client';
+
 import Link from 'next/link';
+import React, {forwardRef} from 'react';
+
 import styles from './styles.module.css';
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   href?: string;
@@ -31,7 +33,7 @@ export const Button = forwardRef<
     disabled,
     ...rest
   },
-  ref
+  ref,
 ) {
   const combinedClassName = [
     styles.button,
@@ -80,6 +82,7 @@ export const Button = forwardRef<
       className={combinedClassName}
       ref={ref as React.Ref<HTMLButtonElement>}
       disabled={disabled}
+      suppressHydrationWarning
       {...rest}
     >
       {children}
@@ -89,4 +92,3 @@ export const Button = forwardRef<
 
 Button.displayName = 'Button';
 export default Button;
-

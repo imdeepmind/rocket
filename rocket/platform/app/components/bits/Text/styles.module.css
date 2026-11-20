@@ -6,37 +6,40 @@
 
 /* Variants */
 .hero {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(40px, 5.5vw, 76px);
   line-height: 1.04;
   font-weight: 700;
   letter-spacing: -0.035em;
-  color: #F7F7FA;
+  color: #f7f7fa;
 }
 
 .h1 {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(36px, 5vw, 64px);
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #F7F7FA;
+  color: #f7f7fa;
 }
 
 .h2 {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(32px, 4vw, 48px);
   line-height: 1.15;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: #F7F7FA;
+  color: #f7f7fa;
 }
 
 .h3 {
   font-size: 18px;
   line-height: 1.35;
   font-weight: 600;
-  color: #F7F7FA;
+  color: #f7f7fa;
   letter-spacing: -0.015em;
 }
 
@@ -45,31 +48,31 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #FF6B85;
+  color: #ff6b85;
 }
 
 .lead {
   font-size: clamp(17px, 2vw, 20px);
   line-height: 1.65;
-  color: #B4B4C6;
+  color: #b4b4c6;
 }
 
 .body {
   font-size: 15px;
   line-height: 1.6;
-  color: #A9A9BB;
+  color: #a9a9bb;
 }
 
 .caption {
   font-size: 14px;
   line-height: 1.5;
-  color: #9C9CB0;
+  color: #9c9cb0;
 }
 
 .muted {
   font-size: 14px;
   line-height: 1.5;
-  color: #9C9CB0;
+  color: #9c9cb0;
 }
 
 .mono {
@@ -78,23 +81,23 @@
 
 /* Colors */
 .color-primary {
-  color: #E11D48;
+  color: #e11d48;
 }
 
 .color-secondary {
-  color: #A9A9BB;
+  color: #a9a9bb;
 }
 
 .color-muted {
-  color: #9C9CB0;
+  color: #9c9cb0;
 }
 
 .color-accent {
-  color: #FF6B85;
+  color: #ff6b85;
 }
 
 .color-white {
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 /* Weights */
@@ -126,4 +129,3 @@
 .align-right {
   text-align: right;
 }
-

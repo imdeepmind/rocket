@@ -20,7 +20,7 @@
   gap: 20px;
   flex-wrap: wrap;
   font-size: 14px;
-  color: #9C9CB0;
+  color: #9c9cb0;
 }
 
 .footerLinks {
@@ -30,7 +30,7 @@
 }
 
 .footerLinks a {
-  color: #9C9CB0;
+  color: #9c9cb0;
   text-decoration: none;
   transition: color 0.15s ease;
 }
@@ -61,4 +61,3 @@
     justify-content: center;
   }
 }
-

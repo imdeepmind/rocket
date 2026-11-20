@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function ZapIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function ZapIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="22"
@@ -18,4 +20,3 @@ export function ZapIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element
     </svg>
   );
 }
-

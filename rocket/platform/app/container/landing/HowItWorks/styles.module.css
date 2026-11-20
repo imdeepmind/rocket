@@ -17,16 +17,17 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #FF6B85;
+  color: #ff6b85;
   margin-bottom: 16px;
 }
 
 .title {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(36px, 4.5vw, 52px);
   line-height: 1.05;
   letter-spacing: -0.035em;
-  color: #F7F7FA;
+  color: #f7f7fa;
   font-weight: 600;
   max-width: 760px;
   margin: 0 auto 80px;
@@ -45,7 +46,12 @@
   left: 16%;
   right: 16%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
   pointer-events: none;
 }
 
@@ -54,32 +60,36 @@
 }
 
 .howStepNum {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   width: 54px;
   height: 54px;
   border-radius: 50%;
   margin: 0 auto 24px;
-  background: #E11D48;
+  background: #e11d48;
   display: grid;
   place-items: center;
   font-size: 20px;
   font-weight: 700;
   color: #ffffff;
-  box-shadow: 0 0 0 8px #08080D, 0 0 40px rgba(225, 29, 72, 0.5);
+  box-shadow:
+    0 0 0 8px #08080d,
+    0 0 40px rgba(225, 29, 72, 0.5);
 }
 
 .stepTitle {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #F7F7FA;
+  color: #f7f7fa;
   margin: 0 0 10px 0;
 }
 
 .stepDescription {
   margin: 0 auto;
-  color: #A9A9BB;
+  color: #a9a9bb;
   max-width: 280px;
   font-size: 16px;
   line-height: 1.6;
@@ -90,4 +100,3 @@
     display: none;
   }
 }
-

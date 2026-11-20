@@ -2,24 +2,43 @@
   "name": "platform",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prettier": "prettier --check .",
+    "prettier:write": "prettier --write .",
+    "format": "prettier --write .",
+    "auth:generate": "better-auth generate --config ./app/lib/auth/auth.ts --output ./app/lib/db/schema/auth.ts -y",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.1172.0",
+    "better-auth": "^1.7.26",
+    "drizzle-orm": "^0.45.4",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.22",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "prettier": "^3.10.1",
     "tailwindcss": "4.3.3",
     "typescript": "^5"
   }

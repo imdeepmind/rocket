@@ -1,6 +1,8 @@
-import React from 'react';
 import Link from 'next/link';
+import React from 'react';
+
 import Text from '@/app/components/bits/Text';
+
 import styles from './styles.module.css';
 
 export default function Footer(): React.JSX.Element {
@@ -33,7 +35,7 @@ export default function Footer(): React.JSX.Element {
           >
             GitHub
           </a>
-          <Link href="/sign-in">Sign In</Link>
+          <Link href="/auth/sign-in">Sign In</Link>
         </nav>
       </div>
     </footer>

@@ -1,0 +1,50 @@
+name: Rocket Platform
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: rocket/platform/package-lock.json
+      - name: Install dependencies
+        working-directory: rocket/platform
+        run: npm ci
+      - name: Lint
+        working-directory: rocket/platform
+        run: npm run lint
+      - name: Prettier check
+        working-directory: rocket/platform
+        run: npm run prettier
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: rocket/platform/package-lock.json
+      - name: Install dependencies
+        working-directory: rocket/platform
+        run: npm ci
+      - name: Copy env example
+        working-directory: rocket/platform
+        run: cp .env.example .env
+      - name: Build
+        working-directory: rocket/platform
+        run: npm run build

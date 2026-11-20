@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function CheckIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function CheckIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="14"
@@ -18,4 +20,3 @@ export function CheckIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Eleme
     </svg>
   );
 }
-

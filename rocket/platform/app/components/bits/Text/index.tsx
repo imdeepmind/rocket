@@ -1,4 +1,5 @@
 import React from 'react';
+
 import styles from './styles.module.css';
 
 export type TextVariant =
@@ -14,12 +15,7 @@ export type TextVariant =
   | 'mono';
 
 export type TextColor =
-  | 'default'
-  | 'primary'
-  | 'secondary'
-  | 'muted'
-  | 'accent'
-  | 'white';
+  'default' | 'primary' | 'secondary' | 'muted' | 'accent' | 'white';
 
 export interface TextProps<T extends React.ElementType = 'p'> {
   as?: T;
@@ -53,7 +49,11 @@ export function Text<T extends React.ElementType = 'p'>({
   className = '',
   children,
   ...rest
-}: TextProps<T> & Omit<React.ComponentPropsWithoutRef<T>, keyof TextProps<T>>): React.JSX.Element {
+}: TextProps<T> &
+  Omit<
+    React.ComponentPropsWithoutRef<T>,
+    keyof TextProps<T>
+  >): React.JSX.Element {
   const Component = as || DEFAULT_TAG_MAP[variant] || 'p';
 
   const combinedClassName = [
@@ -75,4 +75,3 @@ export function Text<T extends React.ElementType = 'p'>({
 }
 
 export default Text;
-

@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function ArrowRightIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function ArrowRightIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="16"
@@ -18,4 +20,3 @@ export function ArrowRightIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.
     </svg>
   );
 }
-

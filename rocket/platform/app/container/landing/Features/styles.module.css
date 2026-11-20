@@ -22,16 +22,17 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #FF6B85;
+  color: #ff6b85;
   margin-bottom: 16px;
 }
 
 .title {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: clamp(36px, 4.5vw, 52px);
   line-height: 1.05;
   letter-spacing: -0.035em;
-  color: #F7F7FA;
+  color: #f7f7fa;
   font-weight: 600;
   margin: 0;
 }
@@ -59,18 +60,18 @@
 }
 
 .featureTitle {
-  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #F7F7FA;
+  color: #f7f7fa;
   margin: 0 0 10px 0;
 }
 
 .featureDescription {
   margin: 0;
-  color: #A9A9BB;
+  color: #a9a9bb;
   font-size: 16px;
   line-height: 1.6;
 }
-

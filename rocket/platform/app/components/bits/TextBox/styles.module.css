@@ -8,12 +8,26 @@
   width: 100%;
 }
 
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
 .label {
   font-size: 13px;
   font-weight: 500;
-  color: #CFCFDC;
-  margin-bottom: 6px;
+  color: #cfcfdc;
+  margin-bottom: 0;
   user-select: none;
+}
+
+.labelRight {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .inputWrapper {
@@ -23,7 +37,10 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
   box-sizing: border-box;
 }
 
@@ -33,13 +50,13 @@
 }
 
 .inputWrapper:focus-within {
-  border-color: #E11D48;
+  border-color: #e11d48;
   box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
   background: rgba(255, 255, 255, 0.07);
 }
 
 .inputError {
-  border-color: #FF4D6D !important;
+  border-color: #ff4d6d !important;
 }
 
 .inputError:focus-within {
@@ -51,13 +68,13 @@
   background: transparent;
   border: none;
   outline: none;
-  color: #F7F7FA;
+  color: #f7f7fa;
   font-family: inherit;
   box-sizing: border-box;
 }
 
 .input::placeholder {
-  color: #9C9CB0;
+  color: #9c9cb0;
   opacity: 0.8;
 }
 
@@ -84,7 +101,7 @@
   align-items: center;
   justify-content: center;
   margin-right: 10px;
-  color: #9C9CB0;
+  color: #9c9cb0;
   flex-shrink: 0;
 }
 
@@ -93,7 +110,7 @@
   align-items: center;
   justify-content: center;
   margin-left: 10px;
-  color: #9C9CB0;
+  color: #9c9cb0;
   flex-shrink: 0;
 }
 
@@ -108,13 +125,12 @@
 
 .errorText {
   font-size: 12px;
-  color: #FF4D6D;
+  color: #ff4d6d;
   margin: 6px 0 0 0;
 }
 
 .hintText {
   font-size: 12px;
-  color: #9C9CB0;
+  color: #9c9cb0;
   margin: 6px 0 0 0;
 }
-
