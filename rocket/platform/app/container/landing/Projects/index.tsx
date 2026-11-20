@@ -53,7 +53,7 @@ export default function Projects(): React.JSX.Element {
                 Your deployed backend services
               </Text>
             </div>
-            <Button href="#" size="md" variant="primary">
+            <Button href="/auth/sign-in" size="md" variant="primary">
               + New project
             </Button>
           </div>

@@ -85,9 +85,14 @@ export default function Navbar(): React.JSX.Element {
       {/* Header Actions */}
       <div className={styles.headerActions}>
         {isLoggedIn ? (
-          <Button size="md" onClick={handleLogout} disabled={isLoggingOut}>
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </Button>
+          <>
+            <Link href="/dashboard" className={styles.signInLink}>
+              Dashboard
+            </Link>
+            <Button size="md" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
+            </Button>
+          </>
         ) : (
           <>
             <Link href="/auth/sign-in" className={styles.signInLink}>
@@ -139,15 +144,20 @@ export default function Navbar(): React.JSX.Element {
           GitHub
         </a>
         {isLoggedIn ? (
-          <Button
-            size="md"
-            fullWidth
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            style={{marginTop: '8px'}}
-          >
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </Button>
+          <>
+            <Link href="/dashboard" onClick={closeMenu}>
+              Dashboard
+            </Link>
+            <Button
+              size="md"
+              fullWidth
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              style={{marginTop: '8px'}}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
+            </Button>
+          </>
         ) : (
           <>
             <Link href="/auth/sign-in" onClick={closeMenu}>

@@ -30,7 +30,7 @@ export default function Hero(): React.JSX.Element {
           of deployment and hosting.
         </Text>
         <div className={styles.ctaGroup}>
-          <Button href="/docs/get-started" size="lg" variant="primary">
+          <Button href="/auth/sign-up" size="lg" variant="primary">
             Get started <ArrowRightIcon />
           </Button>
           <Button href="/docs" size="lg" variant="ghost">
