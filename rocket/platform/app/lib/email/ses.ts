@@ -1,8 +1,4 @@
-import {
-  SESClient,
-  SendEmailCommand,
-  type Body,
-} from '@aws-sdk/client-ses';
+import {SendEmailCommand, SESClient, type Body} from '@aws-sdk/client-ses';
 
 export interface SendEmailOptions {
   to: string | string[];

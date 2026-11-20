@@ -1,10 +1,10 @@
 'use client';
 
-import React, { forwardRef, useId } from 'react';
+import React, {forwardRef, useId} from 'react';
+
 import styles from './styles.module.css';
 
-export interface TextBoxProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface TextBoxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
   error?: string;
@@ -31,7 +31,7 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
       disabled,
       ...rest
     },
-    ref
+    ref,
   ) {
     const generatedId = useId();
     const id = customId || generatedId;
@@ -54,7 +54,9 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
                 {label}
               </label>
             )}
-            {labelRight && <div className={styles.labelRight}>{labelRight}</div>}
+            {labelRight && (
+              <div className={styles.labelRight}>{labelRight}</div>
+            )}
           </div>
         )}
 
@@ -82,9 +84,8 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
         {!error && hint && <p className={styles.hintText}>{hint}</p>}
       </div>
     );
-  }
+  },
 );
 
 TextBox.displayName = 'TextBox';
 export default TextBox;
-

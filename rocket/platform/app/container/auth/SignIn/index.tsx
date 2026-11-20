@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import TextBox from '@/app/components/bits/TextBox';
+import {useRouter} from 'next/navigation';
+import React, {useState} from 'react';
+
+import AuthShell from '@/app/container/auth/AuthShell';
+import OAuthButtons from '@/app/container/auth/OAuthButtons';
+
 import Button from '@/app/components/bits/Button';
-import { authClient } from '@/app/lib/auth/client';
-import AuthShell from '../AuthShell';
-import OAuthButtons from '../OAuthButtons';
+import TextBox from '@/app/components/bits/TextBox';
+
+import {authClient} from '@/app/lib/auth/client';
+
 import styles from './styles.module.css';
 
 export default function SignIn(): React.JSX.Element {
@@ -75,7 +79,10 @@ export default function SignIn(): React.JSX.Element {
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
         {error && (
-          <div className={`${styles.feedbackBanner} ${styles.error}`} role="alert">
+          <div
+            className={`${styles.feedbackBanner} ${styles.error}`}
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -87,7 +94,7 @@ export default function SignIn(): React.JSX.Element {
           type="text"
           placeholder="yourname"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
           fullWidth
           autoComplete="username"
           required
@@ -105,7 +112,7 @@ export default function SignIn(): React.JSX.Element {
           type="password"
           placeholder="••••••••"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           fullWidth
           autoComplete="current-password"
           required
@@ -126,4 +133,3 @@ export default function SignIn(): React.JSX.Element {
     </AuthShell>
   );
 }
-

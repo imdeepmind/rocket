@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
-cd "$(dirname "$0")/../ross"
+set -e
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Ross checks
+cd "$ROOT_DIR/ross"
 npm run lint:check
 npm run compile
 npm run coverage
+
+# Rocket Platform checks
+cd "$ROOT_DIR/rocket/platform"
+npm run lint
+npm run prettier
+npm run build

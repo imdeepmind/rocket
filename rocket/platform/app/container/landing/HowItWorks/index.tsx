@@ -1,5 +1,7 @@
 import React from 'react';
+
 import Text from '@/app/components/bits/Text';
+
 import styles from './styles.module.css';
 
 interface Step {
@@ -39,13 +41,18 @@ export default function HowItWorks(): React.JSX.Element {
       </Text>
       <div className={styles.howGrid}>
         <div className={styles.howLine} />
-        {STEPS.map((step) => (
+        {STEPS.map(step => (
           <div key={step.num} className={styles.stepCard}>
             <div className={styles.howStepNum}>{step.num}</div>
             <Text as="h3" variant="h3" className={styles.stepTitle}>
               {step.title}
             </Text>
-            <Text as="p" variant="caption" color="muted" className={styles.stepDescription}>
+            <Text
+              as="p"
+              variant="caption"
+              color="muted"
+              className={styles.stepDescription}
+            >
               {step.description}
             </Text>
           </div>

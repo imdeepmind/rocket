@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function RocketIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function RocketIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="18"
@@ -19,4 +21,3 @@ export function RocketIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Elem
     </svg>
   );
 }
-

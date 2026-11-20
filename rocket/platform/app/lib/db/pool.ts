@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import {Pool} from 'pg';
 
 let poolInstance: Pool | null = null;
 
@@ -7,7 +7,7 @@ export function getDbPool(): Pool {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
-        'DATABASE_URL environment variable is not defined. Please configure it in your .env file.'
+        'DATABASE_URL environment variable is not defined. Please configure it in your .env file.',
       );
     }
 
@@ -18,4 +18,3 @@ export function getDbPool(): Pool {
 
   return poolInstance;
 }
-

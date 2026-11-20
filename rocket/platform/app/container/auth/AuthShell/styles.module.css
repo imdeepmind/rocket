@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 16px;
-  background-color: #08080D;
+  background-color: #08080d;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -59,7 +59,7 @@
   font-family: var(--font-space-grotesk), sans-serif;
   font-size: 17px;
   font-weight: 600;
-  color: #FFFFFF;
+  color: #ffffff;
   letter-spacing: -0.01em;
 }
 
@@ -85,7 +85,7 @@
   font-family: var(--font-space-grotesk), sans-serif;
   font-size: 26px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #ffffff;
   letter-spacing: -0.02em;
   margin: 0 0 8px 0;
   line-height: 1.25;
@@ -93,7 +93,7 @@
 
 .subtitle {
   font-size: 14px;
-  color: #9C9CB0;
+  color: #9c9cb0;
   margin: 0;
   line-height: 1.5;
 }
@@ -102,18 +102,20 @@
   margin-top: 24px;
   text-align: center;
   font-size: 13px;
-  color: #9C9CB0;
+  color: #9c9cb0;
 }
 
 .footerLink {
-  color: #FF6B85;
+  color: #ff6b85;
   font-weight: 500;
   text-decoration: none;
-  transition: color 0.15s ease, text-decoration 0.15s ease;
+  transition:
+    color 0.15s ease,
+    text-decoration 0.15s ease;
 }
 
 .footerLink:hover {
-  color: #FF8FA3;
+  color: #ff8fa3;
   text-decoration: underline;
 }
 
@@ -130,4 +132,3 @@
     font-size: 23px;
   }
 }
-

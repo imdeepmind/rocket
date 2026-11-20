@@ -1,7 +1,7 @@
 import React from 'react';
 
 export function GoogleIcon(
-  props: React.SVGProps<SVGSVGElement>
+  props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (
     <svg
@@ -30,4 +30,3 @@ export function GoogleIcon(
     </svg>
   );
 }
-

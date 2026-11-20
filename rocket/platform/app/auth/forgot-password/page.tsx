@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+import type {Metadata} from 'next';
+
 import ForgotPassword from '@/app/container/auth/ForgotPassword';
 
 export const metadata: Metadata = {
@@ -9,4 +10,3 @@ export const metadata: Metadata = {
 export default function ForgotPasswordPage(): React.JSX.Element {
   return <ForgotPassword />;
 }
-

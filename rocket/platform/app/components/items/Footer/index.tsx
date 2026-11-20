@@ -1,6 +1,8 @@
-import React from 'react';
 import Link from 'next/link';
+import React from 'react';
+
 import Text from '@/app/components/bits/Text';
+
 import styles from './styles.module.css';
 
 export default function Footer(): React.JSX.Element {

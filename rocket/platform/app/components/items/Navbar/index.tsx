@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
-import { MenuIcon, CloseIcon } from '@/app/icons';
+import Link from 'next/link';
+import React, {useEffect, useState} from 'react';
+
 import Button from '@/app/components/bits/Button';
+
+import {CloseIcon, MenuIcon} from '@/app/icons';
+
 import styles from './styles.module.css';
 
 export default function Navbar(): React.JSX.Element {
@@ -32,7 +35,7 @@ export default function Navbar(): React.JSX.Element {
           alt="Rocket Logo"
           width={32}
           height={32}
-          style={{ objectFit: 'contain', display: 'block', borderRadius: '6px' }}
+          style={{objectFit: 'contain', display: 'block', borderRadius: '6px'}}
         />
         Rocket
       </Link>
@@ -114,7 +117,7 @@ export default function Navbar(): React.JSX.Element {
           size="md"
           fullWidth
           onClick={closeMenu}
-          style={{ marginTop: '8px' }}
+          style={{marginTop: '8px'}}
         >
           Get started
         </Button>

@@ -1,5 +1,6 @@
-import React, { Suspense } from 'react';
-import type { Metadata } from 'next';
+import type {Metadata} from 'next';
+import React, {Suspense} from 'react';
+
 import ResetPassword from '@/app/container/auth/ResetPassword';
 
 export const metadata: Metadata = {
@@ -14,4 +15,3 @@ export default function ResetPasswordPage(): React.JSX.Element {
     </Suspense>
   );
 }
-

@@ -1,6 +1,8 @@
 import React from 'react';
 
-export function MenuIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Element {
+export function MenuIcon(
+  props: React.SVGProps<SVGSVGElement>,
+): React.JSX.Element {
   return (
     <svg
       width="22"
@@ -20,4 +22,3 @@ export function MenuIcon(props: React.SVGProps<SVGSVGElement>): React.JSX.Elemen
     </svg>
   );
 }
-

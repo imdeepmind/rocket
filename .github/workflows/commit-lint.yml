@@ -1,0 +1,33 @@
+name: Rocket Common
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  commit-lint:
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: ross/package-lock.json
+      - name: Install dependencies
+        working-directory: ross
+        run: npm ci
+      - name: Lint commit message
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            ./ross/node_modules/.bin/commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+          else
+            ./ross/node_modules/.bin/commitlint --from ${{ github.event.before }} --to ${{ github.event.after }} --verbose
+          fi
+

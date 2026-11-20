@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link';
-import TextBox from '@/app/components/bits/TextBox';
+import React, {useState} from 'react';
+
+import AuthShell from '@/app/container/auth/AuthShell';
+
 import Button from '@/app/components/bits/Button';
-import { authClient } from '@/app/lib/auth/client';
-import AuthShell from '../AuthShell';
+import TextBox from '@/app/components/bits/TextBox';
+
+import {authClient} from '@/app/lib/auth/client';
+
 import styles from './styles.module.css';
 
 export default function ForgotPassword(): React.JSX.Element {
@@ -64,7 +68,10 @@ export default function ForgotPassword(): React.JSX.Element {
     >
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
         {error && (
-          <div className={`${styles.feedbackBanner} ${styles.error}`} role="alert">
+          <div
+            className={`${styles.feedbackBanner} ${styles.error}`}
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -85,7 +92,7 @@ export default function ForgotPassword(): React.JSX.Element {
           type="email"
           placeholder="you@company.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           fullWidth
           autoComplete="email"
           required
@@ -106,4 +113,3 @@ export default function ForgotPassword(): React.JSX.Element {
     </AuthShell>
   );
 }
-

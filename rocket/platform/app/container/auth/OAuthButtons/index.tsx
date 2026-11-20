@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { GoogleIcon, GithubIcon } from '@/app/icons';
-import { authClient } from '@/app/lib/auth/client';
+import React, {useState} from 'react';
+
+import {GithubIcon, GoogleIcon} from '@/app/icons';
+
+import {authClient} from '@/app/lib/auth/client';
+
 import styles from './styles.module.css';
 
 export interface OAuthButtonsProps {
@@ -83,4 +86,3 @@ export default function OAuthButtons({
     </div>
   );
 }
-

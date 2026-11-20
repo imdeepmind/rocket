@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+import type {Metadata} from 'next';
+
 import SignIn from '@/app/container/auth/SignIn';
 
 export const metadata: Metadata = {
@@ -9,4 +10,3 @@ export const metadata: Metadata = {
 export default function SignInPage(): React.JSX.Element {
   return <SignIn />;
 }
-

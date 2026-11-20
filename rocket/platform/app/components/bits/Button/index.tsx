@@ -1,11 +1,11 @@
 'use client';
 
-import React, { forwardRef } from 'react';
 import Link from 'next/link';
+import React, {forwardRef} from 'react';
+
 import styles from './styles.module.css';
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   href?: string;
@@ -33,7 +33,7 @@ export const Button = forwardRef<
     disabled,
     ...rest
   },
-  ref
+  ref,
 ) {
   const combinedClassName = [
     styles.button,
@@ -92,4 +92,3 @@ export const Button = forwardRef<
 
 Button.displayName = 'Button';
 export default Button;
-

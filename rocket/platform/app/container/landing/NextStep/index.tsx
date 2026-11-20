@@ -1,6 +1,8 @@
 import React from 'react';
+
 import Button from '@/app/components/bits/Button';
 import Text from '@/app/components/bits/Text';
+
 import styles from './styles.module.css';
 
 export default function NextStep(): React.JSX.Element {

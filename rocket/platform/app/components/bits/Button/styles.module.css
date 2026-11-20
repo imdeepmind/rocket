@@ -9,7 +9,11 @@
   cursor: pointer;
   border: none;
   font-family: inherit;
-  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
   user-select: none;
   box-sizing: border-box;
 }
@@ -24,7 +28,7 @@
 }
 
 .button:disabled,
-.button[aria-disabled="true"] {
+.button[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
@@ -35,14 +39,16 @@
 /* Variants */
 .primary {
   color: #ffffff !important;
-  background: #E11D48;
-  box-shadow: 0 8px 28px rgba(225, 29, 72, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: #e11d48;
+  box-shadow:
+    0 8px 28px rgba(225, 29, 72, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .ghost {
   background: rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: #F7F7FA !important;
+  color: #f7f7fa !important;
 }
 
 .ghost:hover {
@@ -72,4 +78,3 @@
 .fullWidth {
   width: 100%;
 }
-

@@ -1,2 +1,1 @@
-export * from './ses';
-
+export * from '@/app/lib/email/ses';

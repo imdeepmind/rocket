@@ -1,7 +1,10 @@
 import React from 'react';
-import { ArrowRightIcon } from '@/app/icons';
+
 import Button from '@/app/components/bits/Button';
 import Text from '@/app/components/bits/Text';
+
+import {ArrowRightIcon} from '@/app/icons';
+
 import styles from './styles.module.css';
 
 export default function Hero(): React.JSX.Element {
@@ -39,30 +42,53 @@ export default function Hero(): React.JSX.Element {
       <div className={styles.heroVisualCol}>
         <div className={`${styles.glass} ${styles.windowCard}`}>
           <div className={styles.windowDots}>
-            <span className={styles.windowDot} style={{ background: '#FF5F57' }} />
-            <span className={styles.windowDot} style={{ background: '#FEBC2E' }} />
-            <span className={styles.windowDot} style={{ background: '#28C840' }} />
+            <span
+              className={styles.windowDot}
+              style={{background: '#FF5F57'}}
+            />
+            <span
+              className={styles.windowDot}
+              style={{background: '#FEBC2E'}}
+            />
+            <span
+              className={styles.windowDot}
+              style={{background: '#28C840'}}
+            />
           </div>
 
           <div className={styles.row}>
-            <span className={styles.dot} aria-hidden="true">✓</span>
+            <span className={styles.dot} aria-hidden="true">
+              ✓
+            </span>
             <div>
               <Text as="div" weight="semibold" className={styles.rowTitle}>
                 Configuration
               </Text>
-              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+              <Text
+                as="div"
+                variant="caption"
+                color="muted"
+                className={styles.rowSubtitle}
+              >
                 Your deployment is ready
               </Text>
             </div>
           </div>
 
           <div className={styles.row}>
-            <span className={styles.dot} aria-hidden="true">✓</span>
+            <span className={styles.dot} aria-hidden="true">
+              ✓
+            </span>
             <div>
               <Text as="div" weight="semibold" className={styles.rowTitle}>
                 Provisioning infrastructure
               </Text>
-              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+              <Text
+                as="div"
+                variant="caption"
+                color="muted"
+                className={styles.rowSubtitle}
+              >
                 Resources set up
               </Text>
             </div>
@@ -74,19 +100,31 @@ export default function Hero(): React.JSX.Element {
               <Text as="div" weight="semibold" className={styles.rowTitle}>
                 Deploying service
               </Text>
-              <Text as="div" variant="caption" color="muted" className={styles.rowSubtitle}>
+              <Text
+                as="div"
+                variant="caption"
+                color="muted"
+                className={styles.rowSubtitle}
+              >
                 This may take a minute…
               </Text>
             </div>
           </div>
 
           <div className={`${styles.row} ${styles.successRow}`}>
-            <span className={styles.dot} aria-hidden="true">✓</span>
+            <span className={styles.dot} aria-hidden="true">
+              ✓
+            </span>
             <div>
               <Text as="div" weight="semibold" className={styles.successTitle}>
                 Deployment successful
               </Text>
-              <Text as="div" variant="caption" color="muted" className={styles.successSubtitle}>
+              <Text
+                as="div"
+                variant="caption"
+                color="muted"
+                className={styles.successSubtitle}
+              >
                 Your API is live
               </Text>
             </div>
@@ -94,10 +132,20 @@ export default function Hero(): React.JSX.Element {
         </div>
 
         <div className={`${styles.mono} ${styles.floatingCard}`}>
-          <Text as="div" variant="caption" color="muted" className={styles.endpointLabel}>
+          <Text
+            as="div"
+            variant="caption"
+            color="muted"
+            className={styles.endpointLabel}
+          >
             API endpoint
           </Text>
-          <Text as="div" variant="mono" color="white" className={styles.endpointUrl}>
+          <Text
+            as="div"
+            variant="mono"
+            color="white"
+            className={styles.endpointUrl}
+          >
             https://api.rocket.dev
           </Text>
         </div>

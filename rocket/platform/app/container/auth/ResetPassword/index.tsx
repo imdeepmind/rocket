@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import TextBox from '@/app/components/bits/TextBox';
+import {useSearchParams} from 'next/navigation';
+import React, {useState} from 'react';
+
+import AuthShell from '@/app/container/auth/AuthShell';
+
 import Button from '@/app/components/bits/Button';
-import { CheckIcon, CloseIcon } from '@/app/icons';
-import { authClient } from '@/app/lib/auth/client';
-import AuthShell from '../AuthShell';
+import TextBox from '@/app/components/bits/TextBox';
+
+import {CheckIcon, CloseIcon} from '@/app/icons';
+
+import {authClient} from '@/app/lib/auth/client';
+
 import styles from './styles.module.css';
 
 export default function ResetPassword(): React.JSX.Element {
@@ -16,7 +21,9 @@ export default function ResetPassword(): React.JSX.Element {
   const errorParam = searchParams.get('error');
 
   const initialMode =
-    errorParam || searchParams.get('status') === 'error' || searchParams.get('state') === 'error'
+    errorParam ||
+    searchParams.get('status') === 'error' ||
+    searchParams.get('state') === 'error'
       ? 'error'
       : 'success';
 
@@ -82,7 +89,11 @@ export default function ResetPassword(): React.JSX.Element {
       footer={footer}
     >
       {/* Dev preview toggle for switching between success and error */}
-      <div className={styles.previewSwitcher} role="group" aria-label="Preview State Switcher">
+      <div
+        className={styles.previewSwitcher}
+        role="group"
+        aria-label="Preview State Switcher"
+      >
         <button
           type="button"
           className={`${styles.previewTab} ${mode === 'success' ? styles.previewTabActive : ''}`}
@@ -117,7 +128,9 @@ export default function ResetPassword(): React.JSX.Element {
           </div>
 
           <h2 className={styles.title}>
-            {isCompleted ? 'Password reset successfully' : 'Reset link verified'}
+            {isCompleted
+              ? 'Password reset successfully'
+              : 'Reset link verified'}
           </h2>
           <p className={styles.description}>
             {isCompleted
@@ -127,7 +140,12 @@ export default function ResetPassword(): React.JSX.Element {
 
           {isCompleted ? (
             <div className={styles.actionRow}>
-              <Button href="/auth/sign-in" variant="primary" size="md" fullWidth>
+              <Button
+                href="/auth/sign-in"
+                variant="primary"
+                size="md"
+                fullWidth
+              >
                 Sign in to your account
               </Button>
             </div>
@@ -149,7 +167,7 @@ export default function ResetPassword(): React.JSX.Element {
                 type="password"
                 placeholder="At least 8 characters"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={e => setNewPassword(e.target.value)}
                 fullWidth
                 autoComplete="new-password"
                 required
@@ -162,7 +180,7 @@ export default function ResetPassword(): React.JSX.Element {
                 type="password"
                 placeholder="Re-enter new password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={e => setConfirmPassword(e.target.value)}
                 fullWidth
                 autoComplete="new-password"
                 required

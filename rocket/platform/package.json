@@ -2,11 +2,17 @@
   "name": "platform",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "prettier": "prettier --check .",
+    "prettier:write": "prettier --write .",
+    "format": "prettier --write .",
     "auth:generate": "better-auth generate --config ./app/lib/auth/auth.ts --output ./app/lib/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -24,6 +30,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.22",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -31,6 +38,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "prettier": "^3.10.1",
     "tailwindcss": "4.3.3",
     "typescript": "^5"
   }
