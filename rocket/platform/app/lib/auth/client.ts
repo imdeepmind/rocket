@@ -26,6 +26,19 @@ export interface ResetPasswordParams {
   token?: string | null;
 }
 
+export interface VerifyEmailParams {
+  token: string;
+}
+
+export interface VerifyEmailData {
+  user?: {
+    id?: string;
+    email?: string;
+    name?: string;
+  };
+  status?: boolean;
+}
+
 export type SocialProvider = 'google' | 'github' | 'Google' | 'GitHub';
 
 export async function forgotPassword(
@@ -100,6 +113,71 @@ export async function resetPassword({
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : 'Failed to reset password';
+    return {success: false, error: message};
+  }
+}
+
+export async function sendVerificationEmail(
+  email: string,
+): Promise<AuthActionResult> {
+  try {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      return {success: false, error: 'Please enter a valid email address'};
+    }
+
+    const result = await authClient.sendVerificationEmail({
+      email: trimmedEmail,
+    });
+
+    if (result?.error) {
+      return {
+        success: false,
+        error: result.error.message || 'Failed to dispatch verification email',
+      };
+    }
+
+    return {success: true, error: null, data: result?.data};
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'An unexpected error occurred while sending verification email';
+    return {success: false, error: message};
+  }
+}
+
+export async function verifyEmail({
+  token,
+}: VerifyEmailParams): Promise<AuthActionResult<VerifyEmailData>> {
+  try {
+    if (!token) {
+      return {success: false, error: 'Verification token is required'};
+    }
+
+    const result = await authClient.verifyEmail({
+      query: {
+        token,
+      },
+    });
+
+    if (result?.error) {
+      return {
+        success: false,
+        error: result.error.message || 'Failed to verify email address',
+      };
+    }
+
+    return {
+      success: true,
+      error: null,
+      data: result?.data as VerifyEmailData | undefined,
+    };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'An unexpected error occurred while verifying email';
     return {success: false, error: message};
   }
 }

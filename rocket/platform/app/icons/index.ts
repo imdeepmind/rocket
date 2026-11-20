@@ -9,3 +9,4 @@ export * from '@/app/icons/MenuIcon';
 export * from '@/app/icons/CloseIcon';
 export * from '@/app/icons/GithubIcon';
 export * from '@/app/icons/GoogleIcon';
+export * from '@/app/icons/MailIcon';

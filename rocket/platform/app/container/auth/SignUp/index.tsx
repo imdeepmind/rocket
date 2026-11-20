@@ -26,8 +26,9 @@ export default function SignUp(): React.JSX.Element {
     e.preventDefault();
     setError(null);
 
+    const trimmedEmail = email.trim();
     setIsSubmitting(true);
-    const result = await signUpWithEmail({name, email, password});
+    const result = await signUpWithEmail({name, email: trimmedEmail, password});
     setIsSubmitting(false);
 
     if (!result.success) {
@@ -35,8 +36,7 @@ export default function SignUp(): React.JSX.Element {
       return;
     }
 
-    router.push('/');
-    router.refresh();
+    router.push(`/auth/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
   }
 
   const footer = (
