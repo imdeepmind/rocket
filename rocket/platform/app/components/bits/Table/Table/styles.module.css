@@ -1,0 +1,9 @@
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 13px;
+  color: #f7f7fa;
+  text-align: left;
+}

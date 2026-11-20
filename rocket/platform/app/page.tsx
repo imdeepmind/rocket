@@ -16,9 +16,8 @@ import styles from './page.module.css';
 export default function Home(): React.JSX.Element {
   return (
     <main className={styles.wrapper}>
-      {/* Ambient top hero glow, Header & Hero */}
+      {/* Header & Hero */}
       <div className={styles.heroWrapper}>
-        <div className={styles.heroGlow} aria-hidden="true" />
         <Navbar />
         <Hero />
       </div>

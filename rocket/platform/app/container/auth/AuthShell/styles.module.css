@@ -7,28 +7,9 @@
   align-items: center;
   justify-content: center;
   padding: 48px 16px;
-  background-color: #08080d;
+  background-color: transparent;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.ambientGlow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%);
-  width: 900px;
-  height: 650px;
-  background: radial-gradient(
-    circle at center,
-    rgba(225, 29, 72, 0.22) 0%,
-    rgba(225, 29, 72, 0.08) 35%,
-    rgba(225, 29, 72, 0.02) 55%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(20px);
 }
 
 .container {

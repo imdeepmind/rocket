@@ -1,0 +1,10 @@
+.emptyCell {
+  padding: 48px 24px;
+  text-align: center;
+  color: #8f90a6;
+  font-size: 14px;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
