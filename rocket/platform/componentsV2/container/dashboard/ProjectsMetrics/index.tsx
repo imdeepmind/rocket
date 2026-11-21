@@ -9,6 +9,8 @@ import LayersIcon from '@/icons/LayersIcon';
 import PauseIcon from '@/icons/PauseIcon';
 import TrendUpIcon from '@/icons/TrendUpIcon';
 
+import styles from './styles.module.css';
+
 export interface ProjectsMetricsData {
   totalProjects: number;
   active: number;
@@ -36,7 +38,7 @@ export default function ProjectsMetrics({
 }: ProjectsMetricsProps): React.JSX.Element {
   return (
     <Box mb="6" classNameOverride={classNameOverride}>
-      <Grid columns={4} gap="4">
+      <Grid columns={4} gap="4" classNameOverride={styles.metricsGrid}>
         <MetricCard
           title="Total projects"
           value={metrics.totalProjects}

@@ -1,25 +1,52 @@
 .container {
   width: 100%;
   overflow-x: auto;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  background-color: var(--color-surface);
+  -webkit-overflow-scrolling: touch;
+  background-color: transparent;
+  border: none;
+}
+
+.container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+}
+
+.container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   text-align: left;
 }
 
 .headerRow {
-  background-color: var(--color-surface-subtle);
+  background-color: transparent;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .headerCell {
-  padding: 12px 18px;
+  padding: 12px 16px;
   font-family: var(--font-inter);
+  white-space: nowrap;
+}
+
+.headerCell:first-child {
+  padding-left: 24px;
+}
+
+.headerCell:last-child {
+  padding-right: 24px;
 }
 
 .bodyRow {
@@ -32,18 +59,27 @@
 }
 
 .bodyRow:hover {
-  background-color: var(--color-surface-hover);
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 .bodyCell {
-  padding: 14px 18px;
-  font-size: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
   color: var(--foreground);
   font-family: var(--font-inter);
   vertical-align: middle;
+  white-space: nowrap;
+}
+
+.bodyCell:first-child {
+  padding-left: 24px;
+}
+
+.bodyCell:last-child {
+  padding-right: 24px;
 }
 
 .emptyCell {
-  padding: 48px 18px;
+  padding: 48px 24px;
   text-align: center;
 }

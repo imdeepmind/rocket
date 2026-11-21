@@ -2,6 +2,9 @@
 
 import React from 'react';
 
+import Flex from '@/componentsV2/bits/Flex';
+import Typography from '@/componentsV2/bits/Typography';
+
 import styles from './styles.module.css';
 
 export interface TabItem {
@@ -23,12 +26,13 @@ export default function Tabs({
   onChange,
   classNameOverride,
 }: TabsProps): React.JSX.Element {
-  const containerClasses = [styles.tablist, classNameOverride]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <div className={containerClasses} role="tablist">
+    <Flex
+      align="center"
+      gap="1"
+      classNameOverride={classNameOverride ?? styles.tablist}
+      role="tablist"
+    >
       {items.map(item => {
         const isActive = activeKey === item.key;
         const tabClasses = [styles.tab, isActive ? styles.tabActive : '']
@@ -36,21 +40,37 @@ export default function Tabs({
           .join(' ');
 
         return (
-          <button
-            key={item.key}
+          <Flex
+            as="button"
             type="button"
+            key={item.key}
             role="tab"
             aria-selected={isActive}
-            className={tabClasses}
+            align="center"
+            gap="2"
+            classNameOverride={tabClasses}
             onClick={() => onChange(item.key)}
           >
-            <span>{item.label}</span>
+            <Typography
+              as="span"
+              variant="caption"
+              weight={isActive ? 'semibold' : 'medium'}
+              classNameOverride={styles.tabLabel}
+            >
+              {item.label}
+            </Typography>
             {item.count !== undefined && (
-              <span className={styles.badge}>{item.count}</span>
+              <Typography
+                as="span"
+                variant="caption"
+                classNameOverride={styles.badge}
+              >
+                {item.count}
+              </Typography>
             )}
-          </button>
+          </Flex>
         );
       })}
-    </div>
+    </Flex>
   );
 }

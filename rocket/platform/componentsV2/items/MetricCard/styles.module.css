@@ -3,6 +3,12 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 120px;
+  transition: all 0.2s ease;
+}
+
+.metricCard:hover {
+  background: rgba(24, 24, 38, 0.75);
+  transform: translateY(-1px);
 }
 
 .topRow {
@@ -70,4 +76,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .metricCard {
+    min-height: 96px;
+    padding: var(--spacing-4) var(--spacing-5);
+  }
+
+  .topRow {
+    margin-bottom: 8px;
+  }
+
+  .value {
+    font-size: 26px;
+  }
 }

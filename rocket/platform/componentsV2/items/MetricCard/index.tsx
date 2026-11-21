@@ -1,6 +1,8 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
 import ProgressBar from '@/componentsV2/bits/ProgressBar';
 import Typography from '@/componentsV2/bits/Typography';
 
@@ -38,38 +40,52 @@ export default function MetricCard({
   classNameOverride,
   ...props
 }: MetricCardProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.metricCard;
+  const combinedClass = classNameOverride
+    ? `${styles.metricCard} ${classNameOverride}`
+    : styles.metricCard;
 
   return (
-    <Card padding="md" classNameOverride={combinedClass} {...props}>
-      <div className={styles.topRow}>
+    <Card
+      variant="glass"
+      radius="2xl"
+      padding="md"
+      classNameOverride={combinedClass}
+      {...props}
+    >
+      <Flex justify="between" align="center" mb="3">
         <Typography variant="body-sm" color="muted">
           {title}
         </Typography>
         {icon && (
-          <div className={[styles.iconBadge, styles[iconVariant]].join(' ')}>
+          <Flex
+            align="center"
+            justify="center"
+            classNameOverride={[styles.iconBadge, styles[iconVariant]].join(
+              ' ',
+            )}
+          >
             {icon}
-          </div>
+          </Flex>
         )}
-      </div>
+      </Flex>
 
-      <div className={styles.content}>
-        <Typography variant="h2" weight="bold" classNameOverride={styles.value}>
+      <Flex direction="column">
+        <Typography variant="h1" weight="bold" classNameOverride={styles.value}>
           {value}
         </Typography>
 
         {progress && (
-          <div className={styles.progressWrapper}>
+          <Box my="2">
             <ProgressBar
               value={progress.value}
               max={progress.max || 100}
               size="sm"
               variant="primary"
             />
-          </div>
+          </Box>
         )}
 
-        <div className={styles.bottomRow}>
+        <Flex justify="between" align="center" gap="2" mt="1">
           {subtitle && (
             <Typography variant="caption" color="muted">
               {subtitle}
@@ -84,8 +100,8 @@ export default function MetricCard({
               {trend.text}
             </Typography>
           )}
-        </div>
-      </div>
+        </Flex>
+      </Flex>
     </Card>
   );
 }

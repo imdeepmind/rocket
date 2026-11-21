@@ -30,6 +30,27 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
+@media (max-width: 1024px) {
+  .cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .cols-2,
+  .cols-4,
+  .cols-5,
+  .cols-6 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive Auto-Fit Min Item Widths */
 .min-sm {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

@@ -1,8 +1,11 @@
 'use client';
 
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 
+import Box from '@/componentsV2/bits/Box';
+import Flex from '@/componentsV2/bits/Flex';
 import IconButton from '@/componentsV2/bits/IconButton';
+import Typography from '@/componentsV2/bits/Typography';
 
 import MoreHorizontalIcon from '@/icons/MoreHorizontalIcon';
 
@@ -31,14 +34,10 @@ export default function ActionMenu({
   classNameOverride,
 }: ActionMenuProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (!(e.target as HTMLElement)?.closest('[data-action-menu]')) {
         setIsOpen(false);
       }
     }
@@ -51,16 +50,6 @@ export default function ActionMenu({
     };
   }, [isOpen]);
 
-  const defaultTrigger = (
-    <IconButton
-      icon={<MoreHorizontalIcon width={16} height={16} />}
-      aria-label="Actions"
-      size="sm"
-      variant="ghost"
-      onClick={() => setIsOpen(prev => !prev)}
-    />
-  );
-
   const menuClasses = [
     styles.menu,
     align === 'right' ? styles.alignRight : styles.alignLeft,
@@ -69,20 +58,43 @@ export default function ActionMenu({
     .join(' ');
 
   return (
-    <div ref={containerRef} className={classNameOverride ?? styles.container}>
-      <div onClick={() => setIsOpen(prev => !prev)}>
-        {trigger ?? defaultTrigger}
-      </div>
+    <Box
+      data-action-menu
+      position="relative"
+      classNameOverride={classNameOverride ?? styles.container}
+    >
+      <Box
+        onClick={e => {
+          e.stopPropagation();
+          setIsOpen(prev => !prev);
+        }}
+      >
+        {trigger ?? (
+          <IconButton
+            icon={<MoreHorizontalIcon width={16} height={16} />}
+            aria-label="Actions"
+            size="sm"
+            variant="ghost"
+          />
+        )}
+      </Box>
 
       {isOpen && (
-        <div className={menuClasses} role="menu">
+        <Box
+          classNameOverride={menuClasses}
+          role="menu"
+          onClick={e => e.stopPropagation()}
+        >
           {items.map(item => (
-            <button
+            <Flex
               key={item.id}
+              as="button"
               type="button"
               role="menuitem"
               disabled={item.disabled}
-              className={[
+              align="center"
+              gap="2"
+              classNameOverride={[
                 styles.item,
                 item.danger ? styles.danger : '',
                 item.disabled ? styles.disabled : '',
@@ -94,12 +106,25 @@ export default function ActionMenu({
                 item.onClick();
               }}
             >
-              {item.icon && <span className={styles.icon}>{item.icon}</span>}
-              <span>{item.label}</span>
-            </button>
+              {item.icon && (
+                <Box as="span" classNameOverride={styles.icon}>
+                  {item.icon}
+                </Box>
+              )}
+              <Typography
+                as="span"
+                variant="caption"
+                weight="medium"
+                classNameOverride={
+                  item.danger ? styles.itemLabelDanger : styles.itemLabel
+                }
+              >
+                {item.label}
+              </Typography>
+            </Flex>
           ))}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }

@@ -8,6 +8,7 @@
   --color-primary-lighter: #ff8fa3;
   --color-surface: #171722;
   --color-surface-hover: #1f1f2e;
+  --color-surface-active: rgba(255, 255, 255, 0.08);
   --color-surface-subtle: #111119;
   --color-surface-card: #14141e;
   --color-text-secondary: #a9a9bb;
