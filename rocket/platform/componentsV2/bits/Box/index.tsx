@@ -47,6 +47,7 @@ export type BoxMaxW =
   | '720'
   | '760'
   | '840'
+  | '1080'
   | 'landing'
   | 'container'
   | string;

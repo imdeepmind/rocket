@@ -4,6 +4,7 @@ import React, {useState} from 'react';
 
 import Box from '@/componentsV2/bits/Box';
 import Flex from '@/componentsV2/bits/Flex';
+import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 import CreateProjectForm, {
   type EnvVarItem,
@@ -37,6 +38,13 @@ export default function NewProjectPage(): React.JSX.Element {
       name: selectedFile.name,
       size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
     });
+    if (projectName === 'Blog Backend' || !projectName.trim()) {
+      const inferred = selectedFile.name
+        .replace(/\.zip$/i, '')
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+      setProjectName(inferred);
+    }
   }
 
   function handleFileRemove() {
@@ -46,7 +54,7 @@ export default function NewProjectPage(): React.JSX.Element {
   function handleAddEnvVar() {
     setEnvVars(prev => [
       ...prev,
-      {id: Date.now().toString(), key: '', value: ''},
+      {id: Date.now().toString(), key: '', value: '', managed: false},
     ]);
   }
 
@@ -69,28 +77,52 @@ export default function NewProjectPage(): React.JSX.Element {
   }
 
   return (
-    <>
+    <Box maxW="1080" mx="auto" fullWidth>
       <Breadcrumb
         items={[
-          {label: 'Workspace', href: '/dashboard'},
           {label: 'Projects', href: '/dashboard'},
-          {label: 'New Project', active: true},
+          {
+            label: step === 4 ? projectName : 'New project',
+            active: true,
+          },
         ]}
       />
 
-      <Flex direction="column" gap="1" mt="4" mb="6">
-        <Typography variant="h1">Create New Project</Typography>
-        <Typography variant="body" color="muted">
-          Upload and configure your microcontainer deployment in 4 simple steps.
-        </Typography>
+      <Flex
+        direction="row"
+        justify="between"
+        align="start"
+        wrap="wrap"
+        gap="5"
+        mt="3"
+        mb="6"
+      >
+        <Flex direction="column" gap="1">
+          <Typography variant="h1">
+            {step === 4 ? `Deploying ${projectName}` : 'Create new project'}
+          </Typography>
+          <Typography variant="body" color="muted">
+            {step === 4
+              ? "This may take a few moments. We'll notify you once it's ready."
+              : 'Deploy a new backend from your ROSS configuration.'}
+          </Typography>
+        </Flex>
+
+        {step === 4 && (
+          <Tag variant="warning" size="md">
+            In progress
+          </Tag>
+        )}
       </Flex>
 
-      <Box mb="6">
-        <CreateProjectStepper
-          currentStep={step}
-          onStepClick={newStep => setStep(newStep)}
-        />
-      </Box>
+      {step < 4 && (
+        <Box mb="6">
+          <CreateProjectStepper
+            currentStep={step as 1 | 2 | 3}
+            onStepClick={newStep => setStep(newStep)}
+          />
+        </Box>
+      )}
 
       <CreateProjectForm
         data={{
@@ -114,6 +146,6 @@ export default function NewProjectPage(): React.JSX.Element {
         onDeploy={handleDeploy}
         cancelHref="/dashboard"
       />
-    </>
+    </Box>
   );
 }

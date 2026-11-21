@@ -613,6 +613,9 @@
 .maxW-840 {
   max-width: 840px;
 }
+.maxW-1080 {
+  max-width: 1080px;
+}
 .maxW-landing {
   max-width: var(--width-landing-container);
 }

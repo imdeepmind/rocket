@@ -7,25 +7,23 @@ import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
 import Flex from '@/componentsV2/bits/Flex';
-import Grid from '@/componentsV2/bits/Grid';
 import IconBadge from '@/componentsV2/bits/IconBadge';
 import IconButton from '@/componentsV2/bits/IconButton';
 import ProgressBar from '@/componentsV2/bits/ProgressBar';
-import StatusDot from '@/componentsV2/bits/StatusDot';
-import Tag from '@/componentsV2/bits/Tag';
 import TextBox from '@/componentsV2/bits/TextBox';
 import Typography from '@/componentsV2/bits/Typography';
+import IncludedFeaturesCard from '@/componentsV2/container/create-project/IncludedFeaturesCard';
 import FileDropzone from '@/componentsV2/items/FileDropzone';
 import OptionCardGroup from '@/componentsV2/items/OptionCardGroup';
-import TerminalViewer from '@/componentsV2/items/TerminalViewer';
 
 import ArrowRightIcon from '@/icons/ArrowRightIcon';
+import CheckIcon from '@/icons/CheckIcon';
 import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
-import DatabaseIcon from '@/icons/DatabaseIcon';
-import LayersIcon from '@/icons/LayersIcon';
-import RocketIcon from '@/icons/RocketIcon';
+import FileTextIcon from '@/icons/FileTextIcon';
+import LockIcon from '@/icons/LockIcon';
 import TrashIcon from '@/icons/TrashIcon';
-import ZapIcon from '@/icons/ZapIcon';
+
+import styles from './styles.module.css';
 
 export interface EnvVarItem {
   id: string;
@@ -62,21 +60,9 @@ export interface CreateProjectFormProps {
 }
 
 const MEMORY_OPTIONS = [
-  {id: '256 MB', title: '256 MB', subtitle: 'Basic staging & test APIs'},
-  {
-    id: '512 MB',
-    title: '512 MB',
-    subtitle: 'Recommended for standard REST APIs',
-  },
-  {id: '1 GB', title: '1 GB', subtitle: 'High-throughput workloads'},
-];
-
-const DEPLOY_STEPS = [
-  'Validating archive structure',
-  'Parsing ROSS config.json',
-  'Provisioning isolated container',
-  'Injecting environment variables',
-  'Starting HTTP server & running healthcheck',
+  {id: '256 MB', title: '256 MB', subtitle: 'Light APIs'},
+  {id: '512 MB', title: '512 MB', subtitle: 'Recommended'},
+  {id: '1 GB', title: '1 GB', subtitle: 'High traffic'},
 ];
 
 export default function CreateProjectForm({
@@ -94,393 +80,704 @@ export default function CreateProjectForm({
   classNameOverride,
 }: CreateProjectFormProps): React.JSX.Element {
   const managedVarsCount = data.envVars.filter(v => v.managed).length;
-  const customVarsCount = data.envVars.filter(v => !v.managed).length;
 
   return (
-    <Box maxW="840" mx="auto" fullWidth classNameOverride={classNameOverride}>
-      {/* Step 1: Upload Archive */}
-      {data.step === 1 && (
-        <Card padding="lg">
-          <Box mb="6">
-            <Typography variant="h3">Upload your ROSS project</Typography>
-            <Typography variant="body-sm" color="muted">
-              Select or drop your project repository packaged as a .zip file.
-            </Typography>
-          </Box>
+    <Box maxW="1080" mx="auto" fullWidth classNameOverride={classNameOverride}>
+      {data.step < 4 ? (
+        <Box classNameOverride={styles.layoutGrid}>
+          {/* Left Column: Form Step Card */}
+          <Card
+            variant="glass"
+            radius="2xl"
+            padding="none"
+            classNameOverride={styles.mainCard}
+          >
+            {/* Step 1: Upload your configuration */}
+            {data.step === 1 && (
+              <>
+                <Box mb="6">
+                  <Typography variant="h2" weight="bold" color="white">
+                    Upload your configuration
+                  </Typography>
+                  <Typography variant="body-sm" color="muted">
+                    Upload a ZIP file containing your ROSS configuration and any
+                    extra files such as functions or migrations.
+                  </Typography>
+                </Box>
 
-          <FileDropzone
-            accept=".zip"
-            maxSizeText=".zip archive up to 50 MB"
-            file={data.file}
-            onFileSelect={onFileSelect}
-            onFileRemove={onFileRemove}
-            title="Drop your ROSS archive here"
-            subtitle="Must include ross/config.json or root config.json"
-          />
+                <FileDropzone
+                  accept=".zip"
+                  maxSizeText=".zip up to 50 MB"
+                  file={data.file}
+                  onFileSelect={onFileSelect}
+                  onFileRemove={onFileRemove}
+                  title="Drag and drop your ZIP here"
+                  subtitle="or browse from your computer · .zip up to 50 MB"
+                  buttonText="Choose ZIP file"
+                />
 
-          <Flex justify="between" align="center" pt="4" mt="6" borderTop>
-            <Button variant="ghost" size="md" href={cancelHref}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              disabled={!data.file}
-              onClick={() => onStepChange(2)}
-              rightIcon={<ArrowRightIcon width={16} height={16} />}
-            >
-              Continue to configuration
-            </Button>
-          </Flex>
-        </Card>
-      )}
-
-      {/* Step 2: Configure & Environment */}
-      {data.step === 2 && (
-        <Card padding="lg">
-          <Box mb="6">
-            <Typography variant="h3">Configure your project</Typography>
-            <Typography variant="body-sm" color="muted">
-              Configure name, memory limits, and environment variables.
-            </Typography>
-          </Box>
-
-          <Box mb="6">
-            <TextBox
-              label="Project Name"
-              placeholder="e.g. Blog Backend"
-              value={data.projectName}
-              onChange={e => onProjectNameChange(e.target.value)}
-              fullWidth
-              hint={`Assigned subdomain: ${data.projectSlug || 'my-project'}.rocket.app`}
-            />
-          </Box>
-
-          {/* Memory Selection */}
-          <Flex direction="column" gap="3" mb="6">
-            <Typography variant="body-sm" weight="semibold">
-              Compute & Memory Allocation
-            </Typography>
-            <OptionCardGroup
-              options={MEMORY_OPTIONS}
-              value={data.memory}
-              onChange={onMemoryChange}
-              columns={3}
-            />
-          </Flex>
-
-          {/* Environment Variables */}
-          <Flex direction="column" gap="3" mb="6">
-            <Flex justify="between" align="center" mb="2">
-              <Box>
-                <Typography variant="body-sm" weight="semibold">
-                  Environment Variables ({data.envVars.length})
-                </Typography>
-                <Typography variant="caption" color="muted">
-                  Managed variables are automatically provided by Rocket
-                  platform.
-                </Typography>
-              </Box>
-              <Button variant="secondary" size="sm" onClick={onAddEnvVar}>
-                + Add Variable
-              </Button>
-            </Flex>
-
-            <Flex direction="column" gap="2">
-              {data.envVars.map(item => (
-                <Flex align="center" gap="2" key={item.id}>
-                  <Box flex="1">
-                    <TextBox
-                      sizeVariant="sm"
-                      placeholder="KEY_NAME"
-                      value={item.key}
-                      disabled={item.managed}
-                      onChange={e =>
-                        onUpdateEnvVar(item.id, 'key', e.target.value)
-                      }
-                      fullWidth
-                    />
-                  </Box>
-                  <Box flex="1">
-                    <TextBox
-                      sizeVariant="sm"
-                      placeholder="value"
-                      value={item.value}
-                      disabled={item.managed}
-                      onChange={e =>
-                        onUpdateEnvVar(item.id, 'value', e.target.value)
-                      }
-                      fullWidth
-                    />
-                  </Box>
-                  <Flex basis="72px" justify="center">
-                    {item.managed ? (
-                      <Tag variant="neutral" size="sm">
-                        Managed
-                      </Tag>
-                    ) : (
-                      <IconButton
-                        icon={<TrashIcon width={14} height={14} />}
-                        aria-label="Remove variable"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onRemoveEnvVar(item.id)}
-                      />
-                    )}
-                  </Flex>
+                <Flex align="center" gap="2" mt="5">
+                  <FileTextIcon width={15} height={15} stroke="currentColor" />
+                  <Typography variant="caption" color="muted">
+                    Place your configuration file at the root of the archive.{' '}
+                    <Typography
+                      as="a"
+                      href="https://ross.imdeepmind.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="caption"
+                      classNameOverride={styles.docsLink}
+                    >
+                      Read the docs ↗
+                    </Typography>
+                  </Typography>
                 </Flex>
-              ))}
-            </Flex>
-          </Flex>
 
-          <Flex justify="between" align="center" pt="4" borderTop>
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => onStepChange(1)}
-              leftIcon={<ChevronLeftIcon width={16} height={16} />}
-            >
-              Back
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              disabled={!data.projectName.trim()}
-              onClick={() => onStepChange(3)}
-              rightIcon={<ArrowRightIcon width={16} height={16} />}
-            >
-              Review specifications
-            </Button>
-          </Flex>
-        </Card>
-      )}
-
-      {/* Step 3: Review Specifications */}
-      {data.step === 3 && (
-        <Card padding="lg">
-          <Box mb="6">
-            <Typography variant="h3">Review & deploy</Typography>
-            <Typography variant="body-sm" color="muted">
-              Confirm your deployment parameters before launching to production.
-            </Typography>
-          </Box>
-
-          <Box mb="6">
-            <Grid columns={2} gap="4">
-              <Card variant="subtle" padding="md">
-                <Flex align="start" gap="3">
-                  <IconBadge
+                <Flex
+                  justify="between"
+                  align="center"
+                  pt="6"
+                  mt="8"
+                  classNameOverride={styles.actionFooter}
+                >
+                  <Button variant="ghost" size="md" href={cancelHref}>
+                    Cancel
+                  </Button>
+                  <Button
                     variant="primary"
                     size="md"
-                    icon={
-                      <LayersIcon
-                        width={18}
-                        height={18}
-                        stroke="currentColor"
-                      />
-                    }
-                  />
-                  <Flex direction="column" gap="1">
-                    <Typography variant="caption" color="muted">
-                      Package Archive
+                    disabled={!data.file}
+                    onClick={() => onStepChange(2)}
+                    rightIcon={<ArrowRightIcon width={16} height={16} />}
+                  >
+                    Next
+                  </Button>
+                </Flex>
+              </>
+            )}
+
+            {/* Step 2: Configure your project */}
+            {data.step === 2 && (
+              <>
+                <Box mb="6">
+                  <Typography variant="h2" weight="bold" color="white">
+                    Configure your project
+                  </Typography>
+                  <Typography variant="body-sm" color="muted">
+                    Name your project, add environment variables and choose
+                    memory.
+                  </Typography>
+                </Box>
+
+                <Flex direction="column" gap="5">
+                  {/* Project Name Field */}
+                  <Flex direction="column" gap="2">
+                    <Typography
+                      variant="body-sm"
+                      weight="medium"
+                      color="default"
+                    >
+                      Project name
                     </Typography>
-                    <Typography variant="body" weight="semibold">
-                      {data.file?.name || 'No file selected'}
-                    </Typography>
-                    <Typography variant="body-sm" color="muted">
-                      Size: {data.file?.size || '0 MB'}
+                    <TextBox
+                      placeholder="e.g. blog-backend"
+                      value={data.projectName}
+                      onChange={e => onProjectNameChange(e.target.value)}
+                      fullWidth
+                      sizeVariant="md"
+                    />
+                    <Typography variant="mono" color="muted">
+                      {data.projectSlug || 'my-project'}.rocket.app
                     </Typography>
                   </Flex>
-                </Flex>
-              </Card>
 
-              <Card variant="subtle" padding="md">
-                <Flex align="start" gap="3">
-                  <IconBadge
+                  {/* Environment Variables */}
+                  <Flex direction="column" gap="2">
+                    <Flex justify="between" align="center">
+                      <Typography
+                        variant="body-sm"
+                        weight="semibold"
+                        color="white"
+                      >
+                        Environment variables
+                      </Typography>
+                      <Button variant="ghost" size="sm" onClick={onAddEnvVar}>
+                        + Add variable
+                      </Button>
+                    </Flex>
+                    <Box mb="2">
+                      <Typography variant="caption" color="muted">
+                        Database and cache URLs are injected for you.
+                      </Typography>
+                    </Box>
+
+                    <Flex direction="column" gap="2">
+                      {data.envVars.map(item => (
+                        <Flex align="center" gap="2" key={item.id}>
+                          <Box basis="40%">
+                            <TextBox
+                              sizeVariant="sm"
+                              placeholder="KEY"
+                              value={item.key}
+                              disabled={item.managed}
+                              onChange={e =>
+                                onUpdateEnvVar(item.id, 'key', e.target.value)
+                              }
+                              fullWidth
+                            />
+                          </Box>
+                          <Box flex="1">
+                            {item.managed ? (
+                              <Flex
+                                align="center"
+                                gap="2"
+                                classNameOverride={styles.managedValueBox}
+                              >
+                                <LockIcon
+                                  width={14}
+                                  height={14}
+                                  stroke="currentColor"
+                                />
+                                <Typography variant="body-sm" color="muted">
+                                  Managed by Rocket
+                                </Typography>
+                              </Flex>
+                            ) : (
+                              <TextBox
+                                sizeVariant="sm"
+                                placeholder="Value"
+                                value={item.value}
+                                onChange={e =>
+                                  onUpdateEnvVar(
+                                    item.id,
+                                    'value',
+                                    e.target.value,
+                                  )
+                                }
+                                fullWidth
+                              />
+                            )}
+                          </Box>
+                          <Box basis="36px" display="flex" justify="center">
+                            {!item.managed && (
+                              <IconButton
+                                icon={<TrashIcon width={16} height={16} />}
+                                aria-label={`Remove ${item.key}`}
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => onRemoveEnvVar(item.id)}
+                              />
+                            )}
+                          </Box>
+                        </Flex>
+                      ))}
+                    </Flex>
+                  </Flex>
+
+                  {/* Memory Selection */}
+                  <Flex direction="column" gap="2">
+                    <Typography
+                      variant="body-sm"
+                      weight="medium"
+                      color="default"
+                    >
+                      Memory
+                    </Typography>
+                    <OptionCardGroup
+                      options={MEMORY_OPTIONS}
+                      value={data.memory}
+                      onChange={onMemoryChange}
+                      columns={3}
+                    />
+                  </Flex>
+                </Flex>
+
+                <Flex
+                  justify="between"
+                  align="center"
+                  pt="6"
+                  mt="8"
+                  classNameOverride={styles.actionFooter}
+                >
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => onStepChange(1)}
+                    leftIcon={<ChevronLeftIcon width={16} height={16} />}
+                  >
+                    Back
+                  </Button>
+                  <Button
                     variant="primary"
                     size="md"
-                    icon={
-                      <RocketIcon
-                        width={18}
-                        height={18}
-                        stroke="currentColor"
-                      />
-                    }
+                    disabled={!data.projectName.trim()}
+                    onClick={() => onStepChange(3)}
+                    rightIcon={<ArrowRightIcon width={16} height={16} />}
+                  >
+                    Next
+                  </Button>
+                </Flex>
+              </>
+            )}
+
+            {/* Step 3: Review and deploy */}
+            {data.step === 3 && (
+              <>
+                <Box mb="5">
+                  <Typography variant="h2" weight="bold" color="white">
+                    Review and deploy
+                  </Typography>
+                  <Typography variant="body-sm" color="muted">
+                    Check your project details before deployment starts.
+                  </Typography>
+                </Box>
+
+                {/* Project Identity Row */}
+                <Flex
+                  align="center"
+                  gap="3"
+                  pb="4"
+                  mb="2"
+                  classNameOverride={styles.reviewProjectIdentity}
+                >
+                  <Avatar
+                    name={data.projectName}
+                    size="md"
+                    shape="rounded"
+                    variant="project"
                   />
-                  <Flex direction="column" gap="1">
-                    <Typography variant="caption" color="muted">
-                      Service Name & Endpoint
-                    </Typography>
-                    <Typography variant="body" weight="semibold">
+                  <Flex direction="column" gap="0">
+                    <Typography variant="body" weight="bold" color="white">
                       {data.projectName}
                     </Typography>
-                    <Typography variant="body-sm" color="muted">
-                      https://{data.projectSlug}.rocket.app
+                    <Typography variant="mono" color="muted">
+                      {data.projectSlug || 'my-project'}.rocket.app
                     </Typography>
                   </Flex>
                 </Flex>
-              </Card>
 
-              <Card variant="subtle" padding="md">
-                <Flex align="start" gap="3">
-                  <IconBadge
-                    variant="primary"
-                    size="md"
-                    icon={
-                      <ZapIcon width={18} height={18} stroke="currentColor" />
-                    }
-                  />
-                  <Flex direction="column" gap="1">
-                    <Typography variant="caption" color="muted">
-                      Compute Memory
+                {/* Specs List */}
+                <Flex
+                  justify="between"
+                  align="center"
+                  py="4"
+                  classNameOverride={styles.specRow}
+                >
+                  <Typography variant="body-sm" color="muted">
+                    Configuration
+                  </Typography>
+                  <Flex align="center" gap="4">
+                    <Typography variant="body-sm" weight="medium" color="white">
+                      {data.file?.name} · {data.file?.size}
                     </Typography>
-                    <Typography variant="body" weight="semibold">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStepChange(1)}
+                    >
+                      Edit
+                    </Button>
+                  </Flex>
+                </Flex>
+
+                <Flex
+                  justify="between"
+                  align="center"
+                  py="4"
+                  classNameOverride={styles.specRow}
+                >
+                  <Typography variant="body-sm" color="muted">
+                    Memory
+                  </Typography>
+                  <Flex align="center" gap="4">
+                    <Typography variant="body-sm" weight="medium" color="white">
                       {data.memory}
                     </Typography>
-                    <Typography variant="body-sm" color="muted">
-                      Isolated Microcontainer
-                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStepChange(2)}
+                    >
+                      Edit
+                    </Button>
                   </Flex>
                 </Flex>
-              </Card>
 
-              <Card variant="subtle" padding="md">
-                <Flex align="start" gap="3">
-                  <IconBadge
+                <Flex
+                  justify="between"
+                  align="center"
+                  py="4"
+                  classNameOverride={styles.specRow}
+                >
+                  <Typography variant="body-sm" color="muted">
+                    Environment variables
+                  </Typography>
+                  <Flex align="center" gap="4">
+                    <Typography variant="body-sm" weight="medium" color="white">
+                      {data.envVars.length} ({managedVarsCount} managed)
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStepChange(2)}
+                    >
+                      Edit
+                    </Button>
+                  </Flex>
+                </Flex>
+
+                <Flex
+                  justify="between"
+                  align="center"
+                  py="4"
+                  classNameOverride={styles.specRow}
+                >
+                  <Typography variant="body-sm" color="muted">
+                    Database
+                  </Typography>
+                  <Flex align="center" gap="4">
+                    <Typography variant="body-sm" weight="medium" color="white">
+                      PostgreSQL
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStepChange(2)}
+                    >
+                      Edit
+                    </Button>
+                  </Flex>
+                </Flex>
+
+                <Flex
+                  justify="between"
+                  align="center"
+                  py="4"
+                  classNameOverride={styles.specRow}
+                >
+                  <Typography variant="body-sm" color="muted">
+                    Cache
+                  </Typography>
+                  <Flex align="center" gap="4">
+                    <Typography variant="body-sm" weight="medium" color="white">
+                      Redis
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStepChange(2)}
+                    >
+                      Edit
+                    </Button>
+                  </Flex>
+                </Flex>
+
+                <Flex
+                  justify="between"
+                  align="center"
+                  pt="6"
+                  mt="8"
+                  classNameOverride={styles.actionFooter}
+                >
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => onStepChange(2)}
+                    leftIcon={<ChevronLeftIcon width={16} height={16} />}
+                  >
+                    Back
+                  </Button>
+                  <Button
                     variant="primary"
                     size="md"
-                    icon={
-                      <DatabaseIcon
-                        width={18}
-                        height={18}
-                        stroke="currentColor"
-                      />
-                    }
-                  />
-                  <Flex direction="column" gap="1">
-                    <Typography variant="caption" color="muted">
-                      Environment Configuration
-                    </Typography>
-                    <Typography variant="body" weight="semibold">
-                      {data.envVars.length} Variables Configured
-                    </Typography>
-                    <Typography variant="body-sm" color="muted">
-                      {managedVarsCount} managed, {customVarsCount} custom
-                    </Typography>
-                  </Flex>
+                    onClick={onDeploy}
+                    rightIcon={<ArrowRightIcon width={16} height={16} />}
+                  >
+                    Deploy project
+                  </Button>
                 </Flex>
-              </Card>
-            </Grid>
-          </Box>
+              </>
+            )}
+          </Card>
 
-          <Flex justify="between" align="center" pt="4" borderTop>
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => onStepChange(2)}
-              leftIcon={<ChevronLeftIcon width={16} height={16} />}
+          {/* Right Column: Included with every project */}
+          <IncludedFeaturesCard />
+        </Box>
+      ) : (
+        /* Step 4: Deploying View */
+        <Box classNameOverride={styles.deployingGrid}>
+          {/* Left Column: Progress & Logs */}
+          <Flex direction="column" gap="5">
+            {/* Steps Progress Card */}
+            <Card
+              variant="glass"
+              radius="2xl"
+              padding="none"
+              classNameOverride={styles.progressCard}
             >
-              Back
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={onDeploy}
-              rightIcon={<RocketIcon width={16} height={16} />}
-            >
-              Deploy Backend
-            </Button>
-          </Flex>
-        </Card>
-      )}
-
-      {/* Step 4: Live Deployment Execution */}
-      {data.step === 4 && (
-        <Card padding="lg">
-          <Box mb="6">
-            <Flex align="center" gap="3">
-              <Avatar name={data.projectName} size="md" variant="project" />
-              <Flex direction="column">
-                <Typography variant="h3">
-                  Deploying {data.projectName}
-                </Typography>
+              <Flex justify="between" align="center" mb="3">
                 <Typography variant="body-sm" color="muted">
-                  Provisioning runtime container and starting ROSS backend...
+                  Step {data.deployStepIndex ?? 2} of 4
+                </Typography>
+                <Typography variant="body-sm" weight="semibold" color="white">
+                  {data.deployProgress ?? 48}%
+                </Typography>
+              </Flex>
+
+              <ProgressBar value={data.deployProgress ?? 48} />
+
+              <Flex direction="column" gap="4" mt="5">
+                {/* Step 1: Validating config */}
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="3">
+                    <IconBadge
+                      variant="success"
+                      size="sm"
+                      rounded="full"
+                      icon={
+                        <CheckIcon
+                          width={14}
+                          height={14}
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        />
+                      }
+                    />
+                    <Flex direction="column" gap="0">
+                      <Typography
+                        variant="body-sm"
+                        weight="semibold"
+                        color="white"
+                      >
+                        Validating configuration
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        ROSS configuration is valid
+                      </Typography>
+                    </Flex>
+                  </Flex>
+                  <Typography variant="caption" color="muted">
+                    2s
+                  </Typography>
+                </Flex>
+
+                {/* Step 2: Provisioning database */}
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="3">
+                    <Box classNameOverride={styles.deployStepIconActive} />
+                    <Flex direction="column" gap="0">
+                      <Typography
+                        variant="body-sm"
+                        weight="semibold"
+                        color="white"
+                      >
+                        Provisioning database
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        Creating PostgreSQL and Redis
+                      </Typography>
+                    </Flex>
+                  </Flex>
+                  <Typography variant="caption" color="white" weight="medium">
+                    In progress
+                  </Typography>
+                </Flex>
+
+                {/* Step 3: Deploying code */}
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="3">
+                    <IconBadge variant="muted" size="sm" rounded="full" />
+                    <Flex direction="column" gap="0">
+                      <Typography variant="body-sm" color="muted">
+                        Deploying code
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        Building and releasing your service
+                      </Typography>
+                    </Flex>
+                  </Flex>
+                  <Typography variant="caption" color="muted">
+                    Waiting
+                  </Typography>
+                </Flex>
+
+                {/* Step 4: Finalizing setup */}
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="3">
+                    <IconBadge variant="muted" size="sm" rounded="full" />
+                    <Flex direction="column" gap="0">
+                      <Typography variant="body-sm" color="muted">
+                        Finalizing setup
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        Assigning your URL and running health checks
+                      </Typography>
+                    </Flex>
+                  </Flex>
+                  <Typography variant="caption" color="muted">
+                    Waiting
+                  </Typography>
+                </Flex>
+              </Flex>
+            </Card>
+
+            {/* Deployment Log Box */}
+            <Card
+              variant="glass"
+              radius="2xl"
+              padding="none"
+              classNameOverride={styles.logCard}
+            >
+              <Box mb="3">
+                <Typography variant="body-sm" weight="semibold" color="white">
+                  Deployment log
+                </Typography>
+              </Box>
+              <Box classNameOverride={styles.logConsole}>
+                <Typography
+                  variant="caption"
+                  classNameOverride={styles.logLine}
+                >
+                  10:42:01 Validating configuration...
+                </Typography>
+                <Typography
+                  variant="caption"
+                  classNameOverride={styles.logLine}
+                >
+                  10:42:03 Configuration is valid
+                </Typography>
+                <Typography
+                  variant="caption"
+                  classNameOverride={styles.logLine}
+                >
+                  10:42:04 Provisioning PostgreSQL...
+                </Typography>
+                <Typography
+                  variant="caption"
+                  classNameOverride={styles.logLine}
+                >
+                  10:42:06 Provisioning Redis...
+                </Typography>
+                <Typography
+                  variant="caption"
+                  classNameOverride={styles.logLine}
+                >
+                  10:42:08 Waiting for database to accept connections
+                  <Box as="span" classNameOverride={styles.logCursor}>
+                    |
+                  </Box>
+                </Typography>
+              </Box>
+            </Card>
+          </Flex>
+
+          {/* Right Column: Project Info Summary */}
+          <Card
+            variant="glass"
+            radius="2xl"
+            padding="none"
+            classNameOverride={styles.sideCard}
+          >
+            <Flex
+              align="center"
+              gap="3"
+              pb="4"
+              mb="2"
+              classNameOverride={styles.reviewProjectIdentity}
+            >
+              <Avatar
+                name={data.projectName}
+                size="md"
+                shape="rounded"
+                variant="project"
+              />
+              <Flex direction="column" gap="0">
+                <Typography variant="body" weight="bold" color="white">
+                  {data.projectName}
+                </Typography>
+                <Typography variant="mono" color="muted">
+                  {data.projectSlug || 'my-project'}
                 </Typography>
               </Flex>
             </Flex>
-          </Box>
 
-          {/* Progress Bar */}
-          <Box mb="6">
-            <Flex justify="between" align="center" mb="2">
-              <Typography variant="caption" color="muted">
-                Overall deployment progress
+            <Flex
+              justify="between"
+              align="center"
+              py="3"
+              classNameOverride={styles.specRow}
+            >
+              <Typography variant="body-sm" color="muted">
+                Configuration
               </Typography>
-              <Typography variant="caption" weight="semibold">
-                {data.deployProgress ?? 48}%
+              <Typography variant="body-sm" weight="medium" color="white">
+                {data.file?.name}
               </Typography>
             </Flex>
-            <ProgressBar value={data.deployProgress ?? 48} />
-          </Box>
 
-          {/* Checklist */}
-          <Card variant="subtle" padding="md">
-            <Flex direction="column" gap="3">
-              {DEPLOY_STEPS.map((stepLabel, idx) => {
-                const currentIdx = data.deployStepIndex ?? 2;
-                const isCompleted = idx < currentIdx;
-                const isCurrent = idx === currentIdx;
-
-                return (
-                  <Flex align="center" gap="3" key={idx}>
-                    <StatusDot
-                      variant={
-                        isCompleted
-                          ? 'success'
-                          : isCurrent
-                            ? 'warning'
-                            : 'waiting'
-                      }
-                      pulse={isCurrent}
-                    />
-                    <Typography
-                      variant="body-sm"
-                      color={isCompleted || isCurrent ? 'default' : 'muted'}
-                      weight={isCurrent ? 'semibold' : 'normal'}
-                    >
-                      {stepLabel}
-                    </Typography>
-                  </Flex>
-                );
-              })}
+            <Flex
+              justify="between"
+              align="center"
+              py="3"
+              classNameOverride={styles.specRow}
+            >
+              <Typography variant="body-sm" color="muted">
+                Memory
+              </Typography>
+              <Typography variant="body-sm" weight="medium" color="white">
+                {data.memory}
+              </Typography>
             </Flex>
+
+            <Flex
+              justify="between"
+              align="center"
+              py="3"
+              classNameOverride={styles.specRow}
+            >
+              <Typography variant="body-sm" color="muted">
+                Database
+              </Typography>
+              <Typography variant="body-sm" weight="medium" color="white">
+                PostgreSQL
+              </Typography>
+            </Flex>
+
+            <Flex
+              justify="between"
+              align="center"
+              py="3"
+              classNameOverride={styles.specRow}
+            >
+              <Typography variant="body-sm" color="muted">
+                Cache
+              </Typography>
+              <Typography variant="body-sm" weight="medium" color="white">
+                Redis
+              </Typography>
+            </Flex>
+
+            <Flex
+              justify="between"
+              align="center"
+              py="3"
+              classNameOverride={styles.specRow}
+            >
+              <Typography variant="body-sm" color="muted">
+                URL
+              </Typography>
+              <Typography variant="body-sm" color="muted">
+                Assigned on completion
+              </Typography>
+            </Flex>
+
+            <Box mt="6">
+              <Button variant="secondary" size="md" href="/dashboard" fullWidth>
+                Back to projects
+              </Button>
+            </Box>
           </Card>
-
-          {/* Terminal Viewer */}
-          <Box my="6">
-            <TerminalViewer
-              title="build & deploy logs"
-              lines={
-                data.logLines || [
-                  '$ rocket deploy --source /uploads/blog-backend.zip',
-                  '✓ Unpacking project archive: blog-backend.zip (2.4 MB)',
-                  '✓ Parsing ROSS config.json: 4 endpoints detected',
-                  'ℹ Provisioning 512 MB microcontainer (us-east-1)...',
-                  'ℹ Injecting 3 environment variables...',
-                  '⠋ Starting server process on port 8080...',
-                ]
-              }
-              maxHeight="220px"
-            />
-          </Box>
-
-          <Flex justify="between" align="center" pt="4" borderTop>
-            <Button variant="ghost" size="md" href="/dashboard">
-              View in dashboard
-            </Button>
-          </Flex>
-        </Card>
+        </Box>
       )}
     </Box>
   );

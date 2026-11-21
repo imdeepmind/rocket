@@ -6,4 +6,5 @@ drizzle
 public
 next-env.d.ts
 storybook-static
+*.tsbuildinfo
 

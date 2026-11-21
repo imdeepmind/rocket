@@ -1,1 +1,115 @@
-/* Styles fully handled via atomic Card, Flex, Box, Grid, Typography, StatusDot, IconBadge bits */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainCard {
+  padding: var(--spacing-8);
+}
+
+.sideCard {
+  padding: var(--spacing-7);
+}
+
+.docsLink {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  transition: color var(--transition-fast);
+}
+
+.docsLink:hover {
+  color: var(--color-primary-lighter);
+  text-decoration: underline;
+}
+
+.actionFooter {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.managedValueBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2) var(--spacing-3);
+  user-select: none;
+}
+
+.reviewProjectIdentity {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.specRow {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.specRow:last-of-type {
+  border-bottom: none;
+}
+
+/* Deploying Screen (Step 4) */
+.deployingGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .deployingGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.progressCard {
+  padding: var(--spacing-7) var(--spacing-8);
+}
+
+.deployStepIconActive {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-primary);
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+.logCard {
+  padding: var(--spacing-6);
+}
+
+.logConsole {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.logLine {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.logCursor {
+  color: var(--color-primary-light);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}

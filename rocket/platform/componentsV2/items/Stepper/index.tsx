@@ -1,6 +1,8 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
 import Typography from '@/componentsV2/bits/Typography';
 
 import CheckIcon from '@/icons/CheckIcon';
@@ -29,8 +31,14 @@ export default function Stepper({
   const combinedClass = classNameOverride ?? styles.stepperCard;
 
   return (
-    <Card padding="none" classNameOverride={combinedClass} {...props}>
-      <div className={styles.stepperContainer}>
+    <Card
+      variant="glass"
+      radius="2xl"
+      padding="none"
+      classNameOverride={combinedClass}
+      {...props}
+    >
+      <Box classNameOverride={styles.stepperContainer}>
         {steps.map((step, index) => {
           const stepNumber = index + 1;
           const isCompleted = stepNumber < currentStep;
@@ -51,11 +59,11 @@ export default function Stepper({
           return (
             <React.Fragment key={step.title}>
               {index > 0 && (
-                <div className={styles.stepLine} aria-hidden="true" />
+                <Box classNameOverride={styles.stepLine} aria-hidden="true" />
               )}
 
-              <div
-                className={[
+              <Box
+                classNameOverride={[
                   styles.stepItem,
                   isClickable ? styles.clickable : '',
                 ].join(' ')}
@@ -63,15 +71,26 @@ export default function Stepper({
                 role={isClickable ? 'button' : undefined}
                 tabIndex={isClickable ? 0 : undefined}
               >
-                <div className={badgeClasses}>
+                <Box classNameOverride={badgeClasses}>
                   {isCompleted ? (
-                    <CheckIcon width={14} height={14} strokeWidth={2.5} />
+                    <CheckIcon
+                      width={15}
+                      height={15}
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    />
                   ) : (
-                    <span>{stepNumber}</span>
+                    <Typography as="span" weight="bold">
+                      {stepNumber}
+                    </Typography>
                   )}
-                </div>
+                </Box>
 
-                <div className={styles.textCol}>
+                <Flex
+                  direction="column"
+                  gap="0"
+                  classNameOverride={styles.textCol}
+                >
                   <Typography
                     variant="body-sm"
                     weight={isActive ? 'semibold' : 'medium'}
@@ -86,12 +105,12 @@ export default function Stepper({
                       {step.subtitle}
                     </Typography>
                   )}
-                </div>
-              </div>
+                </Flex>
+              </Box>
             </React.Fragment>
           );
         })}
-      </div>
+      </Box>
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Card from '@/componentsV2/bits/Card';
 import Typography from '@/componentsV2/bits/Typography';
 
@@ -35,8 +36,8 @@ export default function OptionCardGroup({
   const combinedClass = classNameOverride ?? styles.grid;
 
   return (
-    <div
-      className={combinedClass}
+    <Box
+      classNameOverride={combinedClass}
       style={{gridTemplateColumns: `repeat(${columns}, 1fr)`}}
       role="radiogroup"
       {...props}
@@ -68,13 +69,22 @@ export default function OptionCardGroup({
             }}
           >
             {isSelected && (
-              <span className={styles.checkIcon} aria-hidden="true">
-                <CheckIcon width={14} height={14} strokeWidth={2.5} />
-              </span>
+              <Box
+                as="span"
+                classNameOverride={styles.checkIcon}
+                aria-hidden="true"
+              >
+                <CheckIcon
+                  width={16}
+                  height={16}
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                />
+              </Box>
             )}
             <Typography
               variant="body"
-              weight="semibold"
+              weight="bold"
               classNameOverride={styles.title}
             >
               {option.title}
@@ -87,6 +97,6 @@ export default function OptionCardGroup({
           </Card>
         );
       })}
-    </div>
+    </Box>
   );
 }

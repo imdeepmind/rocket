@@ -2,7 +2,9 @@
 
 import React, {useRef, useState} from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import IconButton from '@/componentsV2/bits/IconButton';
 import Typography from '@/componentsV2/bits/Typography';
 
 import CheckIcon from '@/icons/CheckIcon';
@@ -34,7 +36,7 @@ export default function FileDropzone({
   file,
   onFileSelect,
   onFileRemove,
-  title = 'Drag and drop your ZIP file here',
+  title = 'Drag and drop your ZIP here',
   subtitle,
   buttonText = 'Choose ZIP file',
   classNameOverride,
@@ -79,8 +81,8 @@ export default function FileDropzone({
   const combinedClass = classNameOverride ?? dropzoneClasses;
 
   return (
-    <div
-      className={combinedClass}
+    <Box
+      classNameOverride={combinedClass}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -102,13 +104,13 @@ export default function FileDropzone({
         className={styles.hiddenInput}
       />
 
-      <div className={styles.iconWrapper}>
-        <UploadCloudIcon width={28} height={28} />
-      </div>
+      <Box classNameOverride={styles.iconWrapper}>
+        <UploadCloudIcon width={24} height={24} />
+      </Box>
 
       <Typography
         variant="body"
-        weight="medium"
+        weight="semibold"
         classNameOverride={styles.title}
       >
         {title}
@@ -118,7 +120,7 @@ export default function FileDropzone({
         {subtitle || `or browse from your computer · ${maxSizeText}`}
       </Typography>
 
-      <div className={styles.buttonWrapper}>
+      <Box classNameOverride={styles.buttonWrapper}>
         <Button
           variant="secondary"
           size="sm"
@@ -129,31 +131,41 @@ export default function FileDropzone({
         >
           {buttonText}
         </Button>
-      </div>
+      </Box>
 
       {file && (
-        <div
-          className={styles.selectedBadge}
+        <Box
+          classNameOverride={styles.selectedBadge}
           onClick={e => e.stopPropagation()}
         >
-          <span className={styles.checkIcon}>
-            <CheckIcon width={14} height={14} strokeWidth={2.5} />
-          </span>
-          <span className={styles.fileName}>{file.name}</span>
-          <span className={styles.dot}>·</span>
-          <span className={styles.fileSize}>{file.size}</span>
+          <Typography as="span" weight="semibold" color="white">
+            {file.name}
+          </Typography>
+          <Typography as="span" color="muted">
+            ·
+          </Typography>
+          <Typography as="span" color="muted">
+            {file.size}
+          </Typography>
+          <Box as="span" classNameOverride={styles.checkIcon}>
+            <CheckIcon
+              width={14}
+              height={14}
+              stroke="currentColor"
+              strokeWidth={2.5}
+            />
+          </Box>
           {onFileRemove && (
-            <button
-              type="button"
-              className={styles.removeBtn}
-              onClick={onFileRemove}
+            <IconButton
+              icon={<CloseIcon width={12} height={12} />}
               aria-label="Remove file"
-            >
-              <CloseIcon width={12} height={12} />
-            </button>
+              size="sm"
+              variant="ghost"
+              onClick={onFileRemove}
+            />
           )}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
