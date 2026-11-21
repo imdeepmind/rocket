@@ -32,6 +32,7 @@ export interface TypographyProps<T extends React.ElementType = 'p'> {
   color?: TypographyColor;
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
   align?: 'left' | 'center' | 'right';
+  maxW?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '520' | '600' | '720' | string;
   truncate?: boolean;
   classNameOverride?: string;
   children?: React.ReactNode;
@@ -57,6 +58,7 @@ export default function Typography<T extends React.ElementType = 'p'>({
   color = 'default',
   weight,
   align,
+  maxW,
   truncate = false,
   classNameOverride,
   children,
@@ -74,6 +76,7 @@ export default function Typography<T extends React.ElementType = 'p'>({
     color !== 'default' ? styles[`color-${color}`] : '',
     weight ? styles[`weight-${weight}`] : '',
     align ? styles[`align-${align}`] : '',
+    maxW ? styles[`maxW-${maxW}`] : '',
     truncate ? styles.truncate : '',
   ]
     .filter(Boolean)

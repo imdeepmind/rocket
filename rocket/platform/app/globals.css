@@ -44,6 +44,10 @@
   --spacing-12: 48px;
   --spacing-14: 56px;
   --spacing-16: 64px;
+  --spacing-18: 72px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+  --spacing-30: 120px;
 
   /* Typography Sizes */
   --font-size-xs: 12px;
@@ -62,6 +66,7 @@
   --width-auth-container: 440px;
   --width-modal: 480px;
   --width-sidebar: 260px;
+  --width-landing-container: 1160px;
   --width-content: 1200px;
 }
 

@@ -2,11 +2,16 @@ import React from 'react';
 
 import ArrowRightIcon from '@/icons/ArrowRightIcon';
 
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
+import IconBadge from '@/componentsV2/bits/IconBadge';
+import Section from '@/componentsV2/bits/Section';
+import StatusDot from '@/componentsV2/bits/StatusDot';
+import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 import WindowFrame from '@/componentsV2/bits/WindowFrame';
-
-import styles from './styles.module.css';
 
 export interface HeroPreviewStep {
   title: string;
@@ -55,88 +60,96 @@ export default function Hero({
   previewSteps = DEFAULT_PREVIEW_STEPS,
   classNameOverride,
 }: HeroProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.heroSection;
-
   return (
-    <section className={combinedClass}>
-      <div className={styles.heroContent}>
-        {badgeText && (
-          <div className={styles.heroTag}>
-            <span className={styles.tagPulse} aria-hidden="true" />
-            <Typography variant="caption" color="white" as="span">
-              {badgeText}
-            </Typography>
-          </div>
-        )}
-
-        <Typography variant="hero" as="h1" classNameOverride={styles.heroTitle}>
-          {title ?? (
-            <>
-              Your backend.
-              <br />
-              Deployed. Managed.
-              <br />
-              <span className={styles.accent}>Ready.</span>
-            </>
+    <Section
+      container="landing"
+      spacing="hero"
+      classNameOverride={classNameOverride}
+    >
+      <Flex gap="18" align="center" wrap="wrap">
+        <Flex direction="column" flex="1" minW="0" basis="460">
+          {badgeText && (
+            <Box mb="7">
+              <Tag variant="neutral" size="md" dot>
+                <Typography variant="caption" color="white" as="span">
+                  {badgeText}
+                </Typography>
+              </Tag>
+            </Box>
           )}
-        </Typography>
 
-        <Typography variant="lead" classNameOverride={styles.heroSubtitle}>
-          {subtitle}
-        </Typography>
+          <Typography variant="hero" as="h1">
+            {title ?? (
+              <>
+                Your backend.
+                <br />
+                Deployed. Managed.
+                <br />
+                <Typography variant="hero" as="span" color="accent">
+                  Ready.
+                </Typography>
+              </>
+            )}
+          </Typography>
 
-        <div className={styles.ctaGroup}>
-          <Button
-            href={primaryCtaHref}
-            size="lg"
-            variant="primary"
-            rightIcon={<ArrowRightIcon width={16} height={16} />}
-          >
-            {primaryCtaText}
-          </Button>
-          <Button href={secondaryCtaHref} size="lg" variant="ghost">
-            {secondaryCtaText}
-          </Button>
-        </div>
-      </div>
-
-      <div className={styles.heroVisualCol}>
-        <WindowFrame
-          title="deployment.status"
-          classNameOverride={styles.windowCard}
-        >
-          <div className={styles.stepsList}>
-            {previewSteps.map((step, idx) => (
-              <div key={idx} className={styles.stepRow}>
-                {step.status === 'completed' ? (
-                  <span className={styles.dotSuccess} aria-hidden="true">
-                    ✓
-                  </span>
-                ) : step.status === 'in-progress' ? (
-                  <span className={styles.spinner} aria-hidden="true" />
-                ) : (
-                  <span className={styles.dotWaiting} aria-hidden="true" />
-                )}
-                <div>
-                  <Typography variant="body-sm" weight="semibold">
-                    {step.title}
-                  </Typography>
-                  <Typography variant="caption" color="muted">
-                    {step.subtitle}
-                  </Typography>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.cardFooter}>
-            <span className={styles.pulseDot} aria-hidden="true" />
-            <Typography variant="caption" color="muted">
-              Monitoring active on us-east-1
+          <Box my="7">
+            <Typography variant="lead" maxW="520">
+              {subtitle}
             </Typography>
-          </div>
-        </WindowFrame>
-      </div>
-    </section>
+          </Box>
+
+          <Flex gap="3" wrap="wrap">
+            <Button
+              href={primaryCtaHref}
+              size="lg"
+              variant="primary"
+              rightIcon={<ArrowRightIcon width={16} height={16} />}
+            >
+              {primaryCtaText}
+            </Button>
+            <Button href={secondaryCtaHref} size="lg" variant="ghost">
+              {secondaryCtaText}
+            </Button>
+          </Flex>
+        </Flex>
+
+        <Box flex="1" minW="0" basis="440">
+          <WindowFrame title="deployment.status" variant="glass">
+            <Flex direction="column" gap="3" py="3" px="1">
+              {previewSteps.map((step, idx) => (
+                <Card key={idx} padding="sm" variant="subtle">
+                  <Flex align="center" gap="3">
+                    {step.status === 'completed' ? (
+                      <IconBadge variant="success" size="sm" rounded="full">
+                        ✓
+                      </IconBadge>
+                    ) : step.status === 'in-progress' ? (
+                      <StatusDot variant="loading" size="lg" />
+                    ) : (
+                      <IconBadge variant="surface" size="sm" rounded="full" />
+                    )}
+                    <Flex direction="column">
+                      <Typography variant="body-sm" weight="semibold">
+                        {step.title}
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        {step.subtitle}
+                      </Typography>
+                    </Flex>
+                  </Flex>
+                </Card>
+              ))}
+            </Flex>
+
+            <Flex align="center" gap="2" mt="3" pt="3" borderTop>
+              <StatusDot variant="success" size="sm" pulse />
+              <Typography variant="caption" color="muted">
+                Monitoring active on us-east-1
+              </Typography>
+            </Flex>
+          </WindowFrame>
+        </Box>
+      </Flex>
+    </Section>
   );
 }

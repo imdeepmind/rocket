@@ -20,7 +20,33 @@ export type BoxSpacingScale =
   | '10'
   | '12'
   | '14'
-  | '16';
+  | '16'
+  | '18'
+  | '20'
+  | 'auto';
+
+export type BoxFlex = '1' | 'auto' | 'none' | 'initial';
+export type BoxBasis =
+  'sm' | 'md' | 'lg' | '420' | '440' | '460' | '480' | string;
+export type BoxMinW = '0' | 'full';
+export type BoxMaxW =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | '2xl'
+  | '3xl'
+  | '520'
+  | '600'
+  | '720'
+  | 'landing'
+  | 'container'
+  | string;
+export type BoxOverflow = 'visible' | 'hidden' | 'scroll' | 'auto';
+export type BoxListStyle = 'none' | 'disc' | 'decimal';
+export type BoxPosition = 'relative' | 'absolute' | 'fixed';
+export type BoxTextAlign = 'left' | 'center' | 'right';
 
 export type BoxProps<T extends React.ElementType = 'div'> = {
   as?: T;
@@ -40,6 +66,17 @@ export type BoxProps<T extends React.ElementType = 'div'> = {
   py?: BoxSpacingScale;
   px?: BoxSpacingScale;
   fullWidth?: boolean;
+  flex?: BoxFlex;
+  basis?: BoxBasis;
+  minW?: BoxMinW;
+  maxW?: BoxMaxW;
+  overflow?: BoxOverflow;
+  overflowX?: BoxOverflow;
+  borderTop?: boolean;
+  borderBottom?: boolean;
+  listStyle?: BoxListStyle;
+  position?: BoxPosition;
+  textAlign?: BoxTextAlign;
   classNameOverride?: string;
   children?: React.ReactNode;
 } & Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className'>;
@@ -62,6 +99,17 @@ export default function Box<T extends React.ElementType = 'div'>({
   py,
   px,
   fullWidth = false,
+  flex,
+  basis,
+  minW,
+  maxW,
+  overflow,
+  overflowX,
+  borderTop,
+  borderBottom,
+  listStyle,
+  position,
+  textAlign,
   classNameOverride,
   children,
   ...props
@@ -86,6 +134,17 @@ export default function Box<T extends React.ElementType = 'div'>({
     py !== undefined ? styles[`py-${py}`] : '',
     px !== undefined ? styles[`px-${px}`] : '',
     fullWidth ? styles.fullWidth : '',
+    flex ? styles[`flex-${flex}`] : '',
+    basis ? styles[`basis-${basis}`] : '',
+    minW ? styles[`minW-${minW}`] : '',
+    maxW ? styles[`maxW-${maxW}`] : '',
+    overflow ? styles[`overflow-${overflow}`] : '',
+    overflowX ? styles[`overflowX-${overflowX}`] : '',
+    borderTop ? styles.borderTop : '',
+    borderBottom ? styles.borderBottom : '',
+    listStyle ? styles[`listStyle-${listStyle}`] : '',
+    position ? styles[`position-${position}`] : '',
+    textAlign ? styles[`textAlign-${textAlign}`] : '',
   ]
     .filter(Boolean)
     .join(' ');

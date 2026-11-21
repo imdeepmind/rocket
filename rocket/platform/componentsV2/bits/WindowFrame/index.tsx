@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 export interface WindowFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
   dots?: boolean;
+  variant?: 'default' | 'glass';
   classNameOverride?: string;
   children?: React.ReactNode;
 }
@@ -14,11 +15,17 @@ export interface WindowFrameProps extends React.HTMLAttributes<HTMLDivElement> {
 export default function WindowFrame({
   title,
   dots = true,
+  variant = 'default',
   classNameOverride,
   children,
   ...props
 }: WindowFrameProps): React.JSX.Element {
-  const defaultClasses = [styles.windowFrame].join(' ');
+  const defaultClasses = [
+    styles.windowFrame,
+    variant !== 'default' ? styles[variant] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
   const combinedClass = classNameOverride ?? defaultClasses;
 
   return (

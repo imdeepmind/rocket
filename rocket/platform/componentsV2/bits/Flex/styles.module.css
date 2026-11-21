@@ -316,3 +316,153 @@
   padding-left: var(--spacing-5);
   padding-right: var(--spacing-5);
 }
+
+.gap-18 {
+  gap: var(--spacing-18);
+}
+.gap-20 {
+  gap: var(--spacing-20);
+}
+
+/* Flex & Basis */
+.flex-1 {
+  flex: 1 1 0%;
+}
+.flex-auto {
+  flex: 1 1 auto;
+}
+.flex-none {
+  flex: none;
+}
+.flex-initial {
+  flex: 0 1 auto;
+}
+
+.basis-sm {
+  flex-basis: 320px;
+}
+.basis-md {
+  flex-basis: 440px;
+}
+.basis-lg {
+  flex-basis: 560px;
+}
+.basis-420 {
+  flex-basis: 420px;
+}
+.basis-440 {
+  flex-basis: 440px;
+}
+.basis-460 {
+  flex-basis: 460px;
+}
+.basis-480 {
+  flex-basis: 480px;
+}
+
+.minW-0 {
+  min-width: 0;
+}
+.minW-full {
+  min-width: 100%;
+}
+
+/* Max Width */
+.maxW-xs {
+  max-width: 320px;
+}
+.maxW-sm {
+  max-width: 440px;
+}
+.maxW-md {
+  max-width: 520px;
+}
+.maxW-lg {
+  max-width: 600px;
+}
+.maxW-xl {
+  max-width: 720px;
+}
+.maxW-520 {
+  max-width: 520px;
+}
+.maxW-600 {
+  max-width: 600px;
+}
+.maxW-720 {
+  max-width: 720px;
+}
+.maxW-landing {
+  max-width: var(--width-landing-container);
+}
+.maxW-container {
+  max-width: var(--width-content);
+}
+
+/* Overflow */
+.overflow-visible {
+  overflow: visible;
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.overflow-auto {
+  overflow: auto;
+}
+.overflow-scroll {
+  overflow: scroll;
+}
+
+.overflowX-visible {
+  overflow-x: visible;
+}
+.overflowX-hidden {
+  overflow-x: hidden;
+}
+.overflowX-auto {
+  overflow-x: auto;
+}
+.overflowX-scroll {
+  overflow-x: scroll;
+}
+
+/* Borders */
+.borderTop {
+  border-top: 1px solid var(--border-subtle);
+}
+.borderBottom {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* List Style */
+.listStyle-none {
+  list-style: none;
+}
+.listStyle-disc {
+  list-style: disc;
+}
+.listStyle-decimal {
+  list-style: decimal;
+}
+
+/* Position */
+.position-relative {
+  position: relative;
+}
+.position-absolute {
+  position: absolute;
+}
+.position-fixed {
+  position: fixed;
+}
+
+/* Text Align */
+.textAlign-left {
+  text-align: left;
+}
+.textAlign-center {
+  text-align: center;
+}
+.textAlign-right {
+  text-align: right;
+}

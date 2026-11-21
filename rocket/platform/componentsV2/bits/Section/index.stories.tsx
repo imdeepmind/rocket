@@ -1,31 +1,43 @@
 import type {Meta, StoryObj} from '@storybook/react';
 import React from 'react';
 
-import Section, {type SectionProps} from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
+
+import Section from './index';
 
 const meta = {
   title: 'Bits/Section',
   component: Section,
   parameters: {
-    layout: 'padded',
+    layout: 'fullscreen',
   },
-  args: {
-    as: 'section',
-    children: 'Section container',
-  },
-} satisfies Meta<SectionProps>;
+  tags: ['autodocs'],
+} satisfies Meta<typeof Section>;
 
 export default meta;
-type Story = StoryObj<SectionProps>;
+type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  render: () => (
-    <Section>
-      <Typography variant="h2">Section Title</Typography>
-      <Typography variant="body" color="muted">
-        Semantic section component for page level content regions.
+export const LandingContainer: Story = {
+  args: {
+    container: 'landing',
+    spacing: 'lg',
+    children: (
+      <Typography variant="body">
+        Centered landing container content within max-width.
       </Typography>
-    </Section>
-  ),
+    ),
+  },
+};
+
+export const HeroSpacing: Story = {
+  args: {
+    container: 'landing',
+    spacing: 'hero',
+    align: 'center',
+    children: (
+      <Typography variant="h1" as="h1">
+        Hero Section Title
+      </Typography>
+    ),
+  },
 };

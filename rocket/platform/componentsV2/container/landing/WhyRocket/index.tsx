@@ -1,9 +1,11 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
+import Flex from '@/componentsV2/bits/Flex';
+import IconBadge from '@/componentsV2/bits/IconBadge';
+import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
 import TerminalViewer from '@/componentsV2/items/TerminalViewer';
-
-import styles from './styles.module.css';
 
 export const DEFAULT_BENEFITS = [
   'Less infrastructure setup',
@@ -36,40 +38,53 @@ export default function WhyRocket({
   terminalLines = DEFAULT_TERMINAL_LINES,
   classNameOverride,
 }: WhyRocketProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.whySection;
-
   return (
-    <section id="docs" className={combinedClass}>
-      {/* Left: CLI terminal preview */}
-      <div className={styles.terminalCol}>
-        <TerminalViewer
-          title={terminalTitle}
-          lines={terminalLines}
-          activeCursor
-          showDots
-        />
-      </div>
+    <Section
+      id="docs"
+      container="landing"
+      spacing="lg"
+      classNameOverride={classNameOverride}
+    >
+      <Flex align="center" gap="16" wrap="wrap">
+        {/* Left: CLI terminal preview */}
+        <Box flex="1" minW="0" basis="440">
+          <TerminalViewer
+            title={terminalTitle}
+            lines={terminalLines}
+            activeCursor
+            showDots
+          />
+        </Box>
 
-      {/* Right: Why Rocket info */}
-      <div className={styles.infoCol}>
-        {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
-        <Typography variant="h2" as="h2" classNameOverride={styles.title}>
-          {title}
-        </Typography>
+        {/* Right: Why Rocket info */}
+        <Flex direction="column" gap="4" flex="1" minW="0" basis="440">
+          {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
+          <Typography variant="h2" as="h2">
+            {title}
+          </Typography>
 
-        <ul className={styles.checkList}>
-          {benefits.map(benefit => (
-            <li key={benefit} className={styles.checkItem}>
-              <span className={styles.checkDot} aria-hidden="true">
-                ✓
-              </span>
-              <Typography variant="body" as="span">
-                {benefit}
-              </Typography>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+          <Flex
+            as="ul"
+            direction="column"
+            gap="3"
+            mt="4"
+            listStyle="none"
+            p="0"
+            m="0"
+          >
+            {benefits.map(benefit => (
+              <Flex as="li" align="center" gap="3" key={benefit}>
+                <IconBadge variant="success" size="sm" rounded="full">
+                  ✓
+                </IconBadge>
+                <Typography variant="body" as="span">
+                  {benefit}
+                </Typography>
+              </Flex>
+            ))}
+          </Flex>
+        </Flex>
+      </Flex>
+    </Section>
   );
 }

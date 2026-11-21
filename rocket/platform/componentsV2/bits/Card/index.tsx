@@ -6,9 +6,10 @@ export interface CardProps extends Omit<
   React.HTMLAttributes<HTMLDivElement>,
   'className'
 > {
-  variant?: 'default' | 'glass' | 'interactive' | 'bordered';
+  variant?: 'default' | 'glass' | 'interactive' | 'bordered' | 'subtle';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
+  hoverable?: boolean;
   classNameOverride?: string;
   children?: React.ReactNode;
 }
@@ -17,6 +18,7 @@ export default function Card({
   variant = 'default',
   padding = 'md',
   fullWidth = false,
+  hoverable = false,
   classNameOverride,
   children,
   ...props
@@ -26,6 +28,7 @@ export default function Card({
     styles[variant],
     styles[`pad-${padding}`],
     fullWidth ? styles.fullWidth : '',
+    hoverable ? styles.hoverable : '',
   ]
     .filter(Boolean)
     .join(' ');

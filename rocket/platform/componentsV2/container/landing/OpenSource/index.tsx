@@ -2,11 +2,13 @@ import React from 'react';
 
 import ArrowRightIcon from '@/icons/ArrowRightIcon';
 
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
+import IconBadge from '@/componentsV2/bits/IconBadge';
+import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
-
-import styles from './styles.module.css';
 
 export const DEFAULT_ROSS_FEATURES = [
   'Database schema generation',
@@ -41,90 +43,84 @@ export default function OpenSource({
   features = DEFAULT_ROSS_FEATURES,
   classNameOverride,
 }: OpenSourceProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.openSection;
-
   return (
-    <section className={combinedClass}>
-      {/* Left: About ROSS and Rocket */}
-      <div className={styles.infoCol}>
-        {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
-        <Typography variant="h2" as="h2" classNameOverride={styles.title}>
-          {title}
-        </Typography>
-
-        <Typography variant="lead" classNameOverride={styles.leadText}>
-          {leadText}
-        </Typography>
-
-        <Typography
-          variant="body"
-          color="muted"
-          classNameOverride={styles.bodyText}
-        >
-          {bodyText}
-        </Typography>
-
-        <div className={styles.ctaGroup}>
-          <Button
-            href={primaryCtaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="lg"
-            variant="primary"
-            rightIcon={<ArrowRightIcon width={16} height={16} />}
-          >
-            {primaryCtaText}
-          </Button>
-          <Button
-            href={secondaryCtaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="lg"
-            variant="ghost"
-          >
-            {secondaryCtaText}
-          </Button>
-        </div>
-      </div>
-
-      {/* Right: ROSS handles card */}
-      <div className={styles.cardCol}>
-        <Card
-          padding="lg"
-          variant="glass"
-          classNameOverride={styles.configCard}
-        >
-          <Typography
-            variant="mono"
-            color="muted"
-            classNameOverride={styles.cardHeader}
-          >
-            One JSON configuration. ROSS handles:
+    <Section
+      container="landing"
+      spacing="lg"
+      classNameOverride={classNameOverride}
+    >
+      <Flex align="center" gap="16" wrap="wrap">
+        {/* Left: About ROSS and Rocket */}
+        <Flex direction="column" gap="4" flex="1" minW="0" basis="480">
+          {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
+          <Typography variant="h2" as="h2">
+            {title}
           </Typography>
 
-          <div className={styles.rowList}>
-            {features.map(item => (
-              <div key={item} className={styles.row}>
-                <span className={styles.checkDot} aria-hidden="true">
-                  ✓
-                </span>
-                <Typography variant="body" as="span">
-                  {item}
-                </Typography>
-              </div>
-            ))}
-          </div>
+          <Box my="2">
+            <Typography variant="lead">{leadText}</Typography>
+          </Box>
 
-          <Typography
-            variant="caption"
-            color="muted"
-            classNameOverride={styles.cardFooter}
-          >
-            Bring your ROSS configuration. Rocket deploys it with PostgreSQL and
-            Redis/Memcached included.
+          <Typography variant="body" color="muted">
+            {bodyText}
           </Typography>
-        </Card>
-      </div>
-    </section>
+
+          <Flex gap="3" mt="4" wrap="wrap">
+            <Button
+              href={primaryCtaHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="lg"
+              variant="primary"
+              rightIcon={<ArrowRightIcon width={16} height={16} />}
+            >
+              {primaryCtaText}
+            </Button>
+            <Button
+              href={secondaryCtaHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="lg"
+              variant="ghost"
+            >
+              {secondaryCtaText}
+            </Button>
+          </Flex>
+        </Flex>
+
+        {/* Right: ROSS handles card */}
+        <Box flex="1" minW="0" basis="420">
+          <Card padding="lg" variant="glass" fullWidth>
+            <Box mb="5">
+              <Typography variant="mono" color="muted">
+                One JSON configuration. ROSS handles:
+              </Typography>
+            </Box>
+
+            <Flex direction="column" gap="3" mb="6">
+              {features.map(item => (
+                <Card key={item} padding="sm" variant="subtle">
+                  <Flex align="center" gap="3">
+                    <IconBadge variant="success" size="xs" rounded="full">
+                      ✓
+                    </IconBadge>
+                    <Typography variant="body" as="span">
+                      {item}
+                    </Typography>
+                  </Flex>
+                </Card>
+              ))}
+            </Flex>
+
+            <Box pt="4" borderTop>
+              <Typography variant="caption" color="muted">
+                Bring your ROSS configuration. Rocket deploys it with PostgreSQL
+                and Redis/Memcached included.
+              </Typography>
+            </Box>
+          </Card>
+        </Box>
+      </Flex>
+    </Section>
   );
 }

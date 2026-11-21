@@ -122,6 +122,35 @@
   color: #ffffff;
 }
 
+.color-accent {
+  color: var(--color-primary-light);
+}
+
+.maxW-xs {
+  max-width: 320px;
+}
+.maxW-sm {
+  max-width: 440px;
+}
+.maxW-md {
+  max-width: 520px;
+}
+.maxW-lg {
+  max-width: 600px;
+}
+.maxW-xl {
+  max-width: 720px;
+}
+.maxW-520 {
+  max-width: 520px;
+}
+.maxW-600 {
+  max-width: 600px;
+}
+.maxW-720 {
+  max-width: 720px;
+}
+
 /* Weights */
 .weight-normal {
   font-weight: 400;

@@ -20,7 +20,33 @@ export type FlexSpacingScale =
   | '10'
   | '12'
   | '14'
-  | '16';
+  | '16'
+  | '18'
+  | '20'
+  | 'auto';
+
+export type FlexFlex = '1' | 'auto' | 'none' | 'initial';
+export type FlexBasis =
+  'sm' | 'md' | 'lg' | '420' | '440' | '460' | '480' | string;
+export type FlexMinW = '0' | 'full';
+export type FlexMaxW =
+  | 'xs'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | '2xl'
+  | '3xl'
+  | '520'
+  | '600'
+  | '720'
+  | 'landing'
+  | 'container'
+  | string;
+export type FlexOverflow = 'visible' | 'hidden' | 'scroll' | 'auto';
+export type FlexListStyle = 'none' | 'disc' | 'decimal';
+export type FlexPosition = 'relative' | 'absolute' | 'fixed';
+export type FlexTextAlign = 'left' | 'center' | 'right';
 
 export type FlexProps<T extends React.ElementType = 'div'> = {
   as?: T;
@@ -40,6 +66,17 @@ export type FlexProps<T extends React.ElementType = 'div'> = {
   py?: FlexSpacingScale;
   px?: FlexSpacingScale;
   fullWidth?: boolean;
+  flex?: FlexFlex;
+  basis?: FlexBasis;
+  minW?: FlexMinW;
+  maxW?: FlexMaxW;
+  overflow?: FlexOverflow;
+  overflowX?: FlexOverflow;
+  borderTop?: boolean;
+  borderBottom?: boolean;
+  listStyle?: FlexListStyle;
+  position?: FlexPosition;
+  textAlign?: FlexTextAlign;
   classNameOverride?: string;
   children?: React.ReactNode;
 } & Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className'>;
@@ -62,6 +99,17 @@ export default function Flex<T extends React.ElementType = 'div'>({
   py,
   px,
   fullWidth = false,
+  flex,
+  basis,
+  minW,
+  maxW,
+  overflow,
+  overflowX,
+  borderTop,
+  borderBottom,
+  listStyle,
+  position,
+  textAlign,
   classNameOverride,
   children,
   ...props
@@ -86,6 +134,17 @@ export default function Flex<T extends React.ElementType = 'div'>({
     py !== undefined ? styles[`py-${py}`] : '',
     px !== undefined ? styles[`px-${px}`] : '',
     fullWidth ? styles.fullWidth : '',
+    flex ? styles[`flex-${flex}`] : '',
+    basis ? styles[`basis-${basis}`] : '',
+    minW ? styles[`minW-${minW}`] : '',
+    maxW ? styles[`maxW-${maxW}`] : '',
+    overflow ? styles[`overflow-${overflow}`] : '',
+    overflowX ? styles[`overflowX-${overflowX}`] : '',
+    borderTop ? styles.borderTop : '',
+    borderBottom ? styles.borderBottom : '',
+    listStyle ? styles[`listStyle-${listStyle}`] : '',
+    position ? styles[`position-${position}`] : '',
+    textAlign ? styles[`textAlign-${textAlign}`] : '',
   ]
     .filter(Boolean)
     .join(' ');

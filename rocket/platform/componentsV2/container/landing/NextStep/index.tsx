@@ -1,6 +1,9 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
+import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
 
 import styles from './styles.module.css';
@@ -24,27 +27,39 @@ export default function NextStep({
   secondaryCtaHref = '/docs',
   classNameOverride,
 }: NextStepProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.nextSection;
-
   return (
-    <section className={combinedClass}>
-      <div className={styles.glow} aria-hidden="true" />
-      <div className={styles.content}>
-        <Typography variant="h2" as="h2" classNameOverride={styles.title}>
+    <Section
+      container="landing"
+      spacing="hero"
+      position="relative"
+      overflow="hidden"
+      align="center"
+      classNameOverride={classNameOverride}
+    >
+      <Box classNameOverride={styles.glow} aria-hidden="true" />
+      <Flex
+        direction="column"
+        align="center"
+        gap="5"
+        maxW="720"
+        position="relative"
+        mx="auto"
+      >
+        <Typography variant="h2" as="h2" align="center">
           {title}
         </Typography>
-        <Typography variant="lead" classNameOverride={styles.description}>
+        <Typography variant="lead" align="center">
           {description}
         </Typography>
-        <div className={styles.ctaGroup}>
+        <Flex gap="3" mt="4" wrap="wrap" justify="center">
           <Button href={primaryCtaHref} size="lg" variant="primary">
             {primaryCtaText}
           </Button>
           <Button href={secondaryCtaHref} size="lg" variant="ghost">
             {secondaryCtaText}
           </Button>
-        </div>
-      </div>
-    </section>
+        </Flex>
+      </Flex>
+    </Section>
   );
 }

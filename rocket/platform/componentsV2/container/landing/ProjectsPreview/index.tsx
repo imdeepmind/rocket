@@ -1,12 +1,13 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
+import Section from '@/componentsV2/bits/Section';
 import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 import Table, {TableColumn} from '@/componentsV2/items/Table';
-
-import styles from './styles.module.css';
 
 export interface PreviewProject {
   name: string;
@@ -51,8 +52,6 @@ export default function ProjectsPreview({
   projects = DEFAULT_PREVIEW_PROJECTS,
   classNameOverride,
 }: ProjectsPreviewProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.section;
-
   const columns: TableColumn<PreviewProject>[] = [
     {
       header: 'Project',
@@ -93,34 +92,35 @@ export default function ProjectsPreview({
   ];
 
   return (
-    <section className={combinedClass}>
-      <Card
-        padding="lg"
-        variant="glass"
-        classNameOverride={styles.dashboardCard}
-      >
-        <div className={styles.header}>
-          <div>
+    <Section
+      container="landing"
+      pt="10"
+      pb="20"
+      classNameOverride={classNameOverride}
+    >
+      <Card padding="lg" variant="glass" fullWidth>
+        <Flex align="center" justify="between" mb="6" fullWidth>
+          <Flex direction="column">
             <Typography variant="h3" as="h3">
               {title}
             </Typography>
             <Typography variant="caption" color="muted">
               {subtitle}
             </Typography>
-          </div>
+          </Flex>
           <Button href={newProjectHref} size="sm" variant="primary">
             + New project
           </Button>
-        </div>
+        </Flex>
 
-        <div className={styles.tableWrapper}>
+        <Box overflowX="auto" fullWidth>
           <Table<PreviewProject>
             columns={columns}
             data={projects}
             keyExtractor={row => row.name}
           />
-        </div>
+        </Box>
       </Card>
-    </section>
+    </Section>
   );
 }

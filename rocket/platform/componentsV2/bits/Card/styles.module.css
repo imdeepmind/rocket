@@ -40,6 +40,23 @@
   border-color: var(--border-subtle);
 }
 
+.subtle {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.hoverable {
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.hoverable:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-hover);
+}
+
 /* Padding */
 .pad-none {
   padding: 0;
