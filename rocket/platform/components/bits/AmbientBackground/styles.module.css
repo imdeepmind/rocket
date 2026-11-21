@@ -82,7 +82,6 @@
   animation: floatOrb4 22s ease-in-out infinite;
 }
 
-/* 11-step fluid trajectory for Orb 1 (traverses upper-right, center, bottom, right) */
 @keyframes floatOrb1 {
   0% {
     transform: translate(0, 0) scale(1) rotate(0deg);
@@ -119,7 +118,6 @@
   }
 }
 
-/* 11-step fluid trajectory for Orb 2 (traverses center, bottom-right, top, left, bottom-left) */
 @keyframes floatOrb2 {
   0% {
     transform: translate(0, 0) scale(1) rotate(0deg);
@@ -156,7 +154,6 @@
   }
 }
 
-/* 11-step fluid trajectory for Orb 3 (traverses left, bottom-center, far-right, top-left) */
 @keyframes floatOrb3 {
   0% {
     transform: translate(0, 0) scale(1) rotate(0deg);
@@ -193,7 +190,6 @@
   }
 }
 
-/* 11-step fluid trajectory for Orb 4 (traverses bottom-right, center, left, bottom-center) */
 @keyframes floatOrb4 {
   0% {
     transform: translate(0, 0) scale(1) rotate(0deg);

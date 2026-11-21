@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import React from 'react';
 
-import SignInCard from '@/componentsV2/container/auth/SignInCard';
+import SignInCard from '@/components/container/auth/SignInCard';
 
 export const metadata: Metadata = {
   title: 'Sign In · Rocket',

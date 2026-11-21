@@ -1,15 +1,16 @@
 import React from 'react';
 
-import Box from '@/componentsV2/bits/Box';
-import Features from '@/componentsV2/container/landing/Features';
-import Hero from '@/componentsV2/container/landing/Hero';
-import HowItWorks from '@/componentsV2/container/landing/HowItWorks';
-import NextStep from '@/componentsV2/container/landing/NextStep';
-import OpenSource from '@/componentsV2/container/landing/OpenSource';
-import ProjectsPreview from '@/componentsV2/container/landing/ProjectsPreview';
-import WhyRocket from '@/componentsV2/container/landing/WhyRocket';
-import Footer from '@/componentsV2/container/navigation/Footer';
-import Navbar from '@/componentsV2/container/navigation/Navbar';
+import Features from '@/components/container/landing/Features';
+import Hero from '@/components/container/landing/Hero';
+import HowItWorks from '@/components/container/landing/HowItWorks';
+import NextStep from '@/components/container/landing/NextStep';
+import OpenSource from '@/components/container/landing/OpenSource';
+import ProjectsPreview from '@/components/container/landing/ProjectsPreview';
+import WhyRocket from '@/components/container/landing/WhyRocket';
+import Footer from '@/components/container/navigation/Footer';
+import Navbar from '@/components/container/navigation/Navbar';
+
+import Box from '@/components/bits/Box';
 
 import styles from './page.module.css';
 

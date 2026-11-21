@@ -2,17 +2,20 @@
 
 import React, {forwardRef, useId} from 'react';
 
+import Typography from '@/components/bits/Typography';
+
 import styles from './styles.module.css';
 
 export interface TextBoxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
-  error?: string;
   hint?: string;
+  error?: string;
+  sizeVariant?: 'sm' | 'md' | 'lg';
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
-  sizeVariant?: 'sm' | 'md' | 'lg';
+  classNameOverride?: string;
 }
 
 export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
@@ -20,14 +23,14 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
     {
       label,
       labelRight,
-      error,
       hint,
+      error,
+      sizeVariant = 'md',
       leftIcon,
       rightIcon,
       fullWidth = false,
-      sizeVariant = 'md',
+      classNameOverride,
       id: customId,
-      className = '',
       disabled,
       ...rest
     },
@@ -36,17 +39,27 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
     const generatedId = useId();
     const id = customId || generatedId;
 
+    const containerClasses = [
+      styles.container,
+      fullWidth ? styles.fullWidth : '',
+      disabled ? styles.disabled : '',
+      error ? styles.hasError : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    const wrapperClasses = [
+      styles.inputWrapper,
+      styles[sizeVariant],
+      error ? styles.inputError : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    const inputClasses = classNameOverride ?? styles.input;
+
     return (
-      <div
-        className={[
-          styles.container,
-          fullWidth ? styles.fullWidth : '',
-          disabled ? styles.disabled : '',
-          error ? styles.hasError : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
+      <div className={containerClasses}>
         {(label || labelRight) && (
           <div className={styles.labelRow}>
             {label && (
@@ -60,28 +73,36 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(
           </div>
         )}
 
-        <div
-          className={[
-            styles.inputWrapper,
-            styles[sizeVariant],
-            error ? styles.inputError : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {leftIcon && <span className={styles.leftIcon}>{leftIcon}</span>}
+        <div className={wrapperClasses}>
+          {leftIcon && <span className={styles.icon}>{leftIcon}</span>}
           <input
             ref={ref}
             id={id}
             disabled={disabled}
-            className={[styles.input, className].filter(Boolean).join(' ')}
+            className={inputClasses}
             {...rest}
           />
-          {rightIcon && <span className={styles.rightIcon}>{rightIcon}</span>}
+          {rightIcon && <span className={styles.icon}>{rightIcon}</span>}
         </div>
 
-        {error && <p className={styles.errorText}>{error}</p>}
-        {!error && hint && <p className={styles.hintText}>{hint}</p>}
+        {error && (
+          <Typography
+            variant="caption"
+            color="error"
+            classNameOverride={styles.feedbackText}
+          >
+            {error}
+          </Typography>
+        )}
+        {!error && hint && (
+          <Typography
+            variant="caption"
+            color="muted"
+            classNameOverride={styles.feedbackText}
+          >
+            {hint}
+          </Typography>
+        )}
       </div>
     );
   },

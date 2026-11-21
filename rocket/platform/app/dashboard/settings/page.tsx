@@ -2,10 +2,11 @@
 
 import React from 'react';
 
-import Flex from '@/componentsV2/bits/Flex';
-import Typography from '@/componentsV2/bits/Typography';
-import SettingsForm from '@/componentsV2/container/settings/SettingsForm';
-import Breadcrumb from '@/componentsV2/items/Breadcrumb';
+import SettingsForm from '@/components/container/settings/SettingsForm';
+
+import Flex from '@/components/bits/Flex';
+import Typography from '@/components/bits/Typography';
+import Breadcrumb from '@/components/items/Breadcrumb';
 
 export default function SettingsPage(): React.JSX.Element {
   return (

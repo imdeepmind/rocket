@@ -3,8 +3,9 @@
 import {useRouter} from 'next/navigation';
 import React, {useEffect} from 'react';
 
-import Box from '@/componentsV2/bits/Box';
-import AppShell from '@/componentsV2/container/navigation/AppShell';
+import AppShell from '@/components/container/navigation/AppShell';
+
+import Box from '@/components/bits/Box';
 
 import {signOut, useSession} from '@/lib/auth/client';
 

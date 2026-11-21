@@ -1,8 +1,9 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import Box from '@/componentsV2/bits/Box';
-import VerifyEmailCard from '@/componentsV2/container/auth/VerifyEmailCard';
+import VerifyEmailCard from '@/components/container/auth/VerifyEmailCard';
+
+import Box from '@/components/bits/Box';
 
 export const metadata: Metadata = {
   title: 'Verify Email · Rocket',

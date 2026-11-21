@@ -1,8 +1,9 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import Box from '@/componentsV2/bits/Box';
-import ResetPasswordCard from '@/componentsV2/container/auth/ResetPasswordCard';
+import ResetPasswordCard from '@/components/container/auth/ResetPasswordCard';
+
+import Box from '@/components/bits/Box';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',

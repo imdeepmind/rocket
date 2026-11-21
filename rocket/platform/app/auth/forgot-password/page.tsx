@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import React from 'react';
 
-import ForgotPasswordCard from '@/componentsV2/container/auth/ForgotPasswordCard';
+import ForgotPasswordCard from '@/components/container/auth/ForgotPasswordCard';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',

@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import React from 'react';
 
-import SignUpCard from '@/componentsV2/container/auth/SignUpCard';
+import SignUpCard from '@/components/container/auth/SignUpCard';
 
 export const metadata: Metadata = {
   title: 'Create Account · Rocket',

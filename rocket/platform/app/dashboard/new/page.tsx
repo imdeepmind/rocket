@@ -2,15 +2,16 @@
 
 import React, {useState} from 'react';
 
-import Box from '@/componentsV2/bits/Box';
-import Flex from '@/componentsV2/bits/Flex';
-import Tag from '@/componentsV2/bits/Tag';
-import Typography from '@/componentsV2/bits/Typography';
 import CreateProjectForm, {
   type EnvVarItem,
-} from '@/componentsV2/container/create-project/CreateProjectForm';
-import CreateProjectStepper from '@/componentsV2/container/create-project/CreateProjectStepper';
-import Breadcrumb from '@/componentsV2/items/Breadcrumb';
+} from '@/components/container/create-project/CreateProjectForm';
+import CreateProjectStepper from '@/components/container/create-project/CreateProjectStepper';
+
+import Box from '@/components/bits/Box';
+import Flex from '@/components/bits/Flex';
+import Tag from '@/components/bits/Tag';
+import Typography from '@/components/bits/Typography';
+import Breadcrumb from '@/components/items/Breadcrumb';
 
 export default function NewProjectPage(): React.JSX.Element {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);

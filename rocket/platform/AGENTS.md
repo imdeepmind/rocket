@@ -58,10 +58,10 @@ Components are divided into two distinct tiers:
 - **`bits` (`components/bits/`)**: Small, simpler primitive components (e.g., `Button`, `Text`, `TextBox`, `Card`, `Badge`, `Table`). Bits are low-level atomic building blocks focused on single responsibilities.
 - **`items` (`components/items/`)**: Complex, composite components (e.g., `Navbar`, `AppSidebar`, `Footer`, `AppShell`, `AppNavbar`). Items should ideally be constructed by composing multiple `bits`.
 
-### 2. Container Hierarchy (`container/`)
+### 2. Container Hierarchy (`components/container/`)
 
 - Containers are page-targeted components.
-- Each page is decomposed into multiple distinct sections, where each section lives in a dedicated container folder under `container/<page-or-feature>/` (e.g., `landing/`, `auth/`, `dashboard/`).
+- Each page is decomposed into multiple distinct sections, where each section lives in a dedicated container folder under `components/container/<page-or-feature>/` (e.g., `landing/`, `auth/`, `dashboard/`).
 - Each section container is assembled using `bits` and `items` to build its layout and UI.
 
 ### 3. Avoid Direct HTML Entities & Tags
@@ -109,13 +109,13 @@ Components are divided into two distinct tiers:
 
 - In Next.js App Router, folders within `app/` define routes when they contain `page.tsx` or `route.ts`.
 - `app/` should strictly contain pages, layouts, and route handlers.
-- Other shared code—such as `components/`, `container/`, `icons/`, `lib/`, etc.—should be kept outside `app/` to prevent confusion between routing endpoints and internal codebase modules.
+- Other shared code—such as `components/`, `icons/`, `lib/`, etc.—should be kept outside `app/` to prevent confusion between routing endpoints and internal codebase modules.
 
 ## Import Order (enforced by Prettier)
 
 1. Node built-in modules
 2. Third-party packages
-3. `@/container/*`
+3. `@/components/container/*`
 4. `@/components/*`
 5. `@/icons/*`
 6. `@/lib/*`

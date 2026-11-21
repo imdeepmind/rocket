@@ -6,13 +6,16 @@ import React, {forwardRef} from 'react';
 import styles from './styles.module.css';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   href?: string;
   target?: string;
   rel?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  loading?: boolean;
   fullWidth?: boolean;
-  className?: string;
+  classNameOverride?: string;
   children?: React.ReactNode;
 }
 
@@ -26,8 +29,11 @@ export const Button = forwardRef<
     href,
     target,
     rel,
+    leftIcon,
+    rightIcon,
+    loading = false,
     fullWidth = false,
-    className = '',
+    classNameOverride,
     children,
     type = 'button',
     disabled,
@@ -35,15 +41,34 @@ export const Button = forwardRef<
   },
   ref,
 ) {
-  const combinedClassName = [
+  const defaultClasses = [
     styles.button,
     styles[variant],
     styles[size],
     fullWidth ? styles.fullWidth : '',
-    className,
+    loading ? styles.loading : '',
+    disabled ? styles.disabled : '',
   ]
     .filter(Boolean)
     .join(' ');
+
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
+
+  const content = (
+    <>
+      {loading ? (
+        <span className={styles.spinner} aria-hidden="true" />
+      ) : (
+        leftIcon && <span className={styles.iconWrapper}>{leftIcon}</span>
+      )}
+      <span>{children}</span>
+      {!loading && rightIcon && (
+        <span className={styles.iconWrapper}>{rightIcon}</span>
+      )}
+    </>
+  );
 
   if (href) {
     const isInternal = href.startsWith('/') && !href.startsWith('//');
@@ -51,13 +76,13 @@ export const Button = forwardRef<
       return (
         <Link
           href={href}
-          className={combinedClassName}
+          className={combinedClass}
           ref={ref as React.Ref<HTMLAnchorElement>}
           target={target}
           rel={rel}
           {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
         >
-          {children}
+          {content}
         </Link>
       );
     }
@@ -65,13 +90,13 @@ export const Button = forwardRef<
     return (
       <a
         href={href}
-        className={combinedClassName}
+        className={combinedClass}
         ref={ref as React.Ref<HTMLAnchorElement>}
         target={target}
         rel={rel}
         {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
       >
-        {children}
+        {content}
       </a>
     );
   }
@@ -79,13 +104,13 @@ export const Button = forwardRef<
   return (
     <button
       type={type}
-      className={combinedClassName}
+      className={combinedClass}
       ref={ref as React.Ref<HTMLButtonElement>}
-      disabled={disabled}
+      disabled={disabled || loading}
       suppressHydrationWarning
       {...rest}
     >
-      {children}
+      {content}
     </button>
   );
 });

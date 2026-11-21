@@ -1,112 +1,96 @@
-'use client';
-
 import React from 'react';
 
-import BaseTable from '@/components/bits/Table/Table';
-import TableBody from '@/components/bits/Table/TableBody';
-import TableCell from '@/components/bits/Table/TableCell';
-import TableContainer from '@/components/bits/Table/TableContainer';
-import TableHead from '@/components/bits/Table/TableHead';
-import TableHeader from '@/components/bits/Table/TableHeader';
-import TableRow from '@/components/bits/Table/TableRow';
+import Typography from '@/components/bits/Typography';
 
 import styles from './styles.module.css';
 
 export interface TableColumn<T> {
-  key?: string;
   header: React.ReactNode;
   accessor?: keyof T;
-  render?: (item: T, index: number) => React.ReactNode;
+  render?: (row: T) => React.ReactNode;
   align?: 'left' | 'center' | 'right';
   width?: string | number;
   className?: string;
-  headClassName?: string;
-  ariaLabel?: string;
 }
 
-export interface UnifiedTableProps<T> {
+export interface TableProps<
+  T,
+> extends React.TableHTMLAttributes<HTMLTableElement> {
   columns: TableColumn<T>[];
   data: T[];
-  keyExtractor: (item: T, index: number) => string | number;
-  emptyMessage?: React.ReactNode;
-  className?: string;
-  containerClassName?: string;
-  onRowClick?: (item: T, index: number) => void;
+  keyExtractor: (row: T) => string;
+  emptyText?: string;
+  classNameOverride?: string;
 }
 
-export function Table<T>({
+export default function Table<T>({
   columns,
   data,
   keyExtractor,
-  emptyMessage = 'No items found.',
-  className = '',
-  containerClassName = '',
-  onRowClick,
-}: UnifiedTableProps<T>): React.JSX.Element {
+  emptyText = 'No records found.',
+  classNameOverride,
+  ...props
+}: TableProps<T>): React.JSX.Element {
+  const combinedClass = classNameOverride ?? styles.container;
+
   return (
-    <TableContainer className={containerClassName}>
-      <BaseTable className={className}>
-        <TableHeader>
-          <TableRow>
+    <div className={combinedClass}>
+      <table className={styles.table} {...props}>
+        <thead>
+          <tr className={styles.headerRow}>
             {columns.map((col, idx) => (
-              <TableHead
-                key={
-                  col.key || (typeof col.header === 'string' ? col.header : idx)
-                }
-                align={col.align}
-                style={{width: col.width}}
-                className={col.headClassName}
-                aria-label={col.ariaLabel}
+              <th
+                key={idx}
+                style={{
+                  width: col.width,
+                  textAlign: col.align || 'left',
+                }}
+                className={[styles.headerCell, col.className]
+                  .filter(Boolean)
+                  .join(' ')}
               >
-                {col.header}
-              </TableHead>
+                <Typography variant="caption" color="muted" weight="semibold">
+                  {col.header}
+                </Typography>
+              </th>
             ))}
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
+          </tr>
+        </thead>
+        <tbody>
           {data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={columns.length} className={styles.emptyCell}>
-                {emptyMessage}
-              </TableCell>
-            </TableRow>
+            <tr>
+              <td colSpan={columns.length} className={styles.emptyCell}>
+                <Typography variant="body-sm" color="muted">
+                  {emptyText}
+                </Typography>
+              </td>
+            </tr>
           ) : (
-            data.map((item, rowIdx) => (
-              <TableRow
-                key={keyExtractor(item, rowIdx)}
-                onClick={() => onRowClick?.(item, rowIdx)}
-                className={onRowClick ? styles.clickableRow : ''}
-              >
-                {columns.map((col, colIdx) => {
-                  let content: React.ReactNode = null;
-                  if (col.render) {
-                    content = col.render(item, rowIdx);
-                  } else if (col.accessor) {
-                    content = String(item[col.accessor] ?? '');
-                  }
-
-                  return (
-                    <TableCell
-                      key={
-                        col.key ||
-                        (typeof col.header === 'string' ? col.header : colIdx)
-                      }
-                      align={col.align}
-                      style={{width: col.width}}
-                      className={col.className}
-                    >
-                      {content}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
+            data.map(row => (
+              <tr key={keyExtractor(row)} className={styles.bodyRow}>
+                {columns.map((col, idx) => (
+                  <td
+                    key={idx}
+                    style={{
+                      width: col.width,
+                      textAlign: col.align || 'left',
+                    }}
+                    className={[styles.bodyCell, col.className]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {col.render
+                      ? col.render(row)
+                      : col.accessor
+                        ? String(row[col.accessor] ?? '')
+                        : null}
+                  </td>
+                ))}
+              </tr>
             ))
           )}
-        </TableBody>
-      </BaseTable>
-    </TableContainer>
+        </tbody>
+      </table>
+    </div>
   );
 }
-
-export default Table;

@@ -2,44 +2,55 @@ import React from 'react';
 
 import styles from './styles.module.css';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-  interactive?: boolean;
-  className?: string;
-  children: React.ReactNode;
+export interface CardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'className'
+> {
+  variant?:
+    | 'default'
+    | 'glass'
+    | 'interactive'
+    | 'bordered'
+    | 'subtle'
+    | 'danger'
+    | 'success'
+    | 'floating';
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'row' | 'floating';
+  radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  fullWidth?: boolean;
+  hoverable?: boolean;
+  classNameOverride?: string;
+  children?: React.ReactNode;
 }
 
-export function Card({
+export default function Card({
+  variant = 'default',
   padding = 'md',
-  interactive = false,
-  className = '',
+  radius,
+  fullWidth = false,
+  hoverable = false,
+  classNameOverride,
   children,
   ...props
 }: CardProps): React.JSX.Element {
-  const padClass =
-    padding === 'none'
-      ? styles.padNone
-      : padding === 'sm'
-        ? styles.padSm
-        : padding === 'lg'
-          ? styles.padLg
-          : styles.padMd;
+  const defaultClasses = [
+    styles.card,
+    styles[variant],
+    styles[`pad-${padding}`],
+    radius ? styles[`radius-${radius}`] : '',
+    fullWidth ? styles.fullWidth : '',
+    hoverable ? styles.hoverable : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   return (
-    <div
-      className={[
-        styles.card,
-        padClass,
-        interactive ? styles.interactive : '',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      {...props}
-    >
+    <div className={combinedClass} {...props}>
       {children}
     </div>
   );
 }
-
-export default Card;
