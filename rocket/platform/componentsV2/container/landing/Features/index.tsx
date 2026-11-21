@@ -1,6 +1,6 @@
 import React from 'react';
 
-import Card from '@/componentsV2/bits/Card';
+import Box from '@/componentsV2/bits/Box';
 import Flex from '@/componentsV2/bits/Flex';
 import Grid from '@/componentsV2/bits/Grid';
 import IconBadge from '@/componentsV2/bits/IconBadge';
@@ -62,31 +62,34 @@ export default function Features({
     <Section
       id="features"
       container="landing"
-      spacing="lg"
+      pt="16"
+      pb="30"
       classNameOverride={classNameOverride}
     >
-      <Flex direction="column" gap="3" mb="12">
+      <Flex direction="column" gap="4" mb="18" maxW="640">
         {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
-        <Typography variant="h2" as="h2" maxW="600">
+        <Typography variant="display" as="h2">
           {title}
         </Typography>
       </Flex>
 
-      <Grid minItemWidth="240" gap="5">
+      <Grid minItemWidth="240" rowGap="12" columnGap="10">
         {features.map(feature => (
-          <Card key={feature.title} padding="lg" variant="glass" hoverable>
-            <Flex direction="column" gap="3">
-              <IconBadge variant="primary" size="lg" rounded="md">
+          <Flex key={feature.title} direction="column">
+            <Box mb="6">
+              <IconBadge variant="primary" size="xl" rounded="xl">
                 {feature.icon}
               </IconBadge>
+            </Box>
+            <Box mb="2">
               <Typography variant="h3" as="h3">
                 {feature.title}
               </Typography>
-              <Typography variant="caption" color="muted">
-                {feature.description}
-              </Typography>
-            </Flex>
-          </Card>
+            </Box>
+            <Typography variant="body-lg" color="secondary">
+              {feature.description}
+            </Typography>
+          </Flex>
         ))}
       </Grid>
     </Section>

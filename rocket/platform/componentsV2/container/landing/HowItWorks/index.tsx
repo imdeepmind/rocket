@@ -1,11 +1,13 @@
 import React from 'react';
 
-import Card from '@/componentsV2/bits/Card';
+import Box from '@/componentsV2/bits/Box';
 import Flex from '@/componentsV2/bits/Flex';
 import Grid from '@/componentsV2/bits/Grid';
 import IconBadge from '@/componentsV2/bits/IconBadge';
 import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
+
+import styles from './styles.module.css';
 
 export interface HowItWorksStep {
   stepNumber: number;
@@ -17,20 +19,19 @@ export const DEFAULT_STEPS: HowItWorksStep[] = [
   {
     stepNumber: 1,
     title: 'Configure',
-    description:
-      'Provide your backend and deployment requirements in structured JSON.',
+    description: 'Provide your backend and deployment requirements.',
   },
   {
     stepNumber: 2,
     title: 'Deploy',
     description:
-      'Rocket provisions the required infrastructure, PostgreSQL, and Redis automatically.',
+      'Rocket provisions the required infrastructure and deploys your service.',
   },
   {
     stepNumber: 3,
     title: 'Manage',
     description:
-      'Access your deployed APIs, inspect health, and manage your services from one place.',
+      'Access your deployed APIs and manage their lifecycle through the platform.',
   },
 ];
 
@@ -51,33 +52,51 @@ export default function HowItWorks({
     <Section
       id="how"
       container="landing"
-      spacing="lg"
+      pt="16"
+      pb="30"
+      align="center"
       classNameOverride={classNameOverride}
     >
-      <Flex direction="column" gap="3" mb="12">
+      <Flex
+        direction="column"
+        align="center"
+        textAlign="center"
+        gap="4"
+        mb="20"
+      >
         {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
-        <Typography variant="h2" as="h2" maxW="600">
+        <Typography variant="display" as="h2" maxW="760" align="center">
           {title}
         </Typography>
       </Flex>
 
-      <Grid minItemWidth="280" gap="6">
-        {steps.map(step => (
-          <Card key={step.stepNumber} padding="lg" variant="glass">
-            <Flex direction="column" gap="3">
-              <IconBadge variant="surface" size="md" rounded="full">
-                {step.stepNumber}
-              </IconBadge>
-              <Typography variant="h3" as="h3">
-                {step.title}
-              </Typography>
-              <Typography variant="caption" color="muted">
+      <Box position="relative">
+        <Box classNameOverride={styles.howLine} aria-hidden="true" />
+        <Grid minItemWidth="240" rowGap="12" columnGap="10">
+          {steps.map(step => (
+            <Flex
+              key={step.stepNumber}
+              direction="column"
+              align="center"
+              textAlign="center"
+            >
+              <Box mb="6">
+                <IconBadge variant="step" size="xxl" rounded="full">
+                  {step.stepNumber}
+                </IconBadge>
+              </Box>
+              <Box mb="2">
+                <Typography variant="h2" as="h3">
+                  {step.title}
+                </Typography>
+              </Box>
+              <Typography variant="body-lg" color="secondary" maxW="280">
                 {step.description}
               </Typography>
             </Flex>
-          </Card>
-        ))}
-      </Grid>
+          ))}
+        </Grid>
+      </Box>
     </Section>
   );
 }

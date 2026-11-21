@@ -58,6 +58,15 @@
   color: var(--color-text-muted);
 }
 
+.step {
+  background-color: var(--color-primary);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow:
+    0 0 0 8px #08080d,
+    0 0 40px rgba(225, 29, 72, 0.5);
+}
+
 /* Sizes */
 .xs {
   width: 18px;
@@ -83,6 +92,18 @@
   font-size: 18px;
 }
 
+.xl {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+.xxl {
+  width: 54px;
+  height: 54px;
+  font-size: 20px;
+}
+
 /* Radius */
 .rounded-sm {
   border-radius: var(--radius-sm);
@@ -94,6 +115,10 @@
 
 .rounded-lg {
   border-radius: var(--radius-lg);
+}
+
+.rounded-xl {
+  border-radius: var(--radius-xl);
 }
 
 .rounded-full {

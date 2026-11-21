@@ -20,7 +20,8 @@ export type SectionSpacingScale =
   | '14'
   | '16'
   | '18'
-  | '20';
+  | '20'
+  | '30';
 
 export type SectionProps<T extends React.ElementType = 'section'> = {
   as?: T;
@@ -31,6 +32,7 @@ export type SectionProps<T extends React.ElementType = 'section'> = {
   overflow?: 'visible' | 'hidden';
   pt?: SectionSpacingScale;
   pb?: SectionSpacingScale;
+  px?: SectionSpacingScale;
   classNameOverride?: string;
   children?: React.ReactNode;
 } & Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className'>;
@@ -44,6 +46,7 @@ export default function Section<T extends React.ElementType = 'section'>({
   overflow,
   pt,
   pb,
+  px,
   classNameOverride,
   children,
   ...props
@@ -59,6 +62,7 @@ export default function Section<T extends React.ElementType = 'section'>({
     overflow ? styles[`overflow-${overflow}`] : '',
     pt !== undefined ? styles[`pt-${pt}`] : '',
     pb !== undefined ? styles[`pb-${pb}`] : '',
+    px !== undefined ? styles[`px-${px}`] : '',
   ]
     .filter(Boolean)
     .join(' ');

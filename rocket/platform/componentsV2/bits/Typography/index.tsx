@@ -4,12 +4,14 @@ import styles from './styles.module.css';
 
 export type TypographyVariant =
   | 'hero'
+  | 'display'
   | 'h1'
   | 'h2'
   | 'h3'
   | 'h4'
   | 'lead'
   | 'body'
+  | 'body-lg'
   | 'body-sm'
   | 'caption'
   | 'eyebrow'
@@ -33,7 +35,19 @@ export interface TypographyProps<T extends React.ElementType = 'p'> {
   color?: TypographyColor;
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
   align?: 'left' | 'center' | 'right';
-  maxW?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '520' | '600' | '720' | string;
+  maxW?:
+    | 'xs'
+    | 'sm'
+    | 'md'
+    | 'lg'
+    | 'xl'
+    | '280'
+    | '520'
+    | '600'
+    | '640'
+    | '720'
+    | '760'
+    | string;
   truncate?: boolean;
   transform?: 'uppercase' | 'capitalize' | 'lowercase';
   letterSpacing?: 'tighter' | 'tight' | 'normal' | 'wide' | 'wider';
@@ -43,12 +57,14 @@ export interface TypographyProps<T extends React.ElementType = 'p'> {
 
 const DEFAULT_TAG_MAP: Record<TypographyVariant, React.ElementType> = {
   hero: 'h1',
+  display: 'h2',
   h1: 'h1',
   h2: 'h2',
   h3: 'h3',
   h4: 'h4',
   lead: 'p',
   body: 'p',
+  'body-lg': 'p',
   'body-sm': 'p',
   caption: 'span',
   eyebrow: 'div',

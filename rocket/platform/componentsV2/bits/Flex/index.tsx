@@ -24,6 +24,8 @@ export type FlexSpacingScale =
   | '16'
   | '18'
   | '20'
+  | '24'
+  | '30'
   | 'auto';
 
 export type FlexFlex = '1' | 'auto' | 'none' | 'initial';
@@ -38,9 +40,12 @@ export type FlexMaxW =
   | 'xl'
   | '2xl'
   | '3xl'
+  | '280'
   | '520'
   | '600'
+  | '640'
   | '720'
+  | '760'
   | '840'
   | 'landing'
   | 'container'

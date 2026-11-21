@@ -12,7 +12,7 @@
 
 @media (max-width: 900px) {
   .visualCol {
-    padding-bottom: var(--spacing-15, 60px);
+    padding-bottom: var(--spacing-16);
   }
 
   .floatingCard {

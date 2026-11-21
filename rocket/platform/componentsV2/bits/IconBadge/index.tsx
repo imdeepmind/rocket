@@ -10,9 +10,10 @@ export type IconBadgeVariant =
   | 'error'
   | 'surface'
   | 'muted'
-  | 'waiting';
-export type IconBadgeSize = 'xs' | 'sm' | 'md' | 'lg';
-export type IconBadgeRounded = 'sm' | 'md' | 'lg' | 'full';
+  | 'waiting'
+  | 'step';
+export type IconBadgeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+export type IconBadgeRounded = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 export interface IconBadgeProps extends Omit<
   React.HTMLAttributes<HTMLSpanElement>,
