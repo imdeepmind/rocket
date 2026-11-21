@@ -1,10 +1,4 @@
 .container {
-  background: rgba(18, 18, 28, 0.65);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.35);
   overflow: visible;
 }
 
@@ -13,9 +7,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 18px 24px;
   gap: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-wrap: wrap;
 }
 
@@ -35,7 +28,7 @@
   font-weight: 500;
   color: #8f90a6;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -48,7 +41,6 @@
 
 .filterTabActive {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   font-weight: 600;
 }
@@ -58,16 +50,16 @@
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9px;
-  padding: 6px 12px;
+  border: none;
+  border-radius: 13px;
+  padding: 8px 14px;
   min-width: 220px;
   transition: all 0.15s ease;
 }
 
 .searchInputWrapper:focus-within {
-  border-color: rgba(225, 29, 72, 0.4);
   background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.4);
 }
 
 .searchIcon {
@@ -107,7 +99,7 @@
   font-weight: 700;
   flex-shrink: 0;
   background: rgba(225, 29, 72, 0.15);
-  border: 1px solid rgba(225, 29, 72, 0.3);
+  border: none;
   color: #ff6b85;
 }
 
@@ -225,8 +217,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 24px;
   font-size: 13px;
   color: #8f90a6;
   flex-wrap: wrap;
@@ -246,8 +237,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
   color: #8f90a6;
   cursor: pointer;
   font-size: 12px;
@@ -256,18 +247,17 @@
 }
 
 .pageBtn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
 .pageBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .pageBtnActive {
-  background: rgba(225, 29, 72, 0.15);
-  border-color: rgba(225, 29, 72, 0.4);
+  background: rgba(225, 29, 72, 0.2);
   color: #ffffff;
   font-weight: 600;
 }

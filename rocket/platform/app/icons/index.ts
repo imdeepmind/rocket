@@ -27,3 +27,7 @@ export * from '@/app/icons/PencilIcon';
 export * from '@/app/icons/PauseIcon';
 export * from '@/app/icons/PlayIcon';
 export * from '@/app/icons/TrashIcon';
+export * from '@/app/icons/DatabaseIcon';
+export * from '@/app/icons/GlobeIcon';
+export * from '@/app/icons/UploadCloudIcon';
+export * from '@/app/icons/LockIcon';
