@@ -16,19 +16,23 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Run commands inside `rocket/platform/` (or via npm scripts):
 
-| Command                  | Action                                                         |
-| ------------------------ | -------------------------------------------------------------- |
-| `npm run dev`            | Start Next.js development server                               |
-| `npm run build`          | Build production Next.js bundle                                |
-| `npm run start`          | Start production server                                        |
-| `npm run lint`           | Run ESLint                                                     |
-| `npm run prettier`       | Check code formatting                                          |
-| `npm run prettier:write` | Format code with Prettier                                      |
-| `npm run format`         | Alias for `npm run prettier:write`                             |
-| `npm run auth:generate`  | Generate Better Auth schema (`lib/db/schema/auth.ts`)          |
-| `npm run db:generate`    | Generate new SQL migrations in `drizzle/` from schemas         |
-| `npm run db:migrate`     | Apply pending migrations from `drizzle/` to PostgreSQL         |
-| `npm run db:push`        | Push schema changes directly to the database (prototyping/dev) |
+| Command                   | Action                                                         |
+| ------------------------- | -------------------------------------------------------------- |
+| `npm run dev`             | Start Next.js development server                               |
+| `npm run build`           | Build production Next.js bundle                                |
+| `npm run start`           | Start production server                                        |
+| `npm run lint`            | Run ESLint                                                     |
+| `npm run prettier`        | Check code formatting                                          |
+| `npm run prettier:write`  | Format code with Prettier                                      |
+| `npm run format`          | Alias for `npm run prettier:write`                             |
+| `npm run auth:generate`   | Generate Better Auth schema (`lib/db/schema/auth.ts`)          |
+| `npm run db:generate`     | Generate new SQL migrations in `drizzle/` from schemas         |
+| `npm run db:migrate`      | Apply pending migrations from `drizzle/` to PostgreSQL         |
+| `npm run db:push`         | Push schema changes directly to the database (prototyping/dev) |
+| `npm run storybook`       | Start Storybook development server on port 6006                |
+| `npm run build-storybook` | Build static Storybook site                                    |
+| `npm run storybook`       | Start Storybook development server on port 6006                |
+| `npm run build-storybook` | Build static Storybook site                                    |
 
 Always ensure `npm run lint` and `npm run prettier:write` pass cleanly.
 
