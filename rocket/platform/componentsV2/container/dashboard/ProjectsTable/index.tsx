@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import React, {useMemo} from 'react';
 
 import ExternalLinkIcon from '@/icons/ExternalLinkIcon';
@@ -12,15 +11,16 @@ import SearchIcon from '@/icons/SearchIcon';
 import TrashIcon from '@/icons/TrashIcon';
 
 import Avatar from '@/componentsV2/bits/Avatar';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
 import Tag from '@/componentsV2/bits/Tag';
 import TextBox from '@/componentsV2/bits/TextBox';
 import Typography from '@/componentsV2/bits/Typography';
 import ActionMenu, {type ActionMenuItem} from '@/componentsV2/items/ActionMenu';
 import Table, {type TableColumn} from '@/componentsV2/items/Table';
-
-import styles from './styles.module.css';
+import Tabs, {type TabItem} from '@/componentsV2/items/Tabs';
 
 export interface ProjectItem {
   id: string;
@@ -84,13 +84,17 @@ export default function ProjectsTable({
     {
       header: 'Project',
       render: project => (
-        <div className={styles.projectCell}>
+        <Flex align="center" gap="3">
           <Avatar name={project.name} size="md" variant="project" />
-          <div className={styles.projectInfo}>
-            <span className={styles.projectName}>{project.name}</span>
-            <span className={styles.projectSlug}>{project.slug}</span>
-          </div>
-        </div>
+          <Flex direction="column">
+            <Typography variant="body-sm" weight="semibold">
+              {project.name}
+            </Typography>
+            <Typography variant="caption" color="muted">
+              {project.slug}
+            </Typography>
+          </Flex>
+        </Flex>
       ),
     },
     {
@@ -108,29 +112,37 @@ export default function ProjectsTable({
     {
       header: 'URL',
       render: project => (
-        <a
+        <Flex
+          as="a"
           href={`https://${project.url}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={styles.urlLink}
+          align="center"
+          gap="1"
         >
-          <span>{project.url}</span>
+          <Typography variant="body-sm" color="secondary">
+            {project.url}
+          </Typography>
           <ExternalLinkIcon width={13} height={13} />
-        </a>
+        </Flex>
       ),
     },
     {
       header: 'Memory',
       accessor: 'memory',
       render: project => (
-        <span className={styles.cellMuted}>{project.memory}</span>
+        <Typography variant="body-sm" color="muted">
+          {project.memory}
+        </Typography>
       ),
     },
     {
       header: 'Last deployed',
       accessor: 'lastDeployed',
       render: project => (
-        <span className={styles.cellMuted}>{project.lastDeployed}</span>
+        <Typography variant="body-sm" color="muted">
+          {project.lastDeployed}
+        </Typography>
       ),
     },
     {
@@ -175,11 +187,7 @@ export default function ProjectsTable({
     },
   ];
 
-  const filterTabs: Array<{
-    key: 'All' | 'Active' | 'Deploying' | 'Paused';
-    label: string;
-    count: number;
-  }> = [
+  const filterTabs: TabItem[] = [
     {key: 'All', label: 'All', count: statusCounts.all},
     {key: 'Active', label: 'Active', count: statusCounts.active},
     {key: 'Deploying', label: 'Deploying', count: statusCounts.deploying},
@@ -187,36 +195,26 @@ export default function ProjectsTable({
   ];
 
   return (
-    <Card
-      padding="none"
-      classNameOverride={[styles.card, classNameOverride]
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <Card padding="none" fullWidth classNameOverride={classNameOverride}>
       {/* Controls Bar: Filter Tabs & Search */}
-      <div className={styles.toolbar}>
-        <div className={styles.tabs} role="tablist">
-          {filterTabs.map(tab => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={activeFilter === tab.key}
-              className={[
-                styles.tab,
-                activeFilter === tab.key ? styles.tabActive : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => onFilterChange?.(tab.key)}
-            >
-              <span>{tab.label}</span>
-              <span className={styles.tabBadge}>{tab.count}</span>
-            </button>
-          ))}
-        </div>
+      <Flex
+        justify="between"
+        align="center"
+        wrap="wrap"
+        gap="3"
+        px="5"
+        py="4"
+        borderBottom
+      >
+        <Tabs
+          items={filterTabs}
+          activeKey={activeFilter}
+          onChange={key =>
+            onFilterChange?.(key as 'All' | 'Active' | 'Deploying' | 'Paused')
+          }
+        />
 
-        <div className={styles.searchWrapper}>
+        <Box minW="0">
           <TextBox
             sizeVariant="sm"
             placeholder="Search projects..."
@@ -224,8 +222,8 @@ export default function ProjectsTable({
             value={searchQuery}
             onChange={e => onSearchChange?.(e.target.value)}
           />
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
       {/* Table Component */}
       <Table
@@ -241,16 +239,14 @@ export default function ProjectsTable({
 
       {/* Empty Call To Action if zero total projects */}
       {projects.length === 0 && (
-        <div className={styles.emptyCta}>
+        <Flex direction="column" align="center" gap="3" p="8">
           <Typography variant="body" color="muted">
             Get started by launching your first backend on Rocket.
           </Typography>
-          <Link href={newProjectHref} className={styles.newLink}>
-            <Button variant="primary" size="sm">
-              + New project
-            </Button>
-          </Link>
-        </div>
+          <Button variant="primary" size="sm" href={newProjectHref}>
+            + New project
+          </Button>
+        </Flex>
       )}
     </Card>
   );

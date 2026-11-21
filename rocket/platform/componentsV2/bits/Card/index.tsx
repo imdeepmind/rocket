@@ -6,7 +6,8 @@ export interface CardProps extends Omit<
   React.HTMLAttributes<HTMLDivElement>,
   'className'
 > {
-  variant?: 'default' | 'glass' | 'interactive' | 'bordered' | 'subtle';
+  variant?:
+    'default' | 'glass' | 'interactive' | 'bordered' | 'subtle' | 'danger';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   hoverable?: boolean;

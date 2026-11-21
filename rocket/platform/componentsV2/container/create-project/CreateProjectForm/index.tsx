@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import React from 'react';
 
 import ArrowRightIcon from '@/icons/ArrowRightIcon';
-import CheckIcon from '@/icons/CheckIcon';
 import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
 import DatabaseIcon from '@/icons/DatabaseIcon';
 import LayersIcon from '@/icons/LayersIcon';
@@ -13,19 +11,21 @@ import TrashIcon from '@/icons/TrashIcon';
 import ZapIcon from '@/icons/ZapIcon';
 
 import Avatar from '@/componentsV2/bits/Avatar';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
+import Grid from '@/componentsV2/bits/Grid';
+import IconBadge from '@/componentsV2/bits/IconBadge';
 import IconButton from '@/componentsV2/bits/IconButton';
 import ProgressBar from '@/componentsV2/bits/ProgressBar';
+import StatusDot from '@/componentsV2/bits/StatusDot';
 import Tag from '@/componentsV2/bits/Tag';
 import TextBox from '@/componentsV2/bits/TextBox';
 import Typography from '@/componentsV2/bits/Typography';
 import FileDropzone from '@/componentsV2/items/FileDropzone';
 import OptionCardGroup from '@/componentsV2/items/OptionCardGroup';
-import Stepper from '@/componentsV2/items/Stepper';
 import TerminalViewer from '@/componentsV2/items/TerminalViewer';
-
-import styles from './styles.module.css';
 
 export interface EnvVarItem {
   id: string;
@@ -34,7 +34,7 @@ export interface EnvVarItem {
   managed?: boolean;
 }
 
-export interface WizardData {
+export interface ProjectFormData {
   step: 1 | 2 | 3 | 4;
   file: {name: string; size: string} | null;
   projectName: string;
@@ -46,8 +46,8 @@ export interface WizardData {
   logLines?: string[];
 }
 
-export interface CreateProjectWizardProps {
-  data: WizardData;
+export interface CreateProjectFormProps {
+  data: ProjectFormData;
   onStepChange: (step: 1 | 2 | 3 | 4) => void;
   onFileSelect: (file: File) => void;
   onFileRemove: () => void;
@@ -60,13 +60,6 @@ export interface CreateProjectWizardProps {
   cancelHref?: string;
   classNameOverride?: string;
 }
-
-const WIZARD_STEPS = [
-  {title: 'Upload', subtitle: 'Project ZIP'},
-  {title: 'Configure', subtitle: 'Settings & env'},
-  {title: 'Review', subtitle: 'Specifications'},
-  {title: 'Deploy', subtitle: 'Live execution'},
-];
 
 const MEMORY_OPTIONS = [
   {id: '256 MB', title: '256 MB', subtitle: 'Basic staging & test APIs'},
@@ -86,7 +79,7 @@ const DEPLOY_STEPS = [
   'Starting HTTP server & running healthcheck',
 ];
 
-export default function CreateProjectWizard({
+export default function CreateProjectForm({
   data,
   onStepChange,
   onFileSelect,
@@ -99,36 +92,21 @@ export default function CreateProjectWizard({
   onDeploy,
   cancelHref = '/dashboard',
   classNameOverride,
-}: CreateProjectWizardProps): React.JSX.Element {
-  const containerClass = [styles.container, classNameOverride]
-    .filter(Boolean)
-    .join(' ');
-
+}: CreateProjectFormProps): React.JSX.Element {
   const managedVarsCount = data.envVars.filter(v => v.managed).length;
   const customVarsCount = data.envVars.filter(v => !v.managed).length;
 
   return (
-    <div className={containerClass}>
-      {/* Stepper Navigation */}
-      <Stepper
-        steps={WIZARD_STEPS}
-        currentStep={data.step}
-        onStepClick={stepIdx => {
-          if (stepIdx >= 1 && stepIdx <= 4) {
-            onStepChange(stepIdx as 1 | 2 | 3 | 4);
-          }
-        }}
-      />
-
+    <Box maxW="840" mx="auto" fullWidth classNameOverride={classNameOverride}>
       {/* Step 1: Upload Archive */}
       {data.step === 1 && (
-        <Card padding="lg" classNameOverride={styles.stepCard}>
-          <div className={styles.headerBlock}>
+        <Card padding="lg">
+          <Box mb="6">
             <Typography variant="h3">Upload your ROSS project</Typography>
             <Typography variant="body-sm" color="muted">
               Select or drop your project repository packaged as a .zip file.
             </Typography>
-          </div>
+          </Box>
 
           <FileDropzone
             accept=".zip"
@@ -140,12 +118,10 @@ export default function CreateProjectWizard({
             subtitle="Must include ross/config.json or root config.json"
           />
 
-          <div className={styles.actionsBar}>
-            <Link href={cancelHref} className={styles.cancelLink}>
-              <Button variant="ghost" size="md">
-                Cancel
-              </Button>
-            </Link>
+          <Flex justify="between" align="center" pt="4" mt="6" borderTop>
+            <Button variant="ghost" size="md" href={cancelHref}>
+              Cancel
+            </Button>
             <Button
               variant="primary"
               size="md"
@@ -155,21 +131,21 @@ export default function CreateProjectWizard({
             >
               Continue to configuration
             </Button>
-          </div>
+          </Flex>
         </Card>
       )}
 
       {/* Step 2: Configure & Environment */}
       {data.step === 2 && (
-        <Card padding="lg" classNameOverride={styles.stepCard}>
-          <div className={styles.headerBlock}>
+        <Card padding="lg">
+          <Box mb="6">
             <Typography variant="h3">Configure your project</Typography>
             <Typography variant="body-sm" color="muted">
               Configure name, memory limits, and environment variables.
             </Typography>
-          </div>
+          </Box>
 
-          <div className={styles.formGroup}>
+          <Box mb="6">
             <TextBox
               label="Project Name"
               placeholder="e.g. Blog Backend"
@@ -178,10 +154,10 @@ export default function CreateProjectWizard({
               fullWidth
               hint={`Assigned subdomain: ${data.projectSlug || 'my-project'}.rocket.app`}
             />
-          </div>
+          </Box>
 
           {/* Memory Selection */}
-          <div className={styles.formGroup}>
+          <Flex direction="column" gap="3" mb="6">
             <Typography variant="body-sm" weight="semibold">
               Compute & Memory Allocation
             </Typography>
@@ -191,12 +167,12 @@ export default function CreateProjectWizard({
               onChange={onMemoryChange}
               columns={3}
             />
-          </div>
+          </Flex>
 
           {/* Environment Variables */}
-          <div className={styles.formGroup}>
-            <div className={styles.envHeader}>
-              <div>
+          <Flex direction="column" gap="3" mb="6">
+            <Flex justify="between" align="center" mb="2">
+              <Box>
                 <Typography variant="body-sm" weight="semibold">
                   Environment Variables ({data.envVars.length})
                 </Typography>
@@ -204,16 +180,16 @@ export default function CreateProjectWizard({
                   Managed variables are automatically provided by Rocket
                   platform.
                 </Typography>
-              </div>
+              </Box>
               <Button variant="secondary" size="sm" onClick={onAddEnvVar}>
                 + Add Variable
               </Button>
-            </div>
+            </Flex>
 
-            <div className={styles.envList}>
+            <Flex direction="column" gap="2">
               {data.envVars.map(item => (
-                <div key={item.id} className={styles.envRow}>
-                  <div className={styles.envInputCol}>
+                <Flex align="center" gap="2" key={item.id}>
+                  <Box flex="1">
                     <TextBox
                       sizeVariant="sm"
                       placeholder="KEY_NAME"
@@ -224,8 +200,8 @@ export default function CreateProjectWizard({
                       }
                       fullWidth
                     />
-                  </div>
-                  <div className={styles.envInputCol}>
+                  </Box>
+                  <Box flex="1">
                     <TextBox
                       sizeVariant="sm"
                       placeholder="value"
@@ -236,8 +212,8 @@ export default function CreateProjectWizard({
                       }
                       fullWidth
                     />
-                  </div>
-                  <div className={styles.envActionCol}>
+                  </Box>
+                  <Flex basis="72px" justify="center">
                     {item.managed ? (
                       <Tag variant="neutral" size="sm">
                         Managed
@@ -251,13 +227,13 @@ export default function CreateProjectWizard({
                         onClick={() => onRemoveEnvVar(item.id)}
                       />
                     )}
-                  </div>
-                </div>
+                  </Flex>
+                </Flex>
               ))}
-            </div>
-          </div>
+            </Flex>
+          </Flex>
 
-          <div className={styles.actionsBar}>
+          <Flex justify="between" align="center" pt="4" borderTop>
             <Button
               variant="ghost"
               size="md"
@@ -275,91 +251,129 @@ export default function CreateProjectWizard({
             >
               Review specifications
             </Button>
-          </div>
+          </Flex>
         </Card>
       )}
 
       {/* Step 3: Review Specifications */}
       {data.step === 3 && (
-        <Card padding="lg" classNameOverride={styles.stepCard}>
-          <div className={styles.headerBlock}>
+        <Card padding="lg">
+          <Box mb="6">
             <Typography variant="h3">Review & deploy</Typography>
             <Typography variant="body-sm" color="muted">
               Confirm your deployment parameters before launching to production.
             </Typography>
-          </div>
+          </Box>
 
-          <div className={styles.reviewGrid}>
-            <div className={styles.reviewSection}>
-              <div className={styles.reviewIconBadge}>
-                <LayersIcon width={18} height={18} stroke="currentColor" />
-              </div>
-              <div className={styles.reviewContent}>
-                <Typography variant="caption" color="muted">
-                  Package Archive
-                </Typography>
-                <Typography variant="body" weight="semibold">
-                  {data.file?.name || 'No file selected'}
-                </Typography>
-                <Typography variant="body-sm" color="muted">
-                  Size: {data.file?.size || '0 MB'}
-                </Typography>
-              </div>
-            </div>
+          <Box mb="6">
+            <Grid columns={2} gap="4">
+              <Card variant="subtle" padding="md">
+                <Flex align="start" gap="3">
+                  <IconBadge
+                    variant="primary"
+                    size="md"
+                    icon={
+                      <LayersIcon
+                        width={18}
+                        height={18}
+                        stroke="currentColor"
+                      />
+                    }
+                  />
+                  <Flex direction="column" gap="1">
+                    <Typography variant="caption" color="muted">
+                      Package Archive
+                    </Typography>
+                    <Typography variant="body" weight="semibold">
+                      {data.file?.name || 'No file selected'}
+                    </Typography>
+                    <Typography variant="body-sm" color="muted">
+                      Size: {data.file?.size || '0 MB'}
+                    </Typography>
+                  </Flex>
+                </Flex>
+              </Card>
 
-            <div className={styles.reviewSection}>
-              <div className={styles.reviewIconBadge}>
-                <RocketIcon width={18} height={18} stroke="currentColor" />
-              </div>
-              <div className={styles.reviewContent}>
-                <Typography variant="caption" color="muted">
-                  Service Name & Endpoint
-                </Typography>
-                <Typography variant="body" weight="semibold">
-                  {data.projectName}
-                </Typography>
-                <Typography variant="body-sm" color="muted">
-                  https://{data.projectSlug}.rocket.app
-                </Typography>
-              </div>
-            </div>
+              <Card variant="subtle" padding="md">
+                <Flex align="start" gap="3">
+                  <IconBadge
+                    variant="primary"
+                    size="md"
+                    icon={
+                      <RocketIcon
+                        width={18}
+                        height={18}
+                        stroke="currentColor"
+                      />
+                    }
+                  />
+                  <Flex direction="column" gap="1">
+                    <Typography variant="caption" color="muted">
+                      Service Name & Endpoint
+                    </Typography>
+                    <Typography variant="body" weight="semibold">
+                      {data.projectName}
+                    </Typography>
+                    <Typography variant="body-sm" color="muted">
+                      https://{data.projectSlug}.rocket.app
+                    </Typography>
+                  </Flex>
+                </Flex>
+              </Card>
 
-            <div className={styles.reviewSection}>
-              <div className={styles.reviewIconBadge}>
-                <ZapIcon width={18} height={18} stroke="currentColor" />
-              </div>
-              <div className={styles.reviewContent}>
-                <Typography variant="caption" color="muted">
-                  Compute Memory
-                </Typography>
-                <Typography variant="body" weight="semibold">
-                  {data.memory}
-                </Typography>
-                <Typography variant="body-sm" color="muted">
-                  Isolated Microcontainer
-                </Typography>
-              </div>
-            </div>
+              <Card variant="subtle" padding="md">
+                <Flex align="start" gap="3">
+                  <IconBadge
+                    variant="primary"
+                    size="md"
+                    icon={
+                      <ZapIcon width={18} height={18} stroke="currentColor" />
+                    }
+                  />
+                  <Flex direction="column" gap="1">
+                    <Typography variant="caption" color="muted">
+                      Compute Memory
+                    </Typography>
+                    <Typography variant="body" weight="semibold">
+                      {data.memory}
+                    </Typography>
+                    <Typography variant="body-sm" color="muted">
+                      Isolated Microcontainer
+                    </Typography>
+                  </Flex>
+                </Flex>
+              </Card>
 
-            <div className={styles.reviewSection}>
-              <div className={styles.reviewIconBadge}>
-                <DatabaseIcon width={18} height={18} stroke="currentColor" />
-              </div>
-              <div className={styles.reviewContent}>
-                <Typography variant="caption" color="muted">
-                  Environment Configuration
-                </Typography>
-                <Typography variant="body" weight="semibold">
-                  {data.envVars.length} Variables Configured
-                </Typography>
-                <Typography variant="body-sm" color="muted">
-                  {managedVarsCount} managed, {customVarsCount} custom
-                </Typography>
-              </div>
-            </div>
-          </div>
+              <Card variant="subtle" padding="md">
+                <Flex align="start" gap="3">
+                  <IconBadge
+                    variant="primary"
+                    size="md"
+                    icon={
+                      <DatabaseIcon
+                        width={18}
+                        height={18}
+                        stroke="currentColor"
+                      />
+                    }
+                  />
+                  <Flex direction="column" gap="1">
+                    <Typography variant="caption" color="muted">
+                      Environment Configuration
+                    </Typography>
+                    <Typography variant="body" weight="semibold">
+                      {data.envVars.length} Variables Configured
+                    </Typography>
+                    <Typography variant="body-sm" color="muted">
+                      {managedVarsCount} managed, {customVarsCount} custom
+                    </Typography>
+                  </Flex>
+                </Flex>
+              </Card>
+            </Grid>
+          </Box>
 
-          <div className={styles.actionsBar}>
+          <Flex justify="between" align="center" pt="4" borderTop>
             <Button
               variant="ghost"
               size="md"
@@ -376,78 +390,75 @@ export default function CreateProjectWizard({
             >
               Deploy Backend
             </Button>
-          </div>
+          </Flex>
         </Card>
       )}
 
       {/* Step 4: Live Deployment Execution */}
       {data.step === 4 && (
-        <Card padding="lg" classNameOverride={styles.stepCard}>
-          <div className={styles.headerBlock}>
-            <div className={styles.deployTitleRow}>
+        <Card padding="lg">
+          <Box mb="6">
+            <Flex align="center" gap="3">
               <Avatar name={data.projectName} size="md" variant="project" />
-              <div>
+              <Flex direction="column">
                 <Typography variant="h3">
                   Deploying {data.projectName}
                 </Typography>
                 <Typography variant="body-sm" color="muted">
                   Provisioning runtime container and starting ROSS backend...
                 </Typography>
-              </div>
-            </div>
-          </div>
+              </Flex>
+            </Flex>
+          </Box>
 
           {/* Progress Bar */}
-          <div className={styles.progressContainer}>
-            <div className={styles.progressHeader}>
+          <Box mb="6">
+            <Flex justify="between" align="center" mb="2">
               <Typography variant="caption" color="muted">
                 Overall deployment progress
               </Typography>
               <Typography variant="caption" weight="semibold">
                 {data.deployProgress ?? 48}%
               </Typography>
-            </div>
+            </Flex>
             <ProgressBar value={data.deployProgress ?? 48} />
-          </div>
+          </Box>
 
           {/* Checklist */}
-          <div className={styles.checklist}>
-            {DEPLOY_STEPS.map((stepLabel, idx) => {
-              const currentIdx = data.deployStepIndex ?? 2;
-              const isCompleted = idx < currentIdx;
-              const isCurrent = idx === currentIdx;
+          <Card variant="subtle" padding="md">
+            <Flex direction="column" gap="3">
+              {DEPLOY_STEPS.map((stepLabel, idx) => {
+                const currentIdx = data.deployStepIndex ?? 2;
+                const isCompleted = idx < currentIdx;
+                const isCurrent = idx === currentIdx;
 
-              return (
-                <div key={idx} className={styles.checkItem}>
-                  <div
-                    className={[
-                      styles.checkCircle,
-                      isCompleted ? styles.checkDone : '',
-                      isCurrent ? styles.checkCurrent : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    {isCompleted ? (
-                      <CheckIcon width={12} height={12} stroke="currentColor" />
-                    ) : (
-                      <span>{idx + 1}</span>
-                    )}
-                  </div>
-                  <Typography
-                    variant="body-sm"
-                    color={isCompleted || isCurrent ? 'primary' : 'muted'}
-                    weight={isCurrent ? 'semibold' : 'normal'}
-                  >
-                    {stepLabel}
-                  </Typography>
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <Flex align="center" gap="3" key={idx}>
+                    <StatusDot
+                      variant={
+                        isCompleted
+                          ? 'success'
+                          : isCurrent
+                            ? 'warning'
+                            : 'waiting'
+                      }
+                      pulse={isCurrent}
+                    />
+                    <Typography
+                      variant="body-sm"
+                      color={isCompleted || isCurrent ? 'default' : 'muted'}
+                      weight={isCurrent ? 'semibold' : 'normal'}
+                    >
+                      {stepLabel}
+                    </Typography>
+                  </Flex>
+                );
+              })}
+            </Flex>
+          </Card>
 
           {/* Terminal Viewer */}
-          <div className={styles.terminalContainer}>
+          <Box my="6">
             <TerminalViewer
               title="build & deploy logs"
               lines={
@@ -462,17 +473,15 @@ export default function CreateProjectWizard({
               }
               maxHeight="220px"
             />
-          </div>
+          </Box>
 
-          <div className={styles.actionsBar}>
-            <Link href="/dashboard" className={styles.cancelLink}>
-              <Button variant="ghost" size="md">
-                View in dashboard
-              </Button>
-            </Link>
-          </div>
+          <Flex justify="between" align="center" pt="4" borderTop>
+            <Button variant="ghost" size="md" href="/dashboard">
+              View in dashboard
+            </Button>
+          </Flex>
         </Card>
       )}
-    </div>
+    </Box>
   );
 }

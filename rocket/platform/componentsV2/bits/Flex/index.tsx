@@ -40,6 +40,7 @@ export type FlexMaxW =
   | '520'
   | '600'
   | '720'
+  | '840'
   | 'landing'
   | 'container'
   | string;
