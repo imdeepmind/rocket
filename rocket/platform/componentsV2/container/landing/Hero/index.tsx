@@ -1,7 +1,5 @@
 import React from 'react';
 
-import ArrowRightIcon from '@/icons/ArrowRightIcon';
-
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
@@ -13,10 +11,14 @@ import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 import WindowFrame from '@/componentsV2/bits/WindowFrame';
 
+import ArrowRightIcon from '@/icons/ArrowRightIcon';
+
+import styles from './styles.module.css';
+
 export interface HeroPreviewStep {
   title: string;
   subtitle: string;
-  status: 'completed' | 'in-progress' | 'waiting';
+  status: 'completed' | 'in-progress' | 'waiting' | 'success';
 }
 
 export const DEFAULT_PREVIEW_STEPS: HeroPreviewStep[] = [
@@ -31,9 +33,14 @@ export const DEFAULT_PREVIEW_STEPS: HeroPreviewStep[] = [
     status: 'completed',
   },
   {
-    title: 'Deploying services',
-    subtitle: 'Deployment in progress',
+    title: 'Deploying service',
+    subtitle: 'This may take a minute…',
     status: 'in-progress',
+  },
+  {
+    title: 'Deployment successful',
+    subtitle: 'Your API is live',
+    status: 'success',
   },
 ];
 
@@ -70,7 +77,7 @@ export default function Hero({
         <Flex direction="column" flex="1" minW="0" basis="460">
           {badgeText && (
             <Box mb="7">
-              <Tag variant="neutral" size="md" dot>
+              <Tag variant="neutral" size="md" dot dotColor="success" dotPulse>
                 <Typography variant="caption" color="white" as="span">
                   {badgeText}
                 </Typography>
@@ -80,15 +87,17 @@ export default function Hero({
 
           <Typography variant="hero" as="h1">
             {title ?? (
-              <>
-                Your backend.
-                <br />
-                Deployed. Managed.
-                <br />
+              <Flex direction="column">
+                <Typography variant="hero" as="span">
+                  Your backend.
+                </Typography>
+                <Typography variant="hero" as="span">
+                  Deployed. Managed.
+                </Typography>
                 <Typography variant="hero" as="span" color="accent">
                   Ready.
                 </Typography>
-              </>
+              </Flex>
             )}
           </Typography>
 
@@ -113,41 +122,81 @@ export default function Hero({
           </Flex>
         </Flex>
 
-        <Box flex="1" minW="0" basis="440">
-          <WindowFrame title="deployment.status" variant="glass">
-            <Flex direction="column" gap="3" py="3" px="1">
-              {previewSteps.map((step, idx) => (
-                <Card key={idx} padding="sm" variant="subtle">
-                  <Flex align="center" gap="3">
-                    {step.status === 'completed' ? (
-                      <IconBadge variant="success" size="sm" rounded="full">
-                        ✓
-                      </IconBadge>
-                    ) : step.status === 'in-progress' ? (
-                      <StatusDot variant="loading" size="lg" />
-                    ) : (
-                      <IconBadge variant="surface" size="sm" rounded="full" />
-                    )}
-                    <Flex direction="column">
-                      <Typography variant="body-sm" weight="semibold">
-                        {step.title}
-                      </Typography>
-                      <Typography variant="caption" color="muted">
-                        {step.subtitle}
-                      </Typography>
+        <Box
+          flex="1"
+          minW="0"
+          basis="440"
+          position="relative"
+          pb="10"
+          classNameOverride={styles.visualCol}
+        >
+          <WindowFrame dots headerBorder={false} variant="glass">
+            <Flex direction="column" gap="3">
+              {previewSteps.map((step, idx) => {
+                const isSuccess = step.status === 'success';
+                return (
+                  <Card
+                    key={idx}
+                    variant={isSuccess ? 'success' : 'subtle'}
+                    radius="xl"
+                    padding="row"
+                  >
+                    <Flex align="center" gap="4">
+                      {step.status === 'completed' || isSuccess ? (
+                        <IconBadge
+                          variant="success-solid"
+                          size="sm"
+                          rounded="full"
+                        >
+                          ✓
+                        </IconBadge>
+                      ) : step.status === 'in-progress' ? (
+                        <StatusDot variant="spinner" size="lg" />
+                      ) : (
+                        <IconBadge variant="waiting" size="sm" rounded="full" />
+                      )}
+                      <Flex direction="column">
+                        <Typography
+                          variant="body-sm"
+                          weight="semibold"
+                          color={isSuccess ? 'success' : 'white'}
+                        >
+                          {step.title}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color={isSuccess ? 'success-muted' : 'muted'}
+                        >
+                          {step.subtitle}
+                        </Typography>
+                      </Flex>
                     </Flex>
-                  </Flex>
-                </Card>
-              ))}
-            </Flex>
-
-            <Flex align="center" gap="2" mt="3" pt="3" borderTop>
-              <StatusDot variant="success" size="sm" pulse />
-              <Typography variant="caption" color="muted">
-                Monitoring active on us-east-1
-              </Typography>
+                  </Card>
+                );
+              })}
             </Flex>
           </WindowFrame>
+
+          <Card
+            variant="floating"
+            radius="xl"
+            padding="floating"
+            classNameOverride={styles.floatingCard}
+          >
+            <Flex direction="column" gap="1">
+              <Typography
+                variant="caption"
+                color="muted"
+                transform="uppercase"
+                letterSpacing="wide"
+              >
+                API endpoint
+              </Typography>
+              <Typography variant="mono" color="white" weight="normal">
+                https://api.rocket.dev
+              </Typography>
+            </Flex>
+          </Card>
         </Box>
       </Flex>
     </Section>

@@ -2,12 +2,12 @@
 
 import React, {useRef, useState} from 'react';
 
+import Button from '@/componentsV2/bits/Button';
+import Typography from '@/componentsV2/bits/Typography';
+
 import CheckIcon from '@/icons/CheckIcon';
 import CloseIcon from '@/icons/CloseIcon';
 import UploadCloudIcon from '@/icons/UploadCloudIcon';
-
-import Button from '@/componentsV2/bits/Button';
-import Typography from '@/componentsV2/bits/Typography';
 
 import styles from './styles.module.css';
 

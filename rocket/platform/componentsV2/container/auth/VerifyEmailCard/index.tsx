@@ -4,18 +4,18 @@ import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState} from 'react';
 
-import CheckIcon from '@/icons/CheckIcon';
-import CloseIcon from '@/icons/CloseIcon';
-import MailIcon from '@/icons/MailIcon';
-
-import {sendVerificationEmail, verifyEmail} from '@/lib/auth/client';
-
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Flex from '@/componentsV2/bits/Flex';
 import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
+
+import CheckIcon from '@/icons/CheckIcon';
+import CloseIcon from '@/icons/CloseIcon';
+import MailIcon from '@/icons/MailIcon';
+
+import {sendVerificationEmail, verifyEmail} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

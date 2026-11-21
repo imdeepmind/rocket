@@ -22,6 +22,7 @@ export type TypographyColor =
   | 'muted'
   | 'accent'
   | 'success'
+  | 'success-muted'
   | 'warning'
   | 'error'
   | 'white';
@@ -34,6 +35,8 @@ export interface TypographyProps<T extends React.ElementType = 'p'> {
   align?: 'left' | 'center' | 'right';
   maxW?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '520' | '600' | '720' | string;
   truncate?: boolean;
+  transform?: 'uppercase' | 'capitalize' | 'lowercase';
+  letterSpacing?: 'tighter' | 'tight' | 'normal' | 'wide' | 'wider';
   classNameOverride?: string;
   children?: React.ReactNode;
 }
@@ -60,6 +63,8 @@ export default function Typography<T extends React.ElementType = 'p'>({
   align,
   maxW,
   truncate = false,
+  transform,
+  letterSpacing,
   classNameOverride,
   children,
   ...rest
@@ -78,6 +83,8 @@ export default function Typography<T extends React.ElementType = 'p'>({
     align ? styles[`align-${align}`] : '',
     maxW ? styles[`maxW-${maxW}`] : '',
     truncate ? styles.truncate : '',
+    transform ? styles[`transform-${transform}`] : '',
+    letterSpacing ? styles[`tracking-${letterSpacing}`] : '',
   ]
     .filter(Boolean)
     .join(' ');

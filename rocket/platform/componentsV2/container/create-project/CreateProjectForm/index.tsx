@@ -2,14 +2,6 @@
 
 import React from 'react';
 
-import ArrowRightIcon from '@/icons/ArrowRightIcon';
-import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
-import DatabaseIcon from '@/icons/DatabaseIcon';
-import LayersIcon from '@/icons/LayersIcon';
-import RocketIcon from '@/icons/RocketIcon';
-import TrashIcon from '@/icons/TrashIcon';
-import ZapIcon from '@/icons/ZapIcon';
-
 import Avatar from '@/componentsV2/bits/Avatar';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
@@ -26,6 +18,14 @@ import Typography from '@/componentsV2/bits/Typography';
 import FileDropzone from '@/componentsV2/items/FileDropzone';
 import OptionCardGroup from '@/componentsV2/items/OptionCardGroup';
 import TerminalViewer from '@/componentsV2/items/TerminalViewer';
+
+import ArrowRightIcon from '@/icons/ArrowRightIcon';
+import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
+import DatabaseIcon from '@/icons/DatabaseIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import RocketIcon from '@/icons/RocketIcon';
+import TrashIcon from '@/icons/TrashIcon';
+import ZapIcon from '@/icons/ZapIcon';
 
 export interface EnvVarItem {
   id: string;

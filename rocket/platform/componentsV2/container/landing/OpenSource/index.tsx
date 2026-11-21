@@ -1,7 +1,5 @@
 import React from 'react';
 
-import ArrowRightIcon from '@/icons/ArrowRightIcon';
-
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
@@ -9,6 +7,8 @@ import Flex from '@/componentsV2/bits/Flex';
 import IconBadge from '@/componentsV2/bits/IconBadge';
 import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
+
+import ArrowRightIcon from '@/icons/ArrowRightIcon';
 
 export const DEFAULT_ROSS_FEATURES = [
   'Database schema generation',

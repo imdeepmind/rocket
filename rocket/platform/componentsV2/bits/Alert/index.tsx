@@ -2,11 +2,11 @@
 
 import React from 'react';
 
-import CheckIcon from '@/icons/CheckIcon';
-import CloseIcon from '@/icons/CloseIcon';
-
 import IconButton from '@/componentsV2/bits/IconButton';
 import Typography from '@/componentsV2/bits/Typography';
+
+import CheckIcon from '@/icons/CheckIcon';
+import CloseIcon from '@/icons/CloseIcon';
 
 import styles from './styles.module.css';
 

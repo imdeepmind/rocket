@@ -4,8 +4,6 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import React, {useState} from 'react';
 
-import {signInWithSocial, signUpWithEmail} from '@/lib/auth/client';
-
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
@@ -14,6 +12,8 @@ import TextBox from '@/componentsV2/bits/TextBox';
 import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
 import OAuthButtonGroup from '@/componentsV2/items/OAuthButtonGroup';
+
+import {signInWithSocial, signUpWithEmail} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

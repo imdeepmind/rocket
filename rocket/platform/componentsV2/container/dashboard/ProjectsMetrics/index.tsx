@@ -1,13 +1,13 @@
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
+import Grid from '@/componentsV2/bits/Grid';
+import MetricCard from '@/componentsV2/items/MetricCard';
+
 import ActivityIcon from '@/icons/ActivityIcon';
 import LayersIcon from '@/icons/LayersIcon';
 import PauseIcon from '@/icons/PauseIcon';
 import TrendUpIcon from '@/icons/TrendUpIcon';
-
-import Box from '@/componentsV2/bits/Box';
-import Grid from '@/componentsV2/bits/Grid';
-import MetricCard from '@/componentsV2/items/MetricCard';
 
 export interface ProjectsMetricsData {
   totalProjects: number;

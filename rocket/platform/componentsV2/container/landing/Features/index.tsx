@@ -1,16 +1,16 @@
 import React from 'react';
 
-import ActivityIcon from '@/icons/ActivityIcon';
-import CodeIcon from '@/icons/CodeIcon';
-import LayersIcon from '@/icons/LayersIcon';
-import ZapIcon from '@/icons/ZapIcon';
-
 import Card from '@/componentsV2/bits/Card';
 import Flex from '@/componentsV2/bits/Flex';
 import Grid from '@/componentsV2/bits/Grid';
 import IconBadge from '@/componentsV2/bits/IconBadge';
 import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
+
+import ActivityIcon from '@/icons/ActivityIcon';
+import CodeIcon from '@/icons/CodeIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import ZapIcon from '@/icons/ZapIcon';
 
 export interface FeatureItem {
   icon: React.ReactNode;

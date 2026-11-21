@@ -66,8 +66,16 @@
 
 /* Dot indicator */
 .dot {
-  width: 0.375rem;
-  height: 0.375rem;
+  width: 0.4375rem;
+  height: 0.4375rem;
   border-radius: 9999px;
   background-color: currentColor;
+}
+
+.dotSuccess {
+  background-color: var(--color-success);
+}
+
+.dotPulse {
+  box-shadow: 0 0 10px var(--color-success);
 }

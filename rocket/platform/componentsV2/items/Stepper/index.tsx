@@ -1,9 +1,9 @@
 import React from 'react';
 
-import CheckIcon from '@/icons/CheckIcon';
-
 import Card from '@/componentsV2/bits/Card';
 import Typography from '@/componentsV2/bits/Typography';
+
+import CheckIcon from '@/icons/CheckIcon';
 
 import styles from './styles.module.css';
 

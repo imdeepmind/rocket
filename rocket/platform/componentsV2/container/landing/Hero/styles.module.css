@@ -1,1 +1,21 @@
-/* All hero styling is handled by composable bits (Section, Flex, Box, WindowFrame, Card, Tag, StatusDot, IconBadge) */
+.visualCol {
+  position: relative;
+  padding-bottom: var(--spacing-10);
+}
+
+.floatingCard {
+  position: absolute;
+  right: calc(-1 * var(--spacing-4));
+  bottom: 0;
+  z-index: 2;
+}
+
+@media (max-width: 900px) {
+  .visualCol {
+    padding-bottom: var(--spacing-15, 60px);
+  }
+
+  .floatingCard {
+    right: 0;
+  }
+}

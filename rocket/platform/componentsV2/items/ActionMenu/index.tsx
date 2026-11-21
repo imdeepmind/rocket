@@ -2,9 +2,9 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 
-import MoreHorizontalIcon from '@/icons/MoreHorizontalIcon';
-
 import IconButton from '@/componentsV2/bits/IconButton';
+
+import MoreHorizontalIcon from '@/icons/MoreHorizontalIcon';
 
 import styles from './styles.module.css';
 

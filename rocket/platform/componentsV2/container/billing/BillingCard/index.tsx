@@ -2,9 +2,6 @@
 
 import React from 'react';
 
-import CheckIcon from '@/icons/CheckIcon';
-import CreditCardIcon from '@/icons/CreditCardIcon';
-
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
@@ -13,6 +10,9 @@ import IconBadge from '@/componentsV2/bits/IconBadge';
 import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 import Table, {type TableColumn} from '@/componentsV2/items/Table';
+
+import CheckIcon from '@/icons/CheckIcon';
+import CreditCardIcon from '@/icons/CreditCardIcon';
 
 export interface InvoiceItem {
   id: string;

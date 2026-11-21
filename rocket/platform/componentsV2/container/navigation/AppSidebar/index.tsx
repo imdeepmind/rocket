@@ -4,6 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 
+import Avatar from '@/componentsV2/bits/Avatar';
+import Button from '@/componentsV2/bits/Button';
+import IconButton from '@/componentsV2/bits/IconButton';
+import Tag from '@/componentsV2/bits/Tag';
+import Typography from '@/componentsV2/bits/Typography';
+
 import ActivityIcon from '@/icons/ActivityIcon';
 import CreditCardIcon from '@/icons/CreditCardIcon';
 import FileTextIcon from '@/icons/FileTextIcon';
@@ -12,12 +18,6 @@ import GlobeIcon from '@/icons/GlobeIcon';
 import LayersIcon from '@/icons/LayersIcon';
 import SettingsIcon from '@/icons/SettingsIcon';
 import SidebarToggleIcon from '@/icons/SidebarToggleIcon';
-
-import Avatar from '@/componentsV2/bits/Avatar';
-import Button from '@/componentsV2/bits/Button';
-import IconButton from '@/componentsV2/bits/IconButton';
-import Tag from '@/componentsV2/bits/Tag';
-import Typography from '@/componentsV2/bits/Typography';
 
 import styles from './styles.module.css';
 

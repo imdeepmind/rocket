@@ -17,6 +17,7 @@ export type BoxSpacingScale =
   | '6'
   | '7'
   | '8'
+  | '9'
   | '10'
   | '12'
   | '14'

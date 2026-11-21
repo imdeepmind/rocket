@@ -7,8 +7,16 @@ export interface CardProps extends Omit<
   'className'
 > {
   variant?:
-    'default' | 'glass' | 'interactive' | 'bordered' | 'subtle' | 'danger';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+    | 'default'
+    | 'glass'
+    | 'interactive'
+    | 'bordered'
+    | 'subtle'
+    | 'danger'
+    | 'success'
+    | 'floating';
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'row' | 'floating';
+  radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   fullWidth?: boolean;
   hoverable?: boolean;
   classNameOverride?: string;
@@ -18,6 +26,7 @@ export interface CardProps extends Omit<
 export default function Card({
   variant = 'default',
   padding = 'md',
+  radius,
   fullWidth = false,
   hoverable = false,
   classNameOverride,
@@ -28,6 +37,7 @@ export default function Card({
     styles.card,
     styles[variant],
     styles[`pad-${padding}`],
+    radius ? styles[`radius-${radius}`] : '',
     fullWidth ? styles.fullWidth : '',
     hoverable ? styles.hoverable : '',
   ]

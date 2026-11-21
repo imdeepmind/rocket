@@ -2,14 +2,14 @@
 
 import React from 'react';
 
-import GithubIcon from '@/icons/GithubIcon';
-import GoogleIcon from '@/icons/GoogleIcon';
-
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Flex from '@/componentsV2/bits/Flex';
 import Typography from '@/componentsV2/bits/Typography';
+
+import GithubIcon from '@/icons/GithubIcon';
+import GoogleIcon from '@/icons/GoogleIcon';
 
 import styles from './styles.module.css';
 

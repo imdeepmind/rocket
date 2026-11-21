@@ -2,9 +2,9 @@
 
 import React, {forwardRef, useId} from 'react';
 
-import ChevronDownIcon from '@/icons/ChevronDownIcon';
-
 import Typography from '@/componentsV2/bits/Typography';
+
+import ChevronDownIcon from '@/icons/ChevronDownIcon';
 
 import styles from './styles.module.css';
 

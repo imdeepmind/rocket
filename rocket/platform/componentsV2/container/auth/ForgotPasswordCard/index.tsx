@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import React, {useState} from 'react';
 
-import {forgotPassword} from '@/lib/auth/client';
-
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
 import Flex from '@/componentsV2/bits/Flex';
 import TextBox from '@/componentsV2/bits/TextBox';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
+
+import {forgotPassword} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

@@ -3,7 +3,14 @@ import React from 'react';
 import styles from './styles.module.css';
 
 export type IconBadgeVariant =
-  'primary' | 'success' | 'warning' | 'error' | 'surface' | 'muted';
+  | 'primary'
+  | 'success'
+  | 'success-solid'
+  | 'warning'
+  | 'error'
+  | 'surface'
+  | 'muted'
+  | 'waiting';
 export type IconBadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 export type IconBadgeRounded = 'sm' | 'md' | 'lg' | 'full';
 

@@ -2,14 +2,6 @@
 
 import React, {useMemo} from 'react';
 
-import ExternalLinkIcon from '@/icons/ExternalLinkIcon';
-import EyeIcon from '@/icons/EyeIcon';
-import PauseIcon from '@/icons/PauseIcon';
-import PencilIcon from '@/icons/PencilIcon';
-import PlayIcon from '@/icons/PlayIcon';
-import SearchIcon from '@/icons/SearchIcon';
-import TrashIcon from '@/icons/TrashIcon';
-
 import Avatar from '@/componentsV2/bits/Avatar';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
@@ -21,6 +13,14 @@ import Typography from '@/componentsV2/bits/Typography';
 import ActionMenu, {type ActionMenuItem} from '@/componentsV2/items/ActionMenu';
 import Table, {type TableColumn} from '@/componentsV2/items/Table';
 import Tabs, {type TabItem} from '@/componentsV2/items/Tabs';
+
+import ExternalLinkIcon from '@/icons/ExternalLinkIcon';
+import EyeIcon from '@/icons/EyeIcon';
+import PauseIcon from '@/icons/PauseIcon';
+import PencilIcon from '@/icons/PencilIcon';
+import PlayIcon from '@/icons/PlayIcon';
+import SearchIcon from '@/icons/SearchIcon';
+import TrashIcon from '@/icons/TrashIcon';
 
 export interface ProjectItem {
   id: string;

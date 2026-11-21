@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 export interface WindowFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
   dots?: boolean;
+  headerBorder?: boolean;
   variant?: 'default' | 'glass';
   classNameOverride?: string;
   children?: React.ReactNode;
@@ -15,6 +16,7 @@ export interface WindowFrameProps extends React.HTMLAttributes<HTMLDivElement> {
 export default function WindowFrame({
   title,
   dots = true,
+  headerBorder = true,
   variant = 'default',
   classNameOverride,
   children,
@@ -26,28 +28,34 @@ export default function WindowFrame({
   ]
     .filter(Boolean)
     .join(' ');
-  const combinedClass = classNameOverride ?? defaultClasses;
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   return (
     <div className={combinedClass} {...props}>
-      <div className={styles.header}>
-        {dots && (
-          <div className={styles.dots} aria-hidden="true">
-            <span className={styles.dotClose} />
-            <span className={styles.dotMinimize} />
-            <span className={styles.dotMaximize} />
-          </div>
-        )}
-        {title && (
-          <Typography
-            variant="caption"
-            color="muted"
-            classNameOverride={styles.title}
-          >
-            {title}
-          </Typography>
-        )}
-      </div>
+      {(dots || title) && (
+        <div
+          className={`${styles.header} ${!headerBorder ? styles.noBorder : ''}`}
+        >
+          {dots && (
+            <div className={styles.dots} aria-hidden="true">
+              <span className={styles.dotClose} />
+              <span className={styles.dotMinimize} />
+              <span className={styles.dotMaximize} />
+            </div>
+          )}
+          {title && (
+            <Typography
+              variant="caption"
+              color="muted"
+              classNameOverride={styles.title}
+            >
+              {title}
+            </Typography>
+          )}
+        </div>
+      )}
       <div className={styles.content}>{children}</div>
     </div>
   );

@@ -7,11 +7,13 @@
 
 /* Variants */
 .hero {
-  font-family: var(--font-space-grotesk);
-  font-size: 56px;
+  font-family:
+    var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+  font-size: clamp(40px, 5.5vw, 76px);
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: #f7f7fa;
 }
 
 @media (max-width: 768px) {
@@ -86,6 +88,7 @@
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.5;
 }
 
@@ -110,6 +113,10 @@
   color: var(--color-success);
 }
 
+.color-success-muted {
+  color: var(--color-success-muted, #a5c7b9);
+}
+
 .color-warning {
   color: var(--color-warning);
 }
@@ -122,8 +129,32 @@
   color: #ffffff;
 }
 
-.color-accent {
-  color: var(--color-primary-light);
+/* Transforms */
+.transform-uppercase {
+  text-transform: uppercase;
+}
+.transform-capitalize {
+  text-transform: capitalize;
+}
+.transform-lowercase {
+  text-transform: lowercase;
+}
+
+/* Letter Spacing */
+.tracking-tighter {
+  letter-spacing: -0.05em;
+}
+.tracking-tight {
+  letter-spacing: -0.025em;
+}
+.tracking-normal {
+  letter-spacing: 0;
+}
+.tracking-wide {
+  letter-spacing: 0.06em;
+}
+.tracking-wider {
+  letter-spacing: 0.1em;
 }
 
 .maxW-xs {

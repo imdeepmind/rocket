@@ -1,22 +1,4 @@
-.header {
-  position: relative;
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 24px 32px;
-  box-sizing: border-box;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  font-family: var(--font-inter);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.logoLink {
   text-decoration: none;
 }
 
@@ -26,83 +8,58 @@
   border-radius: var(--radius-sm);
 }
 
-.navLinks {
-  display: flex;
-  gap: 36px;
-  font-size: 15px;
-  align-items: center;
-}
-
 .navLink {
+  font-size: var(--font-size-md, 15px);
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color var(--transition-base, 0.15s ease);
 }
 
 .navLink:hover {
-  color: #ffffff;
+  color: var(--foreground);
 }
 
-.headerActions {
+.desktopNav,
+.desktopActions {
   display: flex;
-  align-items: center;
-  gap: 24px;
 }
 
-.signInLink {
-  font-size: 15px;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.signInLink:hover {
-  color: #ffffff;
-}
-
-.mobileToggleWrapper {
+.mobileToggle {
   display: none;
 }
 
 .mobileMenu {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.mobileNavLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: none;
 }
 
 .mobileNavLink {
-  font-size: 16px;
+  font-size: var(--font-size-md, 15px);
   color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 8px 0;
+  padding: var(--spacing-2) 0;
+  transition: color var(--transition-base, 0.15s ease);
 }
 
 .mobileNavLink:hover {
-  color: #ffffff;
+  color: var(--foreground);
 }
 
-.mobileActions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-@media (max-width: 860px) {
-  .navLinks,
-  .headerActions {
+@media (max-width: 768px) {
+  .desktopNav,
+  .desktopActions {
     display: none;
   }
 
-  .mobileToggleWrapper {
-    display: block;
+  .mobileToggle {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    width: 100%;
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--border-subtle);
   }
 }
