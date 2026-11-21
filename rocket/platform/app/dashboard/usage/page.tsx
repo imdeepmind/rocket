@@ -2,10 +2,9 @@
 
 import React from 'react';
 
-import UsageMetrics from '@/components/container/usage/UsageMetrics';
-
 import Flex from '@/components/bits/Flex';
 import Typography from '@/components/bits/Typography';
+import UsageMetrics from '@/components/container/usage/UsageMetrics';
 import Breadcrumb from '@/components/items/Breadcrumb';
 
 export default function UsagePage(): React.JSX.Element {

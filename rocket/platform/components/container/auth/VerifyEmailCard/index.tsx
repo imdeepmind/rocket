@@ -4,13 +4,12 @@ import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState} from 'react';
 
-import AuthShell from '@/components/container/auth/AuthShell';
-
 import Alert from '@/components/bits/Alert';
 import Box from '@/components/bits/Box';
 import Button from '@/components/bits/Button';
 import Flex from '@/components/bits/Flex';
 import Typography from '@/components/bits/Typography';
+import AuthShell from '@/components/container/auth/AuthShell';
 
 import CheckIcon from '@/icons/CheckIcon';
 import CloseIcon from '@/icons/CloseIcon';

@@ -3,13 +3,12 @@
 import Link from 'next/link';
 import React, {useState} from 'react';
 
-import AuthShell from '@/components/container/auth/AuthShell';
-
 import Alert from '@/components/bits/Alert';
 import Box from '@/components/bits/Box';
 import Button from '@/components/bits/Button';
 import Flex from '@/components/bits/Flex';
 import TextBox from '@/components/bits/TextBox';
+import AuthShell from '@/components/container/auth/AuthShell';
 
 import {forgotPassword} from '@/lib/auth/client';
 

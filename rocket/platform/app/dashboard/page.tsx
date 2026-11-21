@@ -2,13 +2,12 @@
 
 import React from 'react';
 
-import ProjectsMetrics from '@/components/container/dashboard/ProjectsMetrics';
-import ProjectsTable from '@/components/container/dashboard/ProjectsTable';
-
 import Box from '@/components/bits/Box';
 import Button from '@/components/bits/Button';
 import Flex from '@/components/bits/Flex';
 import Typography from '@/components/bits/Typography';
+import ProjectsMetrics from '@/components/container/dashboard/ProjectsMetrics';
+import ProjectsTable from '@/components/container/dashboard/ProjectsTable';
 import Breadcrumb from '@/components/items/Breadcrumb';
 
 export default function DashboardPage(): React.JSX.Element {

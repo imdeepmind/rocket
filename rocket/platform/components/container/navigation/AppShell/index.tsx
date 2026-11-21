@@ -2,6 +2,8 @@
 
 import React, {useState} from 'react';
 
+import Box from '@/components/bits/Box';
+import Flex from '@/components/bits/Flex';
 import AppNavbar, {
   type NotificationItem,
 } from '@/components/container/navigation/AppNavbar';
@@ -9,9 +11,6 @@ import AppSidebar, {
   type UsageData,
   type UserProfileData,
 } from '@/components/container/navigation/AppSidebar';
-
-import Box from '@/components/bits/Box';
-import Flex from '@/components/bits/Flex';
 
 import styles from './styles.module.css';
 

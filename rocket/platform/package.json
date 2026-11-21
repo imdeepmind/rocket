@@ -12,7 +12,6 @@
     "lint": "eslint",
     "prettier": "prettier --check .",
     "prettier:write": "prettier --write .",
-    "format": "prettier --write .",
     "auth:generate": "better-auth generate --config ./lib/auth/auth.ts --output ./lib/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

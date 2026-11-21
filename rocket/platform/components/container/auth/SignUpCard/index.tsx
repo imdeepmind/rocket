@@ -4,14 +4,13 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import React, {useState} from 'react';
 
-import AuthShell from '@/components/container/auth/AuthShell';
-
 import Alert from '@/components/bits/Alert';
 import Box from '@/components/bits/Box';
 import Button from '@/components/bits/Button';
 import Flex from '@/components/bits/Flex';
 import TextBox from '@/components/bits/TextBox';
 import Typography from '@/components/bits/Typography';
+import AuthShell from '@/components/container/auth/AuthShell';
 import OAuthButtonGroup from '@/components/items/OAuthButtonGroup';
 
 import {signInWithSocial, signUpWithEmail} from '@/lib/auth/client';

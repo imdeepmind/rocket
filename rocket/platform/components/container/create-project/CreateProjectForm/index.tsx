@@ -2,8 +2,6 @@
 
 import React from 'react';
 
-import IncludedFeaturesCard from '@/components/container/create-project/IncludedFeaturesCard';
-
 import Avatar from '@/components/bits/Avatar';
 import Box from '@/components/bits/Box';
 import Button from '@/components/bits/Button';
@@ -14,6 +12,7 @@ import IconButton from '@/components/bits/IconButton';
 import ProgressBar from '@/components/bits/ProgressBar';
 import TextBox from '@/components/bits/TextBox';
 import Typography from '@/components/bits/Typography';
+import IncludedFeaturesCard from '@/components/container/create-project/IncludedFeaturesCard';
 import FileDropzone from '@/components/items/FileDropzone';
 import OptionCardGroup from '@/components/items/OptionCardGroup';
 

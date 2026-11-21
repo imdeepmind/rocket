@@ -2,15 +2,14 @@
 
 import React, {useState} from 'react';
 
-import CreateProjectForm, {
-  type EnvVarItem,
-} from '@/components/container/create-project/CreateProjectForm';
-import CreateProjectStepper from '@/components/container/create-project/CreateProjectStepper';
-
 import Box from '@/components/bits/Box';
 import Flex from '@/components/bits/Flex';
 import Tag from '@/components/bits/Tag';
 import Typography from '@/components/bits/Typography';
+import CreateProjectForm, {
+  type EnvVarItem,
+} from '@/components/container/create-project/CreateProjectForm';
+import CreateProjectStepper from '@/components/container/create-project/CreateProjectStepper';
 import Breadcrumb from '@/components/items/Breadcrumb';
 
 export default function NewProjectPage(): React.JSX.Element {

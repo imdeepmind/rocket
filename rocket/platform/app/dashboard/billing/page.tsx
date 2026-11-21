@@ -2,12 +2,11 @@
 
 import React from 'react';
 
+import Flex from '@/components/bits/Flex';
+import Typography from '@/components/bits/Typography';
 import BillingCard, {
   type InvoiceItem,
 } from '@/components/container/billing/BillingCard';
-
-import Flex from '@/components/bits/Flex';
-import Typography from '@/components/bits/Typography';
 import Breadcrumb from '@/components/items/Breadcrumb';
 
 const DUMMY_INVOICES: InvoiceItem[] = [

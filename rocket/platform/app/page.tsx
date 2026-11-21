@@ -1,5 +1,6 @@
 import React from 'react';
 
+import Box from '@/components/bits/Box';
 import Features from '@/components/container/landing/Features';
 import Hero from '@/components/container/landing/Hero';
 import HowItWorks from '@/components/container/landing/HowItWorks';
@@ -9,8 +10,6 @@ import ProjectsPreview from '@/components/container/landing/ProjectsPreview';
 import WhyRocket from '@/components/container/landing/WhyRocket';
 import Footer from '@/components/container/navigation/Footer';
 import Navbar from '@/components/container/navigation/Navbar';
-
-import Box from '@/components/bits/Box';
 
 import styles from './page.module.css';
 
