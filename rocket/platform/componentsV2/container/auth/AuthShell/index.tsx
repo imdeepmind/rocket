@@ -58,7 +58,7 @@ export default function AuthShell({
         </Box>
 
         {/* Auth card */}
-        <Card padding="lg" variant="default" fullWidth>
+        <Card padding="none" fullWidth classNameOverride={styles.card}>
           <Flex direction="column" gap="1" mb="6">
             <Typography variant="h2" as="h1">
               {title}
