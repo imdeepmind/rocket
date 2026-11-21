@@ -75,7 +75,7 @@ export default function Features({
 
       <Grid minItemWidth="240" rowGap="12" columnGap="10">
         {features.map(feature => (
-          <Flex key={feature.title} direction="column">
+          <Flex key={feature.title} direction="column" px="2">
             <Box mb="6">
               <IconBadge variant="primary" size="xl" rounded="xl">
                 {feature.icon}

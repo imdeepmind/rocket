@@ -22,9 +22,11 @@ export default function WindowFrame({
   children,
   ...props
 }: WindowFrameProps): React.JSX.Element {
+  const hasHeader = dots || Boolean(title);
   const defaultClasses = [
     styles.windowFrame,
     variant !== 'default' ? styles[variant] : '',
+    !hasHeader ? styles.noHeader : '',
   ]
     .filter(Boolean)
     .join(' ');

@@ -7,8 +7,11 @@ import Flex from '@/componentsV2/bits/Flex';
 import IconBadge from '@/componentsV2/bits/IconBadge';
 import Section from '@/componentsV2/bits/Section';
 import Typography from '@/componentsV2/bits/Typography';
+import WindowFrame from '@/componentsV2/bits/WindowFrame';
 
 import ArrowRightIcon from '@/icons/ArrowRightIcon';
+
+import styles from './styles.module.css';
 
 export const DEFAULT_ROSS_FEATURES = [
   'Database schema generation',
@@ -28,6 +31,7 @@ export interface OpenSourceProps {
   secondaryCtaText?: string;
   secondaryCtaHref?: string;
   features?: string[];
+  showDots?: boolean;
   classNameOverride?: string;
 }
 
@@ -41,31 +45,43 @@ export default function OpenSource({
   secondaryCtaText = 'View ROSS on GitHub',
   secondaryCtaHref = 'https://github.com/imdeepmind/rocket',
   features = DEFAULT_ROSS_FEATURES,
+  showDots = false,
   classNameOverride,
 }: OpenSourceProps): React.JSX.Element {
   return (
     <Section
       container="landing"
-      spacing="lg"
+      pt="16"
+      pb="16"
       classNameOverride={classNameOverride}
     >
-      <Flex align="center" gap="16" wrap="wrap">
+      <Box classNameOverride={styles.openLayout}>
         {/* Left: About ROSS and Rocket */}
-        <Flex direction="column" gap="4" flex="1" minW="0" basis="480">
-          {eyebrow && <Typography variant="eyebrow">{eyebrow}</Typography>}
-          <Typography variant="h2" as="h2">
-            {title}
-          </Typography>
-
-          <Box my="2">
-            <Typography variant="lead">{leadText}</Typography>
+        <Box classNameOverride={styles.openInfoCol}>
+          {eyebrow && (
+            <Box mb="4">
+              <Typography variant="eyebrow">{eyebrow}</Typography>
+            </Box>
+          )}
+          <Box mb="6">
+            <Typography variant="display" as="h2">
+              {title}
+            </Typography>
           </Box>
 
-          <Typography variant="body" color="muted">
-            {bodyText}
-          </Typography>
+          <Box mb="4">
+            <Typography variant="lead" color="secondary" maxW="520">
+              {leadText}
+            </Typography>
+          </Box>
 
-          <Flex gap="3" mt="4" wrap="wrap">
+          <Box mb="8">
+            <Typography variant="lead" color="secondary" maxW="520">
+              {bodyText}
+            </Typography>
+          </Box>
+
+          <Flex gap="4" wrap="wrap">
             <Button
               href={primaryCtaHref}
               target="_blank"
@@ -86,12 +102,17 @@ export default function OpenSource({
               {secondaryCtaText}
             </Button>
           </Flex>
-        </Flex>
+        </Box>
 
-        {/* Right: ROSS handles card */}
-        <Box flex="1" minW="0" basis="420">
-          <Card padding="lg" variant="glass" fullWidth>
-            <Box mb="5">
+        {/* Right: ROSS handles window */}
+        <Box classNameOverride={styles.configCol}>
+          <WindowFrame
+            dots={showDots}
+            headerBorder={false}
+            variant="glass"
+            classNameOverride={styles.configWindow}
+          >
+            <Box mb="6">
               <Typography variant="mono" color="muted">
                 One JSON configuration. ROSS handles:
               </Typography>
@@ -99,12 +120,17 @@ export default function OpenSource({
 
             <Flex direction="column" gap="3" mb="6">
               {features.map(item => (
-                <Card key={item} padding="sm" variant="subtle">
-                  <Flex align="center" gap="3">
-                    <IconBadge variant="success" size="xs" rounded="full">
+                <Card key={item} padding="row" variant="subtle" radius="xl">
+                  <Flex align="center" gap="4">
+                    <IconBadge variant="success-solid" size="sm" rounded="full">
                       ✓
                     </IconBadge>
-                    <Typography variant="body" as="span">
+                    <Typography
+                      variant="body-lg"
+                      weight="semibold"
+                      color="white"
+                      as="span"
+                    >
                       {item}
                     </Typography>
                   </Flex>
@@ -112,15 +138,17 @@ export default function OpenSource({
               ))}
             </Flex>
 
-            <Box pt="4" borderTop>
-              <Typography variant="caption" color="muted">
-                Bring your ROSS configuration. Rocket deploys it with PostgreSQL
-                and Redis/Memcached included.
-              </Typography>
-            </Box>
-          </Card>
+            <Typography
+              variant="body-sm"
+              color="secondary"
+              classNameOverride={styles.cardFooterNote}
+            >
+              Bring your ROSS configuration. Rocket deploys it with PostgreSQL
+              and Redis/Memcached included.
+            </Typography>
+          </WindowFrame>
         </Box>
-      </Flex>
+      </Box>
     </Section>
   );
 }

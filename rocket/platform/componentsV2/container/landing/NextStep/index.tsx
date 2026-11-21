@@ -22,7 +22,7 @@ export default function NextStep({
   title = 'Ship your backend. Not your infrastructure headaches.',
   description = 'Get your backend deployed and focus on what matters: building your product.',
   primaryCtaText = 'Get started',
-  primaryCtaHref = '/docs/get-started',
+  primaryCtaHref = '/auth/sign-up',
   secondaryCtaText = 'Read the documentation',
   secondaryCtaHref = '/docs',
   classNameOverride,
@@ -45,7 +45,7 @@ export default function NextStep({
         position="relative"
         mx="auto"
       >
-        <Typography variant="h2" as="h2" align="center">
+        <Typography variant="display" as="h2" align="center">
           {title}
         </Typography>
         <Typography variant="lead" align="center">

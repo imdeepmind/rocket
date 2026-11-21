@@ -72,6 +72,15 @@
   padding: 16px;
 }
 
+.noHeader .content,
+.glass.noHeader .content {
+  padding: 36px;
+}
+
 .glass .content {
   padding: 0 28px 28px;
+}
+
+.glass.noHeader .content {
+  padding: 36px;
 }

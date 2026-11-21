@@ -22,6 +22,7 @@ export const DEFAULT_FOOTER_LINKS: NavLinkItem[] = [
     href: 'https://github.com/imdeepmind/rocket',
     external: true,
   },
+  {label: 'Sign In', href: '/auth/sign-in'},
 ];
 
 export interface FooterProps {
