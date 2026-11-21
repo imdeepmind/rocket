@@ -1,7 +1,8 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import VerifyEmail from '@/container/auth/VerifyEmail';
+import Box from '@/componentsV2/bits/Box';
+import VerifyEmailCard from '@/componentsV2/container/auth/VerifyEmailCard';
 
 export const metadata: Metadata = {
   title: 'Verify Email · Rocket',
@@ -10,8 +11,8 @@ export const metadata: Metadata = {
 
 export default function VerifyEmailPage(): React.JSX.Element {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#08080D]" />}>
-      <VerifyEmail />
+    <Suspense fallback={<Box classNameOverride="min-h-screen bg-[#08080D]" />}>
+      <VerifyEmailCard />
     </Suspense>
   );
 }

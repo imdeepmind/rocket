@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
+import React from 'react';
 
-import SignIn from '@/container/auth/SignIn';
+import SignInCard from '@/componentsV2/container/auth/SignInCard';
 
 export const metadata: Metadata = {
   title: 'Sign In · Rocket',
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function SignInPage(): React.JSX.Element {
-  return <SignIn />;
+  return <SignInCard />;
 }

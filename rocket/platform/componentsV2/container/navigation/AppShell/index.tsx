@@ -2,8 +2,11 @@
 
 import React, {useState} from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import AppNavbar from '@/componentsV2/container/navigation/AppNavbar';
-import AppSidebar from '@/componentsV2/container/navigation/AppSidebar';
+import AppSidebar, {
+  type UserProfileData,
+} from '@/componentsV2/container/navigation/AppSidebar';
 
 import styles from './styles.module.css';
 
@@ -13,6 +16,11 @@ export interface AppShellProps {
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onCloseSidebar?: () => void;
+  projectCount?: number;
+  user?: UserProfileData | null;
+  onLogout?: () => void;
+  isLoggingOut?: boolean;
+  activeHref?: string;
   children: React.ReactNode;
   classNameOverride?: string;
 }
@@ -23,6 +31,11 @@ export default function AppShell({
   isSidebarOpen: controlledIsOpen,
   onToggleSidebar: controlledOnToggle,
   onCloseSidebar: controlledOnClose,
+  projectCount = 3,
+  user,
+  onLogout,
+  isLoggingOut,
+  activeHref,
   children,
   classNameOverride,
 }: AppShellProps): React.JSX.Element {
@@ -36,11 +49,11 @@ export default function AppShell({
   const combinedClass = classNameOverride ?? styles.shell;
 
   return (
-    <div className={combinedClass}>
+    <Box classNameOverride={combinedClass}>
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
-        <div
-          className={styles.backdrop}
+        <Box
+          classNameOverride={styles.backdrop}
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -52,19 +65,26 @@ export default function AppShell({
           isOpen={isSidebarOpen}
           onToggle={toggleSidebar}
           onClose={closeSidebar}
+          projectCount={projectCount}
+          user={user}
+          onLogout={onLogout}
+          isLoggingOut={isLoggingOut}
+          activeHref={activeHref}
         />
       )}
 
       {/* Main Viewport */}
-      <div className={styles.viewport}>
+      <Box classNameOverride={styles.viewport}>
         {navbar ?? (
           <AppNavbar
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
           />
         )}
-        <main className={styles.mainContent}>{children}</main>
-      </div>
-    </div>
+        <Box as="main" classNameOverride={styles.mainContent}>
+          {children}
+        </Box>
+      </Box>
+    </Box>
   );
 }

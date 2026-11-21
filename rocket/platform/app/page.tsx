@@ -1,26 +1,26 @@
 import React from 'react';
 
-import Features from '@/container/landing/Features';
-import Hero from '@/container/landing/Hero';
-import HowItWorks from '@/container/landing/HowItWorks';
-import NextStep from '@/container/landing/NextStep';
-import OpenSource from '@/container/landing/OpenSource';
-import Projects from '@/container/landing/Projects';
-import WhyRocket from '@/container/landing/WhyRocket';
-
-import Footer from '@/components/items/Footer';
-import Navbar from '@/components/items/Navbar';
+import Box from '@/componentsV2/bits/Box';
+import Features from '@/componentsV2/container/landing/Features';
+import Hero from '@/componentsV2/container/landing/Hero';
+import HowItWorks from '@/componentsV2/container/landing/HowItWorks';
+import NextStep from '@/componentsV2/container/landing/NextStep';
+import OpenSource from '@/componentsV2/container/landing/OpenSource';
+import ProjectsPreview from '@/componentsV2/container/landing/ProjectsPreview';
+import WhyRocket from '@/componentsV2/container/landing/WhyRocket';
+import Footer from '@/componentsV2/container/navigation/Footer';
+import Navbar from '@/componentsV2/container/navigation/Navbar';
 
 import styles from './page.module.css';
 
 export default function Home(): React.JSX.Element {
   return (
-    <main className={styles.wrapper}>
+    <Box as="main" classNameOverride={styles.wrapper}>
       {/* Header & Hero */}
-      <div className={styles.heroWrapper}>
+      <Box classNameOverride={styles.heroWrapper}>
         <Navbar />
         <Hero />
-      </div>
+      </Box>
 
       {/* Feature showcase */}
       <Features />
@@ -29,7 +29,7 @@ export default function Home(): React.JSX.Element {
       <HowItWorks />
 
       {/* Projects & Activity dashboard preview */}
-      <Projects />
+      <ProjectsPreview />
 
       {/* Why Rocket & CLI deployment preview */}
       <WhyRocket />
@@ -42,6 +42,6 @@ export default function Home(): React.JSX.Element {
 
       {/* Site footer */}
       <Footer />
-    </main>
+    </Box>
   );
 }

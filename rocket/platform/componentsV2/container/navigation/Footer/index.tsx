@@ -1,13 +1,28 @@
 import Link from 'next/link';
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Typography from '@/componentsV2/bits/Typography';
-import {
-  DEFAULT_NAV_LINKS,
-  NavLinkItem,
-} from '@/componentsV2/container/navigation/Navbar';
 
 import styles from './styles.module.css';
+
+export interface NavLinkItem {
+  label: string;
+  href: string;
+  external?: boolean;
+}
+
+export const DEFAULT_FOOTER_LINKS: NavLinkItem[] = [
+  {label: 'Home', href: '/'},
+  {label: 'ROSS', href: 'https://ross.imdeepmind.com', external: true},
+  {label: 'Docs', href: '/docs'},
+  {label: 'Pricing', href: '/pricing'},
+  {
+    label: 'GitHub',
+    href: 'https://github.com/imdeepmind/rocket',
+    external: true,
+  },
+];
 
 export interface FooterProps {
   copyright?: string;
@@ -17,20 +32,24 @@ export interface FooterProps {
 
 export default function Footer({
   copyright = 'Copyright © 2026 Abhishek Chatterjee',
-  links = DEFAULT_NAV_LINKS,
+  links = DEFAULT_FOOTER_LINKS,
   classNameOverride,
 }: FooterProps): React.JSX.Element {
   const combinedClass = classNameOverride ?? styles.footer;
 
   return (
-    <footer className={combinedClass}>
-      <div className={styles.footerInner}>
+    <Box as="footer" classNameOverride={combinedClass}>
+      <Box classNameOverride={styles.footerInner}>
         <Typography variant="caption" color="muted">
           {copyright}
         </Typography>
 
-        <nav className={styles.footerLinks} aria-label="Footer Navigation">
-          {links.map(link =>
+        <Box
+          as="nav"
+          classNameOverride={styles.footerLinks}
+          aria-label="Footer Navigation"
+        >
+          {(links || DEFAULT_FOOTER_LINKS).map(link =>
             link.external ? (
               <a
                 key={link.label}
@@ -47,8 +66,8 @@ export default function Footer({
               </Link>
             ),
           )}
-        </nav>
-      </div>
-    </footer>
+        </Box>
+      </Box>
+    </Box>
   );
 }

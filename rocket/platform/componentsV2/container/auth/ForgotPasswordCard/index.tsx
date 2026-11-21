@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import React, {useState} from 'react';
 
+import {forgotPassword} from '@/lib/auth/client';
+
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
@@ -13,7 +15,7 @@ import AuthShell from '@/componentsV2/container/auth/AuthShell';
 import styles from './styles.module.css';
 
 export interface ForgotPasswordCardProps {
-  onSubmit: (email: string) => void;
+  onSubmit?: (email: string) => void;
   isSubmitting?: boolean;
   error?: string | null;
   success?: boolean;
@@ -30,10 +32,33 @@ export default function ForgotPasswordCard({
   classNameOverride,
 }: ForgotPasswordCardProps): React.JSX.Element {
   const [email, setEmail] = useState('');
+  const [internalError, setInternalError] = useState<string | null>(null);
+  const [internalSuccess, setInternalSuccess] = useState(false);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const displayError = error !== undefined ? error : internalError;
+  const displaySuccess = success || internalSuccess;
+  const displaySubmitting = isSubmitting || internalSubmitting;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSubmit(email);
+    if (onSubmit) {
+      onSubmit(email);
+      return;
+    }
+
+    setInternalError(null);
+    setInternalSuccess(false);
+    setInternalSubmitting(true);
+    const result = await forgotPassword(email);
+    setInternalSubmitting(false);
+
+    if (!result.success) {
+      setInternalError(result.error);
+      return;
+    }
+
+    setInternalSuccess(true);
   }
 
   const footer = (
@@ -57,9 +82,9 @@ export default function ForgotPasswordCard({
         fullWidth
         noValidate
       >
-        {error && <Alert variant="error" message={error} />}
+        {displayError && <Alert variant="error" message={displayError} />}
 
-        {success && (
+        {displaySuccess && (
           <Alert
             variant="success"
             message="A reset link has been dispatched to your email address."
@@ -85,10 +110,10 @@ export default function ForgotPasswordCard({
             variant="primary"
             size="md"
             fullWidth
-            loading={isSubmitting}
-            disabled={isSubmitting}
+            loading={displaySubmitting}
+            disabled={displaySubmitting}
           >
-            {isSubmitting ? 'Sending link...' : 'Send reset link'}
+            {displaySubmitting ? 'Sending link...' : 'Send reset link'}
           </Button>
         </Box>
       </Flex>

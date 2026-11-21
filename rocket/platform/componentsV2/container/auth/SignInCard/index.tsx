@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import React, {useState} from 'react';
+
+import {signInWithEmail, signInWithSocial} from '@/lib/auth/client';
 
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
@@ -20,7 +23,7 @@ export interface SignInFormData {
 }
 
 export interface SignInCardProps {
-  onSubmit: (data: SignInFormData) => void;
+  onSubmit?: (data: SignInFormData) => void;
   onOAuthClick?: (provider: 'Google' | 'GitHub') => void;
   isSubmitting?: boolean;
   error?: string | null;
@@ -42,12 +45,57 @@ export default function SignInCard({
   forgotPasswordHref = '/auth/forgot-password',
   classNameOverride,
 }: SignInCardProps): React.JSX.Element {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [internalError, setInternalError] = useState<string | null>(null);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const [internalNotice, setInternalNotice] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const displayError = error !== undefined ? error : internalError;
+  const displaySubmitting = isSubmitting || internalSubmitting;
+  const displayNotice =
+    oauthNotice !== undefined ? oauthNotice : internalNotice;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSubmit({email, password});
+    if (onSubmit) {
+      onSubmit({email, password});
+      return;
+    }
+
+    setInternalError(null);
+    setInternalSubmitting(true);
+    const result = await signInWithEmail({email, password});
+    setInternalSubmitting(false);
+
+    if (!result.success) {
+      setInternalError(result.error);
+      return;
+    }
+
+    router.push('/dashboard');
+    router.refresh();
+  }
+
+  async function handleOAuth(provider: 'Google' | 'GitHub') {
+    if (onOAuthClick) {
+      onOAuthClick(provider);
+      return;
+    }
+    setInternalNotice(null);
+    const result = await signInWithSocial(provider, '/dashboard');
+    if (!result.success && result.error) {
+      setInternalNotice(result.error);
+    }
+  }
+
+  function handleDismissNotice() {
+    if (onDismissOAuthNotice) {
+      onDismissOAuthNotice();
+    } else {
+      setInternalNotice(null);
+    }
   }
 
   const footer = (
@@ -68,9 +116,9 @@ export default function SignInCard({
     >
       <OAuthButtonGroup
         dividerText="or continue with email"
-        onProviderClick={onOAuthClick}
-        notice={oauthNotice}
-        onDismissNotice={onDismissOAuthNotice}
+        onProviderClick={handleOAuth}
+        notice={displayNotice}
+        onDismissNotice={handleDismissNotice}
       />
 
       <Flex
@@ -81,9 +129,9 @@ export default function SignInCard({
         fullWidth
         noValidate
       >
-        {error && (
+        {displayError && (
           <Box mb="1" fullWidth>
-            <Alert variant="error" message={error} />
+            <Alert variant="error" message={displayError} />
           </Box>
         )}
 
@@ -124,10 +172,10 @@ export default function SignInCard({
             variant="primary"
             size="md"
             fullWidth
-            loading={isSubmitting}
-            disabled={isSubmitting}
+            loading={displaySubmitting}
+            disabled={displaySubmitting}
           >
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
+            {displaySubmitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </Box>
       </Flex>

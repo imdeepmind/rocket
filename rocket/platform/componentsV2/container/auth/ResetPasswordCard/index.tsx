@@ -1,10 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import {useSearchParams} from 'next/navigation';
 import React, {useState} from 'react';
 
 import CheckIcon from '@/icons/CheckIcon';
 import CloseIcon from '@/icons/CloseIcon';
+
+import {resetPassword} from '@/lib/auth/client';
 
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
@@ -18,7 +21,7 @@ import styles from './styles.module.css';
 
 export interface ResetPasswordCardProps {
   mode?: 'success' | 'error';
-  onSubmit: (newPassword: string, confirmPassword: string) => void;
+  onSubmit?: (newPassword: string, confirmPassword: string) => void;
   isSubmitting?: boolean;
   isCompleted?: boolean;
   error?: string | null;
@@ -27,7 +30,7 @@ export interface ResetPasswordCardProps {
 }
 
 export default function ResetPasswordCard({
-  mode = 'success',
+  mode: propMode,
   onSubmit,
   isSubmitting = false,
   isCompleted = false,
@@ -35,12 +38,52 @@ export default function ResetPasswordCard({
   signInHref = '/auth/sign-in',
   classNameOverride,
 }: ResetPasswordCardProps): React.JSX.Element {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const errorParam = searchParams.get('error');
+
+  const hasParamError =
+    !token ||
+    Boolean(errorParam) ||
+    searchParams.get('status') === 'error' ||
+    searchParams.get('state') === 'error';
+
+  const resolvedMode = propMode ?? (hasParamError ? 'error' : 'success');
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [internalError, setInternalError] = useState<string | null>(null);
+  const [internalCompleted, setInternalCompleted] = useState(false);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const displayError = error !== undefined ? error : internalError;
+  const displayCompleted = isCompleted || internalCompleted;
+  const displaySubmitting = isSubmitting || internalSubmitting;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSubmit(newPassword, confirmPassword);
+    if (onSubmit) {
+      onSubmit(newPassword, confirmPassword);
+      return;
+    }
+
+    setInternalError(null);
+
+    if (newPassword !== confirmPassword) {
+      setInternalError('Passwords do not match');
+      return;
+    }
+
+    setInternalSubmitting(true);
+    const result = await resetPassword({newPassword, token});
+    setInternalSubmitting(false);
+
+    if (!result.success) {
+      setInternalError(result.error);
+      return;
+    }
+
+    setInternalCompleted(true);
   }
 
   const footer = (
@@ -51,16 +94,18 @@ export default function ResetPasswordCard({
 
   return (
     <AuthShell
-      title={mode === 'success' ? 'Reset your password' : 'Reset link issue'}
+      title={
+        resolvedMode === 'success' ? 'Reset your password' : 'Reset link issue'
+      }
       subtitle={
-        mode === 'success'
+        resolvedMode === 'success'
           ? 'Enter a new password for your Rocket account.'
           : 'There was a problem with your password reset link.'
       }
       footer={footer}
       classNameOverride={classNameOverride}
     >
-      {mode === 'success' ? (
+      {resolvedMode === 'success' ? (
         <Flex direction="column" align="center" fullWidth>
           <Flex
             align="center"
@@ -73,29 +118,21 @@ export default function ResetPasswordCard({
 
           <Flex direction="column" align="center" gap="1" mb="6">
             <Typography variant="h3" as="h2" align="center">
-              {isCompleted
+              {displayCompleted
                 ? 'Password reset successfully'
                 : 'Reset link verified'}
             </Typography>
-
-            <Typography
-              variant="caption"
-              color="muted"
-              align="center"
-              classNameOverride={styles.statusDesc}
-            >
-              {isCompleted
+            <Typography variant="body" color="muted" align="center">
+              {displayCompleted
                 ? 'Your password has been successfully updated. You can now sign in with your new credentials.'
                 : 'Your reset link is verified. Set your new password below.'}
             </Typography>
           </Flex>
 
-          {isCompleted ? (
-            <Box mt="2" fullWidth>
-              <Button href={signInHref} variant="primary" size="md" fullWidth>
-                Sign in to your account
-              </Button>
-            </Box>
+          {displayCompleted ? (
+            <Button href={signInHref} variant="primary" size="md" fullWidth>
+              Sign in to your account
+            </Button>
           ) : (
             <Flex
               as="form"
@@ -105,27 +142,31 @@ export default function ResetPasswordCard({
               fullWidth
               noValidate
             >
-              {error && <Alert variant="error" message={error} />}
+              {displayError && <Alert variant="error" message={displayError} />}
 
               <TextBox
-                id="new-password"
+                id="reset-new-password"
                 label="New password"
+                name="newPassword"
                 type="password"
                 placeholder="At least 8 characters"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 fullWidth
+                autoComplete="new-password"
                 required
               />
 
               <TextBox
-                id="confirm-password"
-                label="Confirm new password"
+                id="reset-confirm-password"
+                label="Confirm password"
+                name="confirmPassword"
                 type="password"
-                placeholder="Repeat new password"
+                placeholder="Re-enter new password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 fullWidth
+                autoComplete="new-password"
                 required
               />
 
@@ -135,10 +176,12 @@ export default function ResetPasswordCard({
                   variant="primary"
                   size="md"
                   fullWidth
-                  loading={isSubmitting}
-                  disabled={isSubmitting}
+                  loading={displaySubmitting}
+                  disabled={displaySubmitting}
                 >
-                  {isSubmitting ? 'Updating password...' : 'Update password'}
+                  {displaySubmitting
+                    ? 'Updating password...'
+                    : 'Reset password'}
                 </Button>
               </Box>
             </Flex>
@@ -150,9 +193,7 @@ export default function ResetPasswordCard({
             align="center"
             justify="center"
             mb="4"
-            classNameOverride={[styles.iconCircle, styles.errorCircle].join(
-              ' ',
-            )}
+            classNameOverride={`${styles.iconCircle} ${styles.errorCircle}`}
           >
             <CloseIcon width={24} height={24} />
           </Flex>
@@ -161,28 +202,26 @@ export default function ResetPasswordCard({
             <Typography variant="h3" as="h2" align="center">
               Invalid or expired link
             </Typography>
-
-            <Typography
-              variant="caption"
-              color="muted"
-              align="center"
-              classNameOverride={styles.statusDesc}
-            >
-              {error ||
-                'This password reset link is invalid or has expired. Please request a new link.'}
+            <Typography variant="body" color="muted" align="center">
+              This password reset link is invalid or has expired. Request a
+              fresh link to continue.
             </Typography>
           </Flex>
 
-          <Box mt="2" fullWidth>
+          <Flex direction="column" gap="3" fullWidth>
             <Button
               href="/auth/forgot-password"
               variant="primary"
               size="md"
               fullWidth
             >
-              Request new reset link
+              Request a new reset link
             </Button>
-          </Box>
+
+            <Button href={signInHref} variant="outline" size="md" fullWidth>
+              Return to sign in
+            </Button>
+          </Flex>
         </Flex>
       )}
     </AuthShell>

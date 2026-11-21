@@ -1,41 +1,42 @@
 'use client';
 
-import Link from 'next/link';
 import React from 'react';
 
-import ProjectsMetrics from '@/container/dashboard/ProjectsMetrics';
-import ProjectsTable from '@/container/dashboard/ProjectsTable';
-
-import styles from './styles.module.css';
+import Box from '@/componentsV2/bits/Box';
+import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
+import Typography from '@/componentsV2/bits/Typography';
+import ProjectsMetrics from '@/componentsV2/container/dashboard/ProjectsMetrics';
+import ProjectsTable from '@/componentsV2/container/dashboard/ProjectsTable';
+import Breadcrumb from '@/componentsV2/items/Breadcrumb';
 
 export default function DashboardPage(): React.JSX.Element {
   return (
     <>
-      {/* Breadcrumb */}
-      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-        <span>Workspace</span>
-        <span>/</span>
-        <span className={styles.breadcrumbActive}>Projects</span>
-      </nav>
+      <Breadcrumb
+        items={[
+          {label: 'Workspace', href: '/dashboard'},
+          {label: 'Projects', active: true},
+        ]}
+      />
 
-      {/* Header Row */}
-      <div className={styles.headerRow}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Projects</h1>
-          <p className={styles.subtitle}>
+      <Flex justify="between" align="start" wrap="wrap" gap="5" mt="4" mb="7">
+        <Flex direction="column" gap="1">
+          <Typography variant="h1">Projects</Typography>
+          <Typography variant="body" color="muted">
             Manage your backend projects and deployments.
-          </p>
-        </div>
+          </Typography>
+        </Flex>
 
-        <Link href="/dashboard/new" className={styles.newProjectBtn}>
+        <Button variant="primary" href="/dashboard/new">
           + New project
-        </Link>
-      </div>
+        </Button>
+      </Flex>
 
-      {/* Metrics Row */}
-      <ProjectsMetrics />
+      <Box mb="6">
+        <ProjectsMetrics />
+      </Box>
 
-      {/* Projects Table */}
       <ProjectsTable />
     </>
   );

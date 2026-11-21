@@ -17,13 +17,21 @@ export interface ProjectsMetricsData {
   monthlyRequestsTrend?: string;
 }
 
+export const DEFAULT_METRICS: ProjectsMetricsData = {
+  totalProjects: 3,
+  active: 1,
+  paused: 1,
+  monthlyRequests: '12.5k',
+  monthlyRequestsTrend: '↑ 18% vs last month',
+};
+
 export interface ProjectsMetricsProps {
-  metrics: ProjectsMetricsData;
+  metrics?: ProjectsMetricsData;
   classNameOverride?: string;
 }
 
 export default function ProjectsMetrics({
-  metrics,
+  metrics = DEFAULT_METRICS,
   classNameOverride,
 }: ProjectsMetricsProps): React.JSX.Element {
   return (

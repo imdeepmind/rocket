@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import React, {useState} from 'react';
+
+import {signInWithSocial, signUpWithEmail} from '@/lib/auth/client';
 
 import Alert from '@/componentsV2/bits/Alert';
 import Box from '@/componentsV2/bits/Box';
@@ -21,7 +24,7 @@ export interface SignUpFormData {
 }
 
 export interface SignUpCardProps {
-  onSubmit: (data: SignUpFormData) => void;
+  onSubmit?: (data: SignUpFormData) => void;
   onOAuthClick?: (provider: 'Google' | 'GitHub') => void;
   isSubmitting?: boolean;
   error?: string | null;
@@ -41,13 +44,62 @@ export default function SignUpCard({
   signInHref = '/auth/sign-in',
   classNameOverride,
 }: SignUpCardProps): React.JSX.Element {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [internalError, setInternalError] = useState<string | null>(null);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const [internalNotice, setInternalNotice] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const displayError = error !== undefined ? error : internalError;
+  const displaySubmitting = isSubmitting || internalSubmitting;
+  const displayNotice =
+    oauthNotice !== undefined ? oauthNotice : internalNotice;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSubmit({name, email, password});
+    if (onSubmit) {
+      onSubmit({name, email, password});
+      return;
+    }
+
+    setInternalError(null);
+    const trimmedEmail = email.trim();
+    setInternalSubmitting(true);
+    const result = await signUpWithEmail({
+      name,
+      email: trimmedEmail,
+      password,
+    });
+    setInternalSubmitting(false);
+
+    if (!result.success) {
+      setInternalError(result.error);
+      return;
+    }
+
+    router.push(`/auth/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
+  }
+
+  async function handleOAuth(provider: 'Google' | 'GitHub') {
+    if (onOAuthClick) {
+      onOAuthClick(provider);
+      return;
+    }
+    setInternalNotice(null);
+    const result = await signInWithSocial(provider, '/dashboard');
+    if (!result.success && result.error) {
+      setInternalNotice(result.error);
+    }
+  }
+
+  function handleDismissNotice() {
+    if (onDismissOAuthNotice) {
+      onDismissOAuthNotice();
+    } else {
+      setInternalNotice(null);
+    }
   }
 
   const footer = (
@@ -68,9 +120,9 @@ export default function SignUpCard({
     >
       <OAuthButtonGroup
         dividerText="or continue with email"
-        onProviderClick={onOAuthClick}
-        notice={oauthNotice}
-        onDismissNotice={onDismissOAuthNotice}
+        onProviderClick={handleOAuth}
+        notice={displayNotice}
+        onDismissNotice={handleDismissNotice}
       />
 
       <Flex
@@ -81,9 +133,9 @@ export default function SignUpCard({
         fullWidth
         noValidate
       >
-        {error && (
+        {displayError && (
           <Box mb="1" fullWidth>
-            <Alert variant="error" message={error} />
+            <Alert variant="error" message={displayError} />
           </Box>
         )}
 
@@ -132,10 +184,10 @@ export default function SignUpCard({
             variant="primary"
             size="md"
             fullWidth
-            loading={isSubmitting}
-            disabled={isSubmitting}
+            loading={displaySubmitting}
+            disabled={displaySubmitting}
           >
-            {isSubmitting ? 'Creating account...' : 'Create account'}
+            {displaySubmitting ? 'Creating account...' : 'Create account'}
           </Button>
         </Box>
       </Flex>

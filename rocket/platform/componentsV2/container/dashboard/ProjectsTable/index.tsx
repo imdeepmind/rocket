@@ -32,8 +32,38 @@ export interface ProjectItem {
   memory: string;
 }
 
+export const DEFAULT_PROJECTS: ProjectItem[] = [
+  {
+    id: 'p-1',
+    name: 'Blog Backend',
+    slug: 'blog-backend',
+    status: 'Active',
+    url: 'blog-abc123.rocket.app',
+    lastDeployed: '2h ago',
+    memory: '512 MB',
+  },
+  {
+    id: 'p-2',
+    name: 'Survey API',
+    slug: 'survey-api',
+    status: 'Deploying',
+    url: 'survey-def456.rocket.app',
+    lastDeployed: 'Just now',
+    memory: '256 MB',
+  },
+  {
+    id: 'p-3',
+    name: 'E-commerce Microservice',
+    slug: 'ecommerce-ms',
+    status: 'Paused',
+    url: 'shop-xyz789.rocket.app',
+    lastDeployed: '3d ago',
+    memory: '1 GB',
+  },
+];
+
 export interface ProjectsTableProps {
-  projects: ProjectItem[];
+  projects?: ProjectItem[];
   activeFilter?: 'All' | 'Active' | 'Deploying' | 'Paused';
   onFilterChange?: (filter: 'All' | 'Active' | 'Deploying' | 'Paused') => void;
   searchQuery?: string;
@@ -47,7 +77,7 @@ export interface ProjectsTableProps {
 }
 
 export default function ProjectsTable({
-  projects,
+  projects = DEFAULT_PROJECTS,
   activeFilter = 'All',
   onFilterChange,
   searchQuery = '',
