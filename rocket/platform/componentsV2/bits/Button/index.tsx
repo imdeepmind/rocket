@@ -52,7 +52,9 @@ export const Button = forwardRef<
     .filter(Boolean)
     .join(' ');
 
-  const combinedClass = classNameOverride ?? defaultClasses;
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   const content = (
     <>

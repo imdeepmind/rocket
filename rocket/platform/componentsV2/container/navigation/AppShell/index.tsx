@@ -3,8 +3,12 @@
 import React, {useState} from 'react';
 
 import Box from '@/componentsV2/bits/Box';
-import AppNavbar from '@/componentsV2/container/navigation/AppNavbar';
+import Flex from '@/componentsV2/bits/Flex';
+import AppNavbar, {
+  type NotificationItem,
+} from '@/componentsV2/container/navigation/AppNavbar';
 import AppSidebar, {
+  type UsageData,
   type UserProfileData,
 } from '@/componentsV2/container/navigation/AppSidebar';
 
@@ -18,9 +22,13 @@ export interface AppShellProps {
   onCloseSidebar?: () => void;
   projectCount?: number;
   user?: UserProfileData | null;
+  usage?: UsageData;
   onLogout?: () => void;
   isLoggingOut?: boolean;
   activeHref?: string;
+  notifications?: NotificationItem[];
+  onClearNotifications?: () => void;
+  docsHref?: string;
   children: React.ReactNode;
   classNameOverride?: string;
 }
@@ -33,9 +41,13 @@ export default function AppShell({
   onCloseSidebar: controlledOnClose,
   projectCount = 3,
   user,
+  usage,
   onLogout,
   isLoggingOut,
   activeHref,
+  notifications,
+  onClearNotifications,
+  docsHref,
   children,
   classNameOverride,
 }: AppShellProps): React.JSX.Element {
@@ -50,14 +62,17 @@ export default function AppShell({
 
   return (
     <Box classNameOverride={combinedClass}>
-      {/* Mobile Backdrop */}
-      {isSidebarOpen && (
-        <Box
-          classNameOverride={styles.backdrop}
-          onClick={closeSidebar}
-          aria-hidden="true"
-        />
-      )}
+      {/* Mobile Drawer Backdrop */}
+      <Box
+        classNameOverride={[
+          styles.backdrop,
+          isSidebarOpen ? styles.backdropVisible : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
 
       {/* Sidebar */}
       {sidebar ?? (
@@ -67,24 +82,34 @@ export default function AppShell({
           onClose={closeSidebar}
           projectCount={projectCount}
           user={user}
+          usage={usage}
           onLogout={onLogout}
           isLoggingOut={isLoggingOut}
           activeHref={activeHref}
         />
       )}
 
-      {/* Main Viewport */}
-      <Box classNameOverride={styles.viewport}>
+      {/* Main Content View */}
+      <Flex
+        direction="column"
+        flex="1"
+        minW="0"
+        position="relative"
+        classNameOverride={styles.contentWrapper}
+      >
         {navbar ?? (
           <AppNavbar
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
+            notifications={notifications}
+            onClearNotifications={onClearNotifications}
+            docsHref={docsHref}
           />
         )}
-        <Box as="main" classNameOverride={styles.mainContent}>
+        <Box as="main" flex="1" classNameOverride={styles.mainContent}>
           {children}
         </Box>
-      </Box>
+      </Flex>
     </Box>
   );
 }

@@ -3,7 +3,7 @@ import React from 'react';
 import styles from './styles.module.css';
 
 export type StatusDotVariant =
-  'success' | 'warning' | 'error' | 'waiting' | 'loading' | 'spinner';
+  'success' | 'warning' | 'error' | 'waiting' | 'loading' | 'spinner' | 'info';
 export type StatusDotSize = 'sm' | 'md' | 'lg';
 
 export interface StatusDotProps extends Omit<

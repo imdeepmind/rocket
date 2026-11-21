@@ -36,7 +36,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       .filter(Boolean)
       .join(' ');
 
-    const combinedClass = classNameOverride ?? defaultClasses;
+    const combinedClass = classNameOverride
+      ? `${defaultClasses} ${classNameOverride}`
+      : defaultClasses;
 
     return (
       <button

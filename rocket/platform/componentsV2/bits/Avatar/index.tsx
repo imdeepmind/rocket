@@ -9,7 +9,7 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string;
   size?: 'sm' | 'md' | 'lg';
   shape?: 'circle' | 'rounded';
-  variant?: 'project' | 'user';
+  variant?: 'project' | 'user' | 'primary';
   classNameOverride?: string;
 }
 
@@ -46,7 +46,9 @@ export default function Avatar({
     .filter(Boolean)
     .join(' ');
 
-  const combinedClass = classNameOverride ?? defaultClasses;
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   return (
     <div className={combinedClass} aria-label={name} title={name} {...props}>

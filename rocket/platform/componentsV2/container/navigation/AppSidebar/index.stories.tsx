@@ -22,7 +22,13 @@ export const Default: Story = {
     projectCount: 3,
     user: {
       name: 'Abhishek Chatterjee',
-      email: 'abhishek@example.com',
+      email: 'infinityatme@gmail.com',
+    },
+    usage: {
+      used: '12.5k',
+      total: '100k',
+      percentage: 12.5,
+      upgradeHref: '/dashboard/billing',
     },
     onLogout: () => alert('Logout clicked'),
   },

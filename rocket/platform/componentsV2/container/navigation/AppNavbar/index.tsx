@@ -2,9 +2,13 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 
+import Box from '@/componentsV2/bits/Box';
+import Card from '@/componentsV2/bits/Card';
+import Flex from '@/componentsV2/bits/Flex';
 import IconButton from '@/componentsV2/bits/IconButton';
+import StatusDot from '@/componentsV2/bits/StatusDot';
 import Tag from '@/componentsV2/bits/Tag';
 import Typography from '@/componentsV2/bits/Typography';
 
@@ -52,25 +56,24 @@ export interface AppNavbarProps {
   notifications?: NotificationItem[];
   onClearNotifications?: () => void;
   docsHref?: string;
-  githubHref?: string;
   classNameOverride?: string;
 }
 
 export default function AppNavbar({
   isSidebarOpen = true,
   onToggleSidebar,
-  notifications = DUMMY_NOTIFICATIONS,
+  notifications: initialNotifications = DUMMY_NOTIFICATIONS,
   onClearNotifications,
   docsHref = '/docs',
-  githubHref = 'https://github.com/imdeepmind/rocket',
   classNameOverride,
 }: AppNavbarProps): React.JSX.Element {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState(initialNotifications);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest?.('[data-notifications]')) {
         setIsNotificationsOpen(false);
       }
     }
@@ -82,11 +85,18 @@ export default function AppNavbar({
     };
   }, [isNotificationsOpen]);
 
+  function handleClearNotifications() {
+    setNotifications([]);
+    onClearNotifications?.();
+    setIsNotificationsOpen(false);
+  }
+
   const combinedClass = classNameOverride ?? styles.navbar;
 
   return (
-    <header className={combinedClass}>
-      <div className={styles.leftGroup}>
+    <Box as="header" classNameOverride={combinedClass}>
+      {/* Left Group */}
+      <Flex align="center" gap="3">
         {!isSidebarOpen && (
           <>
             {onToggleSidebar && (
@@ -94,12 +104,18 @@ export default function AppNavbar({
                 icon={<SidebarToggleIcon width={18} height={18} />}
                 aria-label="Open sidebar"
                 size="md"
-                variant="ghost"
+                classNameOverride={styles.iconButton}
                 onClick={onToggleSidebar}
               />
             )}
 
-            <Link href="/" className={styles.brandLink}>
+            <Flex
+              as={Link}
+              href="/"
+              align="center"
+              gap="3"
+              classNameOverride={styles.brandLink}
+            >
               <Image
                 src="/logo.png"
                 alt="Rocket Logo"
@@ -107,114 +123,148 @@ export default function AppNavbar({
                 height={28}
                 className={styles.brandLogo}
               />
-              <Typography variant="body" weight="bold" color="white" as="span">
+              <Typography
+                variant="body"
+                weight="bold"
+                color="white"
+                as="span"
+                letterSpacing="tight"
+              >
                 Rocket
               </Typography>
-            </Link>
+            </Flex>
           </>
         )}
-      </div>
+      </Flex>
 
-      <div className={styles.rightGroup}>
-        {/* Quick External Links */}
-        <a
-          href={docsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.docLink}
-        >
-          <Typography variant="body-sm" color="secondary">
-            Docs
-          </Typography>
-          <ExternalLinkIcon width={12} height={12} />
-        </a>
-
-        <a
-          href={githubHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.docLink}
-        >
-          <Typography variant="body-sm" color="secondary">
-            GitHub
-          </Typography>
-          <ExternalLinkIcon width={12} height={12} />
-        </a>
-
-        {/* Notifications Icon and Dropdown */}
-        <div className={styles.notifWrapper} ref={notifRef}>
-          <div className={styles.notifBtnContainer}>
-            <IconButton
-              icon={<BellIcon width={18} height={18} />}
-              aria-label={`Notifications (${notifications.length})`}
-              size="md"
-              variant="ghost"
-              onClick={() => setIsNotificationsOpen(prev => !prev)}
+      {/* Right Group */}
+      <Flex align="center" gap="3" position="relative">
+        {/* Notifications Dropdown */}
+        <Box position="relative" display="inline-flex" data-notifications>
+          <IconButton
+            icon={<BellIcon width={16} height={16} />}
+            aria-label={`Notifications (${notifications.length})`}
+            size="md"
+            classNameOverride={[
+              styles.iconButton,
+              isNotificationsOpen ? styles.iconButtonActive : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            onClick={() => setIsNotificationsOpen(prev => !prev)}
+          />
+          {notifications.length > 0 && (
+            <Box
+              classNameOverride={styles.notificationDot}
+              aria-hidden="true"
             />
-            {notifications.length > 0 && (
-              <span className={styles.badgeCount}>{notifications.length}</span>
-            )}
-          </div>
+          )}
 
           {isNotificationsOpen && (
-            <div className={styles.notifDropdown}>
-              <div className={styles.notifHeader}>
+            <Card
+              variant="glass"
+              radius="lg"
+              padding="none"
+              classNameOverride={styles.notifDropdown}
+            >
+              <Flex justify="between" align="center" px="4" py="3" borderBottom>
                 <Typography variant="body-sm" weight="semibold">
                   Notifications
                 </Typography>
-                {notifications.length > 0 && onClearNotifications && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClearNotifications();
-                      setIsNotificationsOpen(false);
-                    }}
-                    className={styles.clearBtn}
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
+                <Tag
+                  size="sm"
+                  variant={notifications.length > 0 ? 'primary' : 'neutral'}
+                >
+                  {notifications.length > 0
+                    ? `${notifications.length} new`
+                    : 'All read'}
+                </Tag>
+              </Flex>
 
-              <div className={styles.notifList}>
+              <Box classNameOverride={styles.notifList}>
                 {notifications.length === 0 ? (
-                  <div className={styles.emptyNotifs}>
+                  <Box px="4" py="6" textAlign="center">
                     <Typography variant="caption" color="muted">
                       No new notifications
                     </Typography>
-                  </div>
+                  </Box>
                 ) : (
                   notifications.map(item => (
-                    <div key={item.id} className={styles.notifItem}>
-                      <div className={styles.notifTitleRow}>
-                        <Tag
-                          variant={
-                            item.type === 'success'
-                              ? 'success'
-                              : item.type === 'warning'
-                                ? 'warning'
-                                : 'primary'
-                          }
-                          size="sm"
-                          dot
-                        >
-                          {item.title}
-                        </Tag>
-                        <Typography variant="caption" color="muted">
-                          {item.time}
-                        </Typography>
-                      </div>
-                      <Typography variant="caption" color="secondary">
-                        {item.description}
-                      </Typography>
-                    </div>
+                    <Box
+                      key={item.id}
+                      px="4"
+                      py="3"
+                      borderBottom
+                      classNameOverride={styles.notifItem}
+                    >
+                      <Flex align="start" gap="3">
+                        <StatusDot variant={item.type ?? 'info'} size="sm" />
+                        <Flex direction="column" gap="1" flex="1" minW="0">
+                          <Typography
+                            variant="body-sm"
+                            weight="medium"
+                            color="white"
+                          >
+                            {item.title}
+                          </Typography>
+                          <Typography variant="caption" color="muted">
+                            {item.description}
+                          </Typography>
+                          <Typography variant="caption" color="muted">
+                            {item.time}
+                          </Typography>
+                        </Flex>
+                      </Flex>
+                    </Box>
                   ))
                 )}
-              </div>
-            </div>
+              </Box>
+
+              {notifications.length > 0 && (
+                <Box
+                  px="4"
+                  py="2"
+                  textAlign="center"
+                  borderTop
+                  classNameOverride={styles.notifFooter}
+                >
+                  <Typography
+                    as="button"
+                    type="button"
+                    variant="caption"
+                    weight="medium"
+                    color="primary"
+                    onClick={handleClearNotifications}
+                    classNameOverride={styles.clearBtn}
+                  >
+                    Mark all as read
+                  </Typography>
+                </Box>
+              )}
+            </Card>
           )}
-        </div>
-      </div>
-    </header>
+        </Box>
+
+        <Flex
+          as={Link}
+          href={docsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          align="center"
+          gap="2"
+          classNameOverride={styles.docsLink}
+        >
+          <Typography
+            variant="body-sm"
+            weight="medium"
+            as="span"
+            color="secondary"
+          >
+            Docs
+          </Typography>
+          <ExternalLinkIcon width={12} height={12} />
+        </Flex>
+      </Flex>
+    </Box>
   );
 }
