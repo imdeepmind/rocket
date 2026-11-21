@@ -1,0 +1,22 @@
+.pageBtnActive {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: rgba(225, 29, 72, 0.2);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchWrapper {
+  min-width: 220px;
+}
+
+@media (max-width: 640px) {
+  .searchWrapper {
+    width: 100%;
+  }
+}

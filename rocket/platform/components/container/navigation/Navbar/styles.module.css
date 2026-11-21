@@ -1,0 +1,65 @@
+.logoLink {
+  text-decoration: none;
+}
+
+.logoImage {
+  object-fit: contain;
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.navLink {
+  font-size: var(--font-size-md, 15px);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-base, 0.15s ease);
+}
+
+.navLink:hover {
+  color: var(--foreground);
+}
+
+.desktopNav,
+.desktopActions {
+  display: flex;
+}
+
+.mobileToggle {
+  display: none;
+}
+
+.mobileMenu {
+  display: none;
+}
+
+.mobileNavLink {
+  font-size: var(--font-size-md, 15px);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: var(--spacing-2) 0;
+  transition: color var(--transition-base, 0.15s ease);
+}
+
+.mobileNavLink:hover {
+  color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .desktopNav,
+  .desktopActions {
+    display: none;
+  }
+
+  .mobileToggle {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    width: 100%;
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--border-subtle);
+  }
+}

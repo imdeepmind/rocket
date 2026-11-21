@@ -1,0 +1,49 @@
+.grid {
+  display: grid;
+  gap: var(--spacing-3);
+  width: 100%;
+}
+
+.optionCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 72px;
+  background-color: var(--color-surface-hover);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-4) var(--spacing-5);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.optionCard:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.selected {
+  background-color: rgba(225, 29, 72, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 16px -2px rgba(225, 29, 72, 0.3);
+}
+
+.selected:hover {
+  background-color: rgba(225, 29, 72, 0.12);
+  border-color: var(--color-primary);
+}
+
+.checkIcon {
+  position: absolute;
+  top: var(--spacing-3);
+  right: var(--spacing-3);
+  color: var(--color-primary-light);
+  display: inline-flex;
+}
+
+.title {
+  margin-bottom: var(--spacing-1);
+  color: var(--foreground);
+}

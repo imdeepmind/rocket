@@ -1,0 +1,88 @@
+.stepperCard {
+  width: 100%;
+}
+
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-6) var(--spacing-7);
+  gap: var(--spacing-4);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover .textCol span {
+  color: var(--color-primary-light);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-space-grotesk);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+}
+
+.badgeActive {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-light) 100%
+  );
+  color: var(--foreground);
+  box-shadow: 0 0 14px rgba(225, 29, 72, 0.45);
+}
+
+.badgeCompleted {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+}
+
+.badgeUpcoming {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-muted);
+}
+
+.textCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.stepLine {
+  flex: 1;
+  height: 1px;
+  min-width: var(--spacing-10);
+  background-color: var(--border-subtle);
+  margin: 0 var(--spacing-5);
+}
+
+@media (max-width: 640px) {
+  .stepperContainer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4) var(--spacing-5);
+  }
+  .stepLine {
+    display: none;
+  }
+}

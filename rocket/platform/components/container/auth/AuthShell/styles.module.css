@@ -1,0 +1,56 @@
+.wrapper {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  background-color: transparent;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: var(--font-inter);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 440px;
+}
+
+.brandLink {
+  text-decoration: none;
+}
+
+.brandLogo {
+  border-radius: var(--radius-sm);
+}
+
+.card {
+  width: 100%;
+  background: rgba(18, 17, 24, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 36px 32px 32px 32px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 1px 1px rgba(255, 255, 255, 0.06) inset;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    padding: 32px 16px;
+  }
+
+  .card {
+    padding: 28px 20px 24px 20px;
+  }
+}

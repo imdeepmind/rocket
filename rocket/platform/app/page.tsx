@@ -1,26 +1,26 @@
 import React from 'react';
 
-import Features from '@/app/container/landing/Features';
-import Hero from '@/app/container/landing/Hero';
-import HowItWorks from '@/app/container/landing/HowItWorks';
-import NextStep from '@/app/container/landing/NextStep';
-import OpenSource from '@/app/container/landing/OpenSource';
-import Projects from '@/app/container/landing/Projects';
-import WhyRocket from '@/app/container/landing/WhyRocket';
-
-import Footer from '@/app/components/items/Footer';
-import Navbar from '@/app/components/items/Navbar';
+import Box from '@/components/bits/Box';
+import Features from '@/components/container/landing/Features';
+import Hero from '@/components/container/landing/Hero';
+import HowItWorks from '@/components/container/landing/HowItWorks';
+import NextStep from '@/components/container/landing/NextStep';
+import OpenSource from '@/components/container/landing/OpenSource';
+import ProjectsPreview from '@/components/container/landing/ProjectsPreview';
+import WhyRocket from '@/components/container/landing/WhyRocket';
+import Footer from '@/components/container/navigation/Footer';
+import Navbar from '@/components/container/navigation/Navbar';
 
 import styles from './page.module.css';
 
 export default function Home(): React.JSX.Element {
   return (
-    <main className={styles.wrapper}>
+    <Box as="main" classNameOverride={styles.wrapper}>
       {/* Header & Hero */}
-      <div className={styles.heroWrapper}>
+      <Box classNameOverride={styles.heroWrapper}>
         <Navbar />
         <Hero />
-      </div>
+      </Box>
 
       {/* Feature showcase */}
       <Features />
@@ -29,7 +29,7 @@ export default function Home(): React.JSX.Element {
       <HowItWorks />
 
       {/* Projects & Activity dashboard preview */}
-      <Projects />
+      <ProjectsPreview />
 
       {/* Why Rocket & CLI deployment preview */}
       <WhyRocket />
@@ -42,6 +42,6 @@ export default function Home(): React.JSX.Element {
 
       {/* Site footer */}
       <Footer />
-    </main>
+    </Box>
   );
 }

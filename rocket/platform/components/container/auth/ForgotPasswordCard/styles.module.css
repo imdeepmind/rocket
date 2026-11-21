@@ -1,0 +1,9 @@
+.backLink {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}

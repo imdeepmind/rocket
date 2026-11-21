@@ -1,7 +1,8 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import ResetPassword from '@/app/container/auth/ResetPassword';
+import Box from '@/components/bits/Box';
+import ResetPasswordCard from '@/components/container/auth/ResetPasswordCard';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',
@@ -10,8 +11,8 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage(): React.JSX.Element {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#08080D]" />}>
-      <ResetPassword />
+    <Suspense fallback={<Box classNameOverride="min-h-screen bg-[#08080D]" />}>
+      <ResetPasswordCard />
     </Suspense>
   );
 }

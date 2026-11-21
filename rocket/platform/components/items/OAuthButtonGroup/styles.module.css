@@ -1,0 +1,17 @@
+.buttonGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-3);
+}
+
+.line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-subtle);
+}
+
+.dividerText {
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}

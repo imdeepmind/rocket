@@ -1,0 +1,20 @@
+.howLine {
+  position: absolute;
+  top: 26px;
+  left: 16%;
+  right: 16%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .howLine {
+    display: none;
+  }
+}

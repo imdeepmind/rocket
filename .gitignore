@@ -88,6 +88,9 @@ web_modules/
 .next
 out
 
+# Storybook build output
+storybook-static
+
 # Nuxt.js build / generate output
 .nuxt
 dist

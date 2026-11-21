@@ -1,0 +1,74 @@
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12) var(--spacing-6);
+  background-color: rgba(225, 29, 72, 0.02);
+  border: 1.5px dashed rgba(225, 29, 72, 0.35);
+  border-radius: var(--radius-2xl);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+  outline: none;
+  text-align: center;
+}
+
+.dropzone:hover,
+.dropzoneActive {
+  background-color: rgba(225, 29, 72, 0.06);
+  border-color: var(--color-primary);
+}
+
+.dropzone:focus-visible {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.iconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background-color: rgba(225, 29, 72, 0.15);
+  color: var(--color-primary-light);
+  margin-bottom: var(--spacing-4);
+  transition: transform var(--transition-base);
+}
+
+.dropzone:hover .iconWrapper {
+  transform: translateY(-2px);
+}
+
+.title {
+  font-size: var(--font-size-md);
+  color: var(--foreground);
+  margin-bottom: var(--spacing-1);
+}
+
+.buttonWrapper {
+  margin-top: var(--spacing-5);
+}
+
+.selectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: var(--color-surface-active);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--foreground);
+}
+
+.checkIcon {
+  color: var(--color-success);
+  display: inline-flex;
+}

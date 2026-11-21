@@ -1,0 +1,29 @@
+.iconCircle {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background-color: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: var(--color-success);
+}
+
+.errorCircle {
+  background-color: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.25);
+  color: var(--color-error);
+}
+
+.statusDesc {
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+.backLink {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}

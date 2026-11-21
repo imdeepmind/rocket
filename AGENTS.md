@@ -17,7 +17,7 @@ Commands can be run from the repository root via `./dev.sh` (which delegates to 
 | `./dev.sh db` | Start redis and db Docker containers |
 | `./dev.sh csserve` | Serve coverage report via HTTP |
 
-Run `./dev.sh check` after every change before committing.
+Commits automatically run pre-commit hooks, so there is no need to manually run tests or `./dev.sh check` before committing.
 
 ## Testing
 

@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
+import React from 'react';
 
-import SignUp from '@/app/container/auth/SignUp';
+import SignUpCard from '@/components/container/auth/SignUpCard';
 
 export const metadata: Metadata = {
   title: 'Create Account · Rocket',
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function SignUpPage(): React.JSX.Element {
-  return <SignUp />;
+  return <SignUpCard />;
 }

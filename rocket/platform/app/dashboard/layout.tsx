@@ -3,9 +3,10 @@
 import {useRouter} from 'next/navigation';
 import React, {useEffect} from 'react';
 
-import AppShell from '@/app/components/items/AppShell';
+import Box from '@/components/bits/Box';
+import AppShell from '@/components/container/navigation/AppShell';
 
-import {useSession} from '@/app/lib/auth/client';
+import {signOut, useSession} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 
@@ -23,12 +24,17 @@ export default function DashboardLayout({
     }
   }, [session, isPending, router]);
 
+  async function handleLogout() {
+    await signOut();
+    router.push('/auth/sign-in');
+  }
+
   if (isPending) {
     return (
       <AppShell>
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner} />
-        </div>
+        <Box classNameOverride={styles.loadingContainer}>
+          <Box classNameOverride={styles.spinner} />
+        </Box>
       </AppShell>
     );
   }
@@ -37,5 +43,14 @@ export default function DashboardLayout({
     return null;
   }
 
-  return <AppShell projectCount={3}>{children}</AppShell>;
+  const user = {
+    name: session.user.name || 'Developer',
+    email: session.user.email || 'developer@example.com',
+  };
+
+  return (
+    <AppShell projectCount={3} user={user} onLogout={handleLogout}>
+      {children}
+    </AppShell>
+  );
 }

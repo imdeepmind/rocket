@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
+import React from 'react';
 
-import ForgotPassword from '@/app/container/auth/ForgotPassword';
+import ForgotPasswordCard from '@/components/container/auth/ForgotPasswordCard';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function ForgotPasswordPage(): React.JSX.Element {
-  return <ForgotPassword />;
+  return <ForgotPasswordCard />;
 }
