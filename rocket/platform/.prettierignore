@@ -5,4 +5,5 @@ drizzle
 .env*
 public
 next-env.d.ts
+storybook-static
 

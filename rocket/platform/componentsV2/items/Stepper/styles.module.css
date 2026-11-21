@@ -1,0 +1,70 @@
+.stepperCard {
+  width: 100%;
+  overflow: hidden;
+}
+
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  gap: 16px;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover .textCol span {
+  color: var(--color-primary-light);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-space-grotesk);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.badgeActive {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.4);
+}
+
+.badgeCompleted {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badgeUpcoming {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-muted);
+}
+
+.textCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepLine {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-subtle);
+  min-width: 24px;
+}

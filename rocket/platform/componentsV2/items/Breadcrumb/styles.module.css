@@ -1,0 +1,36 @@
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-inter);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.separator {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  user-select: none;
+  opacity: 0.6;
+}
+
+.link {
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.link:hover span {
+  color: var(--foreground) !important;
+}

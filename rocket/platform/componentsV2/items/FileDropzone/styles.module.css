@@ -1,0 +1,100 @@
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  background-color: var(--color-surface-subtle);
+  border: 1.5px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  outline: none;
+  text-align: center;
+}
+
+.dropzone:hover {
+  background-color: var(--color-surface);
+  border-color: var(--border-hover);
+}
+
+.dropzone:focus-visible {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+}
+
+.dropzoneActive {
+  background-color: rgba(225, 29, 72, 0.05);
+  border-color: var(--color-primary-light);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.iconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--color-primary-light);
+  margin-bottom: 12px;
+}
+
+.title {
+  margin-bottom: 4px;
+}
+
+.buttonWrapper {
+  margin-top: 14px;
+}
+
+.selectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 6px 14px;
+  background-color: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  color: #a7f3d0;
+}
+
+.checkIcon {
+  color: var(--color-success);
+  display: inline-flex;
+}
+
+.fileName {
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.fileSize {
+  color: var(--color-text-muted);
+}
+
+.dot {
+  color: var(--color-text-muted);
+}
+
+.removeBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.removeBtn:hover {
+  color: var(--color-error);
+}

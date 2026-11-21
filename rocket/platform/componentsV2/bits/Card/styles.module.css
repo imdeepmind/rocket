@@ -1,0 +1,54 @@
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+/* Variants */
+.default {
+  background-color: var(--color-surface);
+  border-color: var(--border-subtle);
+}
+
+.glass {
+  background: rgba(23, 23, 34, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.interactive {
+  background-color: var(--color-surface);
+  cursor: pointer;
+}
+
+.interactive:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.bordered {
+  background-color: transparent;
+  border-color: var(--border-subtle);
+}
+
+/* Padding */
+.pad-none {
+  padding: 0;
+}
+
+.pad-sm {
+  padding: 12px;
+}
+
+.pad-md {
+  padding: 20px;
+}
+
+.pad-lg {
+  padding: 28px;
+}

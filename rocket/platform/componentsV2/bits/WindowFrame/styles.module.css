@@ -1,0 +1,52 @@
+.windowFrame {
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  gap: 12px;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dotClose,
+.dotMinimize,
+.dotMaximize {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+.dotClose {
+  background-color: #ff5f57;
+}
+
+.dotMinimize {
+  background-color: #febc2e;
+}
+
+.dotMaximize {
+  background-color: #28c840;
+}
+
+.title {
+  margin: 0 auto;
+  font-family: var(--font-space-grotesk);
+}
+
+.content {
+  padding: 16px;
+}

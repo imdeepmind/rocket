@@ -1,0 +1,50 @@
+.terminal {
+  width: 100%;
+}
+
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.line {
+  margin: 0;
+  padding: 0;
+  color: var(--foreground);
+  word-break: break-all;
+}
+
+.promptLine {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.commentLine {
+  color: var(--color-text-muted);
+}
+
+.successLine {
+  color: var(--color-success);
+}
+
+.cursor {
+  display: inline-block;
+  color: var(--color-primary-light);
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
