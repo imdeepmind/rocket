@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function BellIcon(
+export default function BellIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

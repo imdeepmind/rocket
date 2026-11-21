@@ -4,9 +4,9 @@ import React from 'react';
 
 import Card from '@/components/bits/Card';
 
-import {ActivityIcon} from '@/icons';
+import ActivityIcon from '@/icons/ActivityIcon';
 
-import styles from '../styles.module.css';
+import styles from '@/app/dashboard/styles.module.css';
 
 export default function UsagePage(): React.JSX.Element {
   const usageStats = [

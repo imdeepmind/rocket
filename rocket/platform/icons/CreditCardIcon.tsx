@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function CreditCardIcon(
+export default function CreditCardIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

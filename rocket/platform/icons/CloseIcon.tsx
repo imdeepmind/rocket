@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function CloseIcon(
+export default function CloseIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

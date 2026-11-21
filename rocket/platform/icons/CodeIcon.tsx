@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function CodeIcon(
+export default function CodeIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

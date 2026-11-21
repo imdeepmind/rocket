@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function GoogleIcon(
+export default function GoogleIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

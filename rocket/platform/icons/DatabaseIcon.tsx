@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function DatabaseIcon(
+export default function DatabaseIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

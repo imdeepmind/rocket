@@ -2,9 +2,10 @@
 
 import React, {useState} from 'react';
 
-import {GithubIcon, GoogleIcon} from '@/icons';
+import GithubIcon from '@/icons/GithubIcon';
+import GoogleIcon from '@/icons/GoogleIcon';
 
-import {signInWithSocial, SocialProvider} from '@/lib/auth';
+import {signInWithSocial, SocialProvider} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

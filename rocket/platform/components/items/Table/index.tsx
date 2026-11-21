@@ -2,15 +2,13 @@
 
 import React from 'react';
 
-import {
-  Table as BaseTable,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/bits/Table';
+import BaseTable from '@/components/bits/Table/Table';
+import TableBody from '@/components/bits/Table/TableBody';
+import TableCell from '@/components/bits/Table/TableCell';
+import TableContainer from '@/components/bits/Table/TableContainer';
+import TableHead from '@/components/bits/Table/TableHead';
+import TableHeader from '@/components/bits/Table/TableHeader';
+import TableRow from '@/components/bits/Table/TableRow';
 
 import styles from './styles.module.css';
 

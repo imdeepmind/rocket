@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function TrendUpIcon(
+export default function TrendUpIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

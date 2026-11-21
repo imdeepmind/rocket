@@ -7,9 +7,10 @@ import Button from '@/components/bits/Button';
 import Card from '@/components/bits/Card';
 import Table, {TableColumn} from '@/components/items/Table';
 
-import {CheckIcon, CreditCardIcon} from '@/icons';
+import CheckIcon from '@/icons/CheckIcon';
+import CreditCardIcon from '@/icons/CreditCardIcon';
 
-import styles from '../styles.module.css';
+import styles from '@/app/dashboard/styles.module.css';
 
 interface InvoiceRecord {
   id: string;

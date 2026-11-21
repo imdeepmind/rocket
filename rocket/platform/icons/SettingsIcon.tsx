@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function SettingsIcon(
+export default function SettingsIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

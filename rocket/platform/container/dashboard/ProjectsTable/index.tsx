@@ -6,18 +6,16 @@ import Badge from '@/components/bits/Badge';
 import Card from '@/components/bits/Card';
 import Table, {TableColumn} from '@/components/items/Table';
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ExternalLinkIcon,
-  EyeIcon,
-  MoreHorizontalIcon,
-  PauseIcon,
-  PencilIcon,
-  PlayIcon,
-  SearchIcon,
-  TrashIcon,
-} from '@/icons';
+import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
+import ChevronRightIcon from '@/icons/ChevronRightIcon';
+import ExternalLinkIcon from '@/icons/ExternalLinkIcon';
+import EyeIcon from '@/icons/EyeIcon';
+import MoreHorizontalIcon from '@/icons/MoreHorizontalIcon';
+import PauseIcon from '@/icons/PauseIcon';
+import PencilIcon from '@/icons/PencilIcon';
+import PlayIcon from '@/icons/PlayIcon';
+import SearchIcon from '@/icons/SearchIcon';
+import TrashIcon from '@/icons/TrashIcon';
 
 import styles from './styles.module.css';
 

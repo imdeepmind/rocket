@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function UploadCloudIcon(
+export default function UploadCloudIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

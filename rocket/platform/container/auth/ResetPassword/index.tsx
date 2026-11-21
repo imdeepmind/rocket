@@ -9,9 +9,10 @@ import AuthShell from '@/container/auth/AuthShell';
 import Button from '@/components/bits/Button';
 import TextBox from '@/components/bits/TextBox';
 
-import {CheckIcon, CloseIcon} from '@/icons';
+import CheckIcon from '@/icons/CheckIcon';
+import CloseIcon from '@/icons/CloseIcon';
 
-import {resetPassword} from '@/lib/auth';
+import {resetPassword} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

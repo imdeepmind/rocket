@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function GlobeIcon(
+export default function GlobeIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

@@ -3,7 +3,7 @@ import React from 'react';
 import Button from '@/components/bits/Button';
 import Text from '@/components/bits/Text';
 
-import {ArrowRightIcon} from '@/icons';
+import ArrowRightIcon from '@/icons/ArrowRightIcon';
 
 import styles from './styles.module.css';
 

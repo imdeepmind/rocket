@@ -7,7 +7,8 @@ import React, {useEffect, useState} from 'react';
 
 import Button from '@/components/bits/Button';
 
-import {CloseIcon, MenuIcon} from '@/icons';
+import CloseIcon from '@/icons/CloseIcon';
+import MenuIcon from '@/icons/MenuIcon';
 
 import {signOut, useSession} from '@/lib/auth/client';
 

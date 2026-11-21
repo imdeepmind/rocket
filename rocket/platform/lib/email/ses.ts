@@ -1,10 +1,8 @@
 import {SendEmailCommand, SESClient, type Body} from '@aws-sdk/client-ses';
 
-import {
-  emailVerificationTemplate,
-  otpTemplate,
-  passwordResetTemplate,
-} from '@/lib/email/template';
+import {emailVerificationTemplate} from '@/lib/email/template/email-verification';
+import {otpTemplate} from '@/lib/email/template/otp';
+import {passwordResetTemplate} from '@/lib/email/template/password-reset';
 
 export interface SendEmailOptions {
   to: string | string[];

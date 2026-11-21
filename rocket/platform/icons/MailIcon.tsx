@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function MailIcon(
+export default function MailIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

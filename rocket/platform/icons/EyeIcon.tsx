@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function EyeIcon(
+export default function EyeIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

@@ -4,7 +4,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React, {useEffect, useRef, useState} from 'react';
 
-import {BellIcon, ExternalLinkIcon, SidebarToggleIcon} from '@/icons';
+import BellIcon from '@/icons/BellIcon';
+import ExternalLinkIcon from '@/icons/ExternalLinkIcon';
+import SidebarToggleIcon from '@/icons/SidebarToggleIcon';
 
 import styles from './styles.module.css';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function LockIcon(
+export default function LockIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

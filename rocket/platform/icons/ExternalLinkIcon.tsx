@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ExternalLinkIcon(
+export default function ExternalLinkIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

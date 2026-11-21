@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ActivityIcon(
+export default function ActivityIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

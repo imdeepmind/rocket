@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function MenuIcon(
+export default function MenuIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

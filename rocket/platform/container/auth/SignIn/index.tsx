@@ -10,7 +10,7 @@ import OAuthButtons from '@/container/auth/OAuthButtons';
 import Button from '@/components/bits/Button';
 import TextBox from '@/components/bits/TextBox';
 
-import {signInWithEmail} from '@/lib/auth';
+import {signInWithEmail} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

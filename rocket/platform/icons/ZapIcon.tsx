@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ZapIcon(
+export default function ZapIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

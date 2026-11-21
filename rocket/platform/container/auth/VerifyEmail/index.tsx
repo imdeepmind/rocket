@@ -8,9 +8,11 @@ import AuthShell from '@/container/auth/AuthShell';
 
 import Button from '@/components/bits/Button';
 
-import {CheckIcon, CloseIcon, MailIcon} from '@/icons';
+import CheckIcon from '@/icons/CheckIcon';
+import CloseIcon from '@/icons/CloseIcon';
+import MailIcon from '@/icons/MailIcon';
 
-import {sendVerificationEmail, verifyEmail} from '@/lib/auth';
+import {sendVerificationEmail, verifyEmail} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

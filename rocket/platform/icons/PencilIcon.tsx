@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function PencilIcon(
+export default function PencilIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

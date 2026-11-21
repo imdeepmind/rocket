@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function PlayIcon(
+export default function PlayIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

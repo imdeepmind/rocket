@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function RocketIcon(
+export default function RocketIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

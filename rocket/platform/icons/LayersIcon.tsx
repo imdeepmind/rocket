@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function LayersIcon(
+export default function LayersIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

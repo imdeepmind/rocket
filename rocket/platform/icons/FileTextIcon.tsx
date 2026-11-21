@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function FileTextIcon(
+export default function FileTextIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

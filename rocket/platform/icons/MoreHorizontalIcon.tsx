@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function MoreHorizontalIcon(
+export default function MoreHorizontalIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

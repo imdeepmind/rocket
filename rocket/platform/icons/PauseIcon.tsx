@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function PauseIcon(
+export default function PauseIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

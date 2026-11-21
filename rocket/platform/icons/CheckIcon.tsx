@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function CheckIcon(
+export default function CheckIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

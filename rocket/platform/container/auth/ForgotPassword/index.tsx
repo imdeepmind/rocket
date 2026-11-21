@@ -8,7 +8,7 @@ import AuthShell from '@/container/auth/AuthShell';
 import Button from '@/components/bits/Button';
 import TextBox from '@/components/bits/TextBox';
 
-import {forgotPassword} from '@/lib/auth';
+import {forgotPassword} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

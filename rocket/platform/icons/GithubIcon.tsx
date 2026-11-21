@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function GithubIcon(
+export default function GithubIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

@@ -6,7 +6,7 @@ import Button from '@/components/bits/Button';
 import Card from '@/components/bits/Card';
 import TextBox from '@/components/bits/TextBox';
 
-import styles from '../styles.module.css';
+import styles from '@/app/dashboard/styles.module.css';
 
 export default function SettingsPage(): React.JSX.Element {
   const [workspaceName, setWorkspaceName] = useState('Abhishek');

@@ -2,7 +2,10 @@ import React from 'react';
 
 import Card from '@/components/bits/Card';
 
-import {ActivityIcon, LayersIcon, PauseIcon, TrendUpIcon} from '@/icons';
+import ActivityIcon from '@/icons/ActivityIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import PauseIcon from '@/icons/PauseIcon';
+import TrendUpIcon from '@/icons/TrendUpIcon';
 
 import styles from './styles.module.css';
 

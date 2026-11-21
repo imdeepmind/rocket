@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function TrashIcon(
+export default function TrashIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ArrowRightIcon(
+export default function ArrowRightIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

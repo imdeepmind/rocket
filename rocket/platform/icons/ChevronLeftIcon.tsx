@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ChevronLeftIcon(
+export default function ChevronLeftIcon(
   props: React.SVGProps<SVGSVGElement>,
 ): React.JSX.Element {
   return (

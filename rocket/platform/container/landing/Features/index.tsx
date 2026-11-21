@@ -2,7 +2,10 @@ import React from 'react';
 
 import Text from '@/components/bits/Text';
 
-import {ActivityIcon, CodeIcon, LayersIcon, ZapIcon} from '@/icons';
+import ActivityIcon from '@/icons/ActivityIcon';
+import CodeIcon from '@/icons/CodeIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import ZapIcon from '@/icons/ZapIcon';
 
 import styles from './styles.module.css';
 

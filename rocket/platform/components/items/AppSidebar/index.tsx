@@ -7,17 +7,15 @@ import React, {useState} from 'react';
 
 import Badge from '@/components/bits/Badge';
 
-import {
-  ActivityIcon,
-  ChevronDownIcon,
-  CodeIcon,
-  CreditCardIcon,
-  FileTextIcon,
-  GithubIcon,
-  LayersIcon,
-  SettingsIcon,
-  SidebarToggleIcon,
-} from '@/icons';
+import ActivityIcon from '@/icons/ActivityIcon';
+import ChevronDownIcon from '@/icons/ChevronDownIcon';
+import CodeIcon from '@/icons/CodeIcon';
+import CreditCardIcon from '@/icons/CreditCardIcon';
+import FileTextIcon from '@/icons/FileTextIcon';
+import GithubIcon from '@/icons/GithubIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import SettingsIcon from '@/icons/SettingsIcon';
+import SidebarToggleIcon from '@/icons/SidebarToggleIcon';
 
 import {signOut, useSession} from '@/lib/auth/client';
 

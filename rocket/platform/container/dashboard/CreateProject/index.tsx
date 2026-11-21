@@ -6,19 +6,17 @@ import React, {useRef, useState} from 'react';
 import Badge from '@/components/bits/Badge';
 import Card from '@/components/bits/Card';
 
-import {
-  ActivityIcon,
-  ArrowRightIcon,
-  CheckIcon,
-  ChevronLeftIcon,
-  DatabaseIcon,
-  FileTextIcon,
-  LayersIcon,
-  LockIcon,
-  TrashIcon,
-  UploadCloudIcon,
-  ZapIcon,
-} from '@/icons';
+import ActivityIcon from '@/icons/ActivityIcon';
+import ArrowRightIcon from '@/icons/ArrowRightIcon';
+import CheckIcon from '@/icons/CheckIcon';
+import ChevronLeftIcon from '@/icons/ChevronLeftIcon';
+import DatabaseIcon from '@/icons/DatabaseIcon';
+import FileTextIcon from '@/icons/FileTextIcon';
+import LayersIcon from '@/icons/LayersIcon';
+import LockIcon from '@/icons/LockIcon';
+import TrashIcon from '@/icons/TrashIcon';
+import UploadCloudIcon from '@/icons/UploadCloudIcon';
+import ZapIcon from '@/icons/ZapIcon';
 
 import styles from './styles.module.css';
 
