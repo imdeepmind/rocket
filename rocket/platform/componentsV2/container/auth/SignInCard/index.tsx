@@ -4,8 +4,11 @@ import Link from 'next/link';
 import React, {useState} from 'react';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import TextBox from '@/componentsV2/bits/TextBox';
+import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
 import OAuthButtonGroup from '@/componentsV2/items/OAuthButtonGroup';
 
@@ -48,12 +51,12 @@ export default function SignInCard({
   }
 
   const footer = (
-    <span>
+    <Typography as="span" variant="body-sm" color="muted">
       New to Rocket?{' '}
       <Link href={signUpHref} className={styles.link}>
         Create an account
       </Link>
-    </span>
+    </Typography>
   );
 
   return (
@@ -70,11 +73,18 @@ export default function SignInCard({
         onDismissNotice={onDismissOAuthNotice}
       />
 
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
+      <Flex
+        as="form"
+        direction="column"
+        gap="4"
+        onSubmit={handleSubmit}
+        fullWidth
+        noValidate
+      >
         {error && (
-          <div className={styles.alertWrapper}>
+          <Box mb="1" fullWidth>
             <Alert variant="error" message={error} />
-          </div>
+          </Box>
         )}
 
         <TextBox
@@ -108,7 +118,7 @@ export default function SignInCard({
           required
         />
 
-        <div className={styles.actionRow}>
+        <Box mt="2" fullWidth>
           <Button
             type="submit"
             variant="primary"
@@ -119,8 +129,8 @@ export default function SignInCard({
           >
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </Button>
-        </div>
-      </form>
+        </Box>
+      </Flex>
     </AuthShell>
   );
 }

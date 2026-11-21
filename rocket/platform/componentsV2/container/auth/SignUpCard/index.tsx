@@ -4,8 +4,11 @@ import Link from 'next/link';
 import React, {useState} from 'react';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import TextBox from '@/componentsV2/bits/TextBox';
+import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
 import OAuthButtonGroup from '@/componentsV2/items/OAuthButtonGroup';
 
@@ -48,12 +51,12 @@ export default function SignUpCard({
   }
 
   const footer = (
-    <span>
+    <Typography as="span" variant="body-sm" color="muted">
       Already have an account?{' '}
       <Link href={signInHref} className={styles.link}>
         Sign in
       </Link>
-    </span>
+    </Typography>
   );
 
   return (
@@ -70,11 +73,18 @@ export default function SignUpCard({
         onDismissNotice={onDismissOAuthNotice}
       />
 
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
+      <Flex
+        as="form"
+        direction="column"
+        gap="4"
+        onSubmit={handleSubmit}
+        fullWidth
+        noValidate
+      >
         {error && (
-          <div className={styles.alertWrapper}>
+          <Box mb="1" fullWidth>
             <Alert variant="error" message={error} />
-          </div>
+          </Box>
         )}
 
         <TextBox
@@ -116,7 +126,7 @@ export default function SignUpCard({
           required
         />
 
-        <div className={styles.actionRow}>
+        <Box mt="2" fullWidth>
           <Button
             type="submit"
             variant="primary"
@@ -127,8 +137,8 @@ export default function SignUpCard({
           >
             {isSubmitting ? 'Creating account...' : 'Create account'}
           </Button>
-        </div>
-      </form>
+        </Box>
+      </Flex>
     </AuthShell>
   );
 }

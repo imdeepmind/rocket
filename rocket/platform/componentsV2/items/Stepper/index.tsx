@@ -29,7 +29,7 @@ export default function Stepper({
   const combinedClass = classNameOverride ?? styles.stepperCard;
 
   return (
-    <Card padding="none" className={combinedClass} {...props}>
+    <Card padding="none" classNameOverride={combinedClass} {...props}>
       <div className={styles.stepperContainer}>
         {steps.map((step, index) => {
           const stepNumber = index + 1;

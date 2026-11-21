@@ -1,24 +1,7 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
 .buttonGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.noticeWrapper {
-  margin-top: 14px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0 16px 0;
+  gap: var(--spacing-3);
 }
 
 .line {
@@ -29,7 +12,7 @@
 
 .dividerText {
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.05em;
   white-space: nowrap;
 }

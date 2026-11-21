@@ -56,7 +56,7 @@ export default function OptionCardGroup({
             key={option.id}
             padding="sm"
             variant="interactive"
-            className={cardClasses}
+            classNameOverride={cardClasses}
             onClick={() => onChange(option.id)}
             role="radio"
             aria-checked={isSelected}

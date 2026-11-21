@@ -7,6 +7,10 @@
   transition: all 0.15s ease;
 }
 
+.fullWidth {
+  width: 100%;
+}
+
 /* Variants */
 .default {
   background-color: var(--color-surface);
@@ -42,13 +46,13 @@
 }
 
 .pad-sm {
-  padding: 12px;
+  padding: var(--spacing-3);
 }
 
 .pad-md {
-  padding: 20px;
+  padding: var(--spacing-5);
 }
 
 .pad-lg {
-  padding: 28px;
+  padding: var(--spacing-7);
 }

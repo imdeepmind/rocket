@@ -4,7 +4,9 @@ import Link from 'next/link';
 import React, {useState} from 'react';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import TextBox from '@/componentsV2/bits/TextBox';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
 
@@ -47,7 +49,14 @@ export default function ForgotPasswordCard({
       footer={footer}
       classNameOverride={classNameOverride}
     >
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
+      <Flex
+        as="form"
+        direction="column"
+        gap="4"
+        onSubmit={handleSubmit}
+        fullWidth
+        noValidate
+      >
         {error && <Alert variant="error" message={error} />}
 
         {success && (
@@ -70,7 +79,7 @@ export default function ForgotPasswordCard({
           required
         />
 
-        <div className={styles.actionRow}>
+        <Box mt="2" fullWidth>
           <Button
             type="submit"
             variant="primary"
@@ -81,8 +90,8 @@ export default function ForgotPasswordCard({
           >
             {isSubmitting ? 'Sending link...' : 'Send reset link'}
           </Button>
-        </div>
-      </form>
+        </Box>
+      </Flex>
     </AuthShell>
   );
 }

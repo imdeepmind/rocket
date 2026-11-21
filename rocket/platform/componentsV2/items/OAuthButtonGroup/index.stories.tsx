@@ -1,6 +1,8 @@
 import type {Meta, StoryObj} from '@storybook/react';
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
+
 import OAuthButtonGroup from './index';
 
 const meta = {
@@ -25,9 +27,9 @@ export const Default: Story = {
     dividerText: 'or continue with email',
   },
   render: args => (
-    <div style={{width: '360px'}}>
+    <Box style={{width: '360px'}}>
       <OAuthButtonGroup {...args} />
-    </div>
+    </Box>
   ),
 };
 
@@ -38,8 +40,8 @@ export const WithNotice: Story = {
     onDismissNotice: () => alert('Notice dismissed'),
   },
   render: args => (
-    <div style={{width: '360px'}}>
+    <Box style={{width: '360px'}}>
       <OAuthButtonGroup {...args} />
-    </div>
+    </Box>
   ),
 };

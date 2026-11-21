@@ -7,7 +7,9 @@ import CheckIcon from '@/icons/CheckIcon';
 import CloseIcon from '@/icons/CloseIcon';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import TextBox from '@/componentsV2/bits/TextBox';
 import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
@@ -59,39 +61,50 @@ export default function ResetPasswordCard({
       classNameOverride={classNameOverride}
     >
       {mode === 'success' ? (
-        <div className={styles.container}>
-          <div className={styles.iconCircle}>
+        <Flex direction="column" align="center" fullWidth>
+          <Flex
+            align="center"
+            justify="center"
+            mb="4"
+            classNameOverride={styles.iconCircle}
+          >
             <CheckIcon width={24} height={24} />
-          </div>
+          </Flex>
 
-          <Typography
-            variant="h3"
-            as="h2"
-            classNameOverride={styles.statusTitle}
-          >
-            {isCompleted
-              ? 'Password reset successfully'
-              : 'Reset link verified'}
-          </Typography>
+          <Flex direction="column" align="center" gap="1" mb="6">
+            <Typography variant="h3" as="h2" align="center">
+              {isCompleted
+                ? 'Password reset successfully'
+                : 'Reset link verified'}
+            </Typography>
 
-          <Typography
-            variant="caption"
-            color="muted"
-            classNameOverride={styles.statusDesc}
-          >
-            {isCompleted
-              ? 'Your password has been successfully updated. You can now sign in with your new credentials.'
-              : 'Your reset link is verified. Set your new password below.'}
-          </Typography>
+            <Typography
+              variant="caption"
+              color="muted"
+              align="center"
+              classNameOverride={styles.statusDesc}
+            >
+              {isCompleted
+                ? 'Your password has been successfully updated. You can now sign in with your new credentials.'
+                : 'Your reset link is verified. Set your new password below.'}
+            </Typography>
+          </Flex>
 
           {isCompleted ? (
-            <div className={styles.actionRow}>
+            <Box mt="2" fullWidth>
               <Button href={signInHref} variant="primary" size="md" fullWidth>
                 Sign in to your account
               </Button>
-            </div>
+            </Box>
           ) : (
-            <form onSubmit={handleSubmit} className={styles.form} noValidate>
+            <Flex
+              as="form"
+              direction="column"
+              gap="4"
+              onSubmit={handleSubmit}
+              fullWidth
+              noValidate
+            >
               {error && <Alert variant="error" message={error} />}
 
               <TextBox
@@ -116,7 +129,7 @@ export default function ResetPasswordCard({
                 required
               />
 
-              <div className={styles.actionRow}>
+              <Box mt="2" fullWidth>
                 <Button
                   type="submit"
                   variant="primary"
@@ -127,44 +140,50 @@ export default function ResetPasswordCard({
                 >
                   {isSubmitting ? 'Updating password...' : 'Update password'}
                 </Button>
-              </div>
-            </form>
+              </Box>
+            </Flex>
           )}
-        </div>
+        </Flex>
       ) : (
-        <div className={styles.container}>
-          <div className={[styles.iconCircle, styles.errorCircle].join(' ')}>
+        <Flex direction="column" align="center" fullWidth>
+          <Flex
+            align="center"
+            justify="center"
+            mb="4"
+            classNameOverride={[styles.iconCircle, styles.errorCircle].join(
+              ' ',
+            )}
+          >
             <CloseIcon width={24} height={24} />
-          </div>
+          </Flex>
 
-          <Typography
-            variant="h3"
-            as="h2"
-            classNameOverride={styles.statusTitle}
-          >
-            Invalid or expired link
-          </Typography>
+          <Flex direction="column" align="center" gap="1" mb="6">
+            <Typography variant="h3" as="h2" align="center">
+              Invalid or expired link
+            </Typography>
 
-          <Typography
-            variant="caption"
-            color="muted"
-            classNameOverride={styles.statusDesc}
-          >
-            This password reset link is invalid or has expired. Please request a
-            new one.
-          </Typography>
+            <Typography
+              variant="caption"
+              color="muted"
+              align="center"
+              classNameOverride={styles.statusDesc}
+            >
+              {error ||
+                'This password reset link is invalid or has expired. Please request a new link.'}
+            </Typography>
+          </Flex>
 
-          <div className={styles.actionRow}>
+          <Box mt="2" fullWidth>
             <Button
               href="/auth/forgot-password"
               variant="primary"
               size="md"
               fullWidth
             >
-              Request a new reset link
+              Request new reset link
             </Button>
-          </div>
-        </div>
+          </Box>
+        </Flex>
       )}
     </AuthShell>
   );

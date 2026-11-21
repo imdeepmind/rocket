@@ -6,12 +6,17 @@ import GithubIcon from '@/icons/GithubIcon';
 import GoogleIcon from '@/icons/GoogleIcon';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import Typography from '@/componentsV2/bits/Typography';
 
 import styles from './styles.module.css';
 
-export interface OAuthButtonGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface OAuthButtonGroupProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'className'
+> {
   dividerText?: string;
   onProviderClick?: (provider: 'Google' | 'GitHub') => void;
   notice?: string | null;
@@ -27,11 +32,14 @@ export default function OAuthButtonGroup({
   classNameOverride,
   ...props
 }: OAuthButtonGroupProps): React.JSX.Element {
-  const combinedClass = classNameOverride ?? styles.container;
-
   return (
-    <div className={combinedClass} {...props}>
-      <div className={styles.buttonGrid}>
+    <Flex
+      direction="column"
+      fullWidth
+      classNameOverride={classNameOverride}
+      {...props}
+    >
+      <Box classNameOverride={styles.buttonGrid}>
         <Button
           variant="secondary"
           size="md"
@@ -53,22 +61,22 @@ export default function OAuthButtonGroup({
         >
           GitHub
         </Button>
-      </div>
+      </Box>
 
       {notice && (
-        <div className={styles.noticeWrapper}>
+        <Box mt="3" fullWidth>
           <Alert
             variant="warning"
             message={notice}
             dismissible={Boolean(onDismissNotice)}
             onDismiss={onDismissNotice}
           />
-        </div>
+        </Box>
       )}
 
       {dividerText && (
-        <div className={styles.divider}>
-          <div className={styles.line} />
+        <Flex align="center" gap="3" fullWidth my="5">
+          <Box classNameOverride={styles.line} />
           <Typography
             variant="caption"
             color="muted"
@@ -76,9 +84,9 @@ export default function OAuthButtonGroup({
           >
             {dividerText}
           </Typography>
-          <div className={styles.line} />
-        </div>
+          <Box classNameOverride={styles.line} />
+        </Flex>
       )}
-    </div>
+    </Flex>
   );
 }

@@ -1,18 +1,7 @@
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-}
-
-.actionRow {
-  margin-top: 8px;
-}
-
 .backLink {
   color: var(--color-primary-light);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .backLink:hover {

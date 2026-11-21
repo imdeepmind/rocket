@@ -1,24 +1,7 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--spacing-5);
-}
-
-.iconWrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .iconCircle {
   width: 64px;
   height: 64px;
   border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: transform var(--transition-base);
 }
 
@@ -55,36 +38,13 @@
   }
 }
 
-.contentBlock {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
 .description {
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-relaxed);
+  line-height: 1.6;
   max-width: 360px;
 }
 
-.emailHighlight {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.alert {
-  width: 100%;
-  text-align: left;
-}
-
-.actionRow {
-  width: 100%;
-  margin-top: var(--spacing-2);
-}
-
 .buttonLink {
+  display: block;
   width: 100%;
   text-decoration: none;
 }

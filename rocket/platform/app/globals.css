@@ -28,6 +28,41 @@
   --font-space-grotesk:
     'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     sans-serif;
+
+  /* Spacing Scale Constants */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-9: 36px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-14: 56px;
+  --spacing-16: 64px;
+
+  /* Typography Sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+
+  /* Standard Layout Widths */
+  --width-auth-container: 440px;
+  --width-modal: 480px;
+  --width-sidebar: 260px;
+  --width-content: 1200px;
 }
 
 html {

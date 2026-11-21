@@ -41,7 +41,7 @@ export default function MetricCard({
   const combinedClass = classNameOverride ?? styles.metricCard;
 
   return (
-    <Card padding="md" className={combinedClass} {...props}>
+    <Card padding="md" classNameOverride={combinedClass} {...props}>
       <div className={styles.topRow}>
         <Typography variant="body-sm" color="muted">
           {title}

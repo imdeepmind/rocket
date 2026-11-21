@@ -62,7 +62,7 @@ export default function HowItWorks({
             key={step.stepNumber}
             padding="lg"
             variant="glass"
-            className={styles.stepCard}
+            classNameOverride={styles.stepCard}
           >
             <div className={styles.stepBadge}>{step.stepNumber}</div>
             <Typography

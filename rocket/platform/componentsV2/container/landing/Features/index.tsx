@@ -73,7 +73,7 @@ export default function Features({
             key={feature.title}
             padding="lg"
             variant="glass"
-            className={styles.featureCard}
+            classNameOverride={styles.featureCard}
           >
             <div className={styles.iconBox}>{feature.icon}</div>
             <Typography

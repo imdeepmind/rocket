@@ -89,7 +89,11 @@ export default function OpenSource({
 
       {/* Right: ROSS handles card */}
       <div className={styles.cardCol}>
-        <Card padding="lg" variant="glass" className={styles.configCard}>
+        <Card
+          padding="lg"
+          variant="glass"
+          classNameOverride={styles.configCard}
+        >
           <Typography
             variant="mono"
             color="muted"

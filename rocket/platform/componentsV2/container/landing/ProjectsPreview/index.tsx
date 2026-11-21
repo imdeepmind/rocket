@@ -94,7 +94,11 @@ export default function ProjectsPreview({
 
   return (
     <section className={combinedClass}>
-      <Card padding="lg" variant="glass" className={styles.dashboardCard}>
+      <Card
+        padding="lg"
+        variant="glass"
+        classNameOverride={styles.dashboardCard}
+      >
         <div className={styles.header}>
           <div>
             <Typography variant="h3" as="h3">

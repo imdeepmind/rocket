@@ -8,7 +8,9 @@ import CloseIcon from '@/icons/CloseIcon';
 import MailIcon from '@/icons/MailIcon';
 
 import Alert from '@/componentsV2/bits/Alert';
+import Box from '@/componentsV2/bits/Box';
 import Button from '@/componentsV2/bits/Button';
+import Flex from '@/componentsV2/bits/Flex';
 import Typography from '@/componentsV2/bits/Typography';
 import AuthShell from '@/componentsV2/container/auth/AuthShell';
 
@@ -70,61 +72,88 @@ export default function VerifyEmailCard({
       footer={footer}
       classNameOverride={classNameOverride}
     >
-      <div className={styles.container}>
+      <Flex direction="column" align="center" gap="5" fullWidth>
         {/* Status Icon */}
-        <div className={styles.iconWrapper}>
+        <Flex align="center" justify="center" fullWidth>
           {mode === 'success' && (
-            <div className={[styles.iconCircle, styles.iconSuccess].join(' ')}>
+            <Flex
+              align="center"
+              justify="center"
+              classNameOverride={[styles.iconCircle, styles.iconSuccess].join(
+                ' ',
+              )}
+            >
               <CheckIcon width={32} height={32} stroke="currentColor" />
-            </div>
+            </Flex>
           )}
           {mode === 'error' && (
-            <div className={[styles.iconCircle, styles.iconError].join(' ')}>
+            <Flex
+              align="center"
+              justify="center"
+              classNameOverride={[styles.iconCircle, styles.iconError].join(
+                ' ',
+              )}
+            >
               <CloseIcon width={32} height={32} stroke="currentColor" />
-            </div>
+            </Flex>
           )}
           {mode === 'verifying' && (
-            <div className={[styles.iconCircle, styles.iconPending].join(' ')}>
-              <div className={styles.spinner} />
-            </div>
+            <Flex
+              align="center"
+              justify="center"
+              classNameOverride={[styles.iconCircle, styles.iconPending].join(
+                ' ',
+              )}
+            >
+              <Box classNameOverride={styles.spinner} />
+            </Flex>
           )}
           {mode === 'pending' && (
-            <div className={[styles.iconCircle, styles.iconPending].join(' ')}>
+            <Flex
+              align="center"
+              justify="center"
+              classNameOverride={[styles.iconCircle, styles.iconPending].join(
+                ' ',
+              )}
+            >
               <MailIcon width={32} height={32} stroke="currentColor" />
-            </div>
+            </Flex>
           )}
-        </div>
+        </Flex>
 
         {/* Content based on mode */}
         {mode === 'pending' && (
-          <div className={styles.contentBlock}>
-            <Typography variant="body" classNameOverride={styles.description}>
+          <Flex direction="column" align="center" gap="4" fullWidth>
+            <Typography
+              variant="body"
+              align="center"
+              color="muted"
+              classNameOverride={styles.description}
+            >
               We sent a verification link to{' '}
-              <span className={styles.emailHighlight}>
+              <Typography as="span" weight="medium" color="default">
                 {email || 'your email'}
-              </span>
+              </Typography>
               . Click the link inside the email to complete your registration.
             </Typography>
 
             {resendSuccess && (
-              <Alert
-                variant="success"
-                title="Email dispatched"
-                message="A new verification link has been sent to your email."
-                classNameOverride={styles.alert}
-              />
+              <Box fullWidth>
+                <Alert
+                  variant="success"
+                  title="Email dispatched"
+                  message="A new verification link has been sent to your email."
+                />
+              </Box>
             )}
 
             {error && (
-              <Alert
-                variant="error"
-                title="Error"
-                message={error}
-                classNameOverride={styles.alert}
-              />
+              <Box fullWidth>
+                <Alert variant="error" title="Error" message={error} />
+              </Box>
             )}
 
-            <div className={styles.actionRow}>
+            <Box mt="2" fullWidth>
               <Button
                 variant="secondary"
                 fullWidth
@@ -137,58 +166,75 @@ export default function VerifyEmailCard({
                     ? `Resend available in ${cooldownSeconds}s`
                     : 'Resend verification email'}
               </Button>
-            </div>
-          </div>
+            </Box>
+          </Flex>
         )}
 
         {mode === 'verifying' && (
-          <div className={styles.contentBlock}>
+          <Flex direction="column" align="center" fullWidth>
             <Typography
               variant="body-sm"
+              align="center"
+              color="muted"
               classNameOverride={styles.description}
             >
               Confirming your security token with Rocket auth service...
             </Typography>
-          </div>
+          </Flex>
         )}
 
         {mode === 'success' && (
-          <div className={styles.contentBlock}>
-            <Typography variant="body" classNameOverride={styles.description}>
+          <Flex direction="column" align="center" gap="4" fullWidth>
+            <Typography
+              variant="body"
+              align="center"
+              color="muted"
+              classNameOverride={styles.description}
+            >
               Your account is ready! You can now sign in to access your
               workspaces and deploy projects.
             </Typography>
-            <Link href={signInHref} className={styles.buttonLink}>
-              <Button variant="primary" fullWidth>
-                Continue to sign in
-              </Button>
-            </Link>
-          </div>
+            <Box fullWidth>
+              <Link href={signInHref} className={styles.buttonLink}>
+                <Button variant="primary" fullWidth>
+                  Continue to sign in
+                </Button>
+              </Link>
+            </Box>
+          </Flex>
         )}
 
         {mode === 'error' && (
-          <div className={styles.contentBlock}>
+          <Flex direction="column" align="center" gap="4" fullWidth>
             {error ? (
-              <Alert
-                variant="error"
-                title="Verification link invalid"
-                message={error}
-                classNameOverride={styles.alert}
-              />
+              <Box fullWidth>
+                <Alert
+                  variant="error"
+                  title="Verification link invalid"
+                  message={error}
+                />
+              </Box>
             ) : (
-              <Typography variant="body" classNameOverride={styles.description}>
+              <Typography
+                variant="body"
+                align="center"
+                color="muted"
+                classNameOverride={styles.description}
+              >
                 This verification link is invalid or has expired. Please sign up
                 again or request a new link.
               </Typography>
             )}
-            <Link href={signUpHref} className={styles.buttonLink}>
-              <Button variant="primary" fullWidth>
-                Sign up again
-              </Button>
-            </Link>
-          </div>
+            <Box fullWidth>
+              <Link href={signUpHref} className={styles.buttonLink}>
+                <Button variant="primary" fullWidth>
+                  Sign up again
+                </Button>
+              </Link>
+            </Box>
+          </Flex>
         )}
-      </div>
+      </Flex>
     </AuthShell>
   );
 }

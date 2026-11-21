@@ -2,9 +2,13 @@ import React from 'react';
 
 import styles from './styles.module.css';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'className'
+> {
   variant?: 'default' | 'glass' | 'interactive' | 'bordered';
   padding?: 'none' | 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
   classNameOverride?: string;
   children?: React.ReactNode;
 }
@@ -12,6 +16,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export default function Card({
   variant = 'default',
   padding = 'md',
+  fullWidth = false,
   classNameOverride,
   children,
   ...props
@@ -20,11 +25,14 @@ export default function Card({
     styles.card,
     styles[variant],
     styles[`pad-${padding}`],
+    fullWidth ? styles.fullWidth : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const combinedClass = classNameOverride ?? defaultClasses;
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   return (
     <div className={combinedClass} {...props}>

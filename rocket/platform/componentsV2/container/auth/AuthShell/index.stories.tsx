@@ -1,6 +1,7 @@
 import type {Meta, StoryObj} from '@storybook/react';
 import React from 'react';
 
+import Box from '@/componentsV2/bits/Box';
 import Typography from '@/componentsV2/bits/Typography';
 
 import AuthShell from './index';
@@ -22,17 +23,17 @@ export const Default: Story = {
     title: 'Welcome back',
     subtitle: 'Sign in to deploy and manage your backends.',
     children: (
-      <div style={{padding: '20px 0'}}>
+      <Box py="5">
         <Typography variant="body">Form content goes here...</Typography>
-      </div>
+      </Box>
     ),
     footer: (
-      <span>
+      <Typography as="span" variant="body-sm" color="muted">
         New to Rocket?{' '}
         <a href="/auth/sign-up" style={{color: '#ff6b85'}}>
           Create an account
         </a>
-      </span>
+      </Typography>
     ),
   },
 };
