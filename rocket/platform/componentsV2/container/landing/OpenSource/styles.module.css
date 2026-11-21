@@ -1,0 +1,89 @@
+.openSection {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 80px 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 64px;
+  flex-wrap: wrap;
+  width: 100%;
+  font-family: var(--font-inter);
+}
+
+.infoCol {
+  flex: 1 1 480px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+}
+
+.leadText {
+  margin: 8px 0;
+}
+
+.bodyText {
+  line-height: 1.6;
+}
+
+.ctaGroup {
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.cardCol {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.configCard {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  margin-bottom: 20px;
+}
+
+.rowList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.checkDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cardFooter {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 16px;
+}

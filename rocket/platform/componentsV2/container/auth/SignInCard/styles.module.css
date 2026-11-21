@@ -1,0 +1,26 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.alertWrapper {
+  margin-bottom: 4px;
+}
+
+.actionRow {
+  margin-top: 8px;
+}
+
+.link {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  font-size: 13px;
+  transition: opacity 0.15s ease;
+}
+
+.link:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}

@@ -1,0 +1,58 @@
+.whySection {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 80px 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 64px;
+  flex-wrap: wrap;
+  width: 100%;
+  font-family: var(--font-inter);
+}
+
+.terminalCol {
+  flex: 1 1 440px;
+  min-width: 0;
+}
+
+.infoCol {
+  flex: 1 1 440px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+}
+
+.checkList {
+  list-style: none;
+  margin: 16px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}

@@ -1,0 +1,129 @@
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  transition:
+    transform 0.25s ease,
+    width 0.25s ease;
+  z-index: 40;
+  font-family: var(--font-inter);
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.closed {
+  transform: translateX(-100%);
+  width: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brandLogo {
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.navSections {
+  flex: 1;
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionHeader {
+  padding: 0 8px 4px 8px;
+  letter-spacing: 0.05em;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.1s ease;
+}
+
+.navItem:hover {
+  background-color: var(--color-surface-hover);
+  color: #ffffff;
+}
+
+.activeItem {
+  background-color: rgba(225, 29, 72, 0.12);
+  color: var(--color-primary-light) !important;
+}
+
+.itemIcon {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+.itemLabel {
+  flex: 1;
+}
+
+.footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background-color: var(--color-surface-subtle);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

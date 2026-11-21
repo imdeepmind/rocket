@@ -1,0 +1,58 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  max-width: 720px;
+  width: 100%;
+}
+
+.card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-5);
+}
+
+.alert {
+  margin-bottom: var(--spacing-4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.saveAction {
+  margin-top: var(--spacing-2);
+}
+
+.dangerCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  background: var(--color-surface);
+}
+
+.dangerTitle {
+  color: #fb7185;
+}
+
+.dangerAction {
+  margin-top: var(--spacing-2);
+}
+
+.deleteButton {
+  color: #fb7185 !important;
+  border-color: rgba(225, 29, 72, 0.4) !important;
+  background: rgba(225, 29, 72, 0.08) !important;
+}
+
+.deleteButton:hover {
+  background: rgba(225, 29, 72, 0.16) !important;
+}
