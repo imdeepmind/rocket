@@ -5,15 +5,23 @@ import Button from '@/componentsV2/bits/Button';
 import Card from '@/componentsV2/bits/Card';
 import Flex from '@/componentsV2/bits/Flex';
 import Section from '@/componentsV2/bits/Section';
-import Tag from '@/componentsV2/bits/Tag';
+import StatusDot from '@/componentsV2/bits/StatusDot';
 import Typography from '@/componentsV2/bits/Typography';
-import Table, {TableColumn} from '@/componentsV2/items/Table';
+
+import styles from './styles.module.css';
 
 export interface PreviewProject {
   name: string;
   status: 'Live' | 'Failed';
   deployed: string;
   endpoint: string;
+}
+
+export interface RecentActivity {
+  id: string;
+  title: string;
+  meta: string;
+  statusVariant: 'success' | 'warning' | 'error';
 }
 
 export const DEFAULT_PREVIEW_PROJECTS: PreviewProject[] = [
@@ -37,11 +45,33 @@ export const DEFAULT_PREVIEW_PROJECTS: PreviewProject[] = [
   },
 ];
 
+export const DEFAULT_RECENT_ACTIVITIES: RecentActivity[] = [
+  {
+    id: '1',
+    title: 'Deployment succeeded',
+    meta: 'product-api · 2h ago',
+    statusVariant: 'success',
+  },
+  {
+    id: '2',
+    title: 'Deployment in progress',
+    meta: 'analytics-service · 3h ago',
+    statusVariant: 'warning',
+  },
+  {
+    id: '3',
+    title: 'Deployment failed',
+    meta: 'blog-backend · 1d ago',
+    statusVariant: 'error',
+  },
+];
+
 export interface ProjectsPreviewProps {
   title?: string;
   subtitle?: string;
   newProjectHref?: string;
   projects?: PreviewProject[];
+  recentActivities?: RecentActivity[];
   classNameOverride?: string;
 }
 
@@ -50,75 +80,117 @@ export default function ProjectsPreview({
   subtitle = 'Your deployed backend services',
   newProjectHref = '/auth/sign-in',
   projects = DEFAULT_PREVIEW_PROJECTS,
+  recentActivities = DEFAULT_RECENT_ACTIVITIES,
   classNameOverride,
 }: ProjectsPreviewProps): React.JSX.Element {
-  const columns: TableColumn<PreviewProject>[] = [
-    {
-      header: 'Project',
-      render: row => (
-        <Typography variant="mono" color="white" weight="semibold">
-          {row.name}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Status',
-      render: row => (
-        <Tag
-          variant={row.status === 'Live' ? 'success' : 'error'}
-          size="sm"
-          dot
-        >
-          {row.status}
-        </Tag>
-      ),
-    },
-    {
-      header: 'Deployed',
-      render: row => (
-        <Typography variant="caption" color="muted">
-          {row.deployed}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Endpoint',
-      render: row => (
-        <Typography variant="mono" color="secondary">
-          {row.endpoint}
-        </Typography>
-      ),
-    },
-  ];
-
   return (
     <Section
       container="landing"
-      pt="10"
-      pb="20"
+      pt="16"
+      pb="16"
       classNameOverride={classNameOverride}
     >
-      <Card padding="lg" variant="glass" fullWidth>
-        <Flex align="center" justify="between" mb="6" fullWidth>
-          <Flex direction="column">
-            <Typography variant="h3" as="h3">
-              {title}
-            </Typography>
-            <Typography variant="caption" color="muted">
-              {subtitle}
-            </Typography>
+      <Card
+        variant="glass"
+        radius="2xl"
+        padding="none"
+        fullWidth
+        classNameOverride={styles.dashboardCard}
+      >
+        {/* Left: Projects list */}
+        <Box classNameOverride={styles.projectsCol}>
+          <Flex
+            align="center"
+            justify="between"
+            mb="7"
+            wrap="wrap"
+            gap="3"
+            fullWidth
+          >
+            <Flex direction="column" gap="1">
+              <Typography variant="h2" as="h3">
+                {title}
+              </Typography>
+              <Typography variant="caption" color="muted">
+                {subtitle}
+              </Typography>
+            </Flex>
+            <Button href={newProjectHref} size="sm" variant="primary">
+              + New project
+            </Button>
           </Flex>
-          <Button href={newProjectHref} size="sm" variant="primary">
-            + New project
-          </Button>
-        </Flex>
 
-        <Box overflowX="auto" fullWidth>
-          <Table<PreviewProject>
-            columns={columns}
-            data={projects}
-            keyExtractor={row => row.name}
-          />
+          <Box classNameOverride={styles.tableWrapper}>
+            <Box classNameOverride={styles.table}>
+              <Box classNameOverride={styles.tableHeader}>
+                <Typography variant="caption" color="muted">
+                  Project
+                </Typography>
+                <Typography variant="caption" color="muted">
+                  Status
+                </Typography>
+                <Typography variant="caption" color="muted">
+                  Deployed
+                </Typography>
+                <Typography variant="caption" color="muted">
+                  Endpoint
+                </Typography>
+              </Box>
+              {projects.map(project => (
+                <Box key={project.name} classNameOverride={styles.tr}>
+                  <Typography variant="mono" color="white" weight="medium">
+                    {project.name}
+                  </Typography>
+                  <Typography
+                    variant="mono"
+                    color={project.status === 'Live' ? 'success' : 'error'}
+                    weight="medium"
+                  >
+                    {project.status === 'Live' ? '● Live' : '▲ Failed'}
+                  </Typography>
+                  <Typography variant="caption" color="muted">
+                    {project.deployed}
+                  </Typography>
+                  <Typography variant="caption" color="muted">
+                    {project.endpoint}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Right: Recent activity */}
+        <Box classNameOverride={styles.activityCol}>
+          <Box mb="6">
+            <Typography
+              variant="h4"
+              as="h3"
+              color="secondary"
+              weight="semibold"
+            >
+              Recent activity
+            </Typography>
+          </Box>
+          <Flex direction="column" gap="5">
+            {recentActivities.map(item => (
+              <Box key={item.id}>
+                <Flex align="center" gap="2">
+                  <StatusDot variant={item.statusVariant} size="sm" />
+                  <Typography variant="body-lg" color="white" weight="medium">
+                    {item.title}
+                  </Typography>
+                </Flex>
+                <Typography
+                  variant="caption"
+                  color="muted"
+                  classNameOverride={styles.activityMeta}
+                >
+                  {item.meta}
+                </Typography>
+              </Box>
+            ))}
+          </Flex>
         </Box>
       </Card>
     </Section>

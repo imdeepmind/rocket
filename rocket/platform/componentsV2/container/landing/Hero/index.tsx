@@ -193,7 +193,7 @@ export default function Hero({
                 API endpoint
               </Typography>
               <Typography variant="mono" color="white" weight="normal">
-                https://api.rocket.dev
+                https://rocket.imdeepmind.com
               </Typography>
             </Flex>
           </Card>

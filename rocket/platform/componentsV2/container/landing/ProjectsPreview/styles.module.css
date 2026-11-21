@@ -1,1 +1,57 @@
-/* All projects-preview styling is handled by composable bits (Section, Card, Flex, Box, Table) */
+.dashboardCard {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.projectsCol {
+  flex: 3 1 560px;
+  min-width: 0;
+  padding: 40px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 560px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.7fr 1.6fr;
+  gap: 12px;
+  padding-bottom: 18px;
+  align-items: center;
+}
+
+.tr {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.7fr 1.6fr;
+  gap: 12px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  align-items: center;
+}
+
+.activityCol {
+  flex: 1 1 280px;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.activityMeta {
+  padding-left: 14px;
+  margin-top: 2px;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .projectsCol,
+  .activityCol {
+    padding: 28px;
+  }
+}

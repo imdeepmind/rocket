@@ -1,1 +1,50 @@
-/* All why-rocket styling is handled by composable bits (Section, Flex, Box, IconBadge, Typography) */
+.whyLayout {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-18);
+  flex-wrap: wrap;
+}
+
+.terminalCol {
+  flex: 0 1 540px;
+  width: 100%;
+  max-width: 540px;
+}
+
+.terminalContent {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--spacing-4);
+}
+
+.terminalLine {
+  font-size: 15px;
+}
+
+.infoCol {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.checkItemText {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .whyLayout {
+    gap: var(--spacing-12);
+  }
+
+  .terminalCol {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .infoCol {
+    flex: 1 1 100%;
+  }
+
+  .checkItemText {
+    white-space: normal;
+  }
+}

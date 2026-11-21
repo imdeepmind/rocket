@@ -105,7 +105,9 @@ export default function Typography<T extends React.ElementType = 'p'>({
     .filter(Boolean)
     .join(' ');
 
-  const combinedClass = classNameOverride ?? defaultClasses;
+  const combinedClass = classNameOverride
+    ? `${defaultClasses} ${classNameOverride}`
+    : defaultClasses;
 
   return (
     <Component className={combinedClass} {...rest}>
