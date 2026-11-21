@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 
-import SignUp from '@/app/container/auth/SignUp';
+import SignUp from '@/container/auth/SignUp';
 
 export const metadata: Metadata = {
   title: 'Create Account · Rocket',

@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 
-import SignIn from '@/app/container/auth/SignIn';
+import SignIn from '@/container/auth/SignIn';
 
 export const metadata: Metadata = {
   title: 'Sign In · Rocket',

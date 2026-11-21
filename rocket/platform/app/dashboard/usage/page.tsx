@@ -2,9 +2,9 @@
 
 import React from 'react';
 
-import Card from '@/app/components/bits/Card';
+import Card from '@/components/bits/Card';
 
-import {ActivityIcon} from '@/app/icons';
+import {ActivityIcon} from '@/icons';
 
 import styles from '../styles.module.css';
 

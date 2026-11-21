@@ -2,12 +2,12 @@
 
 import React from 'react';
 
-import Badge from '@/app/components/bits/Badge';
-import Button from '@/app/components/bits/Button';
-import Card from '@/app/components/bits/Card';
-import Table, {TableColumn} from '@/app/components/items/Table';
+import Badge from '@/components/bits/Badge';
+import Button from '@/components/bits/Button';
+import Card from '@/components/bits/Card';
+import Table, {TableColumn} from '@/components/items/Table';
 
-import {CheckIcon, CreditCardIcon} from '@/app/icons';
+import {CheckIcon, CreditCardIcon} from '@/icons';
 
 import styles from '../styles.module.css';
 

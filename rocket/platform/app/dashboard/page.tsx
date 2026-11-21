@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import React from 'react';
 
-import ProjectsMetrics from '@/app/container/dashboard/ProjectsMetrics';
-import ProjectsTable from '@/app/container/dashboard/ProjectsTable';
+import ProjectsMetrics from '@/container/dashboard/ProjectsMetrics';
+import ProjectsTable from '@/container/dashboard/ProjectsTable';
 
 import styles from './styles.module.css';
 

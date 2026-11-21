@@ -2,7 +2,7 @@ import {Analytics} from '@vercel/analytics/next';
 import type {Metadata} from 'next';
 import {Inter, Space_Grotesk} from 'next/font/google';
 
-import AmbientBackground from '@/app/components/bits/AmbientBackground';
+import AmbientBackground from '@/components/bits/AmbientBackground';
 
 import '@/app/globals.css';
 

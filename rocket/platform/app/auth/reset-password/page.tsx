@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import ResetPassword from '@/app/container/auth/ResetPassword';
+import ResetPassword from '@/container/auth/ResetPassword';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',

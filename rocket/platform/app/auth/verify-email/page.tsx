@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import React, {Suspense} from 'react';
 
-import VerifyEmail from '@/app/container/auth/VerifyEmail';
+import VerifyEmail from '@/container/auth/VerifyEmail';
 
 export const metadata: Metadata = {
   title: 'Verify Email · Rocket',

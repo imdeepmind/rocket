@@ -3,9 +3,9 @@
 import {useRouter} from 'next/navigation';
 import React, {useEffect} from 'react';
 
-import AppShell from '@/app/components/items/AppShell';
+import AppShell from '@/components/items/AppShell';
 
-import {useSession} from '@/app/lib/auth/client';
+import {useSession} from '@/lib/auth/client';
 
 import styles from './styles.module.css';
 

@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 
-import ForgotPassword from '@/app/container/auth/ForgotPassword';
+import ForgotPassword from '@/container/auth/ForgotPassword';
 
 export const metadata: Metadata = {
   title: 'Reset Password · Rocket',

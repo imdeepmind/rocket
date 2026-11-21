@@ -2,9 +2,9 @@
 
 import React, {useState} from 'react';
 
-import Button from '@/app/components/bits/Button';
-import Card from '@/app/components/bits/Card';
-import TextBox from '@/app/components/bits/TextBox';
+import Button from '@/components/bits/Button';
+import Card from '@/components/bits/Card';
+import TextBox from '@/components/bits/TextBox';
 
 import styles from '../styles.module.css';
 
