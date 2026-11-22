@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import {Inter, Space_Grotesk} from 'next/font/google';
 
 import AmbientBackground from '@/components/bits/AmbientBackground';
+import Banner from '@/components/bits/Banner';
 
 import '@/app/globals.css';
 
@@ -38,6 +39,10 @@ export default function RootLayout({
       className={`${inter.variable} ${spaceGrotesk.variable} antialiased dark`}
     >
       <body className="min-h-screen flex flex-col bg-[#08080D] text-[#F7F7FA] relative overflow-x-hidden">
+        <Banner
+          variant="warning"
+          text="We're actively building Rocket. Early access and public beta coming soon."
+        />
         <AmbientBackground />
         {children}
         <Analytics />
