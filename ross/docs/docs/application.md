@@ -308,6 +308,35 @@ You reference a magic variable in your API configuration using double brackets: 
 
 When a user calls `POST /api/v1/projects`, ROSS strips `orgId` and `tenantId` from client validation, automatically injects `"orgId": "acme-corp"` and `"tenantId": 42` into the request body on the server side, and saves them to the database. The client cannot spoof or override these fields.
 
+#### Scoping DELETE and GET Operations with Query SSP
+
+To enforce multi-tenant isolation or ownership scoping on `GET` and `DELETE` operations, configure `serverSideParams` with `type: "query"` referencing filter operators such as `_eq`:
+
+```json
+{
+  "apis": {
+    "model:v1:todos:id:delete": {
+      "authorization": true,
+      "serverSideParams": [
+        {
+          "name": "owner_id_eq",
+          "type": "query",
+          "value": "[[userId]]"
+        }
+      ]
+    }
+  }
+}
+```
+
+When a user calls `DELETE /api/v1/todos/id/42`, ROSS injects `owner_id_eq` with the authenticated user's ID into the query filters. The executed SQL statement becomes:
+
+```sql
+DELETE FROM "todos" WHERE "id" = 42 AND "owner_id" = <authenticated_user_id>;
+```
+
+Even if a malicious user passes another user's record ID, the deletion query will not match any rows and the target record remains safe.
+
 #### Built-in vs. Custom Magic Variables
 
 ROSS includes built-in magic variables derived from the authenticated session:

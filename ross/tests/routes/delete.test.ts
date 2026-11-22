@@ -1,6 +1,10 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
+import {
+  ApisConfig,
+  AuthenticationConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -418,6 +422,166 @@ describe('test delete api', () => {
       });
 
       expect(response.statusCode).toBe(404);
+
+      await fastify.close();
+    });
+  });
+
+  describe('query filters and server-side params', () => {
+    const todosModel: Record<string, ModelConfig> = {
+      todos: {
+        fields: {
+          id: {type: 'integer', primaryKey: true, apis: ['delete']},
+          title: {type: 'string'},
+          status: {type: 'string', query: ['eq']},
+          authorId: {type: 'integer', query: ['eq']},
+          secretNote: {type: 'string', secret: true, query: ['eq']},
+        },
+      },
+    };
+
+    const sspApis: ApisConfig = {
+      'model.v1.todos.id.delete': {
+        enabled: true,
+        authorization: true,
+        serverSideParams: [
+          {type: 'query', name: 'authorId_eq', value: '[[userId]]'},
+        ],
+      },
+    };
+
+    test('should apply query filter to delete query', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?status_eq=archived',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1 AND "status" = $2;',
+        [42, 'archived'],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply multiple query filters to delete query', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?authorId_eq=7&status_eq=archived',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1 AND "authorId" = $2 AND "status" = $3;',
+        [42, 7, 'archived'],
+      );
+
+      await fastify.close();
+    });
+
+    test('should ignore unknown query params that do not match filter patterns', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?unknown_param=foo',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1;',
+        [42],
+      );
+
+      await fastify.close();
+    });
+
+    test('should inject [userId] as a query filter via SSP', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        todosModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42',
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1 AND "authorId" = $2;',
+        [42, 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('should override client query value with server-side SSP', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        todosModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?authorId_eq=999',
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1 AND "authorId" = $2;',
+        [42, 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('should reject invalid query param type with 400', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?authorId_eq=not-an-integer',
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('should include secret fields in query filter when bypassSecret is true', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel, {
+        'model.v1.todos.id.delete': {
+          bypassSecret: true,
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?secretNote_eq=foo',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1 AND "secretNote" = $2;',
+        [42, 'foo'],
+      );
 
       await fastify.close();
     });

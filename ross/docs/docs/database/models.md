@@ -194,7 +194,13 @@ The `apis` array controls which field-specific REST endpoints ROSS generates:
 | `"index"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `GET /api/v1/<model>/<field>/:<field>` | Look up records by this field's value. Returns a single object if unique, or a paginated array if non-unique. |
 | `"search"` | `string` | `GET /api/v1/<model>/search/<field>?<field>_search=<term>` | Case-insensitive substring search matching text on this specific field. |
 | `"edit"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `PATCH` / `PUT /api/v1/<model>/<field>/:<field>` | Update records matching the specified field parameter. |
-| `"delete"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `DELETE /api/v1/<model>/<field>/:<field>` | Delete records matching the specified field parameter. |
+| `"delete"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `DELETE /api/v1/<model>/<field>/:<field>` | Delete records matching the specified field parameter. Supports query filters (e.g. `?status_eq=inactive`) to further constrain targeted records. |
+
+:::info[DELETE Endpoints Support Query Filters]
+
+Like listing and edit endpoints, `DELETE /api/v1/<model>/<field>/:<field>` supports standard query filters for any other field on the model that defines `query` operations (e.g., `DELETE /api/v1/todos/id/42?owner_id_eq=7`). This enables scoping deletions by state or enforcing row-level ownership validation via Server-Side Parameters (`serverSideParams`).
+
+:::
 
 :::info[Search Is Restricted to String Fields]
 

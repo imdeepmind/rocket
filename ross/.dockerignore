@@ -1,0 +1,15 @@
+node_modules
+.git
+.github
+.husky
+build
+coverage
+docs
+e2e
+examples
+playwright-report
+test-results
+.ross
+.migrations
+*.db
+*.log
