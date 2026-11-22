@@ -1,12 +1,14 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
+import {buildFilterQueryProperties} from '@/lib/schema/query';
 import {
   buildSecurityArray,
   getResponseStructureSchema,
 } from '@/lib/schema/response';
-import {mapDataTypeToJsonSchema} from '@/lib/schema/types';
+import {getPublicFields, mapDataTypeToJsonSchema} from '@/lib/schema/types';
 import {buildPreValidation} from '@/lib/server/prevalidation';
+import {applyFilters} from '@/lib/sql/filters';
 
 import {
   ModelConfig,
@@ -63,6 +65,7 @@ function registerDeleteEndpoint(
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
 ): void {
+  const isUnique = field.primaryKey || field.unique;
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
     field,
@@ -70,6 +73,7 @@ function registerDeleteEndpoint(
     modelName,
     config,
     policy,
+    isUnique,
   );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
@@ -94,16 +98,36 @@ function registerDeleteEndpoint(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const {[fieldName]: value} = request.params as Record<string, unknown>;
+      const queryParams = request.query as Record<string, unknown>;
 
       const tableName = modelName;
       const columnName = fieldName;
 
-      const query = `DELETE FROM "${tableName}" WHERE "${columnName}" = $1;`;
+      const whereClauses: string[] = [];
+      const values: unknown[] = [];
+      let paramIndex = 1;
+
+      whereClauses.push(`"${columnName}" = $${paramIndex++}`);
+      values.push(value);
+
+      if (!isUnique) {
+        const {
+          whereClauses: filterClauses,
+          values: filterValues,
+          nextParamIndex,
+        } = applyFilters(queryParams, paramIndex, [fieldName]);
+
+        whereClauses.push(...filterClauses);
+        values.push(...filterValues);
+        paramIndex = nextParamIndex;
+      }
+
+      const query = `DELETE FROM "${tableName}" WHERE ${whereClauses.join(' AND ')};`;
 
       let tx;
       try {
         tx = await app.db.beginTransaction();
-        await tx.query(query, [value]);
+        await tx.query(query, values);
         await tx.commit();
       } catch (err) {
         if (tx) await tx.rollback().catch(() => {});
@@ -124,8 +148,26 @@ function generateSchema(
   modelName: string,
   config: ResolvedAppConfig,
   policy: ResolvedApiPolicy,
+  isUnique?: boolean,
 ) {
   const paramSchema = mapDataTypeToJsonSchema(field.type);
+
+  const effectiveQueries = policy.supportedQueries;
+  const queryProperties: Record<string, object> = {};
+
+  if (!isUnique) {
+    const fields = policy.bypassSecret
+      ? Object.entries(model.fields)
+      : getPublicFields(model);
+
+    for (const [fName, f] of fields) {
+      if (fName === fieldName) continue;
+      Object.assign(
+        queryProperties,
+        buildFilterQueryProperties(fName, f, effectiveQueries),
+      );
+    }
+  }
 
   const schema: Record<string, unknown> = {
     summary: `Delete ${capitalizeFirstLetter(modelName)} records by ${fieldName}`,
@@ -144,6 +186,14 @@ function generateSchema(
     },
     response: getResponseStructureSchema([204], {}),
   };
+
+  if (Object.keys(queryProperties).length > 0) {
+    schema.querystring = {
+      type: 'object',
+      properties: queryProperties,
+      additionalProperties: false,
+    };
+  }
 
   const security = buildSecurityArray(config, policy.authorization);
 

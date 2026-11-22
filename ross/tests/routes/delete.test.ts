@@ -1,6 +1,10 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 
-import {AuthenticationConfig, ModelConfig} from '@/interfaces/config';
+import {
+  ApisConfig,
+  AuthenticationConfig,
+  ModelConfig,
+} from '@/interfaces/config';
 
 import {pgClientQueryMock, pgQueryMock} from '@tests/helpers/db-mocks';
 import {createTestApp, pgConfig} from '@tests/helpers/test-app';
@@ -418,6 +422,183 @@ describe('test delete api', () => {
       });
 
       expect(response.statusCode).toBe(404);
+
+      await fastify.close();
+    });
+  });
+
+  describe('query filters and server-side params on non-unique delete routes', () => {
+    const todosModel: Record<string, ModelConfig> = {
+      todos: {
+        fields: {
+          id: {type: 'integer', primaryKey: true, apis: ['delete']},
+          title: {type: 'string', query: ['eq']},
+          status: {type: 'string', apis: ['delete'], query: ['eq']},
+          authorId: {type: 'integer', query: ['eq']},
+          secretNote: {type: 'string', secret: true, query: ['eq']},
+        },
+      },
+    };
+
+    const sspApis: ApisConfig = {
+      'model.v1.todos.status.delete': {
+        enabled: true,
+        authorization: true,
+        serverSideParams: [
+          {type: 'query', name: 'authorId_eq', value: '[[userId]]'},
+        ],
+      },
+    };
+
+    test('should apply query filter to delete query on non-unique field', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?authorId_eq=7',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1 AND "authorId" = $2;',
+        ['archived', 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('should apply multiple query filters to delete query on non-unique field', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?authorId_eq=7&title_eq=done',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1 AND "authorId" = $2 AND "title" = $3;',
+        ['archived', 7, 'done'],
+      );
+
+      await fastify.close();
+    });
+
+    test('should not apply query filters when deleting by unique primary key field', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/id/42?authorId_eq=7',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "id" = $1;',
+        [42],
+      );
+
+      await fastify.close();
+    });
+
+    test('should ignore unknown query params on non-unique field', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?unknown_param=foo',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1;',
+        ['archived'],
+      );
+
+      await fastify.close();
+    });
+
+    test('should inject [userId] as a query filter via SSP on non-unique delete route', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        todosModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived',
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1 AND "authorId" = $2;',
+        ['archived', 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('should override client query value with server-side SSP on non-unique delete route', async () => {
+      const fastify = await createTestApp(
+        pgConfig,
+        todosModel,
+        sspApis,
+        undefined,
+        upAuthConfig,
+      );
+      const token = fastify.jwt.sign({id: 7, email: 'alice@example.com'});
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?authorId_eq=999',
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1 AND "authorId" = $2;',
+        ['archived', 7],
+      );
+
+      await fastify.close();
+    });
+
+    test('should reject invalid query param type with 400 on non-unique field', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel);
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?authorId_eq=not-an-integer',
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(pgClientQueryMock).not.toHaveBeenCalled();
+
+      await fastify.close();
+    });
+
+    test('should include secret fields in query filter when bypassSecret is true on non-unique route', async () => {
+      const fastify = await createTestApp(pgConfig, todosModel, {
+        'model.v1.todos.status.delete': {
+          bypassSecret: true,
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/v1/todos/status/archived?secretNote_eq=foo',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(pgClientQueryMock).toHaveBeenCalledWith(
+        'DELETE FROM "todos" WHERE "status" = $1 AND "secretNote" = $2;',
+        ['archived', 'foo'],
+      );
 
       await fastify.close();
     });
