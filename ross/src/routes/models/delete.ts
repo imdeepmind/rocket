@@ -65,6 +65,7 @@ function registerDeleteEndpoint(
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
 ): void {
+  const isUnique = field.primaryKey || field.unique;
   const schema: Record<string, unknown> = generateSchema(
     fieldName,
     field,
@@ -72,6 +73,7 @@ function registerDeleteEndpoint(
     modelName,
     config,
     policy,
+    isUnique,
   );
 
   const path = `/${variant}/${modelName}/${fieldName}/:${fieldName}`;
@@ -108,15 +110,17 @@ function registerDeleteEndpoint(
       whereClauses.push(`"${columnName}" = $${paramIndex++}`);
       values.push(value);
 
-      const {
-        whereClauses: filterClauses,
-        values: filterValues,
-        nextParamIndex,
-      } = applyFilters(queryParams, paramIndex, [fieldName]);
+      if (!isUnique) {
+        const {
+          whereClauses: filterClauses,
+          values: filterValues,
+          nextParamIndex,
+        } = applyFilters(queryParams, paramIndex, [fieldName]);
 
-      whereClauses.push(...filterClauses);
-      values.push(...filterValues);
-      paramIndex = nextParamIndex;
+        whereClauses.push(...filterClauses);
+        values.push(...filterValues);
+        paramIndex = nextParamIndex;
+      }
 
       const query = `DELETE FROM "${tableName}" WHERE ${whereClauses.join(' AND ')};`;
 
@@ -144,21 +148,25 @@ function generateSchema(
   modelName: string,
   config: ResolvedAppConfig,
   policy: ResolvedApiPolicy,
+  isUnique?: boolean,
 ) {
   const paramSchema = mapDataTypeToJsonSchema(field.type);
 
   const effectiveQueries = policy.supportedQueries;
   const queryProperties: Record<string, object> = {};
-  const fields = policy.bypassSecret
-    ? Object.entries(model.fields)
-    : getPublicFields(model);
 
-  for (const [fName, f] of fields) {
-    if (fName === fieldName) continue;
-    Object.assign(
-      queryProperties,
-      buildFilterQueryProperties(fName, f, effectiveQueries),
-    );
+  if (!isUnique) {
+    const fields = policy.bypassSecret
+      ? Object.entries(model.fields)
+      : getPublicFields(model);
+
+    for (const [fName, f] of fields) {
+      if (fName === fieldName) continue;
+      Object.assign(
+        queryProperties,
+        buildFilterQueryProperties(fName, f, effectiveQueries),
+      );
+    }
   }
 
   const schema: Record<string, unknown> = {

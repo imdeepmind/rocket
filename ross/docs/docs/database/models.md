@@ -194,13 +194,7 @@ The `apis` array controls which field-specific REST endpoints ROSS generates:
 | `"index"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `GET /api/v1/<model>/<field>/:<field>` | Look up records by this field's value. Returns a single object if unique, or a paginated array if non-unique. |
 | `"search"` | `string` | `GET /api/v1/<model>/search/<field>?<field>_search=<term>` | Case-insensitive substring search matching text on this specific field. |
 | `"edit"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `PATCH` / `PUT /api/v1/<model>/<field>/:<field>` | Update records matching the specified field parameter. |
-| `"delete"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `DELETE /api/v1/<model>/<field>/:<field>` | Delete records matching the specified field parameter. Supports query filters (e.g. `?status_eq=inactive`) to further constrain targeted records. |
-
-:::info[DELETE Endpoints Support Query Filters]
-
-Like listing and edit endpoints, `DELETE /api/v1/<model>/<field>/:<field>` supports standard query filters for any other field on the model that defines `query` operations (e.g., `DELETE /api/v1/todos/id/42?owner_id_eq=7`). This enables scoping deletions by state or enforcing row-level ownership validation via Server-Side Parameters (`serverSideParams`).
-
-:::
+| `"delete"` | `integer`, `decimal`, `string`, `enum`, `uuid`, `ulid` | `DELETE /api/v1/<model>/<field>/:<field>` | Delete records matching the specified field parameter. |
 
 :::info[Search Is Restricted to String Fields]
 
@@ -462,8 +456,10 @@ For every model configured in `data.models`, ROSS automatically mounts the follo
 - **Method**: `PATCH` (partial update) or `PUT` (complete update)
 - **Path**: `/api/v1/<model>/<field>/:<field>`
 - **Generated for**: Fields with `"edit"` in `apis`.
+- **Query Parameters**:
+  - `<filter_field>_<operator>`: Any configured model query filter (e.g. `?status_eq=active`) to narrow which records are updated. Supported only when the route's target `<field>` is non-unique; endpoints on unique or primary key fields do not accept query filters.
 - **Body**: JSON payload of fields to update. When using `PATCH`, body fields are optional; when using `PUT`, all model fields are required.
-- **Behavior**: Automatically updates the `updated_at` column if `timestamps: true` is enabled. If the field is not unique, you can provide query filters to narrow the update target.
+- **Behavior**: Automatically updates the `updated_at` column if `timestamps: true` is enabled. When updating by a non-unique `<field>`, query filters restrict which matching records are modified.
 - **Response**: `200 OK` returning `{ code: 200, message: "...", data: { ... } }` with updated values. If no matching record was found to update, returns `404 Not Found`.
 
 ### 5. Delete Record
@@ -471,6 +467,9 @@ For every model configured in `data.models`, ROSS automatically mounts the follo
 - **Method**: `DELETE`
 - **Path**: `/api/v1/<model>/<field>/:<field>`
 - **Generated for**: Fields with `"delete"` in `apis`.
+- **Query Parameters**:
+  - `<filter_field>_<operator>`: Any configured model query filter (e.g. `?status_eq=inactive`) to narrow which records are deleted. Supported only when the route's target `<field>` is non-unique; endpoints on unique or primary key fields do not accept query filters.
+- **Behavior**: Deletes records matching the specified `<field>` parameter. When deleting by a non-unique `<field>`, query filters restrict which matching records are deleted.
 - **Response**: `204 No Content` (empty response body).
 
 ### 6. Substring Search

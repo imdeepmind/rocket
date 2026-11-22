@@ -310,12 +310,12 @@ When a user calls `POST /api/v1/projects`, ROSS strips `orgId` and `tenantId` fr
 
 #### Scoping DELETE and GET Operations with Query SSP
 
-To enforce multi-tenant isolation or ownership scoping on `GET` and `DELETE` operations, configure `serverSideParams` with `type: "query"` referencing filter operators such as `_eq`:
+To enforce multi-tenant isolation or ownership scoping on `GET` and non-unique `DELETE` operations, configure `serverSideParams` with `type: "query"` referencing filter operators such as `_eq`:
 
 ```json
 {
   "apis": {
-    "model:v1:todos:id:delete": {
+    "model:v1:todos:status:delete": {
       "authorization": true,
       "serverSideParams": [
         {
@@ -329,13 +329,13 @@ To enforce multi-tenant isolation or ownership scoping on `GET` and `DELETE` ope
 }
 ```
 
-When a user calls `DELETE /api/v1/todos/id/42`, ROSS injects `owner_id_eq` with the authenticated user's ID into the query filters. The executed SQL statement becomes:
+When a user calls `DELETE /api/v1/todos/status/archived`, ROSS injects `owner_id_eq` with the authenticated user's ID into the query filters. The executed SQL statement becomes:
 
 ```sql
-DELETE FROM "todos" WHERE "id" = 42 AND "owner_id" = <authenticated_user_id>;
+DELETE FROM "todos" WHERE "status" = 'archived' AND "owner_id" = <authenticated_user_id>;
 ```
 
-Even if a malicious user passes another user's record ID, the deletion query will not match any rows and the target record remains safe.
+Even if a user attempts to purge records with that status, the deletion query only deletes rows belonging to the authenticated user.
 
 #### Built-in vs. Custom Magic Variables
 

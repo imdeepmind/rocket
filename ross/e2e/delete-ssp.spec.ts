@@ -70,11 +70,17 @@ const deleteSspE2EConfig: AppConfigInput = {
             primaryKey: true,
             autoIncrement: true,
             nullable: false,
-            apis: ['delete', 'index'],
+            apis: ['index'],
           },
           title: {
             type: 'string',
             nullable: false,
+          },
+          status: {
+            type: 'string',
+            nullable: false,
+            apis: ['delete'],
+            query: ['eq'],
           },
           owner_id: {
             type: 'integer',
@@ -86,7 +92,7 @@ const deleteSspE2EConfig: AppConfigInput = {
     },
   },
   apis: {
-    'model.v1.todos.id.delete': {
+    'model.v1.todos.status.delete': {
       enabled: true,
       authorization: true,
       serverSideParams: [
@@ -104,7 +110,8 @@ const deleteSspE2EConfig: AppConfigInput = {
   },
 };
 
-test.describe.serial('E2E: DELETE API with SSP ownership scoping', () => {
+test.describe
+  .serial('E2E: DELETE API with SSP ownership scoping on non-unique field', () => {
   let server: E2EServer;
   let user1Token: string;
   let user2Token: string;
@@ -125,13 +132,13 @@ test.describe.serial('E2E: DELETE API with SSP ownership scoping', () => {
   test.beforeEach(async () => {
     await server.app.db.query('DELETE FROM todos;');
     await server.app.db.query(
-      'INSERT INTO todos (id, title, owner_id) VALUES (?, ?, ?), (?, ?, ?)',
-      [1, 'User 1 Todo', 1, 2, 'User 2 Todo', 2],
+      'INSERT INTO todos (id, title, status, owner_id) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
+      [1, 'User 1 Todo', 'active', 1, 2, 'User 2 Todo', 'active', 2],
     );
   });
 
   test('User 1 cannot delete User 2 todo (scoped by [[userId]])', async () => {
-    const res = await server.request.delete('/api/v1/todos/id/2', {
+    const res = await server.request.delete('/api/v1/todos/status/active', {
       headers: {
         authorization: `Bearer ${user1Token}`,
         'content-type': 'text/plain',
@@ -147,28 +154,17 @@ test.describe.serial('E2E: DELETE API with SSP ownership scoping', () => {
     );
     expect(checkRes.rows.length).toBe(1);
     expect(checkRes.rows[0].id).toBe(2);
-  });
 
-  test('User 1 can delete their own todo', async () => {
-    const res = await server.request.delete('/api/v1/todos/id/1', {
-      headers: {
-        authorization: `Bearer ${user1Token}`,
-        'content-type': 'text/plain',
-      },
-    });
-
-    expect(res.status()).toBe(204);
-
-    // Todo 1 must be deleted from the database
-    const checkRes = await server.app.db.query<{id: number}>(
+    // Todo 1 must have been deleted
+    const checkTodo1 = await server.app.db.query<{id: number}>(
       'SELECT id FROM todos WHERE id = ?',
       [1],
     );
-    expect(checkRes.rows.length).toBe(0);
+    expect(checkTodo1.rows.length).toBe(0);
   });
 
   test('User 2 can delete their own todo', async () => {
-    const res = await server.request.delete('/api/v1/todos/id/2', {
+    const res = await server.request.delete('/api/v1/todos/status/active', {
       headers: {
         authorization: `Bearer ${user2Token}`,
         'content-type': 'text/plain',
