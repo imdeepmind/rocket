@@ -2,7 +2,7 @@
 sidebar_position: 4
 ---
 
-# Application Configuration
+# Application
 
 The `application` block is the core configuration section in `ross.json` (or `config.json`). It controls server runtime behavior, application identity, logging verbosity, security policies (CORS and rate limiting), API versioning, health checks, and server-side variable injection.
 
