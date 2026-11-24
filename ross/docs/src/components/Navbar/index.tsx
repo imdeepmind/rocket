@@ -50,7 +50,7 @@ export default function Navbar(): React.JSX.Element {
       {/* Desktop Navigation */}
       <nav className={styles.navLinks}>
         <Link to="/">Home</Link>
-        <Link to="/docs">Documentation</Link>
+        <Link to="/docs">Docs</Link>
         <a
           href="https://github.com/imdeepmind/rocket"
           target="_blank"
@@ -97,7 +97,7 @@ export default function Navbar(): React.JSX.Element {
           Home
         </Link>
         <Link className={styles.mobileNavLink} to="/docs" onClick={closeMenu}>
-          Documentation
+          Docs
         </Link>
         <a
           className={styles.mobileNavLink}

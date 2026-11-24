@@ -7,6 +7,7 @@ sidebar_position: 1
 The `infrastructure.database` section of your configuration defines your application's primary database connection. ROSS connects directly to your database, pools connections, and exposes model data through automatically generated REST APIs.
 
 ROSS supports three relational database engines:
+
 - **PostgreSQL** (`"postgres"`)
 - **MySQL / MariaDB** (`"mysql"`)
 - **SQLite** (`"sqlite"`)
@@ -115,6 +116,7 @@ Contains connection parameters.
 #### Properties
 
 #### `connection.url`
+
 - **Type**: `string`
 - **Required**: **Yes**
 
@@ -143,10 +145,13 @@ The maximum query execution timeout in milliseconds. If a query exceeds this dur
 
 - **Engine Identifier**: `"postgres"`
 - **Connection URL Format**:
+
   ```text
   postgresql://[user[:password]@][host][:port][/dbname][?param1=value1]
   ```
+
 - **Example**:
+
   ```json
   {
     "engine": "postgres",
@@ -155,6 +160,7 @@ The maximum query execution timeout in milliseconds. If a query exceeds this dur
     }
   }
   ```
+
 - **Features**:
   - Native connection pooling with automatic pool sizing.
   - Full support for PostgreSQL data types, including UUIDs, native JSON/JSONB, timestamps with time zone, and enums.
@@ -167,10 +173,13 @@ ROSS supports MySQL (v8.0+) and MariaDB.
 
 - **Engine Identifier**: `"mysql"`
 - **Connection URL Format**:
+
   ```text
   mysql://[user[:password]@][host][:port][/dbname][?param1=value1]
   ```
+
 - **Example**:
+
   ```json
   {
     "engine": "mysql",
@@ -179,6 +188,7 @@ ROSS supports MySQL (v8.0+) and MariaDB.
     }
   }
   ```
+
 - **Features**:
   - Connection pooling with automatic reconnection handling.
   - Support for auto-incrementing integer primary keys and full-text indexes.
@@ -192,6 +202,7 @@ SQLite requires zero installation or external database processes.
 - **Connection URL Format**: Relative file path (e.g. `./data/app.db`) or absolute file path (e.g. `/var/data/app.db`).
 - **Validation**: The path must end with `.db` or `.sqlite`. In-memory databases (`":memory:"`) are not supported; a persistent file path is required.
 - **Example**:
+
   ```json
   {
     "engine": "sqlite",
@@ -200,6 +211,7 @@ SQLite requires zero installation or external database processes.
     }
   }
   ```
+
 - **Features**:
   - **Automatic Directory Creation**: If the folder containing your SQLite database (such as `./data/`) does not exist, ROSS creates it automatically when the server starts.
   - High-performance, synchronous file operations wrapped in async Promise APIs for Fastify.
@@ -291,6 +303,7 @@ If you need a complex SQL query (joins, aggregations, reporting) but don't want 
 ```
 
 ### Key Features
+
 - **Dynamic Parameter Tokens**: Inject inputs safely using `[[source.param:type]]` tokens (e.g. `[[path.id:integer]]`, `[[query.status:string]]`, `[[body.title:string]]`).
 - **Automatic SQL Injection Protection**: ROSS compiles placeholder tokens into native parameterized queries (`$1` in PostgreSQL, `?` in SQLite/MySQL). Values are never concatenated into the SQL string directly.
 - **DML Safety**: Custom SQL endpoints only permit data retrieval and mutation queries (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `WITH`). DDL statements (`CREATE`, `ALTER`, `DROP`) are blocked by default.
