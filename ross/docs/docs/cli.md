@@ -18,8 +18,6 @@ ROSS provides a subcommand-driven command line interface (`ross`) for developmen
 | `ross config show` | | Resolve, redact secrets, and print full configuration |
 | `ross routes` | | List all registered API routes and methods |
 
----
-
 ## Configuration Path Resolution
 
 All commands accept an optional `-c, --config <path>` flag. When omitted, ROSS automatically locates your configuration file using the following resolution hierarchy:
@@ -55,8 +53,6 @@ If none of these candidate files exist, ROSS exits with an error:
 ```text
 No configuration file found. Provide one via -c, --config <path> or create a ross.json in the current directory.
 ```
-
----
 
 ## Commands
 
@@ -98,8 +94,6 @@ ross dev -m --dangerously-allow-ddl
 ross dev -c ./my-config.json
 ```
 
----
-
 ### `ross start`
 
 **Alias:** `ross serve`
@@ -130,8 +124,6 @@ ross start
 ross serve -p 8080
 ```
 
----
-
 ### `ross build`
 
 Builds all custom TypeScript function endpoints declared in your configuration file into standalone, single-file bundles under `.ross/functions/`.
@@ -160,8 +152,6 @@ ross build
 # Build using a specific configuration file with verbose logging
 ross build -c ./configs/production.json -v
 ```
-
----
 
 ### `ross migrate`
 
@@ -203,8 +193,6 @@ ross migrate --dangerously-allow-ddl
 ross db:push -m prod -c ./production.json
 ```
 
----
-
 ### `ross config validate`
 
 **Top-Level Alias:** `ross check`
@@ -238,8 +226,6 @@ ross check
 ross check -m prod
 ```
 
----
-
 ### `ross config show`
 
 Resolves the configuration by evaluating environment variables (`env:VAR_NAME`) and applying framework defaults. Redacts sensitive credentials (passwords, JWT secrets, webhook tokens) by default.
@@ -266,8 +252,6 @@ ross config show -m prod
 # View raw unredacted configuration
 ross config show --raw
 ```
-
----
 
 ### `ross routes`
 

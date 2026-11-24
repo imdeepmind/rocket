@@ -1,0 +1,45 @@
+name: ROSS Docs
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: ross/docs/package-lock.json
+      - name: Install dependencies
+        working-directory: ross/docs
+        run: npm ci
+      - name: Markdown Lint
+        working-directory: ross/docs
+        run: npm run lint:md
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: ross/docs/package-lock.json
+      - name: Install dependencies
+        working-directory: ross/docs
+        run: npm ci
+      - name: Build docs
+        working-directory: ross/docs
+        run: npm run build
+
