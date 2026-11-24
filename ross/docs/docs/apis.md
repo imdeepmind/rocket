@@ -22,7 +22,7 @@ By default, ROSS inspects your data models, custom endpoints, and authentication
     },
     "model.v1.posts.title.search": {
       "authorization": true,
-      "roles": ["admin", "editor:*"],
+      "roles": ["admin", "editor"],
       "supportedQueries": ["eq", "in", "sort"]
     }
   }
@@ -189,14 +189,14 @@ Enforces Role-Based Access Control (RBAC) on the endpoint. Callers must present 
 
 - Requires `rbac.enabled: true` and `authentication.enabled: true`.
 - An endpoint configuring `roles` must explicitly declare `"authorization": true`.
-- Supports exact declared roles, universal wildcards (`"*"`), and namespaced wildcards (`"editor:*"`):
+- Requires concrete declared role names (e.g. `["admin", "editor"]`). Wildcards (`*` and `prefix:*`) are reserved for defining role hierarchies in `rbac.roles.<role>.includes`.
 
 ```json
 {
   "apis": {
     "model.v1.articles.id.edit": {
       "authorization": true,
-      "roles": ["admin", "editor:*"]
+      "roles": ["admin", "editor"]
     }
   }
 }
@@ -358,7 +358,7 @@ The following example illustrates a production policy configuration combining ro
     },
     "model.v1.posts.title.search": {
       "authorization": true,
-      "roles": ["admin", "editor:*"],
+      "roles": ["admin", "editor"],
       "supportedQueries": ["eq", "in", "sort"],
       "tags": ["Content Management"]
     },
