@@ -22,22 +22,22 @@ npm -v
 
 ## 1. Installation
 
-You can install ROSS globally to use the `ross` command in your terminal:
+You can install ROSS from GitHub globally to use the `ross` command in your terminal:
 
 ```bash
-npm install -g @imdeepmind/ross
+npm install -g github:imdeepmind/rocket#ross-release
 ```
 
 Alternatively, you can install it as a project dependency:
 
 ```bash
-npm install @imdeepmind/ross
+npm install github:imdeepmind/rocket#ross-release
 ```
 
 Or execute commands directly without installation:
 
 ```bash
-npx @imdeepmind/ross <command>
+npx github:imdeepmind/rocket#ross-release <command>
 ```
 
 ## 2. Create Your Project

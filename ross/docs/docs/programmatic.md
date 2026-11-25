@@ -17,7 +17,7 @@ This is useful for:
 ## Installation
 
 ```bash
-npm install @imdeepmind/ross
+npm install github:imdeepmind/rocket#ross-release
 ```
 
 The package is ESM-only and exposes a single entrypoint.
