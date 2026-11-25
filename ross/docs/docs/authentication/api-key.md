@@ -49,7 +49,7 @@ Rules enforced at startup:
 - `userModel` is not used. There is no identity table.
 - `rbac.enabled: true` is rejected: RBAC needs per-user roles, which a shared key cannot provide.
 
-A valid minimal configuration therefore needs only `enabled` and `providers`. `jwtSecret` must be absent, and `userModel` / `tokenExpiration` have no effect.
+A valid minimal configuration therefore needs only `enabled` and `providers`. `jwtSecret` must be absent, and `userModel` / `accessTokenExpiration` / `refreshTokenExpiration` / `sessionStorage` have no effect.
 
 ## Using the key
 

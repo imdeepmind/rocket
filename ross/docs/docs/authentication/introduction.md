@@ -35,7 +35,9 @@ Authentication lives at the top level of your configuration file:
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -73,7 +75,9 @@ Authentication lives at the top level of your configuration file:
 | --- | --- | --- | --- | --- |
 | `enabled` | `boolean` | **Yes** | — | Enables the auth layer. When `false`, no other key may be present. |
 | `jwtSecret` | `string` | Conditional | — | Secret used to sign access tokens. Minimum 32 characters. Required when an identity provider is configured, forbidden when only `api-key` is configured. |
-| `tokenExpiration` | `string` | No | `"1d"` | Access-token lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d` (for example `"15m"`, `"8h"`, `"7d"`). |
+| `accessTokenExpiration` | `string` | No | `"15m"` | Access-token lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d` (for example `"15m"`, `"8h"`, `"7d"`). |
+| `refreshTokenExpiration` | `string` | No | `"7d"` | Refresh-token session lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d`. |
+| `sessionStorage` | `"db" \| "cache"` | No | `"db"` | Backend used to store refresh token sessions (`"db"` uses an internal `_ross_sessions` table; `"cache"` uses the configured cache backend). |
 | `userModel` | `object` | Conditional | — | The table that stores identities. Required when `up-auth` or `sso` is configured. |
 | `providers` | `array` | **Yes** | — | One or more provider entries. Minimum one item. |
 
@@ -141,7 +145,7 @@ Every identity provider issues the same JWT. The payload is built from `userMode
 - `providerId` holds the external SSO subject identifier (for SSO logins) or `null` (for `up-auth` logins).
 - `email` holds the user's email/username (or `null` if unconfigured or absent). If a custom `usernameField` is configured (such as `"username"`), that property is also included.
 - `role` or `roles` appear only when RBAC is enabled. They are extracted from `rbac.roleField`, falling back to `rbac.defaultRole`.
-- The token is signed with `jwtSecret` and expires after `tokenExpiration`.
+- The token is signed with `jwtSecret` and expires after `accessTokenExpiration`.
 - Clients send it as `Authorization: Bearer <token>`.
 
 Protected routes validate the token before the handler runs. A missing or invalid token returns `401` with `"Invalid or expired authentication token"`.
