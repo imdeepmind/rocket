@@ -1,0 +1,46 @@
+import swagger from '@fastify/swagger';
+import swaggerUI from '@fastify/swagger-ui';
+import fp from 'fastify-plugin';
+export default fp(async (fastify) => {
+    const { docs: docsConfig, authentication } = fastify.appConfig;
+    const swaggerConfig = docsConfig.openapi;
+    const components = {};
+    if (authentication.enabled) {
+        const providers = authentication.providers;
+        const hasApiKey = providers.some(provider => provider.type === 'api-key');
+        if (hasApiKey) {
+            components['securitySchemes'] = {
+                apiKeyAuth: {
+                    type: 'apiKey',
+                    name: 'x-api-key',
+                    in: 'header',
+                },
+            };
+        }
+        else {
+            components['securitySchemes'] = {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            };
+        }
+    }
+    await fastify.register(swagger, {
+        openapi: {
+            info: swaggerConfig.info,
+            components,
+        },
+    });
+    await fastify.register(swaggerUI, {
+        routePrefix: swaggerConfig.path,
+        uiConfig: {
+            docExpansion: 'list',
+            deepLinking: false,
+        },
+    });
+}, {
+    name: 'swagger-plugin',
+});
+//# sourceMappingURL=swagger.js.map

@@ -1,0 +1,147 @@
+import chalk from 'chalk';
+const ROCKET_ASCII = `
+                                                                      
+                                                                      
+                                                        :!FxvcccF     
+                                                 ;vLQQQQQQQQQQQQQQQc    
+                                            ;rLQQQQQQQQQQQQLCLQQQc    
+                                         fJQQQQQQQQJuTi      UQQQn    
+                                      TCQQQQQQQn:           .QQQQf    
+                                    ,YQQQQQQY;               ;QQQQ,    
+                                  ICQQQQQz;                  rQQQX     
+                                iCQQQQLT                    ,LQQQf     
+                             .CQQQQQi                      rQQQC      
+                            fQQQQL!    ,YQQQQQQCl         iQQQQ!      
+                 ixYQQQQQQQQQQQQn     fQQQQQQQQQQz        UQQQz       
+              xLQQQQQQQQQQQQQQQ;     ;QQQQj  ;LQQQF      YQQQL.       
+           :UQQQQCzf: iQQQQU       !QQQQ:   UQQQv     YQQQL         
+          zQQQQQv;     lQQQQv         UQQQQvnLQQQL:    XQQQLi         
+        ;LQQQQt       lQQQQx          .YQQQQQQQQLi   .JQQQL;          
+       lQQQQz        ,QQQQn              jCLLCv,    !QQQQL,           
+      IQQQQx         XQQQJ                        .YQQQQz             
+     YQQQc         jQQQL,                       rQQQQLl              
+    !QQQQ;         CQQQF                      FLQQQQu                
+    nQQQLcccccccccYQQQJ                    .nQQQQQU,                 
+    vQQQQQQQQQQQQQQQQQx                  tJQQQQQX,                   
+    .vQQQQQQQQQQQQQQQQQu              fUQQQQQQQ!                     
+                   nQQQQQt       .!JQQQQQQQQQQQF                     
+           .nQL!    ,YQQQQLftxUQQQQQQQQQzI CQQQf                     
+          nQQQQC      iCQQQQQQQQQQQQYT,   ;QQQQl                     
+         CQQQQu         .JQQQQQX!.        rQQQJ                      
+       .CQQQJ            .QQQQ;          !QQQQ!                      
+       UQQQY       lUCj  .QQQQ;         !LQQQu                       
+      iQQQQ:     ,JQQQQ: .QQQQ;        zQQQQv                        
+      TQQQX   .rQQQQQQt  .QQQQ;      xQQQQQf                         
+      fQQQQQQQQQQQQQj    .QQQQ;  ;rLQQQQQc.                          
+      iQQQQQQQQQLn:      .QQQQQQQQQQQQQn.                            
+        .itl:.           .QQQQQQQQQQv.                               
+                          ;cXzuFi                                    
+                                                                      
+                                                    
+`;
+function getMethodColor(method) {
+    const colors = {
+        GET: chalk.green,
+        POST: chalk.yellow,
+        PUT: chalk.blue,
+        PATCH: chalk.blueBright,
+        DELETE: chalk.red,
+        HEAD: chalk.magenta,
+        OPTIONS: chalk.cyan,
+    };
+    // Handle multi-methods like GET/HEAD
+    if (method.includes('/')) {
+        return method
+            .split('/')
+            .map(m => {
+            const color = colors[m.toUpperCase()] || chalk.white;
+            return color(m);
+        })
+            .join(chalk.gray('/'));
+    }
+    return (colors[method.toUpperCase()] || chalk.white)(method);
+}
+const MODEL_COLORS = [
+    chalk.yellow,
+    chalk.magenta,
+    chalk.cyan,
+    chalk.blueBright,
+    chalk.greenBright,
+    chalk.redBright,
+];
+export function showWelcomeScreen(config, port, routes) {
+    const coloredRocket = ROCKET_ASCII.split('\n')
+        .map(line => {
+        return line
+            .replace(/[QLUCJFTYXIF]+/g, m => chalk.blueBright(m))
+            .replace(/[nzvxticulr]+/g, m => chalk.cyan(m))
+            .replace(/[;:,!]+/g, m => chalk.gray(m));
+    })
+        .join('\n');
+    console.log(coloredRocket);
+    console.log('\n');
+    console.log('  ' + chalk.bold.bgWhite.black(` ${config.application.name} `));
+    console.log('  ' + chalk.dim('🚀 Lift off your development with ease'));
+    console.log('\n');
+    const swaggerUrl = config.docs.openapi.enabled
+        ? `http://0.0.0.0:${port}${config.docs.openapi.path}`
+        : chalk.gray('Disabled');
+    const cacheDbStatus = chalk.magenta(config.infrastructure.cache.engine.toUpperCase());
+    const rateLimit = config.application.rateLimit;
+    const rateLimitStatus = rateLimit.enabled
+        ? chalk.green(`${rateLimit.max} req / ${rateLimit.timeWindow}`)
+        : chalk.gray('Disabled');
+    console.log('  ' + chalk.cyan('System Status:'));
+    console.log('  ' + chalk.gray('─────────────────────────────────────────'));
+    console.log('  ' + chalk.white('API Host:    ') + chalk.green(`http://0.0.0.0:${port}`));
+    console.log('  ' + chalk.white('Swagger UI:  ') + chalk.green(swaggerUrl));
+    console.log('  ' +
+        chalk.white('Database:    ') +
+        chalk.magenta(config.infrastructure.database.engine.toUpperCase()));
+    console.log('  ' + chalk.white('Cache DB:    ') + cacheDbStatus);
+    console.log('  ' + chalk.white('Rate Limit:  ') + rateLimitStatus);
+    console.log('  ' +
+        chalk.white('Models:      ') +
+        chalk.magenta(Object.keys(config.data.models).length));
+    console.log('  ' + chalk.gray('─────────────────────────────────────────'));
+    // Log models
+    console.log('\n  ' + chalk.cyan('Models:'));
+    Object.entries(config.data.models).forEach(([modelName, model], index) => {
+        const color = MODEL_COLORS[index % MODEL_COLORS.length];
+        console.log('  ' +
+            chalk.white('• ') +
+            color(modelName.padEnd(15)) +
+            chalk.gray(` (${Object.keys(model.fields).length} fields)`));
+    });
+    // Log routes
+    console.log('\n  ' + chalk.cyan('Routes:'));
+    // Filter routes
+    const swaggerPath = config.docs.openapi.enabled
+        ? config.docs.openapi.path
+        : null;
+    const filteredRoutes = routes.filter(route => {
+        const isHead = route.method.toUpperCase().split('/').includes('HEAD');
+        const isSwagger = swaggerPath !== null && route.url.startsWith(swaggerPath);
+        return !isHead && !isSwagger;
+    });
+    const sortedRoutes = [...filteredRoutes].sort((a, b) => a.url.localeCompare(b.url));
+    // Determine max method length for padding (ignoring color codes)
+    const maxMethodLength = Math.max(...filteredRoutes.map(r => r.method.length), 7);
+    sortedRoutes.forEach(route => {
+        const coloredMethod = getMethodColor(route.method);
+        // Calculate padding manually to account for colors in getMethodColor result
+        const padding = ' '.repeat(Math.max(0, maxMethodLength - route.method.length));
+        const identifier = route.apiIdentifier
+            ? chalk.gray(`  [${route.apiIdentifier}]`)
+            : '';
+        console.log('  ' +
+            coloredMethod +
+            padding +
+            chalk.white(`  ${route.url}`) +
+            identifier);
+    });
+    console.log('\n  ' + chalk.gray('─────────────────────────────────────────'));
+    console.log('  ' + chalk.dim('Press Ctrl+C to stop the server'));
+    console.log('\n');
+}
+//# sourceMappingURL=welcome.js.map

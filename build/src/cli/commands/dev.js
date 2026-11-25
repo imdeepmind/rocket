@@ -1,0 +1,63 @@
+import * as path from 'path';
+import chalk from 'chalk';
+import migrateDatabase from '../../migrator/index.js';
+import { startServer } from '../../server.js';
+import { resolveAndValidateConfig } from '../../lib/config/pipeline.js';
+import { buildFunctions } from '../../lib/functions/builder.js';
+import { showWelcomeScreen } from '../../lib/server/welcome.js';
+import { loadConfigFile, resolveConfigPath } from '../config-finder.js';
+import { setupGracefulShutdown } from '../shutdown.js';
+/**
+ * Handles 'ross dev' command execution.
+ */
+export async function handleDev(options) {
+    process.env.NODE_ENV = 'development';
+    const configPath = resolveConfigPath(options.config);
+    const loadedConfig = loadConfigFile(configPath);
+    const configDir = path.dirname(path.resolve(configPath));
+    let resolvedConfig;
+    try {
+        resolvedConfig = resolveAndValidateConfig(loadedConfig, 'dev', configDir, options);
+        await buildFunctions({
+            config: resolvedConfig,
+            configDir,
+        });
+    }
+    catch (err) {
+        console.error(chalk.red('Failed to build functions:'), err.message);
+        process.exit(1);
+    }
+    const port = options.port ?? (process.env.PORT ? Number(process.env.PORT) : 3000);
+    const host = options.host ?? '0.0.0.0';
+    const verbose = Boolean(options.verbose);
+    const migrate = Boolean(options.migrate);
+    if (migrate) {
+        try {
+            console.log(chalk.blue('Running database migrations...'));
+            await migrateDatabase(resolvedConfig);
+            console.log(chalk.green('Database migrations completed successfully.'));
+        }
+        catch (err) {
+            console.error(chalk.red('Migration failed:'), err instanceof Error ? err.message : String(err));
+            process.exit(1);
+        }
+    }
+    console.log(chalk.blue('Starting development server with:'));
+    console.log(chalk.blue(`Config: ${configPath}`));
+    console.log(chalk.blue(`Port: ${port}`));
+    console.log(chalk.blue(`Host: ${host}`));
+    console.log(chalk.blue('Mode: dev'));
+    console.log(chalk.blue(`Verbose: ${verbose}`));
+    console.log(chalk.blue(`Migrate: ${migrate}`));
+    const { app, routes } = await startServer(resolvedConfig);
+    setupGracefulShutdown(app);
+    try {
+        await app.listen({ port, host });
+        showWelcomeScreen(app.appConfig, port, routes);
+    }
+    catch (err) {
+        console.error(chalk.red('Failed to start server:'), err);
+        process.exit(1);
+    }
+}
+//# sourceMappingURL=dev.js.map

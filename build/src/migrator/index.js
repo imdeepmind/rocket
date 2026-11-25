@@ -1,0 +1,393 @@
+import { execFileSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import { discoverMigrations, validateMigrations, } from '../migrator/custom/discovery.js';
+import { runCustomMigrations } from '../migrator/custom/runner.js';
+import { resolveDrizzleKitCli, resolveDrizzleOrmDir, } from '../migrator/drizzle-paths.js';
+import { resolveModelField } from '../lib/config/resolve.js';
+function injectTimestamps(model, engine) {
+    if (!model.timestamps)
+        return;
+    const nowDefault = engine === 'sqlite'
+        ? { raw: "(datetime('now'))" }
+        : engine === 'mysql'
+            ? { raw: 'CURRENT_TIMESTAMP' }
+            : { raw: 'now()' };
+    if (!('created_at' in model.fields)) {
+        model.fields.created_at = resolveModelField({
+            type: 'datetime',
+            nullable: false,
+            default: nowDefault,
+        });
+    }
+    if (!('updated_at' in model.fields)) {
+        model.fields.updated_at = resolveModelField({
+            type: 'datetime',
+            nullable: false,
+            default: nowDefault,
+        });
+    }
+}
+function generateRelations(modelName, relations) {
+    return Object.entries(relations)
+        .map(([relationName, rel]) => {
+        let fkDef = `    foreignKey({ name: '${relationName}', columns: [t.${rel.localField}], foreignColumns: [${rel.model}.${rel.foreignField}] })`;
+        if (rel.onDelete) {
+            fkDef += `.onDelete('${rel.onDelete}')`;
+        }
+        if (rel.onUpdate) {
+            fkDef += `.onUpdate('${rel.onUpdate}')`;
+        }
+        return fkDef;
+    })
+        .join(',\n');
+}
+function generateSchemaFile(modelName, config, engine) {
+    // inject timestamps into the model config in-memory
+    injectTimestamps(config, engine);
+    const columns = Object.entries(config.fields)
+        .map(([fName, f]) => {
+        let col = '';
+        if (engine === 'sqlite') {
+            switch (f.type) {
+                case 'integer':
+                case 'boolean':
+                    col = `integer('${fName}')`;
+                    break;
+                case 'string':
+                case 'text':
+                    col = `text('${fName}')`;
+                    break;
+                case 'datetime':
+                    col = `integer('${fName}', { mode: 'timestamp' })`;
+                    break;
+                case 'decimal':
+                    col = `real('${fName}')`;
+                    break;
+                case 'date':
+                    col = `text('${fName}')`;
+                    break;
+                case 'json':
+                    col = `text('${fName}', { mode: 'json' })`;
+                    break;
+                case 'enum':
+                    col = `text('${fName}', { enum: [${f.values.map(v => JSON.stringify(v)).join(', ')}] })`;
+                    break;
+                case 'uuid':
+                case 'ulid':
+                    col = `text('${fName}')`;
+                    break;
+                default:
+                    col = `text('${fName}')`;
+                    break;
+            }
+            if (f.primaryKey) {
+                if (f.autoIncrement) {
+                    col += '.primaryKey({ autoIncrement: true })';
+                }
+                else {
+                    col += '.primaryKey()';
+                }
+            }
+            if (f.unique && !f.primaryKey)
+                col += '.unique()';
+            if (f.nullable === false)
+                col += '.notNull()';
+            if (f.default !== undefined) {
+                const def = f.default;
+                if (def && typeof def === 'object' && 'raw' in def) {
+                    col += `.default(sql\`${def.raw}\`)`;
+                }
+                else {
+                    col += `.default(${JSON.stringify(f.default)})`;
+                }
+            }
+        }
+        else if (engine === 'mysql') {
+            switch (f.type) {
+                case 'integer':
+                    col = `int('${fName}')`;
+                    break;
+                case 'string':
+                    col = `varchar('${fName}', { length: 255 })`;
+                    break;
+                case 'text':
+                    col = `text('${fName}')`;
+                    break;
+                case 'boolean':
+                    col = `boolean('${fName}')`;
+                    break;
+                case 'datetime':
+                    col = `datetime('${fName}', { mode: 'string' })`;
+                    break;
+                case 'decimal':
+                    col = `double('${fName}')`;
+                    break;
+                case 'date':
+                    col = `date('${fName}')`;
+                    break;
+                case 'json':
+                    col = `json('${fName}')`;
+                    break;
+                case 'enum':
+                    col = `mysqlEnum('${fName}', [${f.values.map(v => JSON.stringify(v)).join(', ')}])`;
+                    break;
+                case 'uuid':
+                    col = `varchar('${fName}', { length: 36 })`;
+                    break;
+                case 'ulid':
+                    col = `varchar('${fName}', { length: 26 })`;
+                    break;
+                default:
+                    col = `text('${fName}')`;
+                    break;
+            }
+            if (f.primaryKey) {
+                if (f.autoIncrement) {
+                    col += '.primaryKey().autoincrement()';
+                }
+                else {
+                    col += '.primaryKey()';
+                }
+            }
+            if (f.unique && !f.primaryKey)
+                col += '.unique()';
+            if (f.nullable === false)
+                col += '.notNull()';
+            if (f.default !== undefined) {
+                const def = f.default;
+                if (def && typeof def === 'object' && 'raw' in def) {
+                    col += `.default(sql\`${def.raw}\`)`;
+                }
+                else {
+                    col += `.default(${JSON.stringify(f.default)})`;
+                }
+            }
+        }
+        else {
+            switch (f.type) {
+                case 'integer':
+                    col = f.primaryKey ? `serial('${fName}')` : `integer('${fName}')`;
+                    break;
+                case 'string':
+                case 'text':
+                    col = `text('${fName}')`;
+                    break;
+                case 'boolean':
+                    col = `boolean('${fName}')`;
+                    break;
+                case 'datetime':
+                    col = `timestamp('${fName}')`;
+                    break;
+                case 'decimal':
+                    col = `doublePrecision('${fName}')`;
+                    break;
+                case 'date':
+                    col = `date('${fName}')`;
+                    break;
+                case 'json':
+                    col = `jsonb('${fName}')`;
+                    break;
+                case 'enum':
+                    col = `${modelName}_${fName}_enum('${fName}')`;
+                    break;
+                case 'uuid':
+                    col = `uuid('${fName}')`;
+                    break;
+                case 'ulid':
+                    col = `text('${fName}')`;
+                    break;
+                default:
+                    col = `text('${fName}')`;
+                    break;
+            }
+            if (f.primaryKey) {
+                if (f.autoIncrement) {
+                    col += '.primaryKey()';
+                    // serial already implies auto-increment in PG
+                }
+                else {
+                    col += '.primaryKey()';
+                }
+            }
+            if (f.unique && !f.primaryKey)
+                col += '.unique()';
+            if (f.nullable === false)
+                col += '.notNull()';
+            if (f.default !== undefined) {
+                const def = f.default;
+                if (def && typeof def === 'object' && 'raw' in def) {
+                    col += `.default(sql\`${def.raw}\`)`;
+                }
+                else {
+                    col += `.default(${JSON.stringify(f.default)})`;
+                }
+            }
+        }
+        return `    ${fName}: ${col}`;
+    })
+        .join(',\n');
+    const indexes = Object.entries(config.indexes)
+        .map(([idxName, idx]) => {
+        const cols = idx.fields.map(c => `t.${c}`).join(', ');
+        return idx.unique
+            ? `    uniqueIndex('${idxName}').on(${cols})`
+            : `    index('${idxName}').on(${cols})`;
+    })
+        .join(',\n');
+    const relations = Object.keys(config.relations).length > 0
+        ? generateRelations(modelName, config.relations)
+        : '';
+    const extras = [indexes, relations].filter(Boolean).join(',\n');
+    const enumFields = Object.entries(config.fields).filter(([, f]) => f.type === 'enum' && f.values && f.values.length > 0);
+    const pgEnumDeclarations = engine === 'postgres' && enumFields.length > 0
+        ? enumFields
+            .map(([fName, f]) => `export const ${modelName}_${fName}_enum = pgEnum('${modelName}_${fName}_enum', [${f.values.map(v => JSON.stringify(v)).join(', ')}]);`)
+            .join('\n') + '\n'
+        : '';
+    if (engine === 'sqlite') {
+        return `
+import { sqliteTable, integer, text, real, index, uniqueIndex, foreignKey } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+
+export const ${modelName} = sqliteTable('${modelName}', {
+${columns}
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
+`.trim();
+    }
+    else if (engine === 'mysql') {
+        return `
+import { mysqlTable, int, varchar, text, boolean, double, date, datetime, timestamp, json, mysqlEnum, index, uniqueIndex, foreignKey } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
+
+export const ${modelName} = mysqlTable('${modelName}', {
+${columns}
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
+`.trim();
+    }
+    else {
+        return `
+import { pgTable, serial, integer, text, boolean, doublePrecision, index, uniqueIndex, timestamp, date, foreignKey, jsonb, pgEnum, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+${pgEnumDeclarations}export const ${modelName} = pgTable('${modelName}', {
+${columns}
+}${extras ? `, (t) => [\n${extras}\n]` : ''});
+`.trim();
+    }
+}
+/**
+ * Anchor relative SQLite paths to the directory the ROSS process was started
+ * from. The runtime opens SQLite with better-sqlite3, which resolves relative
+ * paths against `process.cwd()`, while drizzle-kit runs in a separate child
+ * process. Passing an absolute path keeps the two from depending on that
+ * child's working directory.
+ */
+function resolveDrizzleDatabaseUrl(engine, dbUrl) {
+    if (engine !== 'sqlite') {
+        return dbUrl;
+    }
+    return path.resolve(process.cwd(), dbUrl);
+}
+async function generateMigrationSQL(configs, engine, dbUrl) {
+    let tmpDir;
+    try {
+        const testDataPath = path.join(process.cwd(), '.migrations');
+        if (!fs.existsSync(testDataPath)) {
+            fs.mkdirSync(testDataPath, { recursive: true });
+        }
+        tmpDir = fs.mkdtempSync(path.join(testDataPath, 'drizzle-'));
+        const schemaPath = path.join(tmpDir, 'schema.ts');
+        const migrationsPath = path.join(tmpDir, 'migrations');
+        const configPath = path.join(tmpDir, 'drizzle.config.ts');
+        const schemas = [];
+        for (const { name, model } of configs) {
+            schemas.push(generateSchemaFile(name, model, engine));
+        }
+        // write schema.ts
+        fs.writeFileSync(schemaPath, schemas.join('\n'));
+        const dialect = engine === 'postgres'
+            ? 'postgresql'
+            : engine === 'mysql'
+                ? 'mysql'
+                : 'sqlite';
+        // Expose drizzle-orm to the generated schema. The schema file lives in a
+        // temp directory outside any project, so it cannot resolve dependencies
+        // installed next to ross; a local node_modules entry makes it resolvable
+        // and pins the exact drizzle-orm version ross ships with.
+        const drizzleOrmDir = resolveDrizzleOrmDir();
+        const drizzleNodeModulesDir = path.dirname(drizzleOrmDir);
+        const tmpNodeModulesDir = path.join(tmpDir, 'node_modules');
+        fs.mkdirSync(tmpNodeModulesDir, { recursive: true });
+        try {
+            fs.symlinkSync(drizzleOrmDir, path.join(tmpNodeModulesDir, 'drizzle-orm'), process.platform === 'win32' ? 'junction' : 'dir');
+        }
+        catch {
+            // Some filesystems reject symlinks; NODE_PATH below still covers it.
+        }
+        // Keep the config free of imports: it is loaded from the temp directory,
+        // where packages installed next to ross are not resolvable.
+        fs.writeFileSync(configPath, `export default {
+  dialect: ${JSON.stringify(dialect)},
+  schema: ${JSON.stringify(schemaPath)},
+  out: ${JSON.stringify(migrationsPath)},
+  dbCredentials: {url: process.env.DRIZZLE_DATABASE_URL},
+  tablesFilter: ${JSON.stringify(configs.map(c => c.name))},
+};
+`);
+        // Run the drizzle-kit CLI that ships with this ross install directly with
+        // the current Node binary, instead of relying on a project script, on npm
+        // being available, or on shell quoting.
+        execFileSync(process.execPath, [resolveDrizzleKitCli(), 'push', `--config=${configPath}`, '--verbose'], {
+            stdio: 'inherit',
+            env: {
+                ...process.env,
+                DRIZZLE_DATABASE_URL: resolveDrizzleDatabaseUrl(engine, dbUrl),
+                NODE_PATH: [drizzleNodeModulesDir, process.env.NODE_PATH]
+                    .filter(Boolean)
+                    .join(path.delimiter),
+            },
+        });
+    }
+    catch (error) {
+        console.log('Migration failed to run: ', error);
+        throw error;
+    }
+    finally {
+        // cleanup
+        if (tmpDir && fs.existsSync(tmpDir)) {
+            try {
+                fs.rmSync(tmpDir, { recursive: true, force: true });
+            }
+            catch (cleanupError) {
+                console.error('Failed to cleanup temp directory:', cleanupError);
+            }
+        }
+    }
+}
+const migrateDatabase = async (config) => {
+    const engine = config.infrastructure.database.engine;
+    const models = Object.entries(config.data.models).map(([name, model]) => ({
+        name,
+        model,
+    }));
+    await generateMigrationSQL(models, engine, config.infrastructure.database.connection.url);
+    const migrationsConfig = config.infrastructure.database.migrations;
+    if (migrationsConfig?.directory) {
+        const dangerouslyAllowDDL = migrationsConfig.dangerouslyAllowDDL;
+        const discovered = discoverMigrations({
+            migrationsDir: migrationsConfig.directory,
+            engine,
+            dangerouslyAllowDDL,
+        });
+        validateMigrations(discovered, dangerouslyAllowDDL);
+        await runCustomMigrations({
+            migrations: discovered,
+            engine,
+            connectionUrl: config.infrastructure.database.connection.url,
+            dangerouslyAllowDDL,
+        });
+    }
+};
+export default migrateDatabase;
+//# sourceMappingURL=index.js.map

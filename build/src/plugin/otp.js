@@ -1,0 +1,94 @@
+import crypto from 'crypto';
+import fp from 'fastify-plugin';
+import { ulid } from 'ulid';
+import { isDistributedCacheConfigured } from '../lib/cache/index.js';
+import { compare, hash } from '../utils/hash.js';
+import { NODE_CACHE_OTP_WARNING, OTP_EMAIL_SUBJECT, OTP_LENGTH, OTP_TTL_SECONDS, } from '../constants.js';
+/**
+ * Get the cache key for an OTP
+ */
+function getOtpCacheKey(ulid, email) {
+    return `otp:${ulid}:${email}`;
+}
+/**
+ * Generate a cryptographically secure random OTP of specified length (default 6 digits)
+ */
+function generateOtp(length = OTP_LENGTH) {
+    let otp = '';
+    for (let i = 0; i < length; i++) {
+        otp += crypto.randomInt(0, 10).toString();
+    }
+    return otp;
+}
+export default fp(async (fastify) => {
+    const otpService = {
+        /**
+         * Generate OTP, hash it, store in cache, and send via email
+         */
+        async sendOTPForVerification(email) {
+            try {
+                const otp = generateOtp();
+                const hashedOtp = await hash(otp);
+                const otpUlid = ulid();
+                const otpData = {
+                    hashedOtp,
+                    email,
+                    createdAt: Date.now(),
+                    ulid: otpUlid,
+                };
+                if (!isDistributedCacheConfigured(fastify.appConfig)) {
+                    fastify.log.warn(NODE_CACHE_OTP_WARNING);
+                }
+                const cacheKey = getOtpCacheKey(otpUlid, email);
+                await fastify.cache.set(cacheKey, otpData, OTP_TTL_SECONDS);
+                // Send email with OTP
+                const htmlBody = `
+            <h2>Your OTP Code</h2>
+            <p>Your one-time password is: <strong>${otp}</strong></p>
+            <p>This code will expire in 10 minutes.</p>
+          `;
+                const body = `Your one-time password is: ${otp}\nThis code will expire in 10 minutes.`;
+                await fastify.communicate.sendEmail(email, OTP_EMAIL_SUBJECT, htmlBody, body);
+                fastify.log.info(`OTP sent to email: ${email}`);
+                return otpUlid;
+            }
+            catch (err) {
+                fastify.log.error(`Failed to send OTP for email ${email}: ${err}`);
+                throw err;
+            }
+        },
+        /**
+         * Verify OTP and remove from cache on success
+         */
+        async verify(email, otp, ulid) {
+            try {
+                const cacheKey = getOtpCacheKey(ulid, email);
+                const otpData = await fastify.cache.get(cacheKey);
+                if (!otpData) {
+                    fastify.log.warn(`OTP not found or expired for email: ${email}`);
+                    return false;
+                }
+                // Compare provided OTP with stored hash
+                const isValid = await compare(otp, otpData.hashedOtp);
+                if (isValid) {
+                    // Delete OTP from cache after successful verification
+                    await fastify.cache.delete(cacheKey);
+                    fastify.log.info(`OTP verified successfully for email: ${email}`);
+                    return true;
+                }
+                else {
+                    fastify.log.warn(`Invalid OTP provided for email: ${email}`);
+                    return false;
+                }
+            }
+            catch (err) {
+                fastify.log.error(`Error verifying OTP for email ${email}: ${err}`);
+                throw err;
+            }
+        },
+    };
+    fastify.decorate('otp', otpService);
+}, {
+    name: 'otp-plugin',
+});
+//# sourceMappingURL=otp.js.map

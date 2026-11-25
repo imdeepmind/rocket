@@ -1,0 +1,105 @@
+{
+  "name": "@imdeepmind/ross",
+  "version": "1.0.0",
+  "description": "The open-source, configuration-driven backend API framework",
+  "main": "./build/src/index.js",
+  "types": "./build/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/src/index.d.ts",
+      "import": "./build/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "build/src"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "bin": {
+    "ross": "./build/src/main.js"
+  },
+  "scripts": {
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint:check": "gts lint",
+    "lint:write": "gts fix",
+    "clean": "gts clean",
+    "compile": "tsc && tsc-alias",
+    "dev": "tsx watch ./src/main.ts",
+    "pretest": "npm run compile",
+    "posttest": "npm run lint:check",
+    "commitlint": "commitlint --edit",
+    "generate:sql": "drizzle-kit push",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui-port 0",
+    "test:e2e:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imdeepmind/rocket.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/imdeepmind/rocket/issues"
+  },
+  "homepage": "https://github.com/imdeepmind/rocket#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@playwright/test": "^1.65.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/memjs": "^1.3.3",
+    "@types/node": "^22.7.5",
+    "@types/node-cache": "^4.1.3",
+    "@types/pg": "^8.20.0",
+    "@types/picomatch": "^4.0.3",
+    "@vitest/coverage-v8": "^4.1.2",
+    "gts": "^7.0.0",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.1169.0",
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/cors": "^11.4.1",
+    "@fastify/formbody": "^9.0.2",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/redis": "^7.2.0",
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^5.2.5",
+    "@node-saml/node-saml": "^5.2.0",
+    "@sendgrid/mail": "^8.1.6",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^12.8.0",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "esbuild": "^0.27.2",
+    "fastify": "^5.8.4",
+    "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
+    "memjs": "^1.3.2",
+    "mysql2": "^3.24.6",
+    "node-cache": "^5.1.2",
+    "openid-client": "^6.9.0",
+    "pg": "^8.20.0",
+    "picomatch": "^4.0.7",
+    "pino-pretty": "^10.0.0",
+    "ulid": "^2.3.0"
+  }
+}
