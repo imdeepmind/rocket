@@ -9,50 +9,38 @@ slug: /
   <img src="img/logo.png" alt="ROSS API Framework Logo" width="200" />
 </p>
 
-ROSS is a configuration-driven API framework designed to accelerate backend development by automating standard engineering tasks. By defining models in a structured JSON format, ROSS automatically handles database schema generation, RESTful routing, request validation, and interactive documentation.
+ROSS is an open-source, configuration-driven REST API framework based on Fastify. Instead of writing repetitive boilerplate for models, routes, validation, and docs, you declare your application in a single structured configuration and ROSS handles database schema management, CRUD/search/aggregate endpoints, request validation, authentication, RBAC, caching, outbound webhooks, and interactive OpenAPI/Swagger documentation automatically.
 
-## Features
+## Two Ways to Use ROSS
 
-- **Automated API Generation**: Instant creation of CRUD, Search, and Aggregate endpoints from JSON configurations.
-- **Database Schema Management**: Automatic handling of table creation, multi-column indexes, and foreign key constraints.
-- **Multi-Engine Database Support**: Native support for both PostgreSQL and SQLite.
-- **Interactive Documentation**: Integrated Swagger/OpenAPI UI available at the specified documented path.
-- **Robust Validation**: Driven by AJV (JSON Schema) for strict and customizable request validation.
-- **Advanced Querying**: Native support for filtering, sorting, and complex search operations.
+You can run ROSS as a standalone CLI over a JSON file or use it programmatically in your Node.js/TypeScript code.
 
-## Quick Start
+### CLI (`ross`)
 
-### 1. Installation
+Point the CLI at a `ross.json` configuration file and let ROSS manage the full server lifecycle—no application code required.
 
-Clone the repository and install dependencies:
+- **Zero boilerplate**: Define models, auth, caching, and custom SQL/function endpoints in JSON and boot immediately with `ross dev` or `ross start`.
+- **Built-in tooling**: Validate configs (`ross config validate`), inspect resolved defaults with secrets redacted (`ross config show`), and run schema/custom migrations (`ross migrate`).
+- **Best for**: Rapid prototyping, standard CRUD/data APIs, and teams that want a declarative backend without maintaining server glue code.
 
-```bash
-git clone https://github.com/imdeepmind/rocket.git
-cd rocket
-npm install
-```
+See the [Getting Started](./get-started.md) guide and [CLI Reference](./cli.md).
 
-### 2. Initialize the Server
+### Programmatic (`@imdeepmind/ross`)
 
-Start the server using an existing configuration file:
+Import `createServer`, `defineConfig`, and `migrateDatabase` directly into your Node.js or TypeScript codebase while keeping full control of the Fastify instance.
 
-```bash
-ross dev -c example_config.json
-```
+- **Type-safe configuration**: Author configs in TypeScript using `AppConfigInput` and split large setups across multiple modules.
+- **Full Fastify control**: Attach custom hooks, plugins, or routes, and decide when to call `app.listen()` and `app.close()`.
+- **Test-friendly**: Exercise routes in-process with `app.inject()` without binding a network port.
+- **Best for**: Existing Fastify services, custom middleware/business logic, and TypeScript-first projects.
 
-### 3. API Exploration
+See [Programmatic Usage](./programmatic.md).
 
-Once the server is initialized, refer to the Swagger UI for interactive API documentation:
-[http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+## Barebone Example
 
+The smallest configuration that boots a working API needs only `application.name` and `data.models`:
 
-
-## 01 Barebone Configuration
-
-The smallest config that boots a working API needs only an application name
-and one model:
-
-```json
+```json title="ross.json"
 {
   "application": { "name": "Barebone API" },
   "data": {
@@ -69,45 +57,14 @@ and one model:
 }
 ```
 
-```bash
-ross dev -c examples/01-barebone/barebone_config.json
-```
-
-The single model exposes `POST /api/v1/notes/`, `GET /api/v1/notes/`,
-`GET /api/v1/notes/id/:id`, `GET /api/v1/notes/search/title`,
-`PATCH`/`PUT /api/v1/notes/title/:title`, and
-`PATCH`/`DELETE /api/v1/notes/status/:status` on a dev SQLite database,
-with Swagger at `/docs`.
-
-## Configuration defaults
-
-ROSS resolves your configuration before validating it. Only
-`application.name` and `data.models` are required — omitted sections receive
-defaults:
-
-- docs are enabled in `dev` and disabled in `prod`
-- the dev database defaults to SQLite (`./database.db`); `prod` requires
-  `infrastructure.database`
-- the cache defaults to in-memory; configure `infrastructure.cache` with Redis or Memcached when you need a shared cache
-- authentication defaults to disabled
-- rate limiting defaults to disabled (`100 requests / 1m`)
-- CORS defaults to disabled
-- the API variant defaults to `v1`
-
-Inspect the fully resolved configuration (with secrets redacted) before
-starting the server:
+Start the development server:
 
 ```bash
-ross config show -c config.json
+ross dev -c ross.json
 ```
 
-## Technology Stack
+With that single model, ROSS sets up a local SQLite database (`./database.db`), mounts REST endpoints under `/api/v1/notes` (`POST`, `GET`, search, `PATCH`, `PUT`, `DELETE`), and serves interactive Swagger UI at `/docs`.
 
-- **Runtime**: Node.js
-- **Framework**: Fastify
-- **Architecture**: TypeScript
-- **Database**: PostgreSQL and SQLite
-- **Cache**: In-memory, Redis, and Memcached
-- **Validation**: AJV
-- **Documentation**: Swagger / OpenAPI
-- **Testing**: Vitest
+## License
+
+ROSS is open-source software licensed under the **MIT License** (`Copyright (c) 2026 Abhishek Chatterjee`). See the [LICENSE](https://github.com/imdeepmind/rocket/blob/develop/ross/LICENSE) file in the [imdeepmind/rocket](https://github.com/imdeepmind/rocket) repository for full terms.
