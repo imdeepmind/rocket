@@ -24,11 +24,17 @@ Rocket is a configuration-driven API framework designed to accelerate backend de
 
 ### 1. Installation
 
-Clone the repository and install dependencies:
+Install ROSS in your project from GitHub:
+
+```bash
+npm install github:imdeepmind/rocket#ross-release
+```
+
+Or clone the repository to run from source:
 
 ```bash
 git clone https://github.com/imdeepmind/rocket.git
-cd rocket
+cd rocket/ross
 npm install
 ```
 

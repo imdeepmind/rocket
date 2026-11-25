@@ -3,8 +3,14 @@ name: ROSS Docs
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'ross/docs/**'
+      - '.github/workflows/ross-docs.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'ross/docs/**'
+      - '.github/workflows/ross-docs.yml'
 
 jobs:
   lint:

@@ -1,79 +1,55 @@
 # AGENTS.md — Rocket Monorepo
 
-Repository containing two independent software projects:
-- **ROSS (`ross/`)**: Config-driven REST API framework (open-source, MIT). TypeScript, Fastify 5, PostgreSQL/SQLite, Vitest 4.
-- **Rocket (`rocket/`)**: Source-available backend deployment, hosting, and management platform (PolyForm Shield 1.0.0).
+Monorepo containing ROSS and the Rocket platform.
 
-## Commands
+## Repository Structure
 
-Commands can be run from the repository root via `./dev.sh` (which delegates to `ross/dev.sh`) or directly within `ross/`:
+- **`ross/`**: ROSS — open-source, configuration-driven REST API framework (MIT). TypeScript, Fastify 5, Drizzle, Vitest.
+- **`ross/docs/`**: ROSS documentation site built with Docusaurus (separate `package.json`, markdown lint, and CI workflow).
+- **`rocket/platform/`**: Rocket Platform — source-available backend deployment, hosting, and management web app (PolyForm Shield 1.0.0). Next.js, TypeScript, Tailwind CSS, Storybook.
+- **`.github/workflows/`**: CI workflows scoped per package (`ross.yml`, `ross-docs.yml`, `rocket-platform.yml`) plus repo-wide `commit-lint.yml`.
 
-| Command | Action |
-| --- | --- |
-| `./dev.sh dev` | Run dev server with `--config example_config.json` |
-| `./dev.sh coverage` | Full test suite with coverage |
-| `./dev.sh test` | Run tests |
-| `./dev.sh check` | Compile + coverage + lint:write |
-| `./dev.sh db` | Start redis and db Docker containers |
-| `./dev.sh csserve` | Serve coverage report via HTTP |
+## Commands (`./dev.sh`)
 
-Commits automatically run pre-commit hooks, so there is no need to manually run tests or `./dev.sh check` before committing.
+Run project commands from the repository root via `./dev.sh <project> <operation>` (each project also has its own `dev.sh`):
 
-## Testing
+```bash
+./dev.sh ross <operation>             # dev, test, coverage, check, e2e, db, csserve, release
+./dev.sh ross-docs <operation>        # dev, build, serve, typecheck, lint, check, clear
+./dev.sh rocket-platform <operation>  # dev, build, start, lint, lint:fix, check, storybook, build-storybook
+```
 
-- DB is always mocked: `tests/setup.ts` globally mocks `pg` and `better-sqlite3`.
-- Route tests use `createTestApp()` from `tests/helpers/test-app.ts` with real Fastify + `fastify.inject()`.
-- Plugin tests create throw-away Fastify instances per test.
-- Mock state is on shared `pgQueryMock`, `sqliteAllMock` etc. from `tests/helpers/db-mocks.ts`.
+Run `./dev.sh <project>` with no operation to see its full usage.
 
-## Path aliases
+## Commit Messages
 
-- `@/` → `src/`
-- `@tests/` → `tests/`
-- Compiled JS needs `tsc-alias` to resolve these (part of `compile`).
-
-## Import order (enforced by Prettier)
-
-Builtins → Third-party → `@/migrator` → `@/plugin` → `@/server` → `@/lib` → `@/routes` → `@/interfaces` → `@/types` → `@/validators` → `@/utils` → `@/constants` → `@tests/` → relative `./`
-
-## Commit messages
+Enforced in CI by `commitlint` (`commitlint.config.cjs`). Local Git hooks (Husky) are not used.
 
 ```
 type(scope): #<NUMBER>: message
 ```
 
-Types: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`. Max header: 120 chars.
+- **Types**: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`
+- **Scopes**: `ross`, `ross-docs`, `rocket-platform`, `rocket`, `repo` (`repo` for global/monorepo changes or changes spanning multiple packages; others for project-scoped changes)
+- **Max header length**: 120 characters
 
-Example: `feat(auth): #123: add token refresh`
+Example: `feat(ross): #123: add token refresh`
 
-## Branch naming
+## Branch Naming & Flow
 
 ```
 <type>/#<issue-number>-<short-description>
 ```
 
-- `<type>` is one of the allowed commit types: `feat`, `chore`, `ci`, `bug`, `refactor`, `test`.
-- `<issue-number>` is the GitHub issue being worked on.
-- `<short-description>` is lowercase, hyphen-separated.
+- `<type>`: one of `feat`, `chore`, `ci`, `bug`, `refactor`, `test`
+- `<issue-number>`: GitHub issue number
+- `<short-description>`: lowercase, hyphen-separated
 
-Examples: `feat/#86-migrate-commit-msg`, `bug/#92-fix-auth-refresh`, `refactor/#74-split-where-builder`
+Examples: `feat/#86-migrate-commit-msg`, `chore/#221-monorepo-ci-and-tooling`
 
-Flow:
-
-1. Create a branch from the default branch: `git switch -c feat/#86-migrate-commit-msg`.
-2. Wait for the developer to review and test your changes.
-3. Commit using the commit convention: `git commit -m "chore(ci): #86: migrate commit convention from JIRA to GitHub Issues"`.
-4. Push the branch (quote `#` in shell commands): `git push -u origin 'feat/#86-migrate-commit-msg'`.
-5. Open a PR that references the issue.
-
-## Architecture essentials
-
-- **Entrypoint:** `src/main.ts` (commander CLI) → `startServer()` in `src/server.ts`.
-- **Fastify custom decorators** (augmented in `src/types/fastify.d.ts`): `app.db`, `app.buildResponse()`, `app.appConfig`, `app.cache`, `app.callWebhook`, `app.enforceSSP`.
-- **DB abstraction:** Uniform `DatabaseQuery` interface (`{changes, rows}`). PG uses `pg.Pool`, SQLite uses `better-sqlite3` (sync wrapped in Promise). DDL queries are blocked.
-- **Config env vars:** Use `env:VARNAME` in JSON config values — resolved by `src/lib/config/env.ts`.
-- **Config validation:** AJV schema in `src/validators/config/schema.ts`. Reference config: `example_config.json`.
-- **Plugin registration order** in `startServer()`: db → cache → communicate → rate-limit → response → ssp → webhook → auth. Fastify-plugin (`fp`) wrapper used throughout.
-- **Shared library code lives in `src/lib/`**, grouped by framework layer: `config/` (env resolution, API identifiers, `config.apis` accessors), `schema/` (JSON Schema builders for Swagger), `sql/` (WHERE-clause filters, placeholder parsing), `server/` (prevalidation, welcome screen). Tests mirror this under `tests/lib/`.
-- **ESM only** (`"type": "module"`). No require().
-- **`docs/`** is a separate Docusaurus site (own package.json) — not part of the main project.
+1. Create a branch from `develop`: `git switch -c feat/#123-short-description`
+2. Make changes and verify with the relevant `./dev.sh <project> check`
+3. Wait for the developer to review and test the changes — **commit only when explicitly asked to commit**
+4. Commit using the commit convention: `git commit -m "feat(ross): #123: short description"`
+5. Push the branch (quote `#` in shell): `git push -u origin 'feat/#123-short-description'`
+6. Open a PR referencing the issue.

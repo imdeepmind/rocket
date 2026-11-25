@@ -3,8 +3,14 @@ name: Rocket Platform
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'rocket/platform/**'
+      - '.github/workflows/rocket-platform.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'rocket/platform/**'
+      - '.github/workflows/rocket-platform.yml'
 
 jobs:
   lint:
