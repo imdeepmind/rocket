@@ -35,7 +35,14 @@ const {app, routes} = await createServer(config);
 await app.listen({port: 3000, host: '0.0.0.0'});
 ```
 
-`createServer()` runs the full configuration pipeline — environment variable resolution, defaults, normalization, and schema validation — and returns:
+`createServer()` runs the full configuration pipeline:
+
+- Environment variable resolution
+- Defaults
+- Normalization
+- Schema validation
+
+It returns:
 
 | Property | Description |
 | --- | --- |
@@ -54,21 +61,10 @@ import type {AppConfigInput} from '@imdeepmind/ross';
 export const config: AppConfigInput = {
   application: {
     name: 'Task API',
-    logLevel: 'info',
-  },
-  infrastructure: {
-    database: {
-      engine: 'sqlite',
-      connection: {url: './database.db'},
-    },
-    cache: {
-      engine: 'memory',
-    },
   },
   data: {
     models: {
       tasks: {
-        timestamps: true,
         fields: {
           id: {type: 'integer', primaryKey: true, autoIncrement: true},
           title: {type: 'string', nullable: false},
@@ -180,7 +176,7 @@ const {app} = await createServer(config);
 
 const response = await app.inject({
   method: 'GET',
-  url: '/api/tasks',
+  url: '/api/v1/tasks',
 });
 
 console.log(response.statusCode, response.json());
@@ -214,7 +210,12 @@ request.authenticate();
 | `defineConfig(config, options?)` | function | Runs the configuration pipeline and returns a `ResolvedAppConfig`. |
 | `migrateDatabase(config)` | function | Applies database schema and custom migrations from a resolved configuration. |
 
-Useful exported types include `AppConfigInput`, `ResolvedAppConfig`, `CreateServerOptions`, `StartServerResult`, `RouteInfo`, `FastifyInstance`, and `FastifyRequest`.
+Useful exported types include:
+
+- **Server & Config**: `AppConfigInput`, `ResolvedAppConfig`, `CreateServerOptions`, `DefineConfigOptions`, `StartServerResult`, `RouteInfo`, `Mode`, `HTTPMethod`, `StructuredResponse`
+- **Config Sections**: `ApisConfig`, `AuthProvider`, `CacheDbConfig`, `CustomEndpointConfig`, `DatabaseConfig`, `EmailConfig`, `ModelConfigInput`, `ModelFieldConfig`, `WebhookConfig`
+- **Integrations & Handlers**: `ICache`, `DatabaseQuery`, `TransactionClient`, `EmailSender`, `CustomFunctionHandler`, `IOtpService`
+- **Fastify**: `FastifyInstance`, `FastifyRequest`
 
 ## Comparison with the CLI
 
