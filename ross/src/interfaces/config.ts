@@ -362,10 +362,14 @@ export type AuthProviderInput =
 /** Convenience aliases kept for readability at call sites. */
 export type AuthProvider = AuthProviderInput;
 
+export type SessionStorageBackend = 'db' | 'cache';
+
 export interface AuthenticationConfigInput {
   enabled?: boolean;
   jwtSecret?: string;
-  tokenExpiration?: string;
+  accessTokenExpiration?: string;
+  refreshTokenExpiration?: string;
+  sessionStorage?: SessionStorageBackend;
   userModel?: AuthUserModelConfig;
   providers?: AuthProviderInput[];
 }
@@ -674,7 +678,9 @@ export type ResolvedAuthenticationConfig =
   | {
       enabled: true;
       jwtSecret?: string;
-      tokenExpiration: string;
+      accessTokenExpiration: string;
+      refreshTokenExpiration: string;
+      sessionStorage: SessionStorageBackend;
       userModel?: AuthUserModelConfig;
       providers: ResolvedAuthProvider[];
     };

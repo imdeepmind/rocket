@@ -185,7 +185,9 @@ describe('buildPreValidation', () => {
       ...baseAppConfig,
       authentication: {
         enabled: true,
-        tokenExpiration: '1d',
+        accessTokenExpiration: '15m',
+        refreshTokenExpiration: '7d',
+        sessionStorage: 'db',
         providers: [
           {
             type: 'api-key',

@@ -849,7 +849,7 @@ test('explicitly disabled authentication never materialises a provider', () => {
   expect('provider' in config.authentication).toBe(false);
 });
 
-test('up-auth is normalized with tokenExpiration and mfaRequired', () => {
+test('up-auth is normalized with accessTokenExpiration, refreshTokenExpiration, sessionStorage, and mfaRequired', () => {
   const config = resolveConfig(
     devInput({
       authentication: upAuth as unknown as AppConfigInput['authentication'],
@@ -862,7 +862,9 @@ test('up-auth is normalized with tokenExpiration and mfaRequired', () => {
   if (!auth.enabled) throw new Error('authentication should be enabled');
 
   expect(auth.jwtSecret).toBe('a-very-long-secret-used-for-testing-purposes');
-  expect(auth.tokenExpiration).toBe('1d');
+  expect(auth.accessTokenExpiration).toBe('15m');
+  expect(auth.refreshTokenExpiration).toBe('7d');
+  expect(auth.sessionStorage).toBe('db');
   expect(auth.userModel).toEqual(upAuth.userModel);
 
   const provider = auth.providers[0];
@@ -874,13 +876,15 @@ test('up-auth is normalized with tokenExpiration and mfaRequired', () => {
   expect(getProviderCapabilities(provider)).toContain('register');
 });
 
-test('up-auth explicit tokenExpiration and mfaRequired are preserved', () => {
+test('up-auth explicit accessTokenExpiration, refreshTokenExpiration, sessionStorage, and mfaRequired are preserved', () => {
   const config = resolveConfig(
     devInput({
       authentication: {
         enabled: true,
         jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
-        tokenExpiration: '8h',
+        accessTokenExpiration: '8h',
+        refreshTokenExpiration: '30d',
+        sessionStorage: 'cache',
         userModel: {
           modelName: 'users',
           idField: 'id',
@@ -906,7 +910,9 @@ test('up-auth explicit tokenExpiration and mfaRequired are preserved', () => {
   const auth = config.authentication;
   if (!auth.enabled) throw new Error('authentication should be enabled');
 
-  expect(auth.tokenExpiration).toBe('8h');
+  expect(auth.accessTokenExpiration).toBe('8h');
+  expect(auth.refreshTokenExpiration).toBe('30d');
+  expect(auth.sessionStorage).toBe('cache');
 
   const provider = auth.providers[0];
   if (provider.type !== 'up-auth') throw new Error('expected up-auth');

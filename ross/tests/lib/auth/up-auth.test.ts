@@ -59,7 +59,9 @@ describe('getUpAuth', () => {
       getUpAuth({
         authentication: {
           enabled: true,
-          tokenExpiration: '1d',
+          accessTokenExpiration: '15m',
+          refreshTokenExpiration: '7d',
+          sessionStorage: 'db',
           providers: [
             {
               type: 'up-auth',

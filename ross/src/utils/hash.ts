@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import bcrypt from 'bcrypt';
 
 import {BCRYPT_SALT_ROUNDS} from '@/constants';
@@ -26,4 +28,11 @@ export async function compare(
   encrypted: string,
 ): Promise<boolean> {
   return bcrypt.compare(data, encrypted);
+}
+
+/**
+ * Computes a deterministic SHA-256 hex digest (used for high-entropy tokens).
+ */
+export function sha256(data: string): string {
+  return crypto.createHash('sha256').update(data).digest('hex');
 }

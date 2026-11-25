@@ -586,7 +586,9 @@
   "authentication": {
     "enabled": true,
     "jwtSecret": "your-super-secret-key-must-be-long-enough",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",

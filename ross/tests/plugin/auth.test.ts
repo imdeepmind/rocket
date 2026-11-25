@@ -28,7 +28,9 @@ const upAuthFixture = (): ResolvedAppConfig =>
     authentication: {
       enabled: true,
       jwtSecret: 'this-will-never-be-used',
-      tokenExpiration: '1d',
+      accessTokenExpiration: '15m',
+      refreshTokenExpiration: '7d',
+      sessionStorage: 'db',
       userModel: {
         modelName: 'users',
         idField: 'id',
@@ -94,7 +96,9 @@ describe('Auth Plugin — up-auth engine', () => {
       authentication: {
         enabled: true,
         jwtSecret: 'this-is-a-long-enough-secret-key-for-testing',
-        tokenExpiration: '1d',
+        accessTokenExpiration: '15m',
+        refreshTokenExpiration: '7d',
+        sessionStorage: 'db',
         userModel: {
           modelName: 'users',
           idField: 'id',
@@ -190,7 +194,9 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        tokenExpiration: '1d',
+        accessTokenExpiration: '15m',
+        refreshTokenExpiration: '7d',
+        sessionStorage: 'db',
         providers: [
           {
             type: 'api-key',
@@ -234,7 +240,9 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        tokenExpiration: '1d',
+        accessTokenExpiration: '15m',
+        refreshTokenExpiration: '7d',
+        sessionStorage: 'db',
         providers: [
           {
             type: 'api-key',
@@ -282,7 +290,9 @@ describe('Auth Plugin — api-key engine', () => {
       data: {models: {}},
       authentication: {
         enabled: true,
-        tokenExpiration: '1d',
+        accessTokenExpiration: '15m',
+        refreshTokenExpiration: '7d',
+        sessionStorage: 'db',
         providers: [
           {
             type: 'api-key',

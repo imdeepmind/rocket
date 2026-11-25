@@ -307,11 +307,11 @@ describe('POST /auth/login', () => {
       await app.close();
     });
 
-    test('should use custom tokenExpiration when configured', async () => {
+    test('should use custom accessTokenExpiration when configured', async () => {
       const authWithExpiration: AuthenticationConfig = {
         ...upAuthConfig,
         jwtSecret: 'this-will-never-be-used',
-        tokenExpiration: '2h',
+        accessTokenExpiration: '2h',
         userModel: {
           modelName: 'users',
           idField: 'id',
@@ -367,7 +367,7 @@ describe('POST /auth/login', () => {
       await app.close();
     });
 
-    test('should use default 1d expiration when tokenExpiration not set', async () => {
+    test('should use default 15m expiration when accessTokenExpiration not set', async () => {
       const app = await createAuthApp(upAuthConfig);
 
       pgQueryMock.mockResolvedValueOnce({
@@ -387,16 +387,17 @@ describe('POST /auth/login', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.data.accessToken).toBeDefined();
+      expect(body.data.refreshToken).toBeDefined();
 
       const secret = 'this-will-never-be-used';
       const decoded = jwt.verify(body.data.accessToken, secret) as Record<
         string,
         unknown
       >;
-      // 1 day = 86400 seconds, allow 1 second tolerance
+      // 15 minutes = 900 seconds
       const iat = decoded.iat as number;
       const exp = decoded.exp as number;
-      expect(exp - iat).toBe(86400);
+      expect(exp - iat).toBe(900);
 
       await app.close();
     });

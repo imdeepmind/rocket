@@ -12,7 +12,13 @@ const MODEL_OPERATION_TAGS: Record<string, string> = {
 };
 
 function getAuthOperationTag(operation: string): string {
-  if (operation === 'login') return 'Login';
+  if (
+    operation === 'login' ||
+    operation === 'refresh' ||
+    operation === 'logout'
+  ) {
+    return 'Login';
+  }
   if (operation === 'registration') return 'Register';
   if (operation === 'changePassword' || operation === 'forgotPassword') {
     return 'Password';

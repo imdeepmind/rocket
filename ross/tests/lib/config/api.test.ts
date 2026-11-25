@@ -556,7 +556,9 @@ test('getAuthModel tolerates a config without a userModel', () => {
     apis: {},
     authentication: {
       enabled: true,
-      tokenExpiration: '1d',
+      accessTokenExpiration: '15m',
+      refreshTokenExpiration: '7d',
+      sessionStorage: 'db',
       providers: [
         {
           type: 'sso',

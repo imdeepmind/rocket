@@ -1,5 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {revokeAllUserSessions} from '@/lib/auth/session';
 import {getActiveUserModel} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
 import {getResponseStructureSchema} from '@/lib/schema/response';
@@ -99,6 +100,8 @@ function registerDeleteMeEndpoint(
         await tx.query(deleteQuery, [userId]);
 
         await tx.commit();
+
+        await revokeAllUserSessions(app, config, userId);
 
         return reply.status(200).send(
           app.buildResponse(200, 'User profile deleted successfully', {

@@ -46,7 +46,7 @@ import {
   ResolvedAppConfig,
 } from '@/interfaces/config';
 
-import {NODE_CACHE_OTP_WARNING} from '@/constants';
+import {NODE_CACHE_OTP_WARNING, NODE_CACHE_SESSION_WARNING} from '@/constants';
 
 vi.mock('fastify', () => {
   let appConfig: ResolvedAppConfig | undefined;
@@ -941,6 +941,38 @@ describe('Server', () => {
       expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
     });
 
+    it('should warn when sessionStorage is cache without a distributed cache', async () => {
+      const configWithCacheSessions: AppConfig = {
+        ...mockConfig,
+        authentication: {
+          enabled: true,
+          jwtSecret: 'test-secret-at-least-32-chars-long!',
+          sessionStorage: 'cache',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
+          },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
+        },
+      };
+
+      await startServer(resolve(configWithCacheSessions, 'dev'));
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_SESSION_WARNING);
+    });
+
     it('should warn when isVerifiedField is configured without a cache', async () => {
       const configWithVerification: AppConfig = {
         ...mockConfig,
@@ -976,6 +1008,38 @@ describe('Server', () => {
       await runLastOnListenHook();
 
       expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_OTP_WARNING);
+    });
+
+    it('should warn when sessionStorage is cache without a distributed cache', async () => {
+      const configWithCacheSessions: AppConfig = {
+        ...mockConfig,
+        authentication: {
+          enabled: true,
+          jwtSecret: 'test-secret-at-least-32-chars-long!',
+          sessionStorage: 'cache',
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
+          },
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
+        },
+      };
+
+      await startServer(resolve(configWithCacheSessions, 'dev'));
+      await runLastOnListenHook();
+
+      expect(mockApp.log.warn).toHaveBeenCalledWith(NODE_CACHE_SESSION_WARNING);
     });
 
     it('should not warn when a cache is configured', async () => {

@@ -9,3 +9,5 @@ export const OTP_LENGTH = 6;
 export const OTP_EMAIL_SUBJECT = 'Your OTP Code';
 export const NODE_CACHE_OTP_WARNING =
   'No distributed cache configured; OTPs are stored in node-cache (in-memory). OTPs are not shared across processes and will be lost on restart.';
+export const NODE_CACHE_SESSION_WARNING =
+  'No distributed cache configured; refresh token sessions are stored in node-cache (in-memory). Sessions are not shared across processes and will be lost on restart.';

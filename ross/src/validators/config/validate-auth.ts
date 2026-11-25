@@ -22,9 +22,11 @@ const RESERVED_PROVIDER_NAMES = new Set([
   'edit-me',
   'forgot-password',
   'login',
+  'logout',
   'me',
   'metadata',
   'providers',
+  'refresh',
   'register',
   'registration',
   'resend-otp',
@@ -204,6 +206,12 @@ function validateAuthConstraints(config: AppConfig): string[] {
   if (!targetModel) {
     errors.push('/authentication/userModel/modelName: model does not exist');
     return errors;
+  }
+
+  if (config.data.models['_ross_sessions']) {
+    errors.push(
+      '/data/models/_ross_sessions: model name is reserved for internal session storage',
+    );
   }
 
   assertField(

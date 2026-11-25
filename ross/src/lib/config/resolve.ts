@@ -96,7 +96,11 @@ export const DEFAULT_DEV_DATABASE = {
 /** Resolved shape used whenever no Redis cache is configured. */
 export const DEFAULT_MEMORY_CACHE = {engine: 'memory'} as const;
 
-export const DEFAULT_TOKEN_EXPIRATION = '1d';
+export const DEFAULT_ACCESS_TOKEN_EXPIRATION = '15m';
+
+export const DEFAULT_REFRESH_TOKEN_EXPIRATION = '7d';
+
+export const DEFAULT_SESSION_STORAGE = 'db' as const;
 
 /** Boolean template merged into every resolved model field. */
 export const DEFAULT_MODEL_FIELD = {
@@ -406,7 +410,11 @@ export function resolveAuthentication(
   return {
     enabled: true,
     ...(input.jwtSecret ? {jwtSecret: input.jwtSecret} : {}),
-    tokenExpiration: input.tokenExpiration ?? DEFAULT_TOKEN_EXPIRATION,
+    accessTokenExpiration:
+      input.accessTokenExpiration ?? DEFAULT_ACCESS_TOKEN_EXPIRATION,
+    refreshTokenExpiration:
+      input.refreshTokenExpiration ?? DEFAULT_REFRESH_TOKEN_EXPIRATION,
+    sessionStorage: input.sessionStorage ?? DEFAULT_SESSION_STORAGE,
     ...(userModel ? {userModel: {...userModel}} : {}),
     providers: providers
       .filter(
