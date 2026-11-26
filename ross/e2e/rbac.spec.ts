@@ -19,6 +19,11 @@ const rbacE2EConfig: AppConfigInput = {
       },
     },
   },
+  integrations: {
+    email: {
+      provider: 'dummy',
+    },
+  },
   authentication: {
     enabled: true,
     jwtSecret: 'e2e-rbac-super-secret-jwt-key-for-testing-at-least-32-chars!',
@@ -32,8 +37,9 @@ const rbacE2EConfig: AppConfigInput = {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },
@@ -93,6 +99,10 @@ const rbacE2EConfig: AppConfigInput = {
           provider: {
             type: 'string',
             nullable: true,
+          },
+          is_active: {
+            type: 'boolean',
+            default: true,
           },
         },
       },
@@ -873,6 +883,11 @@ test.describe
         },
       },
     },
+    integrations: {
+      email: {
+        provider: 'dummy',
+      },
+    },
     authentication: {
       enabled: true,
       jwtSecret:
@@ -887,8 +902,9 @@ test.describe
           type: 'up-auth',
           config: {
             fields: {
-              usernameField: 'email',
+              emailField: 'email',
               passwordField: 'password',
+              isVerifiedField: 'is_active',
             },
           },
         },
@@ -920,6 +936,10 @@ test.describe
             provider: {
               type: 'string',
               nullable: true,
+            },
+            is_active: {
+              type: 'boolean',
+              default: true,
             },
           },
         },

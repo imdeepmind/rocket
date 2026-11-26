@@ -423,8 +423,9 @@ describe('Healthcheck Route (GET /api/health)', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },

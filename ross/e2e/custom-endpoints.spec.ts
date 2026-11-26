@@ -46,6 +46,11 @@ const customEndpointsE2EConfig: AppConfigInput = {
       engine: 'memory',
     },
   },
+  integrations: {
+    email: {
+      provider: 'dummy',
+    },
+  },
   authentication: {
     enabled: true,
     jwtSecret: 'e2e-custom-endpoints-super-secret-jwt-key-min-32-chars!',
@@ -59,8 +64,9 @@ const customEndpointsE2EConfig: AppConfigInput = {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },
@@ -99,6 +105,7 @@ const customEndpointsE2EConfig: AppConfigInput = {
           password: {type: 'string', nullable: false, secret: true},
           role: {type: 'string', nullable: false, default: 'viewer'},
           provider: {type: 'string', nullable: true},
+          is_active: {type: 'boolean', default: true},
         },
       },
       projects: {

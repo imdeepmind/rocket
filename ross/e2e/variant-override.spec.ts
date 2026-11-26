@@ -229,8 +229,17 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
                   type: 'string',
                   nullable: true,
                 },
+                is_active: {
+                  type: 'boolean',
+                  default: false,
+                },
               },
             },
+          },
+        },
+        integrations: {
+          email: {
+            provider: 'dummy',
           },
         },
         authentication: {
@@ -246,8 +255,9 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -265,6 +275,11 @@ test.describe('Overridden Variant: Custom Endpoints & Authentication', () => {
         },
       });
       expect(regRes.status()).toBe(201);
+
+      await server.app.db.query(
+        'UPDATE users SET is_active = 1 WHERE email = ?;',
+        ['variant-user@example.com'],
+      );
 
       // 2. Log in via POST /api/v2/auth/login
       const loginRes = await server.request.post('/api/v2/auth/login', {

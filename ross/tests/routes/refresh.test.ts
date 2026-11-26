@@ -44,7 +44,11 @@ const baseAuth: AuthenticationConfig = {
     {
       type: 'up-auth',
       config: {
-        fields: {usernameField: 'email', passwordField: 'password'},
+        fields: {
+          emailField: 'email',
+          passwordField: 'password',
+          isVerifiedField: 'is_active',
+        },
       },
     },
   ],

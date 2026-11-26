@@ -101,7 +101,11 @@ const upAuthProviders = [
     name: 'up-auth',
     capabilities: new Set(['password']),
     config: {
-      fields: {usernameField: 'email', passwordField: 'password'},
+      fields: {
+        emailField: 'email',
+        passwordField: 'password',
+        isVerifiedField: 'is_active',
+      },
       mfaRequired: false,
     },
   },

@@ -34,8 +34,9 @@ const upAuth = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
+          isVerifiedField: 'is_active',
         },
       },
     },
@@ -871,7 +872,7 @@ test('up-auth is normalized with accessTokenExpiration, refreshTokenExpiration, 
   expect(provider.type).toBe('up-auth');
   if (provider.type !== 'up-auth') throw new Error('expected up-auth');
   expect(provider.config.mfaRequired).toBe(false);
-  expect(provider.config.fields.usernameField).toBe('email');
+  expect(provider.config.fields.emailField).toBe('email');
   expect(getProviderCapabilities(provider)).toContain('password');
   expect(getProviderCapabilities(provider)).toContain('register');
 });
@@ -895,8 +896,9 @@ test('up-auth explicit accessTokenExpiration, refreshTokenExpiration, sessionSto
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'is_active',
               },
               mfaRequired: true,
             },

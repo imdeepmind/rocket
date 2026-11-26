@@ -52,8 +52,9 @@ const upAuth = {
       type: 'up-auth' as const,
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'secret_token',
+          isVerifiedField: 'is_active',
         },
       },
     },
@@ -179,10 +180,10 @@ describe('getGeneratedApiIdentifiers', () => {
 
     expect(ids.has('auth.v1.users.unknown.otpVerifyLogin')).toBe(true);
     expect(ids.has('auth.v1.users.unknown.resendOtpLogin')).toBe(true);
-    expect(ids.has('auth.v1.users.unknown.otpVerifyRegister')).toBe(false);
+    expect(ids.has('auth.v1.users.unknown.otpVerifyRegister')).toBe(true);
   });
 
-  test('gates verification auth routes on userModel.isVerifiedField', () => {
+  test('includes verification auth routes for up-auth', () => {
     const ids = getGeneratedApiIdentifiers(
       resolve({
         authentication: {

@@ -3902,6 +3902,9 @@ const upAuthOnlyModels = {
 const authBase = () => ({
   application: {name: 'Auth Test'},
   data: {models: authModels},
+  integrations: {
+    email: {provider: 'dummy'},
+  },
   authentication: {
     enabled: true as const,
     jwtSecret: 'this-is-a-long-enough-secret-key',
@@ -3917,7 +3920,11 @@ const authBase = () => ({
 const upAuthProvider = {
   type: 'up-auth',
   config: {
-    fields: {usernameField: 'email', passwordField: 'password'},
+    fields: {
+      emailField: 'email',
+      passwordField: 'password',
+      isVerifiedField: 'is_active',
+    },
   },
 };
 
@@ -4132,7 +4139,7 @@ describe('validateInvalidAuthConfig', () => {
         '/authentication/userModel/providerField: field does not exist in model',
     },
     {
-      name: 'usernameField does not exist in the model',
+      name: 'emailField does not exist in the model',
       patch: {
         authentication: {
           ...authBase().authentication,
@@ -4140,14 +4147,111 @@ describe('validateInvalidAuthConfig', () => {
             {
               type: 'up-auth',
               config: {
-                fields: {usernameField: 'nope', passwordField: 'password'},
+                fields: {
+                  emailField: 'nope',
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
               },
             },
           ],
         },
       },
       expected:
-        '/authentication/providers/up-auth/config/fields/usernameField: field does not exist in model',
+        '/authentication/providers/up-auth/config/fields/emailField: field does not exist in model',
+    },
+    {
+      name: 'missing emailField in up-auth.fields',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
+              },
+            },
+          ],
+        },
+      },
+      expected: "must have required property 'emailField'",
+    },
+    {
+      name: 'missing passwordField in up-auth.fields',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  emailField: 'email',
+                  isVerifiedField: 'is_active',
+                },
+              },
+            },
+          ],
+        },
+      },
+      expected: "must have required property 'passwordField'",
+    },
+    {
+      name: 'missing isVerifiedField in up-auth.fields',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  emailField: 'email',
+                  passwordField: 'password',
+                },
+              },
+            },
+          ],
+        },
+      },
+      expected: "must have required property 'isVerifiedField'",
+    },
+    {
+      name: 'legacy usernameField rejected in up-auth.fields',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [
+            {
+              type: 'up-auth',
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
+              },
+            },
+          ],
+        },
+      },
+      expected: 'must NOT have additional properties',
+    },
+    {
+      name: 'isVerifiedField without email integration',
+      patch: {
+        integrations: undefined,
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        'integrations.email must be configured when isVerifiedField is set',
     },
     {
       name: 'isVerifiedField is not boolean',
@@ -4159,7 +4263,7 @@ describe('validateInvalidAuthConfig', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
                   isVerifiedField: 'email',
                 },
@@ -4173,13 +4277,18 @@ describe('validateInvalidAuthConfig', () => {
     {
       name: 'mfaRequired without email integration',
       patch: {
+        integrations: undefined,
         authentication: {
           ...authBase().authentication,
           providers: [
             {
               type: 'up-auth',
               config: {
-                fields: {usernameField: 'email', passwordField: 'password'},
+                fields: {
+                  emailField: 'email',
+                  passwordField: 'password',
+                  isVerifiedField: 'is_active',
+                },
                 mfaRequired: true,
               },
             },
@@ -4327,13 +4436,14 @@ describe('validateInvalidAuthConfig', () => {
         "field 'tenant_id' must be nullable or have a default because SSO accounts do not set it",
     },
     {
-      name: 'up-auth usernameField must be string',
+      name: 'up-auth emailField must be string',
       models: {
         users: {
           fields: {
             id: {type: 'integer', primaryKey: true},
             email: {type: 'integer', unique: true, nullable: false},
             password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean'},
             provider: {type: 'string'},
           },
         },
@@ -4345,16 +4455,17 @@ describe('validateInvalidAuthConfig', () => {
         },
       },
       expected:
-        '/authentication/providers/up-auth/config/fields/usernameField: field must be of type string',
+        '/authentication/providers/up-auth/config/fields/emailField: field must be of type string',
     },
     {
-      name: 'up-auth usernameField must be unique when no SSO',
+      name: 'up-auth emailField must be unique when no SSO',
       models: {
         users: {
           fields: {
             id: {type: 'integer', primaryKey: true},
             email: {type: 'string', unique: false, nullable: false},
             password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean'},
             provider: {type: 'string'},
           },
         },
@@ -4366,16 +4477,17 @@ describe('validateInvalidAuthConfig', () => {
         },
       },
       expected:
-        '/authentication/providers/up-auth/config/fields/usernameField: field must be unique',
+        '/authentication/providers/up-auth/config/fields/emailField: field must be unique',
     },
     {
-      name: 'up-auth usernameField must not be nullable when no SSO',
+      name: 'up-auth emailField must not be nullable when no SSO',
       models: {
         users: {
           fields: {
             id: {type: 'integer', primaryKey: true},
             email: {type: 'string', unique: true, nullable: true},
             password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean'},
             provider: {type: 'string'},
           },
         },
@@ -4387,7 +4499,7 @@ describe('validateInvalidAuthConfig', () => {
         },
       },
       expected:
-        '/authentication/providers/up-auth/config/fields/usernameField: field must not be nullable when SSO is not configured',
+        '/authentication/providers/up-auth/config/fields/emailField: field must not be nullable when SSO is not configured',
     },
     {
       name: 'reserved _ross_sessions model name',
@@ -4511,6 +4623,7 @@ describe('validateValidAuthConfig', () => {
             id: {type: 'integer', primaryKey: true},
             email: {type: 'string', unique: false, nullable: false},
             password: {type: 'string', nullable: false},
+            is_active: {type: 'boolean'},
             provider: {type: 'string'},
           },
           indexes: {
@@ -4775,7 +4888,11 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
           {
             type: 'up-auth',
             config: {
-              fields: {usernameField: 'nope', passwordField: 'password'},
+              fields: {
+                emailField: 'nope',
+                passwordField: 'password',
+                isVerifiedField: 'is_active',
+              },
             },
           },
           oidcProvider,
@@ -4786,7 +4903,7 @@ describe('validateAuthConstraints directly (bypass AJV)', () => {
     const errors = validateAuthConstraints(config as unknown as AppConfig);
 
     expect(errors).toContain(
-      '/authentication/providers/up-auth/config/fields/usernameField: field does not exist in model',
+      '/authentication/providers/up-auth/config/fields/emailField: field does not exist in model',
     );
     expect(errors.join('\n')).not.toContain('must be nullable');
   });

@@ -22,7 +22,7 @@ function registerResendOtpBase(
     return;
   }
 
-  const {model, usernameField} = upAuth;
+  const {model, emailField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -43,7 +43,7 @@ function registerResendOtpBase(
       app,
       config,
       model,
-      usernameField,
+      emailField,
       action,
       path,
       variant,
@@ -57,7 +57,7 @@ function registerResendOtpEndpoint(
   app: FastifyInstance,
   config: ResolvedAppConfig,
   model: string,
-  usernameField: string,
+  emailField: string,
   action: string,
   path: string,
   variant: string,
@@ -65,7 +65,7 @@ function registerResendOtpEndpoint(
   policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
-    usernameField,
+    emailField,
     model,
     action,
     policy,
@@ -80,21 +80,18 @@ function registerResendOtpEndpoint(
       config: {apiIdentifier},
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const {[usernameField]: username} = request.body as Record<
-        string,
-        string
-      >;
+      const {[emailField]: email} = request.body as Record<string, string>;
 
       /* c8 ignore start */
-      if (!username) {
+      if (!email) {
         return reply
           .status(400)
-          .send(app.buildResponse(400, `${usernameField} is required`, null));
+          .send(app.buildResponse(400, `${emailField} is required`, null));
       }
       /* c8 ignore stop */
 
-      const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
-      const res = await app.db.query(query, [String(username)]);
+      const query = `SELECT * FROM "${model}" WHERE "${emailField}" = $1 LIMIT 1;`;
+      const res = await app.db.query(query, [String(email)]);
 
       if (res.rows.length === 0) {
         return reply
@@ -103,7 +100,7 @@ function registerResendOtpEndpoint(
       }
 
       const user = res.rows[0] as Record<string, unknown>;
-      const userEmail = String(user[usernameField]);
+      const userEmail = String(user[emailField]);
       const ulid = await app.otp.sendOTPForVerification(userEmail);
 
       return reply.status(200).send(
@@ -143,16 +140,16 @@ export function registerForgotPasswordResendOtpRoute(
 }
 
 function generateSchema(
-  usernameField: string,
+  emailField: string,
   model: string,
   action: string,
   policy: ResolvedApiPolicy,
 ) {
   const bodySchema = {
     type: 'object',
-    required: [usernameField],
+    required: [emailField],
     properties: {
-      [usernameField]: {type: 'string', description: 'The user identifier'},
+      [emailField]: {type: 'string', description: 'The user identifier'},
     },
     additionalProperties: false,
   };

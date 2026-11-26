@@ -23,7 +23,11 @@ export const authModels: Record<string, ModelConfig> = {
 export const upAuthProvider = {
   type: 'up-auth' as const,
   config: {
-    fields: {usernameField: 'email', passwordField: 'password'},
+    fields: {
+      emailField: 'email',
+      passwordField: 'password',
+      isVerifiedField: 'is_active',
+    },
   },
 };
 

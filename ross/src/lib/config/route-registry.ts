@@ -104,7 +104,14 @@ export function getGeneratedApiIdentifiers(
 
     if (authModel && upAuth) {
       const upConfig = upAuth.config as UpAuthConfigInput;
-      const operations = ['registration', 'login', 'changePassword'];
+      const operations = [
+        'registration',
+        'login',
+        'changePassword',
+        'otpVerifyRegister',
+        'resendOtpRegister',
+        'emailChange',
+      ];
 
       if (config.integrations?.email) {
         operations.push(
@@ -116,14 +123,6 @@ export function getGeneratedApiIdentifiers(
 
       if (upConfig.mfaRequired) {
         operations.push('otpVerifyLogin', 'resendOtpLogin');
-      }
-
-      if (upConfig.fields?.isVerifiedField) {
-        operations.push(
-          'otpVerifyRegister',
-          'resendOtpRegister',
-          'emailChange',
-        );
       }
 
       for (const operation of operations) {

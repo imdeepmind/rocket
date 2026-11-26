@@ -61,7 +61,7 @@ const upAuthConfig: AuthenticationConfig = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
           isVerifiedField: 'is_active',
         },
@@ -333,73 +333,6 @@ describe('PATCH /auth/user/email', () => {
       expect(updateValues[0]).toBe('newalice@example.com');
       expect(updateValues[1]).toBe(false);
       expect(updateValues[2]).toBe(1);
-
-      await app.close();
-    });
-
-    test('should return 200 without isVerifiedField when not configured', async () => {
-      const authWithoutVerified: AuthenticationConfig = {
-        ...upAuthConfig,
-        jwtSecret: 'this-will-never-be-used',
-        userModel: {
-          modelName: 'users',
-          idField: 'id',
-          providerField: 'provider',
-        },
-        providers: [
-          {
-            type: 'up-auth',
-            config: {
-              fields: {
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-            },
-          },
-        ],
-      };
-      const app = await createChangeEmailApp(authWithoutVerified);
-
-      const token = app.jwt.sign({id: 1, email: 'alice@example.com'});
-
-      pgClientQueryMock
-        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
-        .mockResolvedValueOnce({
-          // SELECT
-          rows: [
-            {
-              id: 1,
-              email: 'alice@example.com',
-              password: 'hashed',
-              is_active: true,
-            },
-          ],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({rows: [], rowCount: 1}) // UPDATE
-        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: '/v1/auth/user/email',
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-        payload: {email: 'new@example.com'},
-      });
-
-      expect(response.statusCode).toBe(200);
-
-      // Verify the UPDATE query does NOT include isVerifiedField
-      const updateCall = pgClientQueryMock.mock.calls.find(
-        (call: unknown[]) =>
-          typeof call[0] === 'string' && (call[0] as string).includes('UPDATE'),
-      );
-      expect(updateCall).toBeDefined();
-      const updateQuery = (updateCall as [string, unknown[]])[0] as string;
-      expect(updateQuery).toContain('"email" = $1');
-      expect(updateQuery).not.toContain('"is_active"');
-      expect(updateQuery).toContain('WHERE "id" = $2');
 
       await app.close();
     });

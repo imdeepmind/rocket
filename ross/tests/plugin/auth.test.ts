@@ -41,8 +41,9 @@ const upAuthFixture = (): ResolvedAppConfig =>
           type: 'up-auth',
           config: {
             fields: {
-              usernameField: 'email',
+              emailField: 'email',
               passwordField: 'password',
+              isVerifiedField: 'is_active',
             },
             mfaRequired: false,
           },
@@ -109,8 +110,9 @@ describe('Auth Plugin — up-auth engine', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'is_active',
               },
               mfaRequired: false,
             },

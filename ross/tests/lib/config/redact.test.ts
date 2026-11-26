@@ -18,8 +18,9 @@ const upAuth = {
       type: 'up-auth' as const,
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
+          isVerifiedField: 'is_active',
         },
       },
     },

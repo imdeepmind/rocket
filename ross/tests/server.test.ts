@@ -843,8 +843,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -889,8 +890,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -925,8 +927,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
                 mfaRequired: true,
               },
@@ -958,8 +961,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -994,7 +998,7 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
                   isVerifiedField: 'is_active',
                 },
@@ -1027,8 +1031,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -1070,8 +1075,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -1105,7 +1111,7 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
                   isVerifiedField: 'is_active',
                 },
@@ -1134,8 +1140,8 @@ describe('Server', () => {
       expect(registerEmailChangeRoute).toHaveBeenCalled();
     });
 
-    it('should not register registration OTP verify route when isVerifiedField is not set', async () => {
-      const configWithoutVerified: AppConfig = {
+    it('should register registration OTP verify, resend, and email change routes for up-auth', async () => {
+      const configWithUpAuth: AppConfig = {
         ...mockConfig,
         integrations: {
           email: {
@@ -1155,8 +1161,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -1164,11 +1171,11 @@ describe('Server', () => {
         },
       };
 
-      await startServer(resolve(configWithoutVerified, 'dev'));
+      await startServer(resolve(configWithUpAuth, 'dev'));
 
-      expect(registerRegistrationOtpVerifyRoute).not.toHaveBeenCalled();
-      expect(registerRegistrationResendOtpRoute).not.toHaveBeenCalled();
-      expect(registerEmailChangeRoute).not.toHaveBeenCalled();
+      expect(registerRegistrationOtpVerifyRoute).toHaveBeenCalled();
+      expect(registerRegistrationResendOtpRoute).toHaveBeenCalled();
+      expect(registerEmailChangeRoute).toHaveBeenCalled();
     });
 
     it('should not register login OTP verify route when mfa is not required', async () => {
@@ -1192,8 +1199,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },
@@ -1223,8 +1231,9 @@ describe('Server', () => {
               type: 'up-auth',
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
               },
             },

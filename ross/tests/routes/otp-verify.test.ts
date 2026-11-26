@@ -56,7 +56,7 @@ const upAuthConfig: AuthenticationConfig = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
           isVerifiedField: 'is_active',
         },
@@ -821,68 +821,6 @@ describe('POST /auth/register/verify/otp', () => {
       expect(updateQuery).toContain('UPDATE "users"');
       expect(updateQuery).toContain('"is_active" = true');
       expect(updateQuery).toContain('"updated_at" = now()');
-
-      await app.close();
-    });
-
-    test('should return 200 without UPDATE when isVerifiedField is not configured', async () => {
-      const authWithoutVerified: AuthenticationConfig = {
-        ...upAuthConfig,
-        jwtSecret: 'this-will-never-be-used',
-        userModel: {
-          modelName: 'users',
-          idField: 'id',
-          providerField: 'provider',
-        },
-        providers: [
-          {
-            type: 'up-auth',
-            config: {
-              fields: {
-                usernameField: 'email',
-                passwordField: 'password',
-              },
-            },
-          },
-        ],
-      };
-      const app = await createOtpApp(authWithoutVerified);
-
-      const sendResponse =
-        await app.otp.sendOTPForVerification('alice@example.com');
-      const ulid = typeof sendResponse === 'string' ? sendResponse : '';
-
-      // Mock transaction: BEGIN, SELECT, COMMIT
-      pgClientQueryMock
-        .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
-        .mockResolvedValueOnce({
-          // SELECT
-          rows: [{id: 1, email: 'alice@example.com', password: 'hashed'}],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({rows: [], rowCount: 0}); // COMMIT
-
-      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/v1/auth/register/verify/otp',
-        payload: {ulid, otp: '000000', email: 'alice@example.com'},
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.message).toBe('OTP verification successful');
-      expect(body.data).toBeNull();
-
-      // No UPDATE query should have been executed
-      const updateCall = pgClientQueryMock.mock.calls.find(call => {
-        const [query] = call;
-        return (
-          typeof query === 'string' && (query as string).includes('UPDATE')
-        );
-      });
-      expect(updateCall).toBeUndefined();
 
       await app.close();
     });

@@ -37,6 +37,7 @@ const authModels: Record<string, ModelConfig> = {
       id: {type: 'integer', primaryKey: true},
       email: {type: 'string', nullable: false},
       password: {type: 'string', nullable: false},
+      isVerified: {type: 'boolean', default: true},
     },
   },
 };
@@ -54,8 +55,9 @@ const upAuthConfig: AuthenticationConfig = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
+          isVerifiedField: 'isVerified',
         },
       },
     },
@@ -86,7 +88,7 @@ const upAuthConfigWithVerified: AuthenticationConfig = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
           isVerifiedField: 'isVerified',
         },
@@ -273,7 +275,12 @@ describe('POST /auth/login', () => {
       // Mock DB: user exists
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -322,8 +329,9 @@ describe('POST /auth/login', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'isVerified',
               },
             },
           },
@@ -333,7 +341,12 @@ describe('POST /auth/login', () => {
 
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -372,7 +385,12 @@ describe('POST /auth/login', () => {
 
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -432,6 +450,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
             role: 'admin',
           },
         ],
@@ -477,6 +496,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
             role: ['editor', 'viewer'],
           },
         ],
@@ -518,6 +538,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
             role: '["editor", "viewer"]',
           },
         ],
@@ -559,6 +580,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
             role: null,
           },
         ],
@@ -612,6 +634,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
           },
         ],
         rowCount: 1,
@@ -665,6 +688,7 @@ describe('POST /auth/login', () => {
             id: 1,
             email: 'alice@example.com',
             password: 'hashed_password',
+            isVerified: true,
             role: 'admin',
           },
         ],
@@ -706,8 +730,9 @@ describe('POST /auth/login', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'isVerified',
               },
               mfaRequired: true,
             },
@@ -718,7 +743,12 @@ describe('POST /auth/login', () => {
 
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -756,8 +786,9 @@ describe('POST /auth/login', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'isVerified',
               },
               mfaRequired: true,
             },
@@ -768,7 +799,12 @@ describe('POST /auth/login', () => {
 
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -819,7 +855,12 @@ describe('POST /auth/login', () => {
       // Mock DB: user exists
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -916,7 +957,12 @@ describe('POST /auth/login', () => {
     test('should register admin variant endpoint when apiVariants is configured', async () => {
       pgQueryMock.mockResolvedValueOnce({
         rows: [
-          {id: 1, email: 'alice@example.com', password: 'hashed_password'},
+          {
+            id: 1,
+            email: 'alice@example.com',
+            password: 'hashed_password',
+            isVerified: true,
+          },
         ],
         rowCount: 1,
       });
@@ -1187,7 +1233,7 @@ describe('POST /auth/login', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
                 isVerifiedField: 'isVerified',
               },
@@ -1244,7 +1290,7 @@ describe('POST /auth/login', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
                 isVerifiedField: 'isVerified',
               },
@@ -1282,34 +1328,6 @@ describe('POST /auth/login', () => {
       expect(body.message).toBe('Login successful. OTP sent to your email.');
       expect(body.data.requiresMfa).toBe(true);
       expect(typeof body.data.ulid).toBe('string');
-
-      await app.close();
-    });
-
-    test('should allow login when isVerifiedField is not configured, even if user record has isVerified false', async () => {
-      const app = await createAuthApp(upAuthConfig, authModels);
-
-      pgQueryMock.mockResolvedValueOnce({
-        rows: [
-          {
-            id: 1,
-            email: 'alice@example.com',
-            password: 'hashed_password',
-            isVerified: false,
-          },
-        ],
-        rowCount: 1,
-      });
-      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/v1/auth/login',
-        payload: {email: 'alice@example.com', password: 'p@ssw0rd'},
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json().data.accessToken).toBeDefined();
 
       await app.close();
     });
@@ -1368,6 +1386,7 @@ describe('POST /auth/login — SSO account guardrail', () => {
           id: 1,
           email: 'sso@example.com',
           password: 'hashed_password',
+          isVerified: true,
           provider: 'google',
         },
       ],

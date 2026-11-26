@@ -10,9 +10,9 @@ export interface UpAuthRuntime {
   model: string;
   idField: string;
   providerField: string;
-  usernameField: string;
+  emailField: string;
   passwordField: string;
-  isVerifiedField?: string;
+  isVerifiedField: string;
   mfaRequired: boolean;
 }
 
@@ -44,11 +44,9 @@ export function getUpAuth(config: ResolvedAppConfig): UpAuthRuntime | null {
     model: modelName,
     idField,
     providerField,
-    usernameField: fields.usernameField,
+    emailField: fields.emailField,
     passwordField: fields.passwordField,
-    ...(fields.isVerifiedField
-      ? {isVerifiedField: fields.isVerifiedField}
-      : {}),
+    isVerifiedField: fields.isVerifiedField,
     mfaRequired: provider.config.mfaRequired,
   };
 }

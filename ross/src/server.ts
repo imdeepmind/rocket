@@ -76,9 +76,7 @@ export async function startServer(
 
   const upAuth = getUpAuth(resolvedConfig);
   const ssoProviders = getSsoProviders(resolvedConfig);
-  const usesAccountOtp = Boolean(
-    upAuth && (upAuth.mfaRequired || upAuth.isVerifiedField),
-  );
+  const usesAccountOtp = Boolean(upAuth);
   const usesCacheSessionStorage = Boolean(
     resolvedConfig.authentication.enabled &&
     resolvedConfig.authentication.userModel &&
@@ -201,11 +199,9 @@ export async function startServer(
           registerLoginResendOtpRoute(app, resolvedConfig);
         }
 
-        if (upAuth.isVerifiedField) {
-          registerRegistrationOtpVerifyRoute(app, resolvedConfig);
-          registerRegistrationResendOtpRoute(app, resolvedConfig);
-          registerEmailChangeRoute(app, resolvedConfig);
-        }
+        registerRegistrationOtpVerifyRoute(app, resolvedConfig);
+        registerRegistrationResendOtpRoute(app, resolvedConfig);
+        registerEmailChangeRoute(app, resolvedConfig);
       }
     },
     {prefix: '/api'},

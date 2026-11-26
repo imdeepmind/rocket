@@ -25,9 +25,7 @@ export function registerRegistrationRoute(
     return;
   }
 
-  const {model, passwordField} = upAuth;
-  const requiresOtp = !!upAuth.isVerifiedField;
-  const isVerifiedField = upAuth.isVerifiedField;
+  const {model, passwordField, isVerifiedField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -44,12 +42,10 @@ export function registerRegistrationRoute(
   for (const {identifier, variant, policy} of targets) {
     registerRegistrationEndpoint(
       app,
-      config,
       model,
       authModelConfig,
       passwordField,
       isVerifiedField,
-      requiresOtp,
       upAuth,
       variant,
       identifier,
@@ -60,12 +56,10 @@ export function registerRegistrationRoute(
 
 function registerRegistrationEndpoint(
   app: FastifyInstance,
-  config: ResolvedAppConfig,
   model: string,
   authModelConfig: ModelConfig,
   passwordField: string,
-  isVerifiedField: string | undefined,
-  requiresOtp: boolean,
+  isVerifiedField: string,
   upAuth: UpAuthRuntime,
   variant: string,
   apiIdentifier: string,
@@ -73,9 +67,7 @@ function registerRegistrationEndpoint(
 ): void {
   const schema: Record<string, unknown> = generateSchema(
     authModelConfig,
-    passwordField,
     model,
-    requiresOtp,
     isVerifiedField,
     policy,
   );
@@ -108,9 +100,7 @@ function registerRegistrationEndpoint(
       }
       /* c8 ignore stop */
 
-      if (isVerifiedField) {
-        body[isVerifiedField] = false;
-      }
+      body[isVerifiedField] = false;
 
       const keys = Object.keys(body);
       const values = Object.values(body);
@@ -130,36 +120,17 @@ function registerRegistrationEndpoint(
         tx?.release();
       }
 
-      if (requiresOtp) {
-        const usernameField = upAuth.usernameField;
-        const userEmail = String(incomingBody[usernameField]);
-        const ulid = await app.otp.sendOTPForVerification(userEmail);
-
-        return reply
-          .status(201)
-          .send(
-            app.buildResponse(
-              201,
-              'Registration successful. OTP sent to your email.',
-              {requiresMfa: true, ulid},
-            ),
-          );
-      }
-
-      const responseData: ModelBody = {};
-      for (const [k, v] of Object.entries(body)) {
-        if (k !== passwordField) {
-          responseData[k] = v;
-        }
-      }
+      const emailField = upAuth.emailField;
+      const userEmail = String(incomingBody[emailField]);
+      const ulid = await app.otp.sendOTPForVerification(userEmail);
 
       return reply
         .status(201)
         .send(
           app.buildResponse(
             201,
-            `Successfully registered a new user in the ${model} table`,
-            responseData,
+            'Registration successful. OTP sent to your email.',
+            {requiresMfa: true, ulid},
           ),
         );
     },
@@ -168,49 +139,28 @@ function registerRegistrationEndpoint(
 
 function generateSchema(
   authModelConfig: ModelConfig,
-  passwordField: string,
   model: string,
-  requiresOtp: boolean | undefined,
-  isVerifiedField: string | undefined,
+  isVerifiedField: string,
   policy: ResolvedApiPolicy,
 ) {
-  const bodyModelConfig =
-    requiresOtp && isVerifiedField
-      ? {
-          ...authModelConfig,
-          fields: Object.fromEntries(
-            Object.entries(authModelConfig.fields).filter(
-              ([name]) => name !== isVerifiedField,
-            ),
-          ),
-        }
-      : authModelConfig;
+  const bodyModelConfig = {
+    ...authModelConfig,
+    fields: Object.fromEntries(
+      Object.entries(authModelConfig.fields).filter(
+        ([name]) => name !== isVerifiedField,
+      ),
+    ),
+  };
   const bodySchema = generateJSONValidationSchema(bodyModelConfig, {
     ignorePrimaryKey: true,
     additionalProperties: false,
     excludeTimestamps: true,
   });
 
-  const responseData = requiresOtp
-    ? {
-        type: 'object',
-        properties: {requiresMfa: {type: 'boolean'}, ulid: {type: 'string'}},
-      }
-    : generateJSONValidationSchema(
-        {
-          ...authModelConfig,
-          fields: Object.fromEntries(
-            Object.entries(authModelConfig.fields).filter(
-              ([name]) => name !== passwordField,
-            ),
-          ),
-        },
-        {
-          ignorePrimaryKey: true,
-          additionalProperties: false,
-          excludeTimestamps: true,
-        },
-      );
+  const responseData = {
+    type: 'object',
+    properties: {requiresMfa: {type: 'boolean'}, ulid: {type: 'string'}},
+  };
 
   const responseSchema = getResponseStructureSchema([201], responseData);
 

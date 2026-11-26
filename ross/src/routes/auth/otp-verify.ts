@@ -26,7 +26,7 @@ function registerOtpVerifyBase(
     return;
   }
 
-  const {model, usernameField} = upAuth;
+  const {model, emailField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -47,7 +47,7 @@ function registerOtpVerifyBase(
       app,
       config,
       model,
-      usernameField,
+      emailField,
       upAuth,
       action,
       path,
@@ -62,7 +62,7 @@ function registerOtpVerifyEndpoint(
   app: FastifyInstance,
   config: ResolvedAppConfig,
   model: string,
-  usernameField: string,
+  emailField: string,
   upAuth: UpAuthRuntime,
   action: 'login' | 'register' | 'forgotPassword',
   path: string,
@@ -71,7 +71,7 @@ function registerOtpVerifyEndpoint(
   policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
-    usernameField,
+    emailField,
     model,
     action,
     policy,
@@ -86,24 +86,20 @@ function registerOtpVerifyEndpoint(
       config: {apiIdentifier},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
-      const {ulid, otp, [usernameField]: username} = request.body;
+      const {ulid, otp, [emailField]: email} = request.body;
 
       /* c8 ignore start */
-      if (!ulid || !otp || !username) {
+      if (!ulid || !otp || !email) {
         return reply
           .status(400)
           .send(
-            app.buildResponse(
-              400,
-              'ulid, otp, and username are required',
-              null,
-            ),
+            app.buildResponse(400, 'ulid, otp, and email are required', null),
           );
       }
       /* c8 ignore stop */
 
       const isValid = await app.otp.verify(
-        String(username),
+        String(email),
         String(otp),
         String(ulid),
       );
@@ -129,13 +125,13 @@ function registerOtpVerifyEndpoint(
         hashedPassword = await hash(String(newPassword));
       }
 
-      const selectQuery = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
+      const selectQuery = `SELECT * FROM "${model}" WHERE "${emailField}" = $1 LIMIT 1;`;
 
       let tx;
       try {
         tx = await app.db.beginTransaction();
 
-        const res = await tx.query(selectQuery, [String(username)]);
+        const res = await tx.query(selectQuery, [String(email)]);
 
         if (res.rows.length === 0) {
           throw Object.assign(new Error('User not found'), {
@@ -146,14 +142,12 @@ function registerOtpVerifyEndpoint(
 
         if (action === 'register') {
           const isVerifiedField = upAuth.isVerifiedField;
-          if (isVerifiedField) {
-            const updatedAtClause = buildUpdatedAtClause(
-              config.data.models[model],
-              config.infrastructure.database.engine,
-            );
-            const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $1;`;
-            await tx.query(updateQuery, [String(username)]);
-          }
+          const updatedAtClause = buildUpdatedAtClause(
+            config.data.models[model],
+            config.infrastructure.database.engine,
+          );
+          const updateQuery = `UPDATE "${model}" SET "${isVerifiedField}" = true${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${emailField}" = $1;`;
+          await tx.query(updateQuery, [String(email)]);
 
           await tx.commit();
 
@@ -168,8 +162,8 @@ function registerOtpVerifyEndpoint(
             config.data.models[model],
             config.infrastructure.database.engine,
           );
-          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${usernameField}" = $2;`;
-          await tx.query(updateQuery, [hashedPassword, String(username)]);
+          const updateQuery = `UPDATE "${model}" SET "${passwordField}" = $1${updatedAtClause ? `, ${updatedAtClause}` : ''} WHERE "${emailField}" = $2;`;
+          await tx.query(updateQuery, [hashedPassword, String(email)]);
 
           await tx.commit();
 
@@ -197,7 +191,7 @@ function registerOtpVerifyEndpoint(
           app.jwt,
           config,
           user,
-          usernameField,
+          emailField,
           rbacUser,
         );
 
@@ -240,7 +234,7 @@ export function registerRegistrationOtpVerifyRoute(
 }
 
 function generateSchema(
-  usernameField: string,
+  emailField: string,
   model: string,
   action: 'login' | 'register' | 'forgotPassword',
   policy: ResolvedApiPolicy,
@@ -250,15 +244,15 @@ function generateSchema(
   const bodySchema = {
     type: 'object',
     required: isForgotPassword
-      ? ['ulid', 'otp', usernameField, 'newPassword']
-      : ['ulid', 'otp', usernameField],
+      ? ['ulid', 'otp', emailField, 'newPassword']
+      : ['ulid', 'otp', emailField],
     properties: {
       ulid: {
         type: 'string',
         description: 'The ULID from the OTP send response',
       },
       otp: {type: 'string', description: 'The OTP sent to the user email'},
-      [usernameField]: {type: 'string', description: 'The user identifier'},
+      [emailField]: {type: 'string', description: 'The user identifier'},
       ...(isForgotPassword
         ? {
             newPassword: {
