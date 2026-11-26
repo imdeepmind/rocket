@@ -15,7 +15,9 @@ SAML is the right choice for enterprise identity providers that do not expose OA
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -111,7 +113,7 @@ The path is the login route with `/login` replaced by `/callback`, or the metada
                  SAMLResponse=<base64 assertion>&RelayState=...
 5. ROSS     validate signature, audience, conditions, and InResponseTo
 6. ROSS     find-or-create the local user for (corp, NameID)
-7. ROSS     200  {"accessToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
+7. ROSS     200  {"accessToken": "...", "refreshToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
 ```
 
 ### 1. Start the flow
@@ -170,7 +172,7 @@ Without `redirectUrl`, the ACS responds with the token:
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 
@@ -194,7 +196,7 @@ Content-Type: application/json
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 
