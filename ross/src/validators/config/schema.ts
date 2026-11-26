@@ -901,9 +901,17 @@ const authenticationSchema = {
           type: 'string',
           minLength: 32,
         },
-        tokenExpiration: {
+        accessTokenExpiration: {
           type: 'string',
           pattern: '^\\d+[smhd]$',
+        },
+        refreshTokenExpiration: {
+          type: 'string',
+          pattern: '^\\d+[smhd]$',
+        },
+        sessionStorage: {
+          type: 'string',
+          enum: ['cache', 'db'],
         },
         userModel: authUserModelSchema,
         providers: {

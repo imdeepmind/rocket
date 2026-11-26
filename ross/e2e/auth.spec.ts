@@ -324,7 +324,7 @@ const upAuthE2EConfig: AppConfigInput = {
   authentication: {
     enabled: true,
     jwtSecret: 'e2e-up-auth-jwt-secret-at-least-32-chars-long!',
-    tokenExpiration: '1h',
+    accessTokenExpiration: '1h',
     userModel: {
       modelName: 'users',
       idField: 'id',
@@ -422,6 +422,7 @@ test.describe
   .serial('Playwright E2E: Username & Password Authentication (up-auth)', () => {
   let server: E2EServer;
   let authToken: string;
+  let refreshToken: string;
 
   const testUser = {
     email: 'alice@example.com',
@@ -512,7 +513,7 @@ test.describe
       expect(res.status()).toBe(401);
     });
 
-    test('Authenticates successfully with valid credentials and issues accessToken (HTTP 200)', async () => {
+    test('Authenticates successfully with valid credentials and issues accessToken & refreshToken (HTTP 200)', async () => {
       const res = await server.request.post('/api/v1/auth/login', {
         data: {
           email: testUser.email,
@@ -524,8 +525,59 @@ test.describe
       expect(body.code).toBe(200);
       expect(body.data).toBeDefined();
       expect(typeof body.data.accessToken).toBe('string');
+      expect(typeof body.data.refreshToken).toBe('string');
       authToken = body.data.accessToken;
+      refreshToken = body.data.refreshToken;
       expect(authToken.length).toBeGreaterThan(20);
+      expect(refreshToken.length).toBeGreaterThan(20);
+    });
+
+    test('Refreshes tokens via POST /api/v1/auth/refresh and rotates refreshToken (HTTP 200)', async () => {
+      const res = await server.request.post('/api/v1/auth/refresh', {
+        data: {refreshToken},
+      });
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+      expect(typeof body.data.accessToken).toBe('string');
+      expect(typeof body.data.refreshToken).toBe('string');
+      expect(body.data.refreshToken).not.toBe(refreshToken);
+
+      // Reusing old refresh token must fail with 401
+      const replayRes = await server.request.post('/api/v1/auth/refresh', {
+        data: {refreshToken},
+      });
+      expect(replayRes.status()).toBe(401);
+
+      authToken = body.data.accessToken;
+      refreshToken = body.data.refreshToken;
+    });
+
+    test('Revokes refresh token on POST /api/v1/auth/logout (HTTP 200)', async () => {
+      const logoutRes = await server.request.post('/api/v1/auth/logout', {
+        headers: {Authorization: `Bearer ${authToken}`},
+        data: {refreshToken},
+      });
+      expect(logoutRes.status()).toBe(200);
+
+      const refreshAfterLogout = await server.request.post(
+        '/api/v1/auth/refresh',
+        {
+          data: {refreshToken},
+        },
+      );
+      expect(refreshAfterLogout.status()).toBe(401);
+
+      // Re-login to leave authToken & refreshToken valid for subsequent tests
+      const loginRes = await server.request.post('/api/v1/auth/login', {
+        data: {
+          email: testUser.email,
+          password: testUser.password,
+        },
+      });
+      expect(loginRes.status()).toBe(200);
+      const loginBody = await loginRes.json();
+      authToken = loginBody.data.accessToken;
+      refreshToken = loginBody.data.refreshToken;
     });
   });
 

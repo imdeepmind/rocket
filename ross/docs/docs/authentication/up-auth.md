@@ -15,7 +15,9 @@ This is the only provider that owns a password. It also provides registration, p
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -147,7 +149,10 @@ The body accepts exactly the two configured fields; any additional property is r
 {
   "code": 200,
   "message": "Login successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "xK9..."
+  }
 }
 ```
 
@@ -191,7 +196,10 @@ Content-Type: application/json
 {
   "code": 200,
   "message": "OTP verification successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "xK9..."
+  }
 }
 ```
 
@@ -199,7 +207,7 @@ The same route behaviour is used for the three OTP flows:
 
 | Route | Action | Body |
 | --- | --- | --- |
-| `POST /auth/login/verify/otp` | Completes login and returns `accessToken` | `ulid`, `otp`, username |
+| `POST /auth/login/verify/otp` | Completes login and returns `accessToken` and `refreshToken` | `ulid`, `otp`, username |
 | `POST /auth/register/verify/otp` | Marks the account verified, returns `data: null` | `ulid`, `otp`, username |
 | `POST /auth/forgot-password/verify/otp` | Sets the new password, returns `{success: true}` | `ulid`, `otp`, username, `newPassword` |
 
@@ -411,7 +419,7 @@ Deletion runs inside a transaction. The row is removed permanently; ROSS does no
 | `<usernameField>` | The username column, when it has a value |
 | `role` | `rbac.roleField` when RBAC is enabled and the value is a scalar |
 | `roles` | `rbac.roleField` when the value is an array or a JSON-encoded array |
-| `iat`, `exp` | Issued-at and `tokenExpiration` |
+| `iat`, `exp` | Issued-at and `accessTokenExpiration` |
 
 ## Full example with MFA and verification
 
@@ -429,7 +437,7 @@ Deletion runs inside a transaction. The row is removed permanently; ROSS does no
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "8h",
+    "accessTokenExpiration": "8h",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -505,6 +513,8 @@ Password routes use the API policy identifiers `auth.<variant>.<userModel>.unkno
 | --- | --- |
 | Registration | `auth.v1.users.unknown.registration` |
 | Login | `auth.v1.users.unknown.login` |
+| Refresh token | `auth.v1.users.unknown.refresh` |
+| Logout | `auth.v1.users.unknown.logout` |
 | Change password | `auth.v1.users.unknown.changePassword` |
 | Forgot password | `auth.v1.users.unknown.forgotPassword` |
 | OTP verify (login) | `auth.v1.users.unknown.otpVerifyLogin` |

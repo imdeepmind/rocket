@@ -9,16 +9,16 @@ ROSS has a built-in authentication layer that is entirely configuration-driven. 
 The authentication surface is built around a single contract:
 
 ```text
-provider verifies the caller → ROSS resolves a local user row → ROSS issues one JWT
+provider verifies the caller → ROSS resolves a local user row → ROSS issues access + refresh tokens
 ```
 
-Password login, OAuth2, OIDC, and SAML differ only in how the caller is verified. They all converge on the same user table, the same access token, the same `Authorization: Bearer <token>` header, and the same RBAC claims. An `api-key` provider is the exception: it authenticates the caller statically, without a user row or a JWT.
+Password login, OAuth2, OIDC, and SAML differ only in how the caller is verified. They all converge on the same user table, the same access and refresh tokens, the same `Authorization: Bearer <token>` header, and the same RBAC claims. An `api-key` provider is the exception: it authenticates the caller statically, without a user row, a JWT, or a refresh token.
 
-Authentication is optional at the top level. When it is omitted, ROSS starts normally and every generated API is public unless you opt into route-level authorization.
+Authentication is optional at the top level. When it is omitted or disabled, ROSS starts normally with every generated API public, and setting route-level `authorization: true` is rejected at startup.
 
 ## Supported providers
 
-| Provider | Identifier | Caller verified by | Access token | Documentation |
+| Provider | Identifier | Caller verified by | Token | Documentation |
 | --- | --- | --- | --- | --- |
 | Local password | `"up-auth"` | Username and password (bcrypt) | JWT | [Password authentication](./up-auth.md) |
 | OAuth2 | `"sso"` with `"protocol": "oauth2"` | External OAuth2 authorization server | JWT | [OAuth2](./oauth2.md) |
@@ -35,7 +35,9 @@ Authentication lives at the top level of your configuration file:
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -73,7 +75,9 @@ Authentication lives at the top level of your configuration file:
 | --- | --- | --- | --- | --- |
 | `enabled` | `boolean` | **Yes** | — | Enables the auth layer. When `false`, no other key may be present. |
 | `jwtSecret` | `string` | Conditional | — | Secret used to sign access tokens. Minimum 32 characters. Required when an identity provider is configured, forbidden when only `api-key` is configured. |
-| `tokenExpiration` | `string` | No | `"1d"` | Access-token lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d` (for example `"15m"`, `"8h"`, `"7d"`). |
+| `accessTokenExpiration` | `string` | No | `"15m"` | Access-token lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d` (for example `"15m"`, `"8h"`, `"7d"`). |
+| `refreshTokenExpiration` | `string` | No | `"7d"` | Refresh-token session lifetime. Pattern: digits followed by `s`, `m`, `h`, or `d`. |
+| `sessionStorage` | `"db" \| "cache"` | No | `"db"` | Backend used to store refresh token sessions (`"db"` uses an internal `_ross_sessions` table; `"cache"` uses the configured cache backend). |
 | `userModel` | `object` | Conditional | — | The table that stores identities. Required when `up-auth` or `sso` is configured. |
 | `providers` | `array` | **Yes** | — | One or more provider entries. Minimum one item. |
 
@@ -119,7 +123,7 @@ Validation runs before the server starts, so configuration mistakes fail fast:
 - At most **one** `up-auth` provider and at most **one** `api-key` provider may be configured.
 - `api-key` cannot be combined with any identity provider. An application either authenticates users or accepts a shared key.
 - Every identity provider requires `jwtSecret` and a `userModel` whose fields exist in the referenced model.
-- SSO provider `name` values are lowercase alphanumeric with optional hyphens, up to 32 characters, and must be unique. Names that collide with auth route segments are reserved: `api-key`, `callback`, `change-email`, `change-password`, `edit-me`, `forgot-password`, `login`, `me`, `metadata`, `providers`, `register`, `registration`, `resend-otp`, `sso`, `token`, `up-auth`, `user`, `verify`.
+- SSO provider `name` values are lowercase alphanumeric with optional hyphens, up to 32 characters, and must be unique. Names that collide with auth route segments are reserved: `api-key`, `callback`, `change-email`, `change-password`, `edit-me`, `forgot-password`, `login`, `logout`, `me`, `metadata`, `providers`, `refresh`, `register`, `registration`, `resend-otp`, `sso`, `token`, `up-auth`, `user`, `verify`.
 - `up-auth` and SSO providers can be combined. `api-key` cannot.
 
 ## Access tokens
@@ -141,7 +145,7 @@ Every identity provider issues the same JWT. The payload is built from `userMode
 - `providerId` holds the external SSO subject identifier (for SSO logins) or `null` (for `up-auth` logins).
 - `email` holds the user's email/username (or `null` if unconfigured or absent). If a custom `usernameField` is configured (such as `"username"`), that property is also included.
 - `role` or `roles` appear only when RBAC is enabled. They are extracted from `rbac.roleField`, falling back to `rbac.defaultRole`.
-- The token is signed with `jwtSecret` and expires after `tokenExpiration`.
+- The token is signed with `jwtSecret` and expires after `accessTokenExpiration`.
 - Clients send it as `Authorization: Bearer <token>`.
 
 Protected routes validate the token before the handler runs. A missing or invalid token returns `401` with `"Invalid or expired authentication token"`.
@@ -151,6 +155,70 @@ Protected routes validate the token before the handler runs. A missing or invali
 Rotating `jwtSecret` invalidates every access token, every in-flight SSO flow, and every one-time SSO exchange code at once. Treat it as a deploy event.
 
 :::
+
+## Refresh tokens and session storage
+
+Every identity login (`POST /auth/login`, `POST /auth/login/verify/otp`, and SSO callback or token exchange) issues a `refreshToken` alongside `accessToken`:
+
+```json
+{
+  "accessToken": "eyJhbGciOi...",
+  "refreshToken": "xK9..."
+}
+```
+
+- Refresh tokens are opaque 32-byte random strings (`base64url`). ROSS stores only their SHA-256 hex digest, never the raw token.
+- Each session expires after `refreshTokenExpiration` (default `"7d"`).
+- Refresh tokens are **single-use and rotated**: exchanging a refresh token deletes the consumed session and issues a new `accessToken` and `refreshToken` pair. Replaying an already-used or expired token returns `401`.
+
+### Session storage backends
+
+Configure where refresh token sessions live with `authentication.sessionStorage`:
+
+- **`"db"` (default)**: Stores sessions in an internal `_ross_sessions` table (`id`, `user_id`, `token_hash`, `expires_at`, `created_at`). ROSS automatically includes `_ross_sessions` in database migrations when `sessionStorage` is `"db"`, and deletes all of a user's sessions when they call `DELETE /auth/user/me`. `_ross_sessions` is reserved and cannot be used as a model name under `data.models`.
+- **`"cache"`**: Stores sessions in the configured cache under `session:refresh:<token_hash>` with a TTL matching `refreshTokenExpiration`. When no distributed cache (Redis or Memcached) is configured, sessions are stored in in-memory `node-cache` (not shared across processes and lost on restart), and ROSS logs a startup warning.
+
+### Refreshing tokens
+
+```http
+POST /api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken": "xK9..."}
+```
+
+```json
+{
+  "code": 200,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "mP4..."
+  }
+}
+```
+
+If the token is missing, invalid, expired, already consumed, or belongs to a deleted user, the endpoint returns `401` with `"Invalid or expired refresh token"`.
+
+### Logging out
+
+```http
+POST /api/v1/auth/logout
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{"refreshToken": "mP4..."}
+```
+
+```json
+{
+  "code": 200,
+  "message": "Logged out successfully",
+  "data": {"success": true}
+}
+```
+
+Revokes the given refresh token session if it belongs to the authenticated user.
 
 ## Provider discovery
 
@@ -202,6 +270,8 @@ Auth routes are mounted under the API prefix and variant, so the default base pa
 | Route | Requires |
 | --- | --- |
 | `GET /auth/providers` | At least one identity provider |
+| `POST /auth/refresh` | At least one identity provider |
+| `POST /auth/logout` | At least one identity provider |
 | `POST /auth/register` | `up-auth` |
 | `POST /auth/login` | `up-auth` |
 | `POST /auth/change-password` | `up-auth` |

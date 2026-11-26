@@ -4015,15 +4015,38 @@ describe('validateInvalidAuthConfig', () => {
         '/authentication/jwtSecret must NOT have fewer than 32 characters',
     },
     {
-      name: 'invalid tokenExpiration pattern',
+      name: 'invalid accessTokenExpiration pattern',
       patch: {
         authentication: {
           ...authBase().authentication,
-          tokenExpiration: 'one day',
+          accessTokenExpiration: 'one day',
           providers: [upAuthProvider],
         },
       },
-      expected: '/authentication/tokenExpiration must match pattern',
+      expected: '/authentication/accessTokenExpiration must match pattern',
+    },
+    {
+      name: 'invalid refreshTokenExpiration pattern',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          refreshTokenExpiration: 'seven days',
+          providers: [upAuthProvider],
+        },
+      },
+      expected: '/authentication/refreshTokenExpiration must match pattern',
+    },
+    {
+      name: 'invalid sessionStorage value',
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          sessionStorage: 'redis',
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        '/authentication/sessionStorage must be equal to one of the allowed values',
     },
     {
       name: 'api-key combined with an identity provider',
@@ -4367,6 +4390,25 @@ describe('validateInvalidAuthConfig', () => {
         '/authentication/providers/up-auth/config/fields/usernameField: field must not be nullable when SSO is not configured',
     },
     {
+      name: 'reserved _ross_sessions model name',
+      models: {
+        ...upAuthOnlyModels,
+        _ross_sessions: {
+          fields: {
+            id: {type: 'string', primaryKey: true},
+          },
+        },
+      },
+      patch: {
+        authentication: {
+          ...authBase().authentication,
+          providers: [upAuthProvider],
+        },
+      },
+      expected:
+        '/data/models/_ross_sessions: model name is reserved for internal session storage',
+    },
+    {
       name: 'sso usernameField does not exist in model',
       patch: {
         authentication: {
@@ -4451,9 +4493,13 @@ describe('validateValidAuthConfig', () => {
       providers: [{type: 'api-key', config: {key: 'my-key'}}],
     },
     {
-      name: 'valid up-auth with tokenExpiration',
+      name: 'valid up-auth with accessTokenExpiration, refreshTokenExpiration, and sessionStorage',
       providers: [upAuthProvider],
-      extra: {tokenExpiration: '8h'},
+      extra: {
+        accessTokenExpiration: '8h',
+        refreshTokenExpiration: '14d',
+        sessionStorage: 'cache',
+      },
       models: upAuthOnlyModels,
     },
     {

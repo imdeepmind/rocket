@@ -88,7 +88,14 @@ export function getGeneratedApiIdentifiers(
     const authModel = authentication.userModel?.modelName;
 
     if (authModel) {
-      const sharedOperations = ['providers', 'me', 'deleteMe', 'editMe'];
+      const sharedOperations = [
+        'providers',
+        'me',
+        'deleteMe',
+        'editMe',
+        'refresh',
+        'logout',
+      ];
 
       for (const operation of sharedOperations) {
         addTargets('auth', authModel, 'unknown', operation);

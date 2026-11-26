@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 
-import {compare, hash} from '@/utils/hash';
+import {compare, hash, sha256} from '@/utils/hash';
 import {BCRYPT_SALT_ROUNDS, DUMMY_PASSWORD_HASH} from '@/constants';
 
 describe('hash utility', () => {
@@ -60,5 +60,16 @@ describe('hash utility', () => {
     );
     const isMatch = await compare('any-random-password', DUMMY_PASSWORD_HASH);
     expect(isMatch).toBe(false);
+  });
+
+  test('sha256 returns a deterministic 64-char hex digest', () => {
+    const a = sha256('token-value');
+    const b = sha256('token-value');
+    const c = sha256('other-value');
+
+    expect(a).toHaveLength(64);
+    expect(a).toMatch(/^[a-f0-9]{64}$/);
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
   });
 });

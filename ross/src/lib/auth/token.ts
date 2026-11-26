@@ -72,7 +72,7 @@ export function issueAccessToken(
   }
 
   return signer.sign(payload, {
-    expiresIn: authentication.tokenExpiration,
+    expiresIn: authentication.accessTokenExpiration,
   });
 }
 

@@ -15,7 +15,9 @@ ROSS starts the flow, exchanges the authorization code for an access token, read
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -99,7 +101,7 @@ The path is the login route with `/login` replaced by `/callback`. Register that
 4. ROSS     POST https://github.com/login/oauth/access_token
 5. ROSS     GET  https://api.github.com/user  (Bearer token)
 6. ROSS     find-or-create the local user for (github, <subject>)
-7. ROSS     200  {"accessToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
+7. ROSS     200  {"accessToken": "...", "refreshToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
 ```
 
 ### 1. Start the flow
@@ -170,7 +172,7 @@ When `redirectUrl` is not configured, the callback responds directly with the ac
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 
@@ -196,7 +198,7 @@ Content-Type: application/json
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 

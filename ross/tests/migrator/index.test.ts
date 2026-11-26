@@ -1051,7 +1051,7 @@ describe('migrateDatabase', () => {
         return {applied: ['01_init.sql'], skipped: []};
       });
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(callOrder).toEqual([
         'drizzle-push',
@@ -1092,7 +1092,7 @@ describe('migrateDatabase', () => {
       ];
       vi.mocked(discoverMigrations).mockReturnValue(mockDiscovered);
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(discoverMigrations).toHaveBeenCalledWith({
         migrationsDir: '/app/custom-migrations',
@@ -1112,7 +1112,7 @@ describe('migrateDatabase', () => {
       const config = getBaseConfig('postgres');
       config.infrastructure.database.migrations = undefined;
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(discoverMigrations).not.toHaveBeenCalled();
       expect(validateMigrations).not.toHaveBeenCalled();
@@ -1125,7 +1125,7 @@ describe('migrateDatabase', () => {
         dangerouslyAllowDDL: false,
       } as unknown as {directory: string; dangerouslyAllowDDL: boolean};
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(discoverMigrations).not.toHaveBeenCalled();
       expect(validateMigrations).not.toHaveBeenCalled();
@@ -1139,7 +1139,7 @@ describe('migrateDatabase', () => {
         dangerouslyAllowDDL: false,
       };
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(discoverMigrations).not.toHaveBeenCalled();
       expect(validateMigrations).not.toHaveBeenCalled();
@@ -1165,7 +1165,7 @@ describe('migrateDatabase', () => {
       ];
       vi.mocked(discoverMigrations).mockReturnValue(mockDiscovered);
 
-      await runMigrate(config);
+      await runMigrate(config as unknown as MigratorTestConfig);
 
       expect(discoverMigrations).toHaveBeenCalledWith({
         migrationsDir: '/app/sqlite-migrations',
@@ -1224,6 +1224,63 @@ describe('migrateDatabase', () => {
 
       await expect(runMigrate(config)).rejects.toThrow(
         'Database connection failed during migration',
+      );
+    });
+  });
+
+  describe('internal session table migration', () => {
+    it('includes _ross_sessions when authentication is enabled with db sessionStorage', async () => {
+      const config = {
+        infrastructure: {
+          database: {
+            engine: 'sqlite',
+            connection: {url: './test.db'},
+            timeout: 10000,
+          },
+        },
+        data: {
+          models: {
+            users: {
+              fields: {
+                id: {type: 'integer', primaryKey: true},
+                email: {type: 'string', unique: true, nullable: false},
+                password: {type: 'string', nullable: false},
+                provider: {type: 'string'},
+              },
+            },
+          },
+        },
+        authentication: {
+          enabled: true,
+          jwtSecret: 'a-very-long-secret-used-for-testing-purposes',
+          accessTokenExpiration: '15m',
+          refreshTokenExpiration: '7d',
+          sessionStorage: 'db' as const,
+          userModel: {
+            modelName: 'users',
+            idField: 'id',
+            providerField: 'provider',
+          },
+          providers: [
+            {
+              type: 'up-auth' as const,
+              config: {
+                fields: {
+                  usernameField: 'email',
+                  passwordField: 'password',
+                },
+                mfaRequired: false,
+              },
+            },
+          ],
+        },
+      };
+
+      await runMigrate(config as unknown as MigratorTestConfig);
+
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('schema.ts'),
+        expect.stringContaining('_ross_sessions'),
       );
     });
   });

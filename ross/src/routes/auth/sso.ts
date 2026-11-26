@@ -9,6 +9,7 @@ import {
 } from '@/lib/auth/cookie';
 import {getAdapter} from '@/lib/auth/providers';
 import {buildRedirectUrl} from '@/lib/auth/redirect';
+import {createSession} from '@/lib/auth/session';
 import {
   openState,
   randomToken,
@@ -377,11 +378,18 @@ async function completeLogin(
       provider.config.fields.providerIdField,
     );
 
-    return reply
-      .status(200)
-      .send(
-        app.buildResponse(200, 'SSO authentication successful', {accessToken}),
-      );
+    const {refreshToken} = await createSession(
+      app,
+      config,
+      user[authentication.userModel.idField],
+    );
+
+    return reply.status(200).send(
+      app.buildResponse(200, 'SSO authentication successful', {
+        accessToken,
+        refreshToken,
+      }),
+    );
   } catch (err) {
     if ((err as {code?: string}).code === 'ACCOUNT_COLLISION') {
       return fail(
@@ -445,11 +453,14 @@ async function exchange(
     provider.config.fields.providerIdField,
   );
 
-  return reply
-    .status(200)
-    .send(
-      app.buildResponse(200, 'SSO authentication successful', {accessToken}),
-    );
+  const {refreshToken} = await createSession(app, config, user[idField]);
+
+  return reply.status(200).send(
+    app.buildResponse(200, 'SSO authentication successful', {
+      accessToken,
+      refreshToken,
+    }),
+  );
 }
 
 function failure(
@@ -513,6 +524,7 @@ function buildTokenSchema(policy: ResolvedApiPolicy) {
       type: 'object',
       properties: {
         accessToken: {type: 'string', description: 'JWT access token'},
+        refreshToken: {type: 'string', description: 'Refresh token'},
       },
     }),
   };

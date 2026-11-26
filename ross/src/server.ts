@@ -27,6 +27,7 @@ import {registerDeleteMeRoute} from '@/routes/auth/delete-me';
 import {registerEditMeRoute} from '@/routes/auth/edit-me';
 import {registerForgotPasswordRoute} from '@/routes/auth/forgot-password';
 import {registerLoginRoute} from '@/routes/auth/login';
+import {registerLogoutRoute} from '@/routes/auth/logout';
 import {registerMeRoute} from '@/routes/auth/me';
 import {
   registerForgotPasswordOtpVerifyRoute,
@@ -34,6 +35,7 @@ import {
   registerRegistrationOtpVerifyRoute,
 } from '@/routes/auth/otp-verify';
 import {registerProvidersRoute} from '@/routes/auth/providers';
+import {registerRefreshRoute} from '@/routes/auth/refresh';
 import {registerRegistrationRoute} from '@/routes/auth/registration';
 import {
   registerForgotPasswordResendOtpRoute,
@@ -45,7 +47,7 @@ import {registerHealthRoute} from '@/routes/health';
 
 import {ResolvedAppConfig} from '@/interfaces/config';
 
-import {NODE_CACHE_OTP_WARNING} from '@/constants';
+import {NODE_CACHE_OTP_WARNING, NODE_CACHE_SESSION_WARNING} from '@/constants';
 
 export interface StartServerResult {
   app: FastifyInstance;
@@ -77,10 +79,24 @@ export async function startServer(
   const usesAccountOtp = Boolean(
     upAuth && (upAuth.mfaRequired || upAuth.isVerifiedField),
   );
+  const usesCacheSessionStorage = Boolean(
+    resolvedConfig.authentication.enabled &&
+    resolvedConfig.authentication.userModel &&
+    resolvedConfig.authentication.sessionStorage === 'cache',
+  );
 
   if (usesAccountOtp && !isDistributedCacheConfigured(resolvedConfig)) {
     app.addHook('onListen', () => {
       app.log.warn(NODE_CACHE_OTP_WARNING);
+    });
+  }
+
+  if (
+    usesCacheSessionStorage &&
+    !isDistributedCacheConfigured(resolvedConfig)
+  ) {
+    app.addHook('onListen', () => {
+      app.log.warn(NODE_CACHE_SESSION_WARNING);
     });
   }
 
@@ -161,6 +177,8 @@ export async function startServer(
         registerMeRoute(app, resolvedConfig);
         registerDeleteMeRoute(app, resolvedConfig);
         registerEditMeRoute(app, resolvedConfig);
+        registerRefreshRoute(app, resolvedConfig);
+        registerLogoutRoute(app, resolvedConfig);
       }
 
       if (resolvedConfig.authentication.enabled && ssoProviders.length > 0) {

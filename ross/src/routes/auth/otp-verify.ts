@@ -1,5 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
+import {createSession} from '@/lib/auth/session';
 import {issueAccessToken} from '@/lib/auth/token';
 import {getUpAuth, UpAuthRuntime} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
@@ -202,9 +203,16 @@ function registerOtpVerifyEndpoint(
 
         await tx.commit();
 
+        const {refreshToken} = await createSession(
+          app,
+          config,
+          user[upAuth.idField],
+        );
+
         return reply.status(200).send(
           app.buildResponse(200, 'OTP verification successful', {
             accessToken: token,
+            refreshToken,
           }),
         );
       } catch (err) {
@@ -269,6 +277,7 @@ function generateSchema(
           type: 'object',
           properties: {
             accessToken: {type: 'string', description: 'JWT access token'},
+            refreshToken: {type: 'string', description: 'Refresh token'},
           },
         }
       : action === 'forgotPassword'

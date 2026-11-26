@@ -15,7 +15,9 @@ ROSS discovers the provider's endpoints and signing keys from `{issuerUrl}/.well
   "authentication": {
     "enabled": true,
     "jwtSecret": "env:JWT_SECRET",
-    "tokenExpiration": "1d",
+    "accessTokenExpiration": "15m",
+    "refreshTokenExpiration": "7d",
+    "sessionStorage": "db",
     "userModel": {
       "modelName": "users",
       "idField": "id",
@@ -97,7 +99,7 @@ When `callbackUrl` is omitted, ROSS derives it per request from the login route,
 5. ROSS     POST token endpoint with code + PKCE verifier
 6. ROSS     validate ID token signature, issuer, audience, nonce, and state
 7. ROSS     find-or-create the local user for (google, sub)
-8. ROSS     200  {"accessToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
+8. ROSS     200  {"accessToken": "...", "refreshToken": "..."}   or   302 <redirectUrl>?code=<one-time code>
 ```
 
 ### 1. Discovery and authorization
@@ -160,7 +162,7 @@ Without `redirectUrl`, the callback returns the token directly:
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 
@@ -184,7 +186,7 @@ Content-Type: application/json
 {
   "code": 200,
   "message": "SSO authentication successful",
-  "data": {"accessToken": "eyJhbGciOi..."}
+  "data": {"accessToken": "eyJhbGciOi...", "refreshToken": "xK9..."}
 }
 ```
 

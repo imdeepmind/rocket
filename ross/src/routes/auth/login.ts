@@ -1,6 +1,7 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
 import {blockPasswordManagement} from '@/lib/auth/guards';
+import {createSession} from '@/lib/auth/session';
 import {issueAccessToken} from '@/lib/auth/token';
 import {getUpAuth, UpAuthRuntime} from '@/lib/auth/up-auth';
 import {getApiRouteTargets, ResolvedApiPolicy} from '@/lib/config/api';
@@ -146,9 +147,16 @@ function registerLoginEndpoint(
         rbacUser,
       );
 
+      const {refreshToken} = await createSession(
+        app,
+        config,
+        user[upAuth.idField],
+      );
+
       return reply.status(200).send(
         app.buildResponse(200, 'Login successful', {
           accessToken: token,
+          refreshToken,
         }),
       );
     },
@@ -184,6 +192,7 @@ function generateSchema(
         }
       : {
           accessToken: {type: 'string', description: 'JWT access token'},
+          refreshToken: {type: 'string', description: 'Refresh token'},
         },
   };
 

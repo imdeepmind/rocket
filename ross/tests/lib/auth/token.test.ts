@@ -31,7 +31,7 @@ describe('issueAccessToken', () => {
     expect(token).toBe('signed-token');
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'user@example.com', providerId: null},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 
@@ -43,7 +43,7 @@ describe('issueAccessToken', () => {
 
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: null, providerId: null},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 
@@ -59,7 +59,7 @@ describe('issueAccessToken', () => {
 
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: null, providerId: null, role: 'admin'},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 
@@ -78,7 +78,7 @@ describe('issueAccessToken', () => {
 
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'sso@example.com', providerId: 'sub-123'},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 
@@ -95,7 +95,7 @@ describe('issueAccessToken', () => {
 
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, username: 'alice', email: 'alice', providerId: null},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 
@@ -110,7 +110,7 @@ describe('issueAccessToken', () => {
 
     expect(signer.sign).toHaveBeenCalledWith(
       {id: 7, email: 'fallback@example.com', providerId: null},
-      {expiresIn: '1d'},
+      {expiresIn: '15m'},
     );
   });
 

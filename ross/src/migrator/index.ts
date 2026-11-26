@@ -12,6 +12,8 @@ import {
   resolveDrizzleOrmDir,
 } from '@/migrator/drizzle-paths';
 
+import {getSessionModelConfig, SESSION_TABLE_NAME} from '@/lib/auth/session';
+import {getActiveUserModel} from '@/lib/auth/up-auth';
 import {resolveModelField} from '@/lib/config/resolve';
 
 import {
@@ -424,6 +426,17 @@ const migrateDatabase = async (config: ResolvedAppConfig): Promise<void> => {
     name,
     model,
   }));
+
+  if (
+    config.authentication?.enabled &&
+    config.authentication.sessionStorage === 'db' &&
+    getActiveUserModel(config)
+  ) {
+    models.push({
+      name: SESSION_TABLE_NAME,
+      model: getSessionModelConfig(),
+    });
+  }
 
   await generateMigrationSQL(
     models,
