@@ -301,9 +301,9 @@ export interface AuthUserModelConfig {
 }
 
 export interface UpAuthFieldsConfig {
-  usernameField: string;
+  emailField: string;
   passwordField: string;
-  isVerifiedField?: string;
+  isVerifiedField: string;
 }
 
 export interface UpAuthConfigInput {

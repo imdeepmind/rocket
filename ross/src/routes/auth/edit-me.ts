@@ -26,7 +26,7 @@ export function registerEditMeRoute(
 
   const upAuth = getUpAuth(config);
   const {modelName: model, idField} = userModel;
-  const usernameField = upAuth?.usernameField ?? '';
+  const emailField = upAuth?.emailField ?? '';
   const passwordField = upAuth?.passwordField ?? '';
   const isVerifiedField = upAuth?.isVerifiedField;
 
@@ -49,7 +49,7 @@ export function registerEditMeRoute(
       model,
       authModelConfig,
       idField,
-      usernameField,
+      emailField,
       passwordField,
       isVerifiedField,
       variant,
@@ -65,7 +65,7 @@ function registerEditMeEndpoint(
   model: string,
   authModelConfig: ModelConfig,
   idField: string,
-  usernameField: string,
+  emailField: string,
   passwordField: string,
   isVerifiedField: string | undefined,
   variant: string,
@@ -76,7 +76,7 @@ function registerEditMeEndpoint(
     authModelConfig,
     model,
     idField,
-    usernameField,
+    emailField,
     passwordField,
     isVerifiedField,
     policy,
@@ -106,9 +106,7 @@ function registerEditMeEndpoint(
       const body = request.body as ModelBody;
 
       const protectedFields = new Set(
-        [idField, usernameField, passwordField, isVerifiedField].filter(
-          Boolean,
-        ),
+        [idField, emailField, passwordField, isVerifiedField].filter(Boolean),
       );
       const editableKeys = Object.keys(body).filter(
         k => !protectedFields.has(k) && !isManagedTimestampField(k),
@@ -186,13 +184,13 @@ function generateSchema(
   authModelConfig: ModelConfig,
   model: string,
   idField: string,
-  usernameField: string,
+  emailField: string,
   passwordField: string,
   isVerifiedField: string | undefined,
   policy: ResolvedApiPolicy,
 ) {
   const protectedFields = new Set(
-    [idField, usernameField, passwordField, isVerifiedField].filter(Boolean),
+    [idField, emailField, passwordField, isVerifiedField].filter(Boolean),
   );
 
   const bodyProperties: Record<string, object> = {};
@@ -221,7 +219,7 @@ function generateSchema(
 
   const schema: Record<string, unknown> = {
     summary: `Edit authenticated user profile for ${capitalizeFirstLetter(model)}`,
-    description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${usernameField}, ${passwordField}, or ${isVerifiedField}.`,
+    description: `Updates the profile of the currently authenticated user in the "${model}" table. Cannot update ${idField}, ${emailField}, ${passwordField}, or ${isVerifiedField}.`,
     tags: policy.tags,
     body: bodySchema,
     response: responseSchema,

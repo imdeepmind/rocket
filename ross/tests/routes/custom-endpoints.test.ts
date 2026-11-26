@@ -54,8 +54,9 @@ describe('test custom-endpoints api', () => {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },

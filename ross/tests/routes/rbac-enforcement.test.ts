@@ -46,8 +46,9 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },

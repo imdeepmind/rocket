@@ -17,6 +17,11 @@ const deleteSspE2EConfig: AppConfigInput = {
       },
     },
   },
+  integrations: {
+    email: {
+      provider: 'dummy',
+    },
+  },
   authentication: {
     enabled: true,
     jwtSecret: 'super-secret-jwt-key-for-delete-ssp-testing-32chars',
@@ -30,8 +35,9 @@ const deleteSspE2EConfig: AppConfigInput = {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },
@@ -60,6 +66,10 @@ const deleteSspE2EConfig: AppConfigInput = {
           provider: {
             type: 'string',
             nullable: true,
+          },
+          is_active: {
+            type: 'boolean',
+            default: true,
           },
         },
       },

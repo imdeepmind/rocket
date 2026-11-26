@@ -28,6 +28,7 @@ const getDefaultModelConfig = (): Record<string, ModelConfig> => ({
       id: {type: 'integer', primaryKey: true, unique: true, nullable: false},
       email: {type: 'string', unique: true, nullable: false},
       password: {type: 'string', secret: true, nullable: false},
+      is_active: {type: 'boolean'},
       provider: {type: 'string', nullable: false},
       role: {type: 'string', nullable: false},
       status: {
@@ -62,6 +63,7 @@ const createBaseConfig = (): AppConfig => ({
     },
   },
   infrastructure: {database: getDefaultDatabaseConfig()},
+  integrations: {email: {provider: 'dummy'}},
   data: {models: getDefaultModelConfig()},
   authentication: {
     enabled: true,
@@ -76,8 +78,9 @@ const createBaseConfig = (): AppConfig => ({
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },
@@ -529,6 +532,7 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
     const raw: AppConfigInput = {
       application: {name: 'Full RBAC App'},
       infrastructure: {database: getDefaultDatabaseConfig()},
+      integrations: {email: {provider: 'dummy'}},
       data: {models: getDefaultModelConfig()},
       authentication: {
         enabled: true,
@@ -543,8 +547,9 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
+                isVerifiedField: 'is_active',
               },
             },
           },

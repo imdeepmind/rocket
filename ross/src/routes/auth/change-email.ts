@@ -23,7 +23,7 @@ export function registerEmailChangeRoute(
     return;
   }
 
-  const {model, idField, usernameField, isVerifiedField} = upAuth;
+  const {model, idField, emailField, isVerifiedField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -44,7 +44,7 @@ export function registerEmailChangeRoute(
       model,
       authModelConfig,
       idField,
-      usernameField,
+      emailField,
       isVerifiedField,
       variant,
       identifier,
@@ -59,14 +59,14 @@ function registerEmailChangeEndpoint(
   model: string,
   authModelConfig: ModelConfig,
   idField: string,
-  usernameField: string,
-  isVerifiedField: string | undefined,
+  emailField: string,
+  isVerifiedField: string,
   variant: string,
   apiIdentifier: string,
   policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
-    usernameField,
+    emailField,
     model,
     policy,
   );
@@ -93,13 +93,13 @@ function registerEmailChangeEndpoint(
       }
 
       const body = request.body as Record<string, string>;
-      const newEmail = body[usernameField];
+      const newEmail = body[emailField];
 
       /* c8 ignore start */
       if (!newEmail) {
         return reply
           .status(400)
-          .send(app.buildResponse(400, `${usernameField} is required`, null));
+          .send(app.buildResponse(400, `${emailField} is required`, null));
       }
       /* c8 ignore stop */
 
@@ -123,13 +123,11 @@ function registerEmailChangeEndpoint(
           app.buildResponse,
         );
 
-        const setClauses = [`"${usernameField}" = $1`];
-        const values: unknown[] = [newEmail];
-
-        if (isVerifiedField) {
-          setClauses.push(`"${isVerifiedField}" = $2`);
-          values.push(false);
-        }
+        const setClauses = [
+          `"${emailField}" = $1`,
+          `"${isVerifiedField}" = $2`,
+        ];
+        const values: unknown[] = [newEmail, false];
 
         const updatedAtClause = buildUpdatedAtClause(
           authModelConfig,
@@ -165,15 +163,15 @@ function registerEmailChangeEndpoint(
 }
 
 function generateSchema(
-  usernameField: string,
+  emailField: string,
   model: string,
   policy: ResolvedApiPolicy,
 ) {
   const bodySchema = {
     type: 'object',
-    required: [usernameField],
+    required: [emailField],
     properties: {
-      [usernameField]: {type: 'string', description: 'The new email address'},
+      [emailField]: {type: 'string', description: 'The new email address'},
     },
     additionalProperties: false,
   };

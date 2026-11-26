@@ -25,7 +25,7 @@ export function registerLoginRoute(
     return;
   }
 
-  const {model, usernameField, passwordField} = upAuth;
+  const {model, emailField, passwordField} = upAuth;
 
   const authModelConfig = models[model];
 
@@ -38,7 +38,7 @@ export function registerLoginRoute(
       app,
       config,
       model,
-      usernameField,
+      emailField,
       passwordField,
       upAuth,
       variant,
@@ -52,7 +52,7 @@ function registerLoginEndpoint(
   app: FastifyInstance,
   config: ResolvedAppConfig,
   model: string,
-  usernameField: string,
+  emailField: string,
   passwordField: string,
   upAuth: UpAuthRuntime,
   variant: string,
@@ -60,7 +60,7 @@ function registerLoginEndpoint(
   policy: ResolvedApiPolicy,
 ): void {
   const schema: Record<string, unknown> = generateSchema(
-    usernameField,
+    emailField,
     passwordField,
     model,
     upAuth.mfaRequired ?? false,
@@ -76,11 +76,10 @@ function registerLoginEndpoint(
       config: {apiIdentifier},
     },
     async (request: FastifyRequest<{Body: ModelBody}>, reply: FastifyReply) => {
-      const {[usernameField]: username, [passwordField]: password} =
-        request.body;
+      const {[emailField]: email, [passwordField]: password} = request.body;
 
-      const query = `SELECT * FROM "${model}" WHERE "${usernameField}" = $1 LIMIT 1;`;
-      const res = await app.db.query(query, [username]);
+      const query = `SELECT * FROM "${model}" WHERE "${emailField}" = $1 LIMIT 1;`;
+      const res = await app.db.query(query, [email]);
 
       const user = res.rows[0] as Record<string, unknown> | undefined;
 
@@ -110,14 +109,14 @@ function registerLoginEndpoint(
 
       const {isVerifiedField} = upAuth;
 
-      if (isVerifiedField && Boolean(user[isVerifiedField]) !== true) {
+      if (Boolean(user[isVerifiedField]) !== true) {
         return reply
           .status(401)
           .send(app.buildResponse(401, 'User is not verified', null));
       }
 
       if (upAuth.mfaRequired) {
-        const userEmail = String(user[usernameField]);
+        const userEmail = String(user[emailField]);
         const ulid = await app.otp.sendOTPForVerification(userEmail);
 
         return reply.status(200).send(
@@ -143,7 +142,7 @@ function registerLoginEndpoint(
         app.jwt,
         config,
         user,
-        usernameField,
+        emailField,
         rbacUser,
       );
 
@@ -164,7 +163,7 @@ function registerLoginEndpoint(
 }
 
 function generateSchema(
-  usernameField: string,
+  emailField: string,
   passwordField: string,
   model: string,
   mfaRequired: boolean,
@@ -172,9 +171,9 @@ function generateSchema(
 ) {
   const bodySchema = {
     type: 'object',
-    required: [usernameField, passwordField],
+    required: [emailField, passwordField],
     properties: {
-      [usernameField]: {type: 'string', description: 'The user identifier'},
+      [emailField]: {type: 'string', description: 'The user identifier'},
       [passwordField]: {type: 'string', description: 'The user password'},
     },
     additionalProperties: false,

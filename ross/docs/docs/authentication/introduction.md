@@ -48,8 +48,9 @@ Authentication lives at the top level of your configuration file:
         "type": "up-auth",
         "config": {
           "fields": {
-            "usernameField": "email",
-            "passwordField": "password"
+            "emailField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "is_active"
           }
         }
       },
@@ -276,10 +277,10 @@ Auth routes are mounted under the API prefix and variant, so the default base pa
 | `POST /auth/login` | `up-auth` |
 | `POST /auth/change-password` | `up-auth` |
 | `GET`, `PATCH`, `DELETE /auth/user/me` | `up-auth` (these routes also serve SSO-owned rows in a mixed deployment) |
-| `PATCH /auth/user/email` | `up-auth` + `fields.isVerifiedField` |
+| `PATCH /auth/user/email` | `up-auth` |
 | `POST /auth/forgot-password` and its `verify/otp` and `resend/otp` routes | `up-auth` + `integrations.email` |
 | `POST /auth/login/verify/otp` and `/login/resend/otp` | `up-auth` + `mfaRequired: true` |
-| `POST /auth/register/verify/otp` and `/register/resend/otp` | `up-auth` + `fields.isVerifiedField` |
+| `POST /auth/register/verify/otp` and `/register/resend/otp` | `up-auth` |
 | `GET /auth/sso/<name>/login` and `.../callback` | Each SSO provider |
 | `POST /auth/sso/<name>/token` | An SSO provider with `redirectUrl` |
 | `GET /auth/sso/<name>/metadata` | A SAML provider |

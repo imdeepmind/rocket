@@ -49,8 +49,8 @@ ROSS sends email only for account and security flows that are driven by one-time
 | --- | --- | --- |
 | Forgot password | `POST /api/v1/auth/forgot-password`, `/forgot-password/verify/otp`, `/forgot-password/resend/otp` | `integrations.email` is configured |
 | Login MFA | `POST /api/v1/auth/login`, `/login/verify/otp`, `/login/resend/otp` | `integrations.email` and the `up-auth` provider has `config.mfaRequired: true` |
-| Registration verification | `POST /api/v1/auth/register`, `/register/verify/otp`, `/register/resend/otp` | `integrations.email` and the `up-auth` provider has `config.fields.isVerifiedField` set |
-| Email change | `PATCH /api/v1/auth/user/email` | `integrations.email` and `config.fields.isVerifiedField` is set |
+| Registration verification | `POST /api/v1/auth/register`, `/register/verify/otp`, `/register/resend/otp` | `integrations.email` and `up-auth` is configured |
+| Email change | `PATCH /api/v1/auth/user/email` | `integrations.email` and `up-auth` is configured |
 
 Each OTP email contains:
 
@@ -72,16 +72,14 @@ It depends on your authentication configuration:
 
 | Your authentication setup | Email integration |
 | --- | --- |
-| Authentication disabled | Not needed |
-| `up-auth` without `mfaRequired` and without `isVerifiedField` | Optional, but required for forgot-password |
-| `up-auth` with `mfaRequired: true` | **Required** (validation fails otherwise) |
-| `up-auth` with `config.fields.isVerifiedField` set | **Required** (validation fails otherwise) |
+| Authentication disabled or SSO-only | Not needed |
+| `up-auth` (with or without `mfaRequired: true`) | **Required** (validation fails otherwise) |
 
 If you omit `integrations.email`:
 
 - ROSS does not register the `communicate` plugin or the `app.communicate` decorator.
 - Email-dependent routes are not mounted, so requests to them return `404 Not Found`.
-- Configuration validation rejects `mfaRequired: true` and `isVerifiedField` with an explicit error that the integration must be configured.
+- Configuration validation rejects `up-auth` (`isVerifiedField` and `mfaRequired: true`) with an explicit error that the integration must be configured.
 
 ## Secrets and environment variables
 

@@ -72,7 +72,7 @@
                 "type": "up-auth",
                 "config": {
                     "fields": {
-                        "usernameField": "email",
+                        "emailField": "email",
                         "passwordField": "password",
                         "isVerifiedField": "isActive"
                     },

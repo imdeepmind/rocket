@@ -216,8 +216,9 @@ The following configuration demonstrates a complete setup featuring multi-versio
         "type": "up-auth",
         "config": {
           "fields": {
-            "usernameField": "email",
-            "passwordField": "password"
+            "emailField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "is_active"
           }
         }
       }

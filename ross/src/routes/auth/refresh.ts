@@ -71,7 +71,7 @@ function resolveTokenFields(
 
   const upAuth = getUpAuth(config);
   if (upAuth) {
-    return {usernameField: upAuth.usernameField};
+    return {usernameField: upAuth.emailField};
   }
 
   return {};

@@ -321,6 +321,11 @@ const upAuthE2EConfig: AppConfigInput = {
       },
     },
   },
+  integrations: {
+    email: {
+      provider: 'dummy',
+    },
+  },
   authentication: {
     enabled: true,
     jwtSecret: 'e2e-up-auth-jwt-secret-at-least-32-chars-long!',
@@ -335,8 +340,9 @@ const upAuthE2EConfig: AppConfigInput = {
         type: 'up-auth',
         config: {
           fields: {
-            usernameField: 'email',
+            emailField: 'email',
             passwordField: 'password',
+            isVerifiedField: 'is_active',
           },
         },
       },
@@ -368,6 +374,11 @@ const upAuthE2EConfig: AppConfigInput = {
           provider: {
             type: 'string',
             nullable: true,
+          },
+          is_active: {
+            type: 'boolean',
+            nullable: false,
+            default: false,
           },
           full_name: {
             type: 'string',
@@ -470,7 +481,7 @@ test.describe
       expect(res.status()).toBe(400);
     });
 
-    test('Successfully registers a new user without exposing secret password (HTTP 201)', async () => {
+    test('Successfully registers a new user and returns OTP challenge (HTTP 201)', async () => {
       const res = await server.request.post('/api/v1/auth/register', {
         data: testUser,
       });
@@ -478,10 +489,14 @@ test.describe
       const body = await res.json();
       expect(body.code).toBe(201);
       expect(body.data).toBeDefined();
-      expect(body.data.email).toBe(testUser.email);
-      expect(body.data.full_name).toBe(testUser.full_name);
-      expect(body.data.provider).toBe('up-auth');
+      expect(body.data.requiresMfa).toBe(true);
+      expect(typeof body.data.ulid).toBe('string');
       expect(body.data.password).toBeUndefined();
+
+      await server.app.db.query(
+        'UPDATE users SET is_active = 1 WHERE email = ?;',
+        [testUser.email],
+      );
     });
 
     test('Rejects registration with duplicate email address (conflict)', async () => {

@@ -61,8 +61,9 @@ const upAuthConfig: AuthenticationConfig = {
       type: 'up-auth',
       config: {
         fields: {
-          usernameField: 'email',
+          emailField: 'email',
           passwordField: 'password',
+          isVerifiedField: 'is_active',
         },
       },
     },
@@ -112,8 +113,28 @@ async function createAuthApp(
     {mode: 'dev'},
   );
   app.appConfig = config as ResolvedAppConfig;
+  const cacheStorage = new Map<string, {value: unknown; expiry?: number}>();
+  (app as any).cache = {
+    get: vi.fn(async (key: string) => {
+      const item = cacheStorage.get(key);
+      if (!item) return null;
+      return item.value;
+    }),
+    set: vi.fn(async (key: string, value: unknown, ttlSeconds?: number) => {
+      const expiry = ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined;
+      cacheStorage.set(key, {value, expiry});
+    }),
+    delete: vi.fn(async (key: string) => {
+      cacheStorage.delete(key);
+    }),
+  };
+  (app as any).communicate = {
+    sendEmail: vi.fn(async () => {}),
+  };
+
   await app.register(databasePlugin);
   await app.register(responsePlugin);
+  await app.register(otpPlugin);
 
   registerErrorHandler(app);
   registerNotFoundHandler(app);
@@ -221,7 +242,7 @@ describe('POST /auth/register', () => {
   // -------------------------------------------------------------------------
 
   describe('happy path', () => {
-    test('should return 201 with the new user data (password excluded)', async () => {
+    test('should return 201 with requiresMfa and ulid on registration', async () => {
       const app = await createAuthApp(upAuthConfig);
 
       const response = await app.inject({
@@ -238,14 +259,13 @@ describe('POST /auth/register', () => {
 
       const body = response.json();
       expect(body.code).toBe(201);
-      expect(body.message).toContain('users');
+      expect(body.message).toBe(
+        'Registration successful. OTP sent to your email.',
+      );
       expect(body).not.toHaveProperty('raw_data');
-
-      // data must NOT include the password field
-      expect(body.data).not.toHaveProperty('password');
       expect(body.data).toMatchObject({
-        email: 'alice@example.com',
-        name: 'Alice',
+        requiresMfa: true,
+        ulid: expect.any(String),
       });
 
       await app.close();
@@ -262,7 +282,6 @@ describe('POST /auth/register', () => {
       });
 
       // bcrypt.hash must have been called with the raw password
-      expect(hashSpy).toHaveBeenCalledOnce();
       expect(hashSpy).toHaveBeenCalledWith('mySecret', 10);
 
       hashSpy.mockRestore();
@@ -665,6 +684,7 @@ describe('POST /auth/register', () => {
           },
           username: {type: 'string', nullable: false},
           secret: {type: 'string', nullable: false},
+          is_active: {type: 'boolean', default: false},
         },
       },
     };
@@ -682,8 +702,9 @@ describe('POST /auth/register', () => {
           type: 'up-auth',
           config: {
             fields: {
-              usernameField: 'username',
+              emailField: 'username',
               passwordField: 'secret',
+              isVerifiedField: 'is_active',
             },
           },
         },
@@ -702,9 +723,11 @@ describe('POST /auth/register', () => {
       expect(response.statusCode).toBe(201);
 
       const body = response.json();
-      // The custom password column "secret" must not leak into the response
       expect(body.data).not.toHaveProperty('secret');
-      expect(body.data).toMatchObject({username: 'judy'});
+      expect(body.data).toMatchObject({
+        requiresMfa: true,
+        ulid: expect.any(String),
+      });
 
       const [query] = pgClientQueryMock.mock.calls.find(
         call => typeof call[0] === 'string' && call[0].includes('INSERT'),
@@ -805,7 +828,7 @@ describe('POST /auth/register', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
                 isVerifiedField: 'is_active',
               },
@@ -851,7 +874,7 @@ describe('POST /auth/register', () => {
             type: 'up-auth',
             config: {
               fields: {
-                usernameField: 'email',
+                emailField: 'email',
                 passwordField: 'password',
                 isVerifiedField: 'is_active',
               },

@@ -293,11 +293,11 @@ function validateUpAuthProvider(
   const {fields} = provider.config;
   const base = '/authentication/providers/up-auth/config';
 
-  const usernameField = assertField(
+  const emailField = assertField(
     errors,
     targetModel,
-    fields.usernameField,
-    `${base}/fields/usernameField`,
+    fields.emailField,
+    `${base}/fields/emailField`,
   );
   assertField(
     errors,
@@ -306,16 +306,16 @@ function validateUpAuthProvider(
     `${base}/fields/passwordField`,
   );
 
-  if (usernameField && usernameField.type !== 'string') {
-    errors.push(`${base}/fields/usernameField: field must be of type string`);
+  if (emailField && emailField.type !== 'string') {
+    errors.push(`${base}/fields/emailField: field must be of type string`);
   }
 
   if (hasSso) {
     assertNullable(
       errors,
       targetModel,
-      fields.usernameField,
-      `${base}/fields/usernameField`,
+      fields.emailField,
+      `${base}/fields/emailField`,
     );
     assertNullable(
       errors,
@@ -323,36 +323,34 @@ function validateUpAuthProvider(
       fields.passwordField,
       `${base}/fields/passwordField`,
     );
-  } else if (usernameField) {
-    if (!isFieldUnique(targetModel, fields.usernameField, usernameField)) {
-      errors.push(`${base}/fields/usernameField: field must be unique`);
+  } else if (emailField) {
+    if (!isFieldUnique(targetModel, fields.emailField, emailField)) {
+      errors.push(`${base}/fields/emailField: field must be unique`);
     }
-    if (usernameField.nullable !== false) {
+    if (emailField.nullable !== false) {
       errors.push(
-        `${base}/fields/usernameField: field must not be nullable when SSO is not configured`,
+        `${base}/fields/emailField: field must not be nullable when SSO is not configured`,
       );
     }
   }
 
-  if (fields.isVerifiedField) {
-    const verifiedField = assertField(
-      errors,
-      targetModel,
-      fields.isVerifiedField,
-      `${base}/fields/isVerifiedField`,
+  const verifiedField = assertField(
+    errors,
+    targetModel,
+    fields.isVerifiedField,
+    `${base}/fields/isVerifiedField`,
+  );
+
+  if (verifiedField && verifiedField.type !== 'boolean') {
+    errors.push(
+      `${base}/fields/isVerifiedField: field must be of type boolean`,
     );
+  }
 
-    if (verifiedField && verifiedField.type !== 'boolean') {
-      errors.push(
-        `${base}/fields/isVerifiedField: field must be of type boolean`,
-      );
-    }
-
-    if (!config.integrations?.email) {
-      errors.push(
-        `${base}/fields/isVerifiedField: integrations.email must be configured when isVerifiedField is set`,
-      );
-    }
+  if (!config.integrations?.email) {
+    errors.push(
+      `${base}/fields/isVerifiedField: integrations.email must be configured when isVerifiedField is set`,
+    );
   }
 
   if (provider.config.mfaRequired && !config.integrations?.email) {
@@ -428,7 +426,7 @@ function validateSsoProvider(
     if (columnField.nullable === false && columnField.default === undefined) {
       const isUpAuthCredential = upAuthProviders.some(
         p =>
-          p.config.fields.usernameField === columnName ||
+          p.config.fields.emailField === columnName ||
           p.config.fields.passwordField === columnName,
       );
 

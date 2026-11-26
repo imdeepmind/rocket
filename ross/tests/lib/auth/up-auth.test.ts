@@ -22,14 +22,14 @@ describe('getUpAuth', () => {
       model: 'users',
       idField: 'id',
       providerField: 'provider',
-      usernameField: 'email',
+      emailField: 'email',
       passwordField: 'password',
+      isVerifiedField: 'is_active',
       mfaRequired: false,
     });
-    expect(upAuth?.isVerifiedField).toBeUndefined();
   });
 
-  test('exposes the verification field when configured', () => {
+  test('exposes the configured verification field', () => {
     const config = buildEnabledAuth([
       {
         ...upAuthProvider,
@@ -66,7 +66,11 @@ describe('getUpAuth', () => {
             {
               type: 'up-auth',
               config: {
-                fields: {usernameField: 'email', passwordField: 'pw'},
+                fields: {
+                  emailField: 'email',
+                  passwordField: 'pw',
+                  isVerifiedField: 'is_active',
+                },
                 mfaRequired: false,
               },
             },

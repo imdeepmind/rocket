@@ -712,9 +712,9 @@ const upAuthProviderSchema = {
         fields: {
           type: 'object',
           additionalProperties: false,
-          required: ['usernameField', 'passwordField'],
+          required: ['emailField', 'passwordField', 'isVerifiedField'],
           properties: {
-            usernameField: {
+            emailField: {
               type: 'string',
               isEntityName: true,
               minLength: 1,

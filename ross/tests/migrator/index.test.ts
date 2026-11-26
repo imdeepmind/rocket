@@ -1266,8 +1266,9 @@ describe('migrateDatabase', () => {
               type: 'up-auth' as const,
               config: {
                 fields: {
-                  usernameField: 'email',
+                  emailField: 'email',
                   passwordField: 'password',
+                  isVerifiedField: 'is_active',
                 },
                 mfaRequired: false,
               },

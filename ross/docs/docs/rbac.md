@@ -290,8 +290,9 @@ Here is an end-to-end example configuring models, authentication, role hierarchi
         "type": "up-auth",
         "config": {
           "fields": {
-            "usernameField": "email",
-            "passwordField": "password"
+            "emailField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "is_active"
           }
         }
       }

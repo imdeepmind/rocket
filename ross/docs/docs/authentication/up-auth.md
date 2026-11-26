@@ -28,8 +28,9 @@ This is the only provider that owns a password. It also provides registration, p
         "type": "up-auth",
         "config": {
           "fields": {
-            "usernameField": "email",
-            "passwordField": "password"
+            "emailField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "is_active"
           }
         }
       }
@@ -43,18 +44,18 @@ This is the only provider that owns a password. It also provides registration, p
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `type` | `"up-auth"` | **Yes** | — | Provider identifier. |
-| `config.fields.usernameField` | `string` | **Yes** | — | Model column used as the login identifier. It is also the address OTP emails are sent to. |
+| `config.fields.emailField` | `string` | **Yes** | — | Model column used as the login identifier. It is also the address OTP emails are sent to. |
 | `config.fields.passwordField` | `string` | **Yes** | — | Model column that stores the bcrypt hash. Mark it `"secret": true`. |
-| `config.fields.isVerifiedField` | `string` | No | — | Boolean model column used for email verification. When set, registration starts unverified and login rejects unverified users. Requires `integrations.email`. |
+| `config.fields.isVerifiedField` | `string` | **Yes** | — | Boolean model column used for email verification. Registration starts unverified and login rejects unverified users. Requires `integrations.email`. |
 | `config.mfaRequired` | `boolean` | No | `false` | Sends an OTP after a correct password and withholds the access token until the OTP is verified. Requires `integrations.email`. |
 
 Additional rules enforced at startup:
 
 - At most one `up-auth` provider is allowed.
 - `userModel` and `jwtSecret` are required.
-- `usernameField` and `passwordField` must exist in the user model and be of type `string`.
-- When no SSO provider is configured, `usernameField` must be unique (`unique: true` or unique index) and not nullable (`nullable: false`), and `passwordField` must not be nullable (`nullable: false`).
-- When an SSO provider is configured in the same application, `passwordField` must be `nullable: true` (and `usernameField` must be `nullable: true` unless mapped/provided), because SSO accounts do not have passwords.
+- `emailField` and `passwordField` must exist in the user model and be of type `string`.
+- When no SSO provider is configured, `emailField` must be unique (`unique: true` or unique index) and not nullable (`nullable: false`), and `passwordField` must not be nullable (`nullable: false`).
+- When an SSO provider is configured in the same application, `passwordField` must be `nullable: true` (and `emailField` must be `nullable: true` unless mapped/provided), because SSO accounts do not have passwords.
 - `isVerifiedField` must exist, must be of type `boolean`, and requires `integrations.email`.
 - `mfaRequired: true` requires `integrations.email`.
 
@@ -72,13 +73,13 @@ All routes are mounted under the API prefix and variant, so the default base pat
 | `POST` | `/api/v1/auth/login` | No | `up-auth` configured |
 | `POST` | `/api/v1/auth/login/verify/otp` | No | `mfaRequired: true` |
 | `POST` | `/api/v1/auth/login/resend/otp` | No | `mfaRequired: true` |
-| `POST` | `/api/v1/auth/register/verify/otp` | No | `isVerifiedField` set |
-| `POST` | `/api/v1/auth/register/resend/otp` | No | `isVerifiedField` set |
+| `POST` | `/api/v1/auth/register/verify/otp` | No | `up-auth` configured |
+| `POST` | `/api/v1/auth/register/resend/otp` | No | `up-auth` configured |
 | `POST` | `/api/v1/auth/forgot-password` | No | `integrations.email` |
 | `POST` | `/api/v1/auth/forgot-password/verify/otp` | No | `integrations.email` |
 | `POST` | `/api/v1/auth/forgot-password/resend/otp` | No | `integrations.email` |
 | `POST` | `/api/v1/auth/change-password` | Bearer JWT | `up-auth` configured |
-| `PATCH` | `/api/v1/auth/user/email` | Bearer JWT | `isVerifiedField` set |
+| `PATCH` | `/api/v1/auth/user/email` | Bearer JWT | `up-auth` configured |
 | `GET` | `/api/v1/auth/user/me` | Bearer JWT | `up-auth` configured |
 | `PATCH` | `/api/v1/auth/user/me` | Bearer JWT | `up-auth` configured |
 | `DELETE` | `/api/v1/auth/user/me` | Bearer JWT | `up-auth` configured |
@@ -103,24 +104,10 @@ The request body is generated from the user model:
 - The primary key and managed timestamp columns are excluded.
 - Every non-nullable field without a default is required.
 - Unknown properties are rejected.
-- When `isVerifiedField` is configured, that column is removed from the accepted body and forced to `false`.
+- `isVerifiedField` is removed from the accepted body and forced to `false`.
 - The password is hashed before the row is inserted.
 
-Success (no verification configured):
-
-```json
-{
-  "code": 201,
-  "message": "Successfully registered a new user in the users table",
-  "data": {
-    "email": "alice@example.com",
-    "display_name": "Alice",
-    "provider": "up-auth"
-  }
-}
-```
-
-Success with `isVerifiedField` configured:
+Success:
 
 ```json
 {
@@ -178,7 +165,7 @@ Complete the login with `POST /auth/login/verify/otp` and the `ulid`, `otp`, and
 | --- | --- | --- |
 | `400` | `Password management is not supported for accounts authenticated via <provider>...` | The matched row belongs to an SSO provider. |
 | `401` | `Invalid username or password` | Unknown user or wrong password. |
-| `401` | `User is not verified` | `isVerifiedField` is set and the column is not `true`. |
+| `401` | `User is not verified` | The `isVerifiedField` column is not `true`. |
 | `400` | Schema validation message | Missing or unknown body properties. |
 
 The handler compares against a dummy hash when the user does not exist, so response timing does not reveal whether an account is registered.
@@ -315,7 +302,7 @@ The route always requires a bearer token, independently of the `apis` authorizat
 
 ## Change email
 
-Available only when `fields.isVerifiedField` is configured. It updates the email column, marks the account unverified, and sends an OTP to the new address:
+Updates the email column, marks the account unverified, and sends an OTP to the new address:
 
 ```http
 PATCH /api/v1/auth/user/email
@@ -369,9 +356,9 @@ Content-Type: application/json
 The accepted body is generated from the model with these columns removed:
 
 - the primary key (`idField`)
-- the username column (`usernameField`)
+- the email column (`emailField`)
 - the password column (`passwordField`)
-- the verification column (`isVerifiedField`, when configured)
+- the verification column (`isVerifiedField`)
 - managed timestamp columns
 
 An empty body returns `400 No editable fields provided`. Success returns the updated fields:
@@ -416,7 +403,7 @@ Deletion runs inside a transaction. The row is removed permanently; ROSS does no
 | Claim | Source |
 | --- | --- |
 | `id` | `userModel.idField` |
-| `<usernameField>` | The username column, when it has a value |
+| `<emailField>` | The email column, when it has a value |
 | `role` | `rbac.roleField` when RBAC is enabled and the value is a scalar |
 | `roles` | `rbac.roleField` when the value is an array or a JSON-encoded array |
 | `iat`, `exp` | Issued-at and `accessTokenExpiration` |
@@ -448,7 +435,7 @@ Deletion runs inside a transaction. The row is removed permanently; ROSS does no
         "type": "up-auth",
         "config": {
           "fields": {
-            "usernameField": "email",
+            "emailField": "email",
             "passwordField": "password",
             "isVerifiedField": "is_active"
           },
@@ -484,7 +471,11 @@ Password login and SSO can coexist. Make the credential columns nullable and let
       {
         "type": "up-auth",
         "config": {
-          "fields": {"usernameField": "email", "passwordField": "password"}
+          "fields": {
+            "emailField": "email",
+            "passwordField": "password",
+            "isVerifiedField": "is_active"
+          }
         }
       },
       {

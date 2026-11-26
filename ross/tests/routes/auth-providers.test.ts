@@ -21,7 +21,13 @@ const dbConfig = {
 
 const upAuth = {
   type: 'up-auth' as const,
-  config: {fields: {usernameField: 'email', passwordField: 'password'}},
+  config: {
+    fields: {
+      emailField: 'email',
+      passwordField: 'password',
+      isVerifiedField: 'is_active',
+    },
+  },
 };
 
 const oauth2 = {
