@@ -1,0 +1,139 @@
+{
+    "application": {
+        "name": "Rocket Notes (username/password)",
+        "logLevel": "info",
+        "rateLimit": {
+            "enabled": true,
+            "max": 1000,
+            "timeWindow": "15m"
+        }
+    },
+    "docs": {
+        "openapi": {
+            "enabled": true,
+            "path": "/api/docs",
+            "info": {
+                "title": "Rocket Notes (username/password auth)",
+                "description": "Rocket OSS example: classic username/password authentication with JWT bearer tokens and per-user scoped notes.",
+                "version": "v1.0.0",
+                "license": {
+                    "name": "MIT",
+                    "url": "https://opensource.org/licenses/MIT"
+                }
+            }
+        }
+    },
+    "infrastructure": {
+        "database": {
+            "engine": "sqlite",
+            "connection": {
+                "url": "./examples/auth/username-password/database.db"
+            },
+            "timeout": 10000
+        }
+    },
+    "authentication": {
+        "enabled": true,
+        "provider": {
+            "type": "up-auth",
+            "config": {
+                "userModel": {
+                    "model": "users",
+                    "idField": "id",
+                    "usernameField": "username",
+                    "passwordField": "password"
+                },
+                "jwtSecret": "env:JWT_SECRET"
+            }
+        }
+    },
+    "data": {
+        "models": {
+            "users": {
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false
+                    },
+                    "username": {
+                        "type": "string",
+                        "unique": true,
+                        "nullable": false,
+                        "query": ["eq"]
+                    },
+                    "password": {
+                        "type": "string",
+                        "nullable": false,
+                        "secret": true
+                    }
+                },
+                "indexes": {
+                    "users_username_unique": {
+                        "fields": ["username"],
+                        "unique": true
+                    }
+                }
+            },
+            "notes": {
+                "timestamps": true,
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "query": ["eq"]
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": false,
+                        "query": ["sort"]
+                    },
+                    "body": {
+                        "type": "text",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "default": "pending",
+                        "query": ["eq"]
+                    },
+                    "userId": {
+                        "type": "integer",
+                        "nullable": false,
+                        "query": ["eq"],
+                        "aggregations": ["count"]
+                    }
+                },
+                "indexes": {
+                    "notes_user_id_idx": {
+                        "fields": ["userId"],
+                        "unique": false
+                    }
+                },
+                "relations": {
+                    "owner": {
+                        "type": "belongsTo",
+                        "model": "users",
+                        "localField": "userId",
+                        "foreignField": "id",
+                        "onDelete": "cascade",
+                        "onUpdate": "cascade"
+                    }
+                }
+            }
+        }
+    },
+    "apis": {
+        "model.v1.notes.unknown.getAll": {
+            "tags": ["Notes"]
+        },
+        "model.v1.notes.unknown.insert": {
+            "tags": ["Notes"]
+        }
+    }
+}

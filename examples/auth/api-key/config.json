@@ -1,0 +1,94 @@
+{
+    "application": {
+        "name": "Rocket Inventory (API key)",
+        "logLevel": "info",
+        "rateLimit": {
+            "enabled": true,
+            "max": 1000,
+            "timeWindow": "15m"
+        }
+    },
+    "docs": {
+        "openapi": {
+            "enabled": true,
+            "path": "/api/docs",
+            "info": {
+                "title": "Rocket Inventory (API key auth)",
+                "description": "Rocket OSS example: API key authentication via the x-api-key header with a protected inventory model and one public read route.",
+                "version": "v1.0.0",
+                "license": {
+                    "name": "MIT",
+                    "url": "https://opensource.org/licenses/MIT"
+                }
+            }
+        }
+    },
+    "infrastructure": {
+        "database": {
+            "engine": "sqlite",
+            "connection": {
+                "url": "./examples/auth/api-key/database.db"
+            },
+            "timeout": 10000
+        }
+    },
+    "authentication": {
+        "enabled": true,
+        "provider": {
+            "type": "api-key",
+            "config": {
+                "key": "env:API_KEY"
+            }
+        }
+    },
+    "data": {
+        "models": {
+            "inventory": {
+                "timestamps": true,
+                "fields": {
+                    "id": {
+                        "type": "integer",
+                        "primaryKey": true,
+                        "autoIncrement": true,
+                        "unique": true,
+                        "nullable": false,
+                        "query": ["eq"],
+                        "apis": ["edit", "delete"]
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": false,
+                        "query": ["sort"]
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "default": 0,
+                        "query": ["eq", "gt", "lt"],
+                        "aggregations": ["count", "sum", "avg", "min", "max"]
+                    },
+                    "location": {
+                        "type": "string",
+                        "nullable": false,
+                        "query": ["eq"]
+                    }
+                },
+                "indexes": {
+                    "inventory_name_idx": {
+                        "fields": ["name"],
+                        "unique": false
+                    },
+                    "inventory_name_location_idx": {
+                        "fields": ["name", "location"],
+                        "unique": false
+                    }
+                }
+            }
+        }
+    },
+    "apis": {
+        "model.v1.inventory.unknown.getAll": {
+            "tags": ["Inventory"],
+            "authorization": false
+        }
+    }
+}
