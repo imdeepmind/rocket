@@ -450,22 +450,31 @@ describe('buildPreValidation', () => {
       expect(reply.status).not.toHaveBeenCalled();
     });
 
-    test('normalizes string array of roles with wildcards', async () => {
+    test('normalizes string array of concrete roles without wildcard expansion', async () => {
       const app = buildMockApp();
       const request = buildMockRequest({
         user: {id: 9, email: 'editor@example.com', role: 'editor:junior'},
       });
       const reply = buildMockReply();
 
-      const handler = buildPreValidation(
+      const concreteHandler = buildPreValidation(
+        app as never,
+        rbacEnabledConfig,
+        true,
+        ['editor:junior'],
+      );
+      await concreteHandler(request as never, reply as never);
+      expect(reply.status).not.toHaveBeenCalled();
+
+      const wildcardReply = buildMockReply();
+      const wildcardHandler = buildPreValidation(
         app as never,
         rbacEnabledConfig,
         true,
         ['editor:*'],
       );
-      await handler(request as never, reply as never);
-
-      expect(reply.status).not.toHaveBeenCalled();
+      await wildcardHandler(request as never, wildcardReply as never);
+      expect(wildcardReply.status).toHaveBeenCalledWith(403);
     });
 
     test('normalizes string array of roles when RBAC is disabled or roles is absent', async () => {

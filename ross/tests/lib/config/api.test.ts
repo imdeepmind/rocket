@@ -269,54 +269,51 @@ describe('resolveApiPolicy', () => {
     expect(policy.roles).toBeUndefined();
   });
 
-  test('roles expands concrete roles and namespaced wildcards when RBAC is enabled', () => {
+  test('roles preserves concrete roles as a Set without wildcard expansion when RBAC is enabled', () => {
     const config = resolveWithRbac({
       'model.v1.posts.title.search': {
-        roles: ['editor:*', 'viewer'],
+        roles: ['editor:senior', 'viewer'],
       },
     });
     const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
-    expect(policy.roles).toEqual(
-      new Set(['editor:senior', 'editor:junior', 'viewer']),
-    );
+    expect(policy.roles).toEqual(new Set(['editor:senior', 'viewer']));
   });
 
-  test('roles expands universal wildcard "*" to all declared roles', () => {
+  test('roles does not expand wildcards in resolveApiPolicy', () => {
     const config = resolveWithRbac({
       'model.v1.posts.title.search': {
         roles: ['*'],
       },
+      'model.v1.posts.unknown.insert': {
+        roles: ['editor:*'],
+      },
     });
-    const policy = resolveApiPolicy(config, 'model.v1.posts.title.search');
-    expect(policy.roles).toEqual(
-      new Set([
-        'admin',
-        'lead_editor',
-        'editor:senior',
-        'editor:junior',
-        'viewer',
-      ]),
+    expect(resolveApiPolicy(config, 'model.v1.posts.title.search').roles).toEqual(
+      new Set(['*']),
     );
+    expect(
+      resolveApiPolicy(config, 'model.v1.posts.unknown.insert').roles,
+    ).toEqual(new Set(['editor:*']));
   });
 
   test('variant inherits roles from base override when not explicitly set', () => {
     const config = resolveWithRbac(
       {
         'model.v1.posts.title.search': {
-          roles: ['editor:*'],
+          roles: ['editor:senior'],
         },
       },
       {'model.v1.posts.title.search': {variants: ['custom']}},
     );
     const policy = resolveApiPolicy(config, 'model.custom.posts.title.search');
-    expect(policy.roles).toEqual(new Set(['editor:senior', 'editor:junior']));
+    expect(policy.roles).toEqual(new Set(['editor:senior']));
   });
 
   test('variant explicit roles override base roles', () => {
     const config = resolveWithRbac(
       {
         'model.v1.posts.title.search': {
-          roles: ['editor:*'],
+          roles: ['editor:senior'],
         },
         'model.custom.posts.title.search': {
           roles: ['admin'],
@@ -338,13 +335,15 @@ describe('resolveApiPolicy', () => {
     expect(policy.roles).toBeUndefined();
   });
 
-  test('resolves wildcard and concrete role policies across a full role hierarchy', () => {
+  test('resolves concrete role policies across a full role hierarchy', () => {
     const config = resolveConfig(
       {
         ...baseInput({
           'aggregate.admin.users.id.getAggregation': {roles: ['admin']},
-          'model.test.posts.unknown.insert': {roles: ['editor:*']},
-          'model.test.users.id.index': {roles: ['*']},
+          'model.test.posts.unknown.insert': {
+            roles: ['editor:senior', 'editor:junior'],
+          },
+          'model.test.users.id.index': {roles: ['viewer']},
           'model.test.users.unknown.getAll': {authorization: true},
           'custom.test.all.unknown.updatePostTitle': {
             roles: ['editor:senior', 'admin'],
@@ -379,7 +378,7 @@ describe('resolveApiPolicy', () => {
     );
     expect(adminPolicy.roles).toEqual(new Set(['admin']));
 
-    // 2. Namespaced wildcard "editor:*" -> expands to editor:senior, editor:junior
+    // 2. Concrete editor roles
     const insertPolicy = resolveApiPolicy(
       config,
       'model.test.posts.unknown.insert',
@@ -388,18 +387,9 @@ describe('resolveApiPolicy', () => {
       new Set(['editor:senior', 'editor:junior']),
     );
 
-    // 3. Universal wildcard "*" -> expands to all declared roles
+    // 3. Base concrete role
     const indexPolicy = resolveApiPolicy(config, 'model.test.users.id.index');
-    expect(indexPolicy.roles).toEqual(
-      new Set([
-        'admin',
-        'lead_editor',
-        'editor:senior',
-        'editor:junior',
-        'auditor',
-        'viewer',
-      ]),
-    );
+    expect(indexPolicy.roles).toEqual(new Set(['viewer']));
 
     // 4. Multiple concrete roles
     const customPolicy = resolveApiPolicy(

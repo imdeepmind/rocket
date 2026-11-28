@@ -1,10 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify';
 
-import {
-  buildRoleInclusionMap,
-  expandWildcards,
-  isRoleAuthorized,
-} from '@/lib/rbac';
+import {buildRoleInclusionMap, isRoleAuthorized} from '@/lib/rbac';
 
 import {RbacConfig, ResolvedAppConfig} from '@/interfaces/config';
 
@@ -52,12 +48,7 @@ export function buildPreValidation(
   if (roles instanceof Set) {
     allowedRolesSet = roles;
   } else if (Array.isArray(roles)) {
-    if (config.rbac?.enabled && config.rbac.roles) {
-      const declared = Object.keys(config.rbac.roles);
-      allowedRolesSet = expandWildcards(roles, declared);
-    } else {
-      allowedRolesSet = new Set(roles);
-    }
+    allowedRolesSet = new Set(roles);
   }
 
   return async (request, reply) => {
