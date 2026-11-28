@@ -408,7 +408,7 @@
         },
         "model.test.posts.unknown.insert": {
             "authorization": true,
-            "roles": ["editor:*"],
+            "roles": ["editor:senior", "editor:junior"],
             "serverSideParams": [
                 {
                     "type": "body",
@@ -419,7 +419,7 @@
         },
         "model.test.users.id.index": {
             "authorization": true,
-            "roles": ["*"],
+            "roles": ["viewer"],
             "supportedQueries": ["eq", "sort"]
         },
         "custom.test.all.unknown.updatePostTitle": {

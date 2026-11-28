@@ -1,6 +1,5 @@
 import {buildApiIdentifier, parseApiIdentifier} from '@/lib/config/identifier';
 import {deriveApiTags} from '@/lib/config/tags';
-import {expandWildcards} from '@/lib/rbac';
 
 import {
   Aggregation,
@@ -94,8 +93,7 @@ export function resolveApiPolicy(
   let roles: Set<string> | undefined;
 
   if (rawRoles && config.rbac?.enabled && config.rbac.roles) {
-    const declaredRoles = Object.keys(config.rbac.roles);
-    roles = expandWildcards(rawRoles, declaredRoles);
+    roles = new Set(rawRoles);
   }
 
   return {

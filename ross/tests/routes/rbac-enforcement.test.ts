@@ -87,7 +87,7 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
     'model.v1.users.unknown.insert': {
       enabled: true,
       authorization: true,
-      roles: ['editor:*'],
+      roles: ['editor:junior'],
     },
     'model.v1.users.id.edit': {
       enabled: true,
@@ -116,7 +116,7 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
     'custom.v1.all.unknown.wildcard': {
       enabled: true,
       authorization: true,
-      roles: ['*'],
+      roles: ['viewer'],
     },
   };
 
@@ -288,7 +288,7 @@ describe('RBAC Route-Level PreValidation Enforcement', () => {
       expect(response.statusCode).toBe(200);
     });
 
-    test('allows POST when user role matches wildcard endpoint roles (editor:junior matches editor:*)', async () => {
+    test('allows POST when user role matches concrete endpoint role (editor:junior)', async () => {
       pgClientQueryMock
         .mockResolvedValueOnce({rows: [], rowCount: 0}) // BEGIN
         .mockResolvedValueOnce({

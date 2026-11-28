@@ -124,25 +124,17 @@ function validateRbacConstraints(
         );
       }
 
-      apiConfig.roles.forEach((rolePattern, i) => {
-        if (rolePattern === '*') {
-          return;
-        }
-
-        if (rolePattern.endsWith(':*')) {
-          const prefix = rolePattern.slice(0, -2);
-          const hasMatch = declaredRoles.some(r => r.startsWith(`${prefix}:`));
-          if (!hasMatch) {
-            errors.push(
-              `apis/${key}/roles/${i}: wildcard pattern "${rolePattern}" does not match any declared role in rbac.roles`,
-            );
-          }
-          return;
-        }
-
-        if (!Object.prototype.hasOwnProperty.call(roles, rolePattern)) {
+      apiConfig.roles.forEach((roleName, i) => {
+        if (roleName === '*' || roleName.endsWith(':*')) {
           errors.push(
-            `apis/${key}/roles/${i}: role "${rolePattern}" does not exist in rbac.roles`,
+            `apis/${key}/roles/${i}: wildcard pattern "${roleName}" is not allowed in route roles; wildcards are only supported in rbac.roles.<role>.includes`,
+          );
+          return;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(roles, roleName)) {
+          errors.push(
+            `apis/${key}/roles/${i}: role "${roleName}" does not exist in rbac.roles`,
           );
         }
       });

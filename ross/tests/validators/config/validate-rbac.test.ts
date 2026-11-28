@@ -494,7 +494,7 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
     );
   });
 
-  it('rejects apis[key].roles with wildcard matching no declared roles', () => {
+  it('rejects apis[key].roles with namespaced wildcard (even if matching declared roles)', () => {
     const config = createBaseConfig();
     config.rbac = createValidRbacConfig();
     config.apis = {
@@ -502,15 +502,22 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
         authorization: true,
         roles: ['billing:*'],
       },
+      'model.test.posts.unknown.delete': {
+        authorization: true,
+        roles: ['editor:*'],
+      },
     };
 
     const errors = validateRbacConstraints(config);
     expect(errors).toContain(
-      'apis/model.test.posts.unknown.insert/roles/0: wildcard pattern "billing:*" does not match any declared role in rbac.roles',
+      'apis/model.test.posts.unknown.insert/roles/0: wildcard pattern "billing:*" is not allowed in route roles; wildcards are only supported in rbac.roles.<role>.includes',
+    );
+    expect(errors).toContain(
+      'apis/model.test.posts.unknown.delete/roles/0: wildcard pattern "editor:*" is not allowed in route roles; wildcards are only supported in rbac.roles.<role>.includes',
     );
   });
 
-  it('accepts apis[key].roles with universal wildcard and valid prefix wildcard', () => {
+  it('rejects apis[key].roles with universal wildcard "*"', () => {
     const config = createBaseConfig();
     config.rbac = createValidRbacConfig();
     config.apis = {
@@ -518,9 +525,25 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
         authorization: true,
         roles: ['*'],
       },
+    };
+
+    const errors = validateRbacConstraints(config);
+    expect(errors).toContain(
+      'apis/model.test.posts.unknown.insert/roles/0: wildcard pattern "*" is not allowed in route roles; wildcards are only supported in rbac.roles.<role>.includes',
+    );
+  });
+
+  it('accepts apis[key].roles with concrete declared roles', () => {
+    const config = createBaseConfig();
+    config.rbac = createValidRbacConfig();
+    config.apis = {
+      'model.test.posts.unknown.insert': {
+        authorization: true,
+        roles: ['viewer'],
+      },
       'model.test.posts.unknown.delete': {
         authorization: true,
-        roles: ['editor:*', 'admin'],
+        roles: ['editor:senior', 'admin'],
       },
     };
 
@@ -559,7 +582,7 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
       apis: {
         'model.v1.posts.unknown.insert': {
           authorization: true,
-          roles: ['editor:*'],
+          roles: ['editor:senior', 'editor:junior'],
         },
       },
     };
@@ -569,7 +592,8 @@ describe('Static RBAC Constraint Validation (validateRbacConstraints)', () => {
     if (!resolved.rbac.enabled) throw new Error('expected rbac to be enabled');
     expect(resolved.rbac.modelName).toBe('users');
     expect(resolved.apis['model.v1.posts.unknown.insert'].roles).toEqual([
-      'editor:*',
+      'editor:senior',
+      'editor:junior',
     ]);
   });
 

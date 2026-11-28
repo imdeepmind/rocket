@@ -164,7 +164,7 @@ const rbacE2EConfig: AppConfigInput = {
       },
     },
     wildcardEndpoint: {
-      description: 'Endpoint open to all authenticated roles via *',
+      description: 'Endpoint open to all roles via base viewer role inheritance',
       method: 'GET',
       path: '/wildcard-endpoint',
       handler: {
@@ -217,14 +217,14 @@ const rbacE2EConfig: AppConfigInput = {
     },
     'custom.v1.all.unknown.editorDashboard': {
       authorization: true,
-      roles: ['editor:*'],
+      roles: ['editor:junior'],
     },
     'custom.v1.all.unknown.publicInfo': {
       authorization: false,
     },
     'custom.v1.all.unknown.wildcardEndpoint': {
       authorization: true,
-      roles: ['*'],
+      roles: ['viewer'],
     },
     'custom.v1.all.unknown.openAuthEndpoint': {
       authorization: true,
@@ -525,7 +525,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(res.status()).toBe(403);
     });
 
-    test('editor:junior can access editor-dashboard via editor:* wildcard (200 OK)', async () => {
+    test('editor:junior can access editor-dashboard via concrete role (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/editor-dashboard',
         {
@@ -607,7 +607,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(res.status()).toBe(403);
     });
 
-    test('editor:senior can access editor-dashboard via editor:* wildcard (200 OK)', async () => {
+    test('editor:senior can access editor-dashboard via role inheritance (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/editor-dashboard',
         {
@@ -693,7 +693,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(body.data.data[0].metric).toBe(42);
     });
 
-    test('admin can access custom editor-dashboard via wildcard (200 OK)', async () => {
+    test('admin can access custom editor-dashboard via role hierarchy (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/editor-dashboard',
         {
@@ -704,8 +704,8 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
     });
   });
 
-  test.describe('Universal Wildcard Route (roles: ["*"]) Workflows', () => {
-    test('viewer can access endpoint configured with roles: ["*"] (200 OK)', async () => {
+  test.describe('Base Role Inheritance Route (roles: ["viewer"]) Workflows', () => {
+    test('viewer can access endpoint configured with roles: ["viewer"] (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/wildcard-endpoint',
         {
@@ -718,7 +718,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(body.data.data[0].wildcard_val).toBe(123);
     });
 
-    test('editor:junior can access endpoint configured with roles: ["*"] (200 OK)', async () => {
+    test('editor:junior can access endpoint configured with roles: ["viewer"] (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/wildcard-endpoint',
         {
@@ -728,7 +728,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(res.status()).toBe(200);
     });
 
-    test('admin can access endpoint configured with roles: ["*"] (200 OK)', async () => {
+    test('admin can access endpoint configured with roles: ["viewer"] (200 OK)', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/wildcard-endpoint',
         {
@@ -738,7 +738,7 @@ test.describe.serial('Playwright E2E: RBAC Role Enforcement', () => {
       expect(res.status()).toBe(200);
     });
 
-    test('unauthenticated request to roles: ["*"] endpoint returns 401 Unauthorized', async () => {
+    test('unauthenticated request to roles: ["viewer"] endpoint returns 401 Unauthorized', async () => {
       const res = await server.request.get(
         '/api/v1/custom-endpoints/wildcard-endpoint',
       );
@@ -976,6 +976,38 @@ test.describe
 
     await expect(createE2EServer(invalidConfig)).rejects.toThrow(
       'roles cannot be configured when rbac is not enabled',
+    );
+  });
+
+  test('server startup rejects wildcards in apis route roles when rbac is enabled', async () => {
+    const universalWildcardConfig: AppConfigInput = {
+      ...rbacE2EConfig,
+      apis: {
+        ...rbacE2EConfig.apis,
+        'custom.v1.all.unknown.wildcardEndpoint': {
+          authorization: true,
+          roles: ['*'],
+        },
+      },
+    };
+
+    await expect(createE2EServer(universalWildcardConfig)).rejects.toThrow(
+      'wildcard pattern "*" is not allowed in route roles',
+    );
+
+    const namespacedWildcardConfig: AppConfigInput = {
+      ...rbacE2EConfig,
+      apis: {
+        ...rbacE2EConfig.apis,
+        'custom.v1.all.unknown.editorDashboard': {
+          authorization: true,
+          roles: ['editor:*'],
+        },
+      },
+    };
+
+    await expect(createE2EServer(namespacedWildcardConfig)).rejects.toThrow(
+      'wildcard pattern "editor:*" is not allowed in route roles',
     );
   });
 
